@@ -22,6 +22,16 @@ typedef struct device {
 
 static device *devs;
 
+static void
+free_devtable(void){
+	device *d;
+
+	while( (d = devs) ){
+		devs = d->next;
+		free(d);
+	}
+}
+
 static inline device *
 create_new_device(const char *name){
 	device *d;
@@ -125,7 +135,9 @@ int main(void){
 		return EXIT_FAILURE;
 	}
 	if(watch_dir(fd,DISKS_BY_PATH)){
+		free_devtable();
 		return EXIT_FAILURE;
 	}
+	free_devtable();
 	return EXIT_SUCCESS;
 }
