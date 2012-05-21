@@ -40,11 +40,11 @@ verbf(const char *fmt,...){
 // partition.
 typedef struct device {
 	struct device *next;
-	char name[PATH_MAX];
-	char path[PATH_MAX];
-	char id[PATH_MAX];
-	char label[PATH_MAX];
-	int major,minor;
+	char name[PATH_MAX];	// Entry in /dev or /sys/block
+	char sysfs[PATH_MAX];	// Entry in /sys/devices
+	char path[PATH_MAX];	// Device topology, not filesystem
+	char *id,*label;	// Not all have one
+	int major,minor;	// Not currently being set FIXME
 } device;
 
 static device *devs;
@@ -63,19 +63,24 @@ free_devtable(void){
 
 static inline device *
 create_new_device(const char *name){
+	char buf[PATH_MAX + 1] = "";
 	int unloaded = 0;
+	int fd,slen;
 	device *d;
-	int fd;
 
 	if(strlen(name) >= sizeof(d->name)){
 		fprintf(stderr,"Name too long: %s\n",name);
+		return NULL;
+	}
+	if((slen = readlinkat(sysfd,name,buf,sizeof(buf) - 1)) < 0){
+		fprintf(stderr,"Couldn't read sysfs:%s (%s?)\n",name,strerror(errno));
 		return NULL;
 	}
 	if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
 		if(errno == ENOMEDIUM){
 			unloaded = 1;
 		}else{
-			fprintf(stderr,"Couldn't open %s (%s?)\n",name,strerror(errno));
+			fprintf(stderr,"Couldn't open dev:%s (%s?)\n",name,strerror(errno));
 			return NULL;
 		}
 	}
@@ -92,8 +97,11 @@ create_new_device(const char *name){
 	}
 	if( (d = malloc(sizeof(*d))) ){
 		memset(d,0,sizeof(*d));
+		d->id = d->label = NULL;
 		strcpy(d->name,name);
 		// FIXME get major/minors
+		strncpy(d->sysfs,buf,slen);
+		d->sysfs[slen] = '\0';
 	}else{
 		fprintf(stderr,"Couldn't look up %s (%s?)\n",name,strerror(errno));
 	}
