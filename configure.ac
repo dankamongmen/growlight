@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([growlight], [0.0.98], [http://http://dank.qemfd.net/dankwiki/index.php/Growlight])
+AC_INIT([growlight], [0.0.98], [growlight@sprezzatech.com], [growlight], [http://http://dank.qemfd.net/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-bzip2])
 AC_CONFIG_HEADER([src/config.h])
