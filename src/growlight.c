@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -9,7 +10,8 @@
 #include <src/config.h>
 #include <sys/inotify.h>
 
-#define DISKS_PREFIX "/dev/disk"
+#define DEVROOT "/dev"
+#define DISKS_PREFIX DEVROOT "/disk"
 #define DISKS_BY_ID "/by-id/"
 #define DISKS_BY_PATH "/by-path/"
 
@@ -42,6 +44,7 @@ typedef struct device {
 } device;
 
 static device *devs;
+static int devfd = -1;
 
 static void
 free_devtable(void){
@@ -56,14 +59,24 @@ free_devtable(void){
 static inline device *
 create_new_device(const char *name){
 	device *d;
+	int fd;
 
 	if(strlen(name) >= sizeof(d->name)){
+		fprintf(stderr,"Name too long: %s\n",name);
 		return NULL;
 	}
+	if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
+		fprintf(stderr,"Couldn't open %s (%s?)\n",name,strerror(errno));
+		return NULL;
+	}
+	// do SG_IO ioctls FIXME
+	close(fd);
 	if( (d = malloc(sizeof(*d))) ){
 		memset(d,0,sizeof(*d));
 		strcpy(d->name,name);
 		// FIXME get major/minors
+	}else{
+		fprintf(stderr,"Couldn't look up %s (%s?)\n",name,strerror(errno));
 	}
 	return d;
 }
@@ -130,9 +143,7 @@ watch_dir(int fd,const char *dfp){
 			}else{
 				const device *dev;
 
-				if((dev = lookup_device(d->d_name)) == NULL){
-					fprintf(stderr,"Couldn't look up %s (%s?)\n",
-							d->d_name,strerror(errno));
+				if((dev = lookup_device(buf)) == NULL){
 					break;
 				}
 				verbf("%s -> %s\n",d->d_name,buf);
@@ -140,7 +151,7 @@ watch_dir(int fd,const char *dfp){
 		}
 		r = 0;
 	}
-	if(errno){
+	if(r == 0 && errno){
 		fprintf(stderr,"Error reading %s (%s?)\n",dfp,strerror(errno));
 		r = -1;
 	}
@@ -154,6 +165,22 @@ usage(const char *name,int status){
 
 	fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ]\n",name);
 	exit(status);
+}
+
+static int
+get_dev_fd(DIR **dir,const char *devroot){
+	int fd;
+
+	if((*dir = opendir(devroot)) == NULL){
+		fprintf(stderr,"Couldn't open dev directory at %s (%s?)\n"
+				,devroot,strerror(errno));
+		return -1;
+	}
+	if((fd = dirfd(*dir)) < 0){
+		closedir(*dir);
+		*dir = NULL;
+	}
+	return fd;
 }
 
 int main(int argc,char **argv){
@@ -176,6 +203,7 @@ int main(int argc,char **argv){
 		},
 	};
 	int fd,opt,longidx;
+	DIR *dir;
 
 	opterr = 1;
 	while((opt = getopt_long(argc,argv,"hv",ops,&longidx)) >= 0){
@@ -201,6 +229,9 @@ int main(int argc,char **argv){
 		} }
 	}
 	printf("%s %s\n",PACKAGE,PACKAGE_VERSION);
+	if((devfd = get_dev_fd(&dir,DEVROOT)) < 0){
+		return EXIT_FAILURE;
+	}
 	if((fd = inotify_fd()) < 0){
 		return EXIT_FAILURE;
 	}
