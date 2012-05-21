@@ -13,6 +13,7 @@
 #include <src/config.h>
 #include <sys/inotify.h>
 
+#define SYSROOT "/sys/block"
 #define DEVROOT "/dev"
 #define DISKS_PREFIX DEVROOT "/disk"
 #define DISKS_BY_ID "/by-id/"
@@ -47,7 +48,8 @@ typedef struct device {
 } device;
 
 static device *devs;
-static int devfd = -1;
+static int devfd = -1; // Hold a reference to /dev
+static int sysfd = -1; // Hold a reference to /sys
 
 static void
 free_devtable(void){
@@ -199,15 +201,15 @@ usage(const char *name,int status){
 }
 
 static int
-get_dev_fd(DIR **dir,const char *devroot){
+get_dir_fd(DIR **dir,const char *root){
 	int fd;
 
-	if((*dir = opendir(devroot)) == NULL){
-		fprintf(stderr,"Couldn't open dev directory at %s (%s?)\n"
-				,devroot,strerror(errno));
+	if((*dir = opendir(root)) == NULL){
+		fprintf(stderr,"Couldn't open directory at %s (%s?)\n",root,strerror(errno));
 		return -1;
 	}
 	if((fd = dirfd(*dir)) < 0){
+		fprintf(stderr,"Couldn't get dirfd at %s (%s?)\n",root,strerror(errno));
 		closedir(*dir);
 		*dir = NULL;
 	}
@@ -234,7 +236,7 @@ int main(int argc,char **argv){
 		},
 	};
 	int fd,opt,longidx;
-	DIR *dir;
+	DIR *ddir,*sdir;
 
 	opterr = 1;
 	while((opt = getopt_long(argc,argv,"hv",ops,&longidx)) >= 0){
@@ -260,7 +262,10 @@ int main(int argc,char **argv){
 		} }
 	}
 	printf("%s %s\n",PACKAGE,PACKAGE_VERSION);
-	if((devfd = get_dev_fd(&dir,DEVROOT)) < 0){
+	if((devfd = get_dir_fd(&ddir,DEVROOT)) < 0){
+		return EXIT_FAILURE;
+	}
+	if((sysfd = get_dir_fd(&sdir,SYSROOT)) < 0){
 		return EXIT_FAILURE;
 	}
 	if((fd = inotify_fd()) < 0){
