@@ -1,6 +1,8 @@
 LANG=C
 LC_ALL=c
 
+AM_CFLAGS=-O2 -Wall -W -Werror -Wextra -fvisibility=hidden
+
 doc_DATA=
 doc_DATA+=README
 
