@@ -68,7 +68,6 @@ create_new_device(const char *name){
 		fprintf(stderr,"Name too long: %s\n",name);
 		return NULL;
 	}
-	printf("%s\n",name);
 	if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
 		if(errno == ENOMEDIUM){
 			unloaded = 1;
@@ -84,7 +83,6 @@ create_new_device(const char *name){
 		memset(&sg,0,sizeof(sg));
 		sg.interface_id = 'S'; // SCSI
 		r = ioctl(fd,SG_IO,&sg,sizeof(sg));
-		printf("IOCTL: %d\n",r);
 		close(fd);
 	}
 	if( (d = malloc(sizeof(*d))) ){
