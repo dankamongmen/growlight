@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <getopt.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -11,6 +12,23 @@
 #define DISKS_PREFIX "/dev/disk"
 #define DISKS_BY_ID "/by-id/"
 #define DISKS_BY_PATH "/by-path/"
+
+static unsigned verbose;
+
+static inline int
+verbf(const char *fmt,...){
+	va_list ap;
+	int v;
+
+	va_start(ap,fmt);
+	if(verbose){
+		v = vprintf(fmt,ap);
+	}else{
+		v = 0;
+	}
+	va_end(ap);
+	return v;
+}
 
 // An (non-link) entry in the device hierarchy, representing a disk or
 // partition.
@@ -87,7 +105,7 @@ watch_dir(int fd,const char *dfp){
 		fprintf(stderr,"Coudln't inotify on %s (%s?)\n",dfp,strerror(errno));
 		return -1;
 	}else{
-		printf("Watching %s on %d\n",dfp,wfd);
+		verbf("Watching %s on %d\n",dfp,wfd);
 	}
 	if((dir = opendir(dfp)) < 0){
 		fprintf(stderr,"Coudln't open %s (%s?)\n",dfp,strerror(errno));
@@ -117,7 +135,7 @@ watch_dir(int fd,const char *dfp){
 							d->d_name,strerror(errno));
 					break;
 				}
-				printf("%s -> %s\n",d->d_name,buf);
+				verbf("%s -> %s\n",d->d_name,buf);
 			}
 		}
 		r = 0;
@@ -157,7 +175,6 @@ int main(int argc,char **argv){
 			.val = 0,
 		},
 	};
-	unsigned verbose = 0;
 	int fd,opt,longidx;
 
 	opterr = 1;
