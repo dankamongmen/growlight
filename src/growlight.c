@@ -7,7 +7,9 @@
 #include <src/config.h>
 #include <sys/inotify.h>
 
-#define DISKS_BY_PATH "/dev/disk/by-path/"
+#define DISKS_PREFIX "/dev/disk"
+#define DISKS_BY_ID "/by-id/"
+#define DISKS_BY_PATH "/by-path/"
 
 // An (non-link) entry in the device hierarchy, representing a disk or
 // partition.
@@ -101,7 +103,7 @@ watch_dir(int fd,const char *dfp){
 	while( errno = 0, (d = readdir(dir)) ){
 		r = -1;
 		if(d->d_type == DT_LNK){
-			char buf[PATH_MAX];
+			char buf[PATH_MAX] = "";
 
 			if(readlinkat(dfd,d->d_name,buf,sizeof(buf)) < 0){
 				fprintf(stderr,"Couldn't read link at %s/%s (%s?)\n",
@@ -134,7 +136,11 @@ int main(void){
 	if((fd = inotify_fd()) < 0){
 		return EXIT_FAILURE;
 	}
-	if(watch_dir(fd,DISKS_BY_PATH)){
+	if(watch_dir(fd,DISKS_PREFIX DISKS_BY_PATH)){
+		free_devtable();
+		return EXIT_FAILURE;
+	}
+	if(watch_dir(fd,DISKS_PREFIX DISKS_BY_ID)){
 		free_devtable();
 		return EXIT_FAILURE;
 	}
