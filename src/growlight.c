@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stdio.h>
+#include <getopt.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <stdlib.h>
@@ -129,9 +130,59 @@ watch_dir(int fd,const char *dfp){
 	return r;
 }
 
-int main(void){
-	int fd;
+static void
+usage(const char *name,int status){
+	FILE *fp = status == EXIT_SUCCESS ? stdout : stderr;
 
+	fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ]\n",name);
+	exit(status);
+}
+
+int main(int argc,char **argv){
+	static const struct option ops[] = {
+		{
+			.name = "help",
+			.has_arg = 0,
+			.flag = NULL,
+			.val = 'h',
+		},{
+			.name = "verbose",
+			.has_arg = 0,
+			.flag = NULL,
+			.val = 'v',
+		},{
+			.name = NULL,
+			.has_arg = 0,
+			.flag = NULL,
+			.val = 0,
+		},
+	};
+	unsigned verbose = 0;
+	int fd,opt,longidx;
+
+	opterr = 1;
+	while((opt = getopt_long(argc,argv,"hv",ops,&longidx)) >= 0){
+		switch(opt){
+		case 'h':{
+			usage(argv[0],EXIT_SUCCESS);
+			break;
+		}case 'v':{
+			verbose = 1;
+			break;
+		}case ':':{
+			fprintf(stderr,"Option requires argument: '%c'\n",optopt);
+			usage(argv[0],EXIT_FAILURE);
+			break;
+		}case '?':{
+			fprintf(stderr,"Unknown option: '%c'\n",optopt);
+			usage(argv[0],EXIT_FAILURE);
+			break;
+		}default:{
+			fprintf(stderr,"Unknown option: '%c'\n",optopt);
+			usage(argv[0],EXIT_FAILURE);
+			break;
+		} }
+	}
 	printf("%s %s\n",PACKAGE,PACKAGE_VERSION);
 	if((fd = inotify_fd()) < 0){
 		return EXIT_FAILURE;
