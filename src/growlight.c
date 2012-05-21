@@ -58,6 +58,7 @@ free_devtable(void){
 
 static inline device *
 create_new_device(const char *name){
+	int unloaded = 0;
 	device *d;
 	int fd;
 
@@ -66,11 +67,17 @@ create_new_device(const char *name){
 		return NULL;
 	}
 	if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
-		fprintf(stderr,"Couldn't open %s (%s?)\n",name,strerror(errno));
-		return NULL;
+		if(errno = ENOMEDIUM){
+			unloaded = 1;
+		}else{
+			fprintf(stderr,"Couldn't open %s (%s?)\n",name,strerror(errno));
+			return NULL;
+		}
 	}
-	// do SG_IO ioctls FIXME
-	close(fd);
+	if(!unloaded){
+		// do SG_IO ioctls FIXME
+		close(fd);
+	}
 	if( (d = malloc(sizeof(*d))) ){
 		memset(d,0,sizeof(*d));
 		strcpy(d->name,name);
@@ -81,10 +88,24 @@ create_new_device(const char *name){
 	return d;
 }
 
+// Strips leading "../"s and "./"s, for better or worse.
 static device *
 lookup_device(const char *name){
 	device *d;
+	size_t s;
 
+	do{
+		if(strncmp(name,"/",1) == 0){
+			s = 1;
+		}else if(strncmp(name,"./",2) == 0){
+			s = 2;
+		}else if(strncmp(name,"../",3) == 0){
+			s = 3;
+		}else{
+			s = 0;
+		}
+		name += s;
+	}while(s);
 	for(d = devs ; d ; d = d->next){
 		if(strcmp(name,d->name) == 0){
 			return d;
