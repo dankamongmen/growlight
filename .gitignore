@@ -1,0 +1,17 @@
+aclocal.m4
+autom4te.cache/
+config.log
+config.status
+configure
+depcomp
+.deps/
+growlight
+growlight.o
+install-sh
+Makefile
+Makefile.in
+missing
+src/config.h
+src/config.h.in
+src/config.h.in~
+src/stamp-h1
