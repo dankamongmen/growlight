@@ -6,7 +6,7 @@ AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/])
 
 ## compiler check
-CXXFLAGS="-O2 -g -Wall -W"
+CXXFLAGS="-O2 -Wall -W"
 AC_PROG_CXX
 AC_PROG_CC_C_O
 AC_PROG_CC_C99
