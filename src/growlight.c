@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,7 +45,14 @@ watch_dir(int fd,const char *dfp){
 	}
 	while( (d = readdir(dir)) ){
 		if(d->d_type == DT_LNK){
-			printf("Link: %s\n",d->d_name);
+			char buf[PATH_MAX];
+
+			if(readlinkat(dfd,d->d_name,buf,sizeof(buf)) < 0){
+				fprintf(stderr,"Couldn't read link at %s/%s (%s?)\n",
+					dfp,d->d_name,strerror(errno));
+			}else{
+				printf("%s -> %s\n",d->d_name,buf);
+			}
 		}
 	}
 	closedir(dir);
