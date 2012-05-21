@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
+#include <blkid.h>
 #include <stdarg.h>
 #include <getopt.h>
 #include <unistd.h>
@@ -84,6 +85,8 @@ create_new_device(const char *name){
 		sg.interface_id = 'S'; // SCSI
 		r = ioctl(fd,SG_IO,&sg,sizeof(sg));
 		close(fd);
+		if(r == 0){
+		}
 	}
 	if( (d = malloc(sizeof(*d))) ){
 		memset(d,0,sizeof(*d));
