@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
+#include <scsi/sg.h>
+#include <sys/ioctl.h>
 #include <src/config.h>
 #include <sys/inotify.h>
 
@@ -66,8 +68,9 @@ create_new_device(const char *name){
 		fprintf(stderr,"Name too long: %s\n",name);
 		return NULL;
 	}
+	printf("%s\n",name);
 	if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
-		if(errno = ENOMEDIUM){
+		if(errno == ENOMEDIUM){
 			unloaded = 1;
 		}else{
 			fprintf(stderr,"Couldn't open %s (%s?)\n",name,strerror(errno));
@@ -75,7 +78,13 @@ create_new_device(const char *name){
 		}
 	}
 	if(!unloaded){
-		// do SG_IO ioctls FIXME
+		struct sg_io_hdr sg;
+		int r;
+
+		memset(&sg,0,sizeof(sg));
+		sg.interface_id = 'S'; // SCSI
+		r = ioctl(fd,SG_IO,&sg,sizeof(sg));
+		printf("IOCTL: %d\n",r);
 		close(fd);
 	}
 	if( (d = malloc(sizeof(*d))) ){
@@ -141,7 +150,7 @@ watch_dir(int fd,const char *dfp){
 	}else{
 		verbf("Watching %s on %d\n",dfp,wfd);
 	}
-	if((dir = opendir(dfp)) < 0){
+	if((dir = opendir(dfp)) == NULL){
 		fprintf(stderr,"Coudln't open %s (%s?)\n",dfp,strerror(errno));
 		inotify_rm_watch(fd,wfd);
 		return -1;
