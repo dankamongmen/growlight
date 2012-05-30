@@ -1,7 +1,9 @@
 aclocal.m4
 autom4te.cache/
+config.guess
 config.log
 config.status
+config.sub
 configure
 depcomp
 .deps/
@@ -10,6 +12,7 @@ growlight.o
 growlight-*.tar.bz2
 growlight-*.tar.gz
 install-sh
+libblkid.o
 Makefile
 Makefile.in
 missing
