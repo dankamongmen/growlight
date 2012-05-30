@@ -12,7 +12,9 @@
 #include <sys/ioctl.h>
 #include <src/config.h>
 #include <sys/inotify.h>
+
 #include <libblkid.h>
+#include <growlight.h>
 
 #define SYSROOT "/sys/block"
 
@@ -98,8 +100,7 @@ create_new_device(const char *name){
 }
 
 // Strips leading "../"s and "./"s, for better or worse.
-/* static device *
-lookup_device(const char *name){
+device *lookup_device(const char *name){
 	device *d;
 	size_t s;
 
@@ -125,7 +126,7 @@ lookup_device(const char *name){
 		devs = d;
 	}
 	return d;
-} */
+}
 
 static inline int
 inotify_fd(void){

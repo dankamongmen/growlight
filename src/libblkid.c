@@ -1,7 +1,8 @@
-#include <stdio.h>
 #include <pthread.h>
-#include <libblkid.h>
 #include <blkid/blkid.h>
+
+#include <libblkid.h>
+#include <growlight.h>
 
 static blkid_cache cache;
 static unsigned cache_once_success;
@@ -42,6 +43,7 @@ blkid_exit(void){
 int load_blkid_superblocks(void){
 	blkid_dev_iterate biter;
 	blkid_dev dev;
+	int r;
 
 	if(blkid_entry()){
 		return -1;
@@ -49,15 +51,20 @@ int load_blkid_superblocks(void){
 	if((biter = blkid_dev_iterate_begin(cache)) == NULL){
 		goto err;
 	}
+	r = 0;
 	while(blkid_dev_next(biter,&dev) == 0){
 		const char *name;
 
 		if((name = blkid_dev_devname(dev)) == NULL){
-			break;
+			r = -1;
+		}else if(lookup_device(name) == NULL){
+			r = -1;
 		}
-		// FIXME add device
 	}
 	blkid_dev_iterate_end(biter);
+	if(r){
+		goto err;
+	}
 	return blkid_exit();
 
 err:
