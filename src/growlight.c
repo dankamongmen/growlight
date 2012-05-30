@@ -277,6 +277,7 @@ int main(int argc,char **argv){
 		free_devtable();
 		return EXIT_FAILURE;
 	}
+	close_blkid();
 	free_devtable();
 	return EXIT_SUCCESS;
 }
