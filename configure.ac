@@ -11,6 +11,8 @@ AC_PROG_CXX
 AC_PROG_CC_C_O
 AC_PROG_CC_C99
 
+AX_PTHREAD
+
 PKG_CHECK_MODULES(libblkid, blkid, [have_libblkid=yes])
 	CFLAGS+=" $libblkid_CFLAGS"
 	LIBS+=" $libblkid_LIBS"
