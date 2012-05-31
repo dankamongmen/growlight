@@ -12,7 +12,7 @@ static pthread_mutex_t cache_lock = PTHREAD_MUTEX_INITIALIZER;
 static void
 init_blkid_cache(void){
 	if(blkid_get_cache(&cache,NULL) == 0){
-		if(blkid_probe_all_new(cache) == 0){
+		if(blkid_probe_all(cache) == 0){
 			blkid_gc_cache(cache);
 			cache_once_success = 1;
 		}

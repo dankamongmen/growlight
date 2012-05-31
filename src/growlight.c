@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <scsi/sg.h>
+#include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <src/config.h>
 #include <sys/inotify.h>
@@ -16,7 +17,8 @@
 #include <libblkid.h>
 #include <growlight.h>
 
-#define SYSROOT "/sys/block"
+#define DEVROOT "/dev/"
+#define SYSROOT "/sys/block/"
 
 static unsigned verbose;
 
@@ -48,6 +50,7 @@ typedef struct device {
 } device;
 
 static device *devs;
+static int devfd = -1; // Hold a reference to DEVROOT
 static int sysfd = -1; // Hold a reference to SYSROOT
 
 static void
@@ -58,10 +61,16 @@ free_devtable(void){
 		devs = d->next;
 		free(d);
 	}
+	close(devfd);
+	close(sysfd);
+	devfd = sysfd = -1;
 }
 
 static inline device *
 create_new_device(const char *name){
+	char buf[PATH_MAX] = "";
+	unsigned raid = 0;
+	struct stat sbuf;
 	device *d;
 	int fd;
 
@@ -69,24 +78,43 @@ create_new_device(const char *name){
 		fprintf(stderr,"Name too long: %s\n",name);
 		return NULL;
 	}
-	if((fd = openat(sysfd,name,O_CLOEXEC)) < 0){
-		if(errno == ENOMEDIUM){
-			// unloaded?
-		}else{
-			fprintf(stderr,"Couldn't open sys:%s (%s?)\n",name,strerror(errno));
-			return NULL;
-		}
+	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
+		fprintf(stderr,"Couldn't read link at %s/%s (%s?)\n",
+			SYSROOT,name,strerror(errno));
 	}else{
-		struct sg_io_hdr sg;
-		int r;
+		verbf("%s -> %s\n",name,buf);
+	}
+	if((fd = openat(sysfd,buf,O_CLOEXEC)) < 0){
+		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
+			SYSROOT,buf,strerror(errno));
+		return NULL;
+	}
+	if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
+		if(S_ISDIR(sbuf.st_mode)){
+			raid = 1;
+		}
+	}
+	if(!raid){
+		if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
+			if(errno == ENOMEDIUM){
+				// unloaded?
+			}else{
+				fprintf(stderr,"Couldn't open %s%s (%s?)\n",
+						DEVROOT,name,strerror(errno));
+				return NULL;
+			}
+		}else{
+			struct sg_io_hdr sg;
+			int r;
 
-		memset(&sg,0,sizeof(sg));
-		sg.interface_id = 'S'; // SCSI
-		r = ioctl(fd,SG_IO,&sg,sizeof(sg));
-		close(fd);
-		if(r != 0){
-			fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
-			return NULL;
+			memset(&sg,0,sizeof(sg));
+			sg.interface_id = 'S'; // SCSI
+			r = ioctl(fd,SG_IO,&sg,sizeof(sg));
+			close(fd);
+			if(r != 0){
+				fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
+				return NULL;
+			}
 		}
 	}
 	if( (d = malloc(sizeof(*d))) ){
@@ -99,7 +127,9 @@ create_new_device(const char *name){
 	return d;
 }
 
-// Strips leading "../"s and "./"s, for better or worse.
+// Strips leading "/dev/"s, "../"s and "./"s, for better or worse. What's left
+// must be an entry in /sys/block (and should probably be one in /dev, but
+// we can index back with major/minor numbers...I think).
 device *lookup_device(const char *name){
 	device *d;
 	size_t s;
@@ -111,6 +141,8 @@ device *lookup_device(const char *name){
 			s = 2;
 		}else if(strncmp(name,"../",3) == 0){
 			s = 3;
+		}else if(strncmp(name,"dev/",4) == 0){
+			s = 4;
 		}else{
 			s = 0;
 		}
@@ -140,10 +172,10 @@ inotify_fd(void){
 
 static inline int
 watch_dir(int fd,const char *dfp){
-	//struct dirent *d;
-	//DIR *dir;
+	struct dirent *d;
+	DIR *dir;
 	int wfd,r;
-	//int dfd;
+	int dfd;
 
 	wfd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 	if(wfd < 0){
@@ -153,7 +185,6 @@ watch_dir(int fd,const char *dfp){
 		verbf("Watching %s on fd %d\n",dfp,wfd);
 	}
 	r = 0;
-	/*
 	if((dir = opendir(dfp)) == NULL){
 		fprintf(stderr,"Coudln't open %s (%s?)\n",dfp,strerror(errno));
 		inotify_rm_watch(fd,wfd);
@@ -168,18 +199,10 @@ watch_dir(int fd,const char *dfp){
 	while( errno = 0, (d = readdir(dir)) ){
 		r = -1;
 		if(d->d_type == DT_LNK){
-			char buf[PATH_MAX] = "";
+			const device *dev;
 
-			if(readlinkat(dfd,d->d_name,buf,sizeof(buf)) < 0){
-				fprintf(stderr,"Couldn't read link at %s/%s (%s?)\n",
-					dfp,d->d_name,strerror(errno));
-			}else{
-				const device *dev;
-
-				if((dev = lookup_device(buf)) == NULL){
-					break;
-				}
-				verbf("%s -> %s\n",d->d_name,buf);
+			if((dev = lookup_device(d->d_name)) == NULL){
+				break;
 			}
 		}
 		r = 0;
@@ -189,7 +212,6 @@ watch_dir(int fd,const char *dfp){
 		r = -1;
 	}
 	closedir(dir);
-	*/
 	return r;
 }
 
@@ -263,18 +285,25 @@ int main(int argc,char **argv){
 		} }
 	}
 	printf("%s %s (libblkid %s)\n",PACKAGE,PACKAGE_VERSION,BLKID_VERSION);
+	if(chdir(SYSROOT)){
+		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		return EXIT_FAILURE;
+	}
 	if((sysfd = get_dir_fd(&sdir,SYSROOT)) < 0){
+		return EXIT_FAILURE;
+	}
+	if((devfd = get_dir_fd(&sdir,DEVROOT)) < 0){
 		return EXIT_FAILURE;
 	}
 	if((fd = inotify_fd()) < 0){
 		return EXIT_FAILURE;
 	}
-	if(load_blkid_superblocks()){
-		fprintf(stderr,"Error in libblkid iteration (%s?)\n",strerror(errno));
+	if(watch_dir(fd,SYSROOT)){
 		free_devtable();
 		return EXIT_FAILURE;
 	}
-	if(watch_dir(fd,SYSROOT)){
+	if(load_blkid_superblocks()){
+		fprintf(stderr,"Error in libblkid iteration (%s?)\n",strerror(errno));
 		free_devtable();
 		return EXIT_FAILURE;
 	}
