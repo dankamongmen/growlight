@@ -66,10 +66,16 @@ free_devtable(void){
 	devfd = sysfd = -1;
 }
 
+	/*if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
+		if(S_ISDIR(sbuf.st_mode)){
+			raid = 1;
+		}
+	}*/
+
 static inline device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
-	unsigned raid = 0;
+	unsigned realdev = 0;
 	struct stat sbuf;
 	device *d;
 	int fd;
@@ -89,12 +95,14 @@ create_new_device(const char *name){
 			SYSROOT,buf,strerror(errno));
 		return NULL;
 	}
-	if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
-		if(S_ISDIR(sbuf.st_mode)){
-			raid = 1;
-		}
+	if(fstatat(fd,"device",&sbuf,AT_NO_AUTOMOUNT) == 0){
+		realdev = 1;
 	}
-	if(!raid){
+	if(close(fd)){
+		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
+		return NULL;
+	}
+	if(realdev){
 		if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
 			if(errno == ENOMEDIUM){
 				// unloaded?
@@ -302,11 +310,11 @@ int main(int argc,char **argv){
 		free_devtable();
 		return EXIT_FAILURE;
 	}
-	if(load_blkid_superblocks()){
+	/*if(load_blkid_superblocks()){
 		fprintf(stderr,"Error in libblkid iteration (%s?)\n",strerror(errno));
 		free_devtable();
 		return EXIT_FAILURE;
-	}
+	}*/
 	close_blkid();
 	free_devtable();
 	return EXIT_SUCCESS;
