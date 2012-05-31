@@ -303,6 +303,11 @@ int main(int argc,char **argv){
 	if((devfd = get_dir_fd(&sdir,DEVROOT)) < 0){
 		return EXIT_FAILURE;
 	}
+	/*if(load_blkid_superblocks()){
+		fprintf(stderr,"Error initializing libblkid (%s?)\n",strerror(errno));
+		free_devtable();
+		return EXIT_FAILURE;
+	}*/
 	if((fd = inotify_fd()) < 0){
 		return EXIT_FAILURE;
 	}
@@ -310,11 +315,6 @@ int main(int argc,char **argv){
 		free_devtable();
 		return EXIT_FAILURE;
 	}
-	/*if(load_blkid_superblocks()){
-		fprintf(stderr,"Error in libblkid iteration (%s?)\n",strerror(errno));
-		free_devtable();
-		return EXIT_FAILURE;
-	}*/
 	close_blkid();
 	free_devtable();
 	return EXIT_SUCCESS;
