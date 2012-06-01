@@ -79,3 +79,19 @@ int close_blkid(void){
 	blkid_put_cache(cache);
 	return blkid_exit();
 }
+
+int probe_blkid_dev(const char *dev){
+	blkid_probe probe;
+
+	if(blkid_entry()){
+		return -1;
+	}
+	if((probe = blkid_new_probe_from_filename(dev)) == NULL){
+		goto err;
+	}
+	return blkid_exit();
+
+err:
+	blkid_exit();
+	return -1;
+}
