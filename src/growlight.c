@@ -74,6 +74,7 @@ free_devtable(void){
 
 static inline device *
 create_new_device(const char *name){
+	char devbuf[PATH_MAX] = "";
 	char buf[PATH_MAX] = "";
 	unsigned realdev = 0;
 	struct stat sbuf;
@@ -102,6 +103,10 @@ create_new_device(const char *name){
 		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
 		return NULL;
 	}
+	if((unsigned)snprintf(devbuf,sizeof(devbuf),DEVROOT"%s",name) >= sizeof(devbuf)){
+		fprintf(stderr,"Couldn't construct dev path for "DEVROOT"%s\n",name);
+		return NULL;
+	}
 	if(realdev){
 		if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
 			if(errno == ENOMEDIUM){
@@ -115,6 +120,10 @@ create_new_device(const char *name){
 			struct sg_io_hdr sg;
 			int r;
 
+			if(probe_blkid_dev(devbuf)){
+				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
+				return NULL;
+			}
 			memset(&sg,0,sizeof(sg));
 			sg.interface_id = 'S'; // SCSI
 			r = ioctl(fd,SG_IO,&sg,sizeof(sg));
