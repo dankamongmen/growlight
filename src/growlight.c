@@ -117,10 +117,8 @@ create_new_device(const char *name){
 				return NULL;
 			}
 		}else{
-			struct sg_io_hdr sg;
 			blkid_topology tpr;
 			blkid_probe pr;
-			int r;
 
 			if(probe_blkid_dev(devbuf,&pr)){
 				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
@@ -134,6 +132,8 @@ create_new_device(const char *name){
 			}
 			logsec = blkid_topology_get_logical_sector_size(tpr);
 			physsec = blkid_topology_get_physical_sector_size(tpr);
+			/*struct sg_io_hdr sg;
+			int r;
 			memset(&sg,0,sizeof(sg));
 			sg.interface_id = 'S'; // SCSI
 			r = ioctl(fd,SG_IO,&sg,sizeof(sg));
@@ -141,7 +141,7 @@ create_new_device(const char *name){
 			if(r != 0){
 				fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
 				return NULL;
-			}
+			}*/
 			verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
 		}
 	}
