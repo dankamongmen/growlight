@@ -45,8 +45,8 @@ typedef struct device {
 	char path[PATH_MAX];	// Device topology, not filesystem
 	char *id,*label;	// Not all have one
 	// FIXME these aren't yet being set
-	unsigned logical;	// Logical sector size
-	unsigned physical;	// Physical sector size
+	unsigned logsec;	// Logical sector size
+	unsigned physsec;	// Physical sector size
 } device;
 
 static device *devs;
@@ -74,9 +74,9 @@ free_devtable(void){
 
 static inline device *
 create_new_device(const char *name){
+	unsigned realdev = 0,physsec = 0,logsec = 0;
 	char devbuf[PATH_MAX] = "";
 	char buf[PATH_MAX] = "";
-	unsigned realdev = 0;
 	struct stat sbuf;
 	device *d;
 	int fd;
@@ -118,12 +118,22 @@ create_new_device(const char *name){
 			}
 		}else{
 			struct sg_io_hdr sg;
+			blkid_topology tpr;
+			blkid_probe pr;
 			int r;
 
-			if(probe_blkid_dev(devbuf)){
+			if(probe_blkid_dev(devbuf,&pr)){
 				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
+				close(fd);
 				return NULL;
 			}
+			if((tpr = blkid_probe_get_topology(pr)) == NULL){
+				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
+				close(fd);
+				return NULL;
+			}
+			logsec = blkid_topology_get_logical_sector_size(tpr);
+			physsec = blkid_topology_get_physical_sector_size(tpr);
 			memset(&sg,0,sizeof(sg));
 			sg.interface_id = 'S'; // SCSI
 			r = ioctl(fd,SG_IO,&sg,sizeof(sg));
@@ -132,12 +142,15 @@ create_new_device(const char *name){
 				fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
 				return NULL;
 			}
+			verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
 		}
 	}
 	if( (d = malloc(sizeof(*d))) ){
 		memset(d,0,sizeof(*d));
 		d->id = d->label = NULL;
 		strcpy(d->name,name);
+		d->logsec = logsec;
+		d->physsec = physsec;
 	}else{
 		fprintf(stderr,"Couldn't look up %s (%s?)\n",name,strerror(errno));
 	}

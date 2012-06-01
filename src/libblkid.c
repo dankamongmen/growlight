@@ -80,13 +80,11 @@ int close_blkid(void){
 	return blkid_exit();
 }
 
-int probe_blkid_dev(const char *dev){
-	blkid_probe probe;
-
+int probe_blkid_dev(const char *dev,blkid_probe *pr){
 	if(blkid_entry()){
 		return -1;
 	}
-	if((probe = blkid_new_probe_from_filename(dev)) == NULL){
+	if((*pr = blkid_new_probe_from_filename(dev)) == NULL){
 		goto err;
 	}
 	return blkid_exit();
