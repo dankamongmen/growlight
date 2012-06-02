@@ -108,6 +108,7 @@ free_devtable(void){
 			} */
 
 // FIXME use libudev for this crap
+// FIXME sysfs is UTF-8 not ASCII
 char *get_sysfs_string(int dirfd,const char *node){
 	char buf[512]; // FIXME
 	ssize_t r;
