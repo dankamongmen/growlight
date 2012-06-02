@@ -74,9 +74,10 @@ free_devtable(void){
 
 static inline device *
 create_new_device(const char *name){
-	unsigned realdev = 0,physsec = 0,logsec = 0;
+	unsigned realdev = 0,physsec = 0,logsec = 0,mddev = 0;
 	char devbuf[PATH_MAX] = "";
 	char buf[PATH_MAX] = "";
+	unsigned removable = 0;
 	struct stat sbuf;
 	device *d;
 	int fd;
@@ -96,8 +97,13 @@ create_new_device(const char *name){
 			SYSROOT,buf,strerror(errno));
 		return NULL;
 	}
+	// Check for "device" to determine if it's real or virtual
 	if(fstatat(fd,"device",&sbuf,AT_NO_AUTOMOUNT) == 0){
 		realdev = 1;
+	}
+	// Check for "md" to determine if it's an MDADM device
+	if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
+		mddev = 1;
 	}
 	if(close(fd)){
 		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
@@ -107,7 +113,8 @@ create_new_device(const char *name){
 		fprintf(stderr,"Couldn't construct dev path for "DEVROOT"%s\n",name);
 		return NULL;
 	}
-	if(realdev){
+	removable = 0; // FIXME
+	if(realdev || mddev){
 		if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
 			if(errno == ENOMEDIUM){
 				// unloaded?
@@ -120,27 +127,52 @@ create_new_device(const char *name){
 			blkid_topology tpr;
 			blkid_probe pr;
 
+			// FIXME move this to its own function
 			if(probe_blkid_dev(devbuf,&pr)){
 				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
 				close(fd);
 				return NULL;
+			}
+			if(realdev && !removable){
+				blkid_parttable ptbl;
+				blkid_partlist ppl;
+				int pars;
+
+				if((ppl = blkid_probe_get_partitions(pr)) == NULL){
+					fprintf(stderr,"Couldn't probe partitions of %s (%s?)\n",name,strerror(errno));
+					close(fd);
+					return NULL;
+				}
+				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
+					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
+					close(fd);
+					return NULL;
+				}
+				pars = blkid_partlist_numof_partitions(ppl);
+				verbf("\t%d partition%s, table type %s\n",
+						pars,pars == 1 ? "" : "s",
+						blkid_parttable_get_type(ptbl));
 			}
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
 				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
 				close(fd);
 				return NULL;
 			}
+			// FIXME errorchecking!
 			logsec = blkid_topology_get_logical_sector_size(tpr);
 			physsec = blkid_topology_get_physical_sector_size(tpr);
-			/*struct sg_io_hdr sg;
-			int r;
-			memset(&sg,0,sizeof(sg));
-			sg.interface_id = 'S'; // SCSI
-			r = ioctl(fd,SG_IO,&sg,sizeof(sg));
-			close(fd);
-			if(r != 0){
-				fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
-				return NULL;
+			/*if(realdev){
+
+				struct sg_io_hdr sg;
+				int r;
+				memset(&sg,0,sizeof(sg));
+				sg.interface_id = 'S'; // SCSI
+				r = ioctl(fd,SG_IO,&sg,sizeof(sg));
+				close(fd);
+				if(r != 0){
+					fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
+					return NULL;
+				}
 			}*/
 			verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
 		}

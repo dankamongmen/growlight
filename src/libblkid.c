@@ -87,6 +87,15 @@ int probe_blkid_dev(const char *dev,blkid_probe *pr){
 	if((*pr = blkid_new_probe_from_filename(dev)) == NULL){
 		goto err;
 	}
+	if(blkid_probe_enable_topology(*pr,1)){
+		goto err;
+	}
+	if(blkid_probe_enable_superblocks(*pr,1)){
+		goto err;
+	}
+	if(blkid_probe_enable_partitions(*pr,1)){
+		goto err;
+	}
 	return blkid_exit();
 
 err:
