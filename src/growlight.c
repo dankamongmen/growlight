@@ -44,8 +44,7 @@ typedef struct device {
 	struct device *next;
 	char name[PATH_MAX];	// Entry in /dev or /sys/block
 	char path[PATH_MAX];	// Device topology, not filesystem
-	char *id,*label;	// Not all have one
-	// FIXME these aren't yet being set
+	char *model,*revision;  // Arbitrary strings
 	unsigned logsec;	// Logical sector size
 	unsigned physsec;	// Physical sector size
 } device;
@@ -73,91 +72,7 @@ free_devtable(void){
 		}
 	}*/
 
-static inline device *
-create_new_device(const char *name){
-	unsigned realdev = 0,physsec = 0,logsec = 0,mddev = 0;
-	char devbuf[PATH_MAX] = "";
-	char buf[PATH_MAX] = "";
-	struct stat sbuf;
-	device *d;
-	int fd;
-
-	if(strlen(name) >= sizeof(d->name)){
-		fprintf(stderr,"Name too long: %s\n",name);
-		return NULL;
-	}
-	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
-		fprintf(stderr,"Couldn't read link at %s/%s (%s?)\n",
-			SYSROOT,name,strerror(errno));
-	}else{
-		verbf("%s -> %s\n",name,buf);
-	}
-	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
-		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
-			SYSROOT,buf,strerror(errno));
-		return NULL;
-	}
-	// Check for "device" to determine if it's real or virtual
-	if(fstatat(fd,"device",&sbuf,AT_NO_AUTOMOUNT) == 0){
-		realdev = 1;
-	}
-	// Check for "md" to determine if it's an MDADM device
-	if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
-		mddev = 1;
-	}
-	if(close(fd)){
-		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
-		return NULL;
-	}
-	if((unsigned)snprintf(devbuf,sizeof(devbuf),DEVROOT"%s",name) >= sizeof(devbuf)){
-		fprintf(stderr,"Couldn't construct dev path for "DEVROOT"%s\n",name);
-		return NULL;
-	}
-	if(realdev || mddev){
-		// Loop on EAGAIN? Need O_NONBLOCK for SG_IO later.
-		if((fd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
-			if(errno == ENOMEDIUM){
-				// unloaded?
-			}else{
-				fprintf(stderr,"Couldn't open %s%s (%s?)\n",
-						DEVROOT,name,strerror(errno));
-				return NULL;
-			}
-		}else{
-			blkid_parttable ptbl;
-			blkid_topology tpr;
-			blkid_partlist ppl;
-			blkid_probe pr;
-			int pars;
-
-			// FIXME move this to its own function
-			if(probe_blkid_dev(devbuf,&pr)){
-				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
-				close(fd);
-				return NULL;
-			}
-			if( (ppl = blkid_probe_get_partitions(pr)) ){
-				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
-					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
-					close(fd);
-					return NULL;
-				}
-				pars = blkid_partlist_numof_partitions(ppl);
-				verbf("\t%d partition%s, table type %s\n",
-						pars,pars == 1 ? "" : "s",
-						blkid_parttable_get_type(ptbl));
-			}else{
-				verbf("\tNo partition table\n");
-			}
-			if((tpr = blkid_probe_get_topology(pr)) == NULL){
-				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
-				close(fd);
-				return NULL;
-			}
-			// FIXME errorchecking!
-			logsec = blkid_topology_get_logical_sector_size(tpr);
-			physsec = blkid_topology_get_physical_sector_size(tpr);
-			if(realdev){
+	/* if(realdev){
 				struct sg_io_hdr sg;
 #define INQ_REPLY_LEN 96
 				unsigned char cmd[6] = {
@@ -190,18 +105,146 @@ create_new_device(const char *name){
 					fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
 					return NULL;
 				}
+			} */
+
+// FIXME use libudev for this crap
+char *get_sysfs_string(int dirfd,const char *node){
+	char buf[512]; // FIXME
+	ssize_t r;
+	int fd;
+
+	if((fd = openat(dirfd,node,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+		return NULL;
+	}
+	if((r = read(fd,buf,sizeof(buf))) <= 0){
+		int e = errno;
+		close(fd);
+		errno = e;
+		return NULL;
+	}
+	if((size_t)r >= sizeof(buf) || buf[r - 1] != '\n'){
+		close(fd);
+		errno = ENAMETOOLONG;
+		return NULL;
+	}
+	close(fd);
+	buf[r - 1] = '\0';
+	return strdup(buf);
+}
+
+static inline device *
+create_new_device(const char *name){
+	unsigned realdev = 0,physsec = 0,logsec = 0,mddev = 0;
+	char *model = NULL,*rev = NULL;
+	char devbuf[PATH_MAX] = "";
+	char buf[PATH_MAX] = "";
+	struct stat sbuf;
+	//DIR *sdevdir;
+	device *d;
+	int fd,sdevfd;
+
+	if(strlen(name) >= sizeof(d->name)){
+		fprintf(stderr,"Name too long: %s\n",name);
+		return NULL;
+	}
+	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
+		fprintf(stderr,"Couldn't read link at %s/%s (%s?)\n",
+			SYSROOT,name,strerror(errno));
+	}else{
+		verbf("%s -> %s\n",name,buf);
+	}
+	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
+		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
+			SYSROOT,buf,strerror(errno));
+		return NULL;
+	}
+	// Check for "device" to determine if it's real or virtual
+	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+		realdev = 1;
+		if((model = get_sysfs_string(sdevfd,"model")) == NULL){
+			fprintf(stderr,"Couldn't get a model for %s (%s?)\n",name,strerror(errno));
+		}
+		if((rev = get_sysfs_string(sdevfd,"rev")) == NULL){
+			fprintf(stderr,"Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
+		}
+		verbf("\tModel: %s revision %s\n",model,rev);
+		close(sdevfd);
+	}
+	// Check for "md" to determine if it's an MDADM device
+	if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
+		mddev = 1;
+	}
+	if(close(fd)){
+		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
+		free(model); free(rev);
+		return NULL;
+	}
+	if((unsigned)snprintf(devbuf,sizeof(devbuf),DEVROOT"%s",name) >= sizeof(devbuf)){
+		fprintf(stderr,"Couldn't construct dev path for "DEVROOT"%s\n",name);
+		free(model); free(rev);
+		return NULL;
+	}
+	if(realdev || mddev){
+		// Loop on EAGAIN? Need O_NONBLOCK for SG_IO later.
+		if((fd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+			if(errno == ENOMEDIUM){
+				// unloaded?
+			}else{
+				fprintf(stderr,"Couldn't open %s%s (%s?)\n",
+						DEVROOT,name,strerror(errno));
+				free(model); free(rev);
+				return NULL;
 			}
+		}else{
+			blkid_parttable ptbl;
+			blkid_topology tpr;
+			blkid_partlist ppl;
+			blkid_probe pr;
+			int pars;
+
+			// FIXME move this to its own function
+			if(probe_blkid_dev(devbuf,&pr)){
+				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
+				close(fd);
+				free(model); free(rev);
+				return NULL;
+			}
+			if( (ppl = blkid_probe_get_partitions(pr)) ){
+				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
+					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
+					close(fd);
+					free(model); free(rev);
+					return NULL;
+				}
+				pars = blkid_partlist_numof_partitions(ppl);
+				verbf("\t%d partition%s, table type %s\n",
+						pars,pars == 1 ? "" : "s",
+						blkid_parttable_get_type(ptbl));
+			}else{
+				verbf("\tNo partition table\n");
+			}
+			if((tpr = blkid_probe_get_topology(pr)) == NULL){
+				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
+				close(fd);
+				free(model); free(rev);
+				return NULL;
+			}
+			// FIXME errorchecking!
+			logsec = blkid_topology_get_logical_sector_size(tpr);
+			physsec = blkid_topology_get_physical_sector_size(tpr);
 			verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
 		}
 	}
 	if( (d = malloc(sizeof(*d))) ){
 		memset(d,0,sizeof(*d));
-		d->id = d->label = NULL;
 		strcpy(d->name,name);
 		d->logsec = logsec;
 		d->physsec = physsec;
+		d->revision = rev;
+		d->model = model;
 	}else{
 		fprintf(stderr,"Couldn't look up %s (%s?)\n",name,strerror(errno));
+		free(model); free(rev);
 	}
 	return d;
 }
