@@ -77,7 +77,6 @@ create_new_device(const char *name){
 	unsigned realdev = 0,physsec = 0,logsec = 0,mddev = 0;
 	char devbuf[PATH_MAX] = "";
 	char buf[PATH_MAX] = "";
-	unsigned removable = 0;
 	struct stat sbuf;
 	device *d;
 	int fd;
@@ -113,7 +112,6 @@ create_new_device(const char *name){
 		fprintf(stderr,"Couldn't construct dev path for "DEVROOT"%s\n",name);
 		return NULL;
 	}
-	removable = 0; // FIXME
 	if(realdev || mddev){
 		if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
 			if(errno == ENOMEDIUM){
@@ -124,8 +122,11 @@ create_new_device(const char *name){
 				return NULL;
 			}
 		}else{
+			blkid_parttable ptbl;
 			blkid_topology tpr;
+			blkid_partlist ppl;
 			blkid_probe pr;
+			int pars;
 
 			// FIXME move this to its own function
 			if(probe_blkid_dev(devbuf,&pr)){
@@ -133,16 +134,7 @@ create_new_device(const char *name){
 				close(fd);
 				return NULL;
 			}
-			if(realdev && !removable){
-				blkid_parttable ptbl;
-				blkid_partlist ppl;
-				int pars;
-
-				if((ppl = blkid_probe_get_partitions(pr)) == NULL){
-					fprintf(stderr,"Couldn't probe partitions of %s (%s?)\n",name,strerror(errno));
-					close(fd);
-					return NULL;
-				}
+			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
 					close(fd);
@@ -152,6 +144,8 @@ create_new_device(const char *name){
 				verbf("\t%d partition%s, table type %s\n",
 						pars,pars == 1 ? "" : "s",
 						blkid_parttable_get_type(ptbl));
+			}else{
+				verbf("\tNo partition table\n");
 			}
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
 				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
