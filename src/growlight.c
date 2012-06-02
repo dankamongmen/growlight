@@ -10,6 +10,7 @@
 #include <string.h>
 #include <scsi/sg.h>
 #include <sys/stat.h>
+#include <scsi/scsi.h>
 #include <sys/ioctl.h>
 #include <src/config.h>
 #include <sys/inotify.h>
@@ -91,7 +92,7 @@ create_new_device(const char *name){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
-	if((fd = openat(sysfd,buf,O_CLOEXEC)) < 0){
+	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
 			SYSROOT,buf,strerror(errno));
 		return NULL;
@@ -113,7 +114,8 @@ create_new_device(const char *name){
 		return NULL;
 	}
 	if(realdev || mddev){
-		if((fd = openat(devfd,name,O_CLOEXEC)) < 0){
+		// Loop on EAGAIN? Need O_NONBLOCK for SG_IO later.
+		if((fd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 			if(errno == ENOMEDIUM){
 				// unloaded?
 			}else{
@@ -155,19 +157,40 @@ create_new_device(const char *name){
 			// FIXME errorchecking!
 			logsec = blkid_topology_get_logical_sector_size(tpr);
 			physsec = blkid_topology_get_physical_sector_size(tpr);
-			/*if(realdev){
-
+			if(realdev){
 				struct sg_io_hdr sg;
+#define INQ_REPLY_LEN 96
+				unsigned char cmd[6] = {
+					INQUIRY,0,0,0,0x24,0
+				};
+				unsigned char sense[INQ_REPLY_LEN];
+#undef INQ_REPLY_LEN
+				unsigned char buf[512];
 				int r;
 				memset(&sg,0,sizeof(sg));
 				sg.interface_id = 'S'; // SCSI
-				r = ioctl(fd,SG_IO,&sg,sizeof(sg));
+				sg.dxfer_direction = SG_DXFER_FROM_DEV;
+				sg.cmd_len = sizeof(cmd);
+				//sg.mx_sb_len = sizeof(sense);
+				sg.mx_sb_len = 32;
+				sg.iovec_count = 0;
+				//sg.dxfer_len = sizeof(sense);
+				sg.dxfer_len = 32;
+				sg.cmdp = cmd;
+				sg.sbp = sense;
+				sg.usr_ptr = buf;
+#define SCSI_TIMEOUT_MS 20000
+				sg.timeout = SCSI_TIMEOUT_MS;
+#undef SCSI_TIMEOUT_MS
+				//sg.flags = SG_FLAG_DIRECT_IO;
+				r = ioctl(fd,SG_IO,&sg,sizeof(sg),buf,sizeof(buf));
+				printf("IOCTL: %d\n",r);
 				close(fd);
 				if(r != 0){
 					fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
 					return NULL;
 				}
-			}*/
+			}
 			verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
 		}
 	}
