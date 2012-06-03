@@ -7,7 +7,7 @@
 static blkid_cache cache;
 static unsigned cache_once_success;
 static pthread_once_t cache_once = PTHREAD_ONCE_INIT;
-static pthread_mutex_t cache_lock = PTHREAD_MUTEX_INITIALIZER;
+//static pthread_mutex_t cache_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void
 init_blkid_cache(void){
@@ -19,8 +19,8 @@ init_blkid_cache(void){
 	}
 }
 
-// Call at the start of all entry points. Ensures the libblkid block cache is
-// successfully initialized upon first call, and takes the lock.
+// Call at the start of all entry points, pairing with blkid_exit on exit.
+// Ensures the libblkid block cache is successfully initialized.
 static int
 blkid_entry(void){
 	if(pthread_once(&cache_once,init_blkid_cache)){
@@ -29,15 +29,18 @@ blkid_entry(void){
 	if(!cache_once_success){
 		return -1;
 	}
-	if(pthread_mutex_lock(&cache_lock)){
+	/*if(pthread_mutex_lock(&cache_lock)){
 		return -1;
-	}
+	}*/
 	return 0;
 }
 
 static inline int
-blkid_exit(void){
-	return pthread_mutex_unlock(&cache_lock);
+blkid_exit(int ret){
+	/*if(pthread_mutex_unlock(&cache_lock)){
+		return -1;
+	}*/
+	return ret;
 }
 
 int load_blkid_superblocks(void){
@@ -49,7 +52,7 @@ int load_blkid_superblocks(void){
 		return -1;
 	}
 	if((biter = blkid_dev_iterate_begin(cache)) == NULL){
-		goto err;
+		return blkid_exit(-1);
 	}
 	r = 0;
 	while(blkid_dev_next(biter,&dev) == 0){
@@ -62,14 +65,7 @@ int load_blkid_superblocks(void){
 		}
 	}
 	blkid_dev_iterate_end(biter);
-	if(r){
-		goto err;
-	}
-	return blkid_exit();
-
-err:
-	blkid_exit();
-	return -1;
+	return blkid_exit(r);
 }
 
 int close_blkid(void){
@@ -77,7 +73,7 @@ int close_blkid(void){
 		return -1;
 	}
 	blkid_put_cache(cache);
-	return blkid_exit();
+	return blkid_exit(0);
 }
 
 int probe_blkid_dev(const char *dev,blkid_probe *pr){
@@ -85,20 +81,23 @@ int probe_blkid_dev(const char *dev,blkid_probe *pr){
 		return -1;
 	}
 	if((*pr = blkid_new_probe_from_filename(dev)) == NULL){
-		goto err;
+		return blkid_exit(-1);
 	}
 	if(blkid_probe_enable_topology(*pr,1)){
-		goto err;
+		blkid_free_probe(*pr);
+		return blkid_exit(-1);
 	}
 	if(blkid_probe_enable_superblocks(*pr,1)){
-		goto err;
+		blkid_free_probe(*pr);
+		return blkid_exit(-1);
 	}
 	if(blkid_probe_enable_partitions(*pr,1)){
-		goto err;
+		blkid_free_probe(*pr);
+		return blkid_exit(-1);
 	}
-	return blkid_exit();
-
-err:
-	blkid_exit();
-	return -1;
+	if(blkid_exit(0)){
+		blkid_free_probe(*pr);
+		return -1;
+	}
+	return 0;
 }
