@@ -214,59 +214,48 @@ create_new_device(const char *name){
 		return NULL;
 	}
 	if(realdev || mddev){
-		// Loop on EAGAIN? Need O_NONBLOCK for SG_IO later.
-		if((fd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
-			if(errno == ENOMEDIUM){
-				// unloaded?
-			}else{
-				fprintf(stderr,"Couldn't open %s%s (%s?)\n",
-						DEVROOT,name,strerror(errno));
-				free(model); free(rev);
-				return NULL;
-			}
-		}else{
-			blkid_parttable ptbl;
-			blkid_topology tpr;
-			blkid_partlist ppl;
-			blkid_probe pr;
-			int pars;
+		blkid_parttable ptbl;
+		blkid_topology tpr;
+		blkid_partlist ppl;
+		blkid_probe pr;
+		int pars;
 
-			// FIXME move all this to its own function
-			if(probe_blkid_dev(devbuf,&pr) == 0){
-				if( (ppl = blkid_probe_get_partitions(pr)) ){
-					if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
-						fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
-						close(fd);
-						free(model); free(rev);
-						blkid_free_probe(pr);
-						return NULL;
-					}
-					pars = blkid_partlist_numof_partitions(ppl);
-					verbf("\t%d partition%s, table type %s\n",
-							pars,pars == 1 ? "" : "s",
-							blkid_parttable_get_type(ptbl));
-				}else{
-					verbf("\tNo partition table\n");
-				}
-				if((tpr = blkid_probe_get_topology(pr)) == NULL){
-					fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
+		// FIXME move all this to its own function
+		if(probe_blkid_dev(devbuf,&pr) == 0){
+			if( (ppl = blkid_probe_get_partitions(pr)) ){
+				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
+					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
 					close(fd);
 					free(model); free(rev);
 					blkid_free_probe(pr);
 					return NULL;
 				}
-				// FIXME errorchecking!
-				logsec = blkid_topology_get_logical_sector_size(tpr);
-				physsec = blkid_topology_get_physical_sector_size(tpr);
-				verbf("\tLogical sector size: %uB Physical sector size: %uB\n",logsec,physsec);
-				blkid_free_probe(pr);
-			}else if(!removable || errno != ENOMEDIUM){
-				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
+				pars = blkid_partlist_numof_partitions(ppl);
+				verbf("\t%d partition%s, table type %s\n",
+						pars,pars == 1 ? "" : "s",
+						blkid_parttable_get_type(ptbl));
+			}else{
+				verbf("\tNo partition table\n");
+			}
+			if((tpr = blkid_probe_get_topology(pr)) == NULL){
+				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
 				close(fd);
 				free(model); free(rev);
+				blkid_free_probe(pr);
 				return NULL;
 			}
+			// FIXME errorchecking!
+			logsec = blkid_topology_get_logical_sector_size(tpr);
+			physsec = blkid_topology_get_physical_sector_size(tpr);
+			verbf("\tLogical sector size: %uB Physical sector size: %uB\n",logsec,physsec);
+			blkid_free_probe(pr);
+		}else if(!removable || errno != ENOMEDIUM){
+			fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
 			close(fd);
+			free(model); free(rev);
+			return NULL;
+		}else{
+			verbf("\tDevice is unloaded\n");
 		}
 	}
 	if( (d = malloc(sizeof(*d))) ){
