@@ -21,7 +21,6 @@ fi
 PKG_CHECK_MODULES([libudev], [libudev], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])])
 	CFLAGS+=" $libudev_CFLAGS"
 	LIBS+=" $libudev_LIBS"
-#LIBS+=" -ludev"
 
 PKG_CHECK_MODULES([libblkid], [blkid], [have_libblkid=yes])
 	CFLAGS+=" $libblkid_CFLAGS"
