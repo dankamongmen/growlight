@@ -339,10 +339,18 @@ watch_dir(int fd,const char *dfp){
 }
 
 static void
+version(const char *name,int status){
+	FILE *fp = status == EXIT_SUCCESS ? stdout : stderr;
+
+	fprintf(fp,"%s version %s\n",name,VERSION);
+	exit(status);
+}
+
+static void
 usage(const char *name,int status){
 	FILE *fp = status == EXIT_SUCCESS ? stdout : stderr;
 
-	fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ]\n",name);
+	fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n",name);
 	exit(status);
 }
 
@@ -375,6 +383,11 @@ int main(int argc,char **argv){
 			.flag = NULL,
 			.val = 'v',
 		},{
+			.name = "version",
+			.has_arg = 0,
+			.flag = NULL,
+			.val = 'V',
+		},{
 			.name = NULL,
 			.has_arg = 0,
 			.flag = NULL,
@@ -384,14 +397,17 @@ int main(int argc,char **argv){
 	int fd,opt,longidx;
 	DIR *sdir;
 
-	opterr = 1;
-	while((opt = getopt_long(argc,argv,"hv",ops,&longidx)) >= 0){
+	opterr = 0; // disallow getopt(3) diagnostics to stderr
+	while((opt = getopt_long(argc,argv,"hvV",ops,&longidx)) >= 0){
 		switch(opt){
 		case 'h':{
 			usage(argv[0],EXIT_SUCCESS);
 			break;
 		}case 'v':{
 			verbose = 1;
+			break;
+		}case 'V':{
+			version(argv[0],EXIT_SUCCESS);
 			break;
 		}case ':':{
 			fprintf(stderr,"Option requires argument: '%c'\n",optopt);
