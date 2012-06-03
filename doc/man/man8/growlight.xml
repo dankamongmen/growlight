@@ -60,9 +60,9 @@
 	<refsynopsisdiv>
 		<cmdsynopsis>
 			<command>&dhpackage;</command>
-			<arg>-h</arg>
-			<arg>-v</arg>
-			<arg>--version</arg>
+			<arg>-h|--help</arg>
+			<arg>-v|--verbose</arg>
+			<arg>-V|--version</arg>
 		</cmdsynopsis>
 	</refsynopsisdiv>
 	<refsect1 id="description">
@@ -77,19 +77,19 @@
 	<refsect1 id="options">
 		<title>OPTIONS</title>
 		<varlistentry>
-			<term><option>-h</option></term>
+			<term><option>-h|--help</option></term>
 			<listitem>
 			<para>Print a brief usage summary and exit.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>-v</option></term>
+			<term><option>-v|--verbose</option></term>
 			<listitem>
 			<para>Be more verbose.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>--version</option></term>
+			<term><option>-V|--version</option></term>
 			<listitem>
 			<para>Print version information and exit.</para>
 			</listitem>
