@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+	"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd" [
+
+<!ENTITY % growlightents SYSTEM "growlight.ent" >
+%growlightents;
+
+<!-- TITLE should be something like "User commands",		-->
+<!-- "&dhpackage; command-line reference" or similar (see e.g.	-->
+<!-- http://www.tldp.org/HOWTO/Man-Page/q2.html). But limit	-->
+<!-- it to 30    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" chars.	-->
+<!ENTITY dhtitle "growlight reference">
+  
+<!-- This is the application/package name.	-->
+<!ENTITY dhucpackage "growlight">
+<!ENTITY dhpackage "growlight">
+
+<!-- If the application e.g. belongs to a package like X.org,	-->
+<!-- this should be set to the package/suite name instead of	-->
+<!-- dhpackage.							-->
+<!ENTITY dhproduct "growlight">
+
+<!-- SECTION should be 1-8, maybe w/ subsection other	-->
+<!-- parameters are allowed: see man(7), man(1) and	-->
+<!-- http://www.tldp.org/HOWTO/Man-Page/q2.html.	-->
+<!ENTITY dhsection "8">
+
+]>
+
+<refentry>
+	<refentryinfo>
+		<title>&dhtitle;</title>
+		<!-- Better put a suite name instead of &dhpackage; into productname -->
+		<productname>&dhproduct;</productname>
+		<releaseinfo role="version">&dhrelease;</releaseinfo>
+		<authorgroup>
+			<author>
+				<firstname>&dhfirstname;</firstname>
+				<surname>&dhsurname;</surname>
+				<contrib>Design and implementation.</contrib>
+				<address>
+					<email>&dhemail;</email>
+				</address>
+			</author>
+		</authorgroup>
+		<copyright>
+			<year>2012</year>
+			<holder>&dhusername;</holder>
+		</copyright>
+	</refentryinfo>
+	<refmeta>
+		<refentrytitle>&dhucpackage;</refentrytitle>
+		<manvolnum>&dhsection;</manvolnum>
+	</refmeta>
+	<refnamediv>
+		<refname>&dhpackage;</refname>
+		<refpurpose>System disk preparation</refpurpose>
+	</refnamediv>
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>&dhpackage;</command>
+			<arg>-h</arg>
+			<arg>-v</arg>
+			<arg>--version</arg>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+	<refsect1 id="description">
+		<title>DESCRIPTION</title>
+		<para><command>&dhpackage;</command> detects and describes
+                disk pools, block devices, partition tables, and partitions.
+		It can partition devices, manipulate ZFS, MDADM, DMRAID, LVM
+		and hardware RAID virtual devices, and prepare an fstab file
+		for using the devices to boot or in a chroot, and is fully
+		aware of variable sector sizes, GPT, and UEFI.</para>
+	</refsect1>
+	<refsect1 id="options">
+		<title>OPTIONS</title>
+		<varlistentry>
+			<term><option>-h</option></term>
+			<listitem>
+			<para>Print a brief usage summary and exit.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>-v</option></term>
+			<listitem>
+			<para>Be more verbose.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>--version</option></term>
+			<listitem>
+			<para>Print version information and exit.</para>
+			</listitem>
+		</varlistentry>
+	</refsect1>
+	<refsect1 id="bugs">
+		<title>BUGS</title>
+		<para>Search <ulink url="http://www.sprezzatech.com/bugs/buglist.cgi?component=Growlight"/>.
+		Mail bug reports and/or patches to the authors.</para>
+	</refsect1>
+	<refsect1 id="see_also">
+		<title>SEE ALSO</title>
+		<para>GitHub: <ulink url="http://github.com/dankamongmen/growlight"/></para>
+		<para>Project wiki: <ulink url="http://dank.qemfd.net/dankwiki/index.php/growlight"/></para>
+		<para>
+		<citerefentry>
+			<refentrytitle>dmraid</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>fstab</refentrytitle>
+			<manvolnum>5</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>libblkid</refentrytitle>
+			<manvolnum>3</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>lsblk</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>mdadm</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>zfs</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>zpool</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>
+		</para>
+	</refsect1>
+</refentry>
