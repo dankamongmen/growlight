@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
@@ -125,7 +126,8 @@ free_devtable(void){
 
 // FIXME use libudev for this crap
 // FIXME sysfs is UTF-8 not ASCII
-char *get_sysfs_string(int dirfd,const char *node){
+static char *
+get_sysfs_string(int dirfd,const char *node){
 	char buf[512]; // FIXME
 	ssize_t r;
 	int fd;
@@ -149,7 +151,19 @@ char *get_sysfs_string(int dirfd,const char *node){
 	return strdup(buf);
 }
 
-int get_sysfs_bool(int dirfd,const char *node,unsigned *b){
+static unsigned
+sysfs_exist_p(int dirfd,const char *node){
+	int fd;
+
+	if((fd = openat(dirfd,node,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+		return 0;
+	}
+	close(fd);
+	return 1;
+}
+
+static int
+get_sysfs_bool(int dirfd,const char *node,unsigned *b){
 	char buf[512]; // FIXME
 	ssize_t r;
 	int fd;
@@ -176,10 +190,40 @@ int get_sysfs_bool(int dirfd,const char *node,unsigned *b){
 
 // Pass a directory handle fd, and the bare name of the device
 int explore_sysfs_node(int fd,const char *name,device *d){
-	struct stat sbuf;
+	struct dirent *dire;
 	unsigned b;
 	int sdevfd;
+	DIR *dir;
 
+	// do *not* call closedir(3) on dir: doing so will close(2) fd.
+	if((dir = fdopendir(fd)) == NULL){
+		fprintf(stderr,"Couldn't get DIR * from fd %d for %s (%s?)\n",
+				fd,name,strerror(errno));
+		return -1;
+	}
+	while(errno = 0, (dire = readdir(dir)) ){
+		int subfd;
+
+		if(dire->d_type == DT_DIR){
+			// Check for "md" to determine if it's an MDADM device
+			if(strcmp(dire->d_name,"md") == 0){
+				d->layout = LAYOUT_MDADM;
+			}else if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+				if(sysfs_exist_p(subfd,"partition")){
+					verbf("\tPartition at %s\n",dire->d_name);
+				}
+				close(subfd);
+			}else{
+				fprintf(stderr,"Couldn't open directory at %s for %s (%s?)\n",
+						dire->d_name,name,strerror(errno));
+				return -1;
+			}
+		}
+	}
+	if(errno){
+		fprintf(stderr,"Error walking sysfs:%s (%s?)\n",name,strerror(errno));
+		return -1;
+	}
 	if(get_sysfs_bool(fd,"removable",&b)){
 		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
 	}else{
@@ -196,10 +240,6 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 		}
 		verbf("\tModel: %s revision %s\n",d->model,d->revision);
 		close(sdevfd);
-	}
-	// Check for "md" to determine if it's an MDADM device
-	if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
-		d->layout = LAYOUT_MDADM;
 	}
 	return 0;
 }
