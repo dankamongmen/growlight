@@ -7,8 +7,10 @@ config.sub
 configure
 depcomp
 .deps/
+doc/growlight.ent
 growlight
 growlight.o
+growlight.8
 growlight-*.tar.bz2
 growlight-*.tar.gz
 install-sh
