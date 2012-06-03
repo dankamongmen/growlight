@@ -18,6 +18,8 @@ if test "$XSLTPROC" = no ; then
 	AC_MSG_ERROR([Cannot find xsltproc.])
 fi
 
+AX_CHECK_DOCBOOK_XSLT
+
 PKG_CHECK_MODULES([libudev], [libudev], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])])
 	CFLAGS+=" $libudev_CFLAGS"
 	LIBS+=" $libudev_LIBS"
