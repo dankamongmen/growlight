@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
+#include <pciaccess.h>
 #include <src/config.h>
 #include <sys/inotify.h>
 
@@ -318,12 +319,12 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
 // for virtual/PCI currently.
 static int
-parse_bus_topology(const char *fn,unsigned long *domain,unsigned long *bus,
-			unsigned long *dev,unsigned long *func){
+parse_bus_topology(const char *fn){
+	unsigned long domain,bus,dev,func;
+	struct pci_device *pcidev;
 	const char *pci;
 
 	if(strstr(fn,"/devices/virtual/")){
-		*domain = *bus = *dev = *func = 0;
 		return 0;
 	}
 	if((pci = strstr(fn,"/devices/pci")) == NULL){
@@ -331,17 +332,20 @@ parse_bus_topology(const char *fn,unsigned long *domain,unsigned long *bus,
 		return -1;
 	}
 	pci += strlen("/devices/pci");
-	if(parse_pci_busid(pci,domain,bus,dev,func)){
+	if(parse_pci_busid(pci,&domain,&bus,&dev,&func)){
 		fprintf(stderr,"Couldn't extract PCI address from %s\n",pci);
 		return -1;
 	}
-	verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",*domain,*bus,*dev,*func);
+	verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
+	if((pcidev = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
+		fprintf(stderr,"Couldn't look up PCI device %s\n",fn);
+		return -1;
+	}
 	return 0;
 }
 
 static inline device *
 create_new_device(const char *name){
-	unsigned long domain,bus,dev,func;
 	char buf[PATH_MAX] = "";
 	device *d,dd;
 	int fd;
@@ -357,7 +361,7 @@ create_new_device(const char *name){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
-	if(parse_bus_topology(buf,&domain,&bus,&dev,&func)){
+	if(parse_bus_topology(buf)){
 		fprintf(stderr,"Couldn't get physical bus topology for %s\n",name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
@@ -615,6 +619,10 @@ int main(int argc,char **argv){
 		} }
 	}
 	printf("%s %s (libblkid %s)\n",PACKAGE,PACKAGE_VERSION,BLKID_VERSION);
+	if(pci_system_init()){
+		fprintf(stderr,"Couldn't init libpciaccess (%s?)\n",strerror(errno));
+		return EXIT_FAILURE;
+	}
 	if(chdir(SYSROOT)){
 		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
 		return EXIT_FAILURE;
