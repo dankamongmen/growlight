@@ -3,8 +3,6 @@ growlight
 
 Sprezzatech's system installation application.
 
-See:
-
  http://www.sprezzatech.com/research.html
  http://dank.qemfd.net/dankwiki/index.php/Growlight
 
@@ -13,3 +11,13 @@ Dependencies:
  - libudev (tested with Debian's 175-3.1)
  - libblkid (tested with Debian's 2.20.1-5)
  - xsltproc (buildtime only)
+ - autotools (buildtime only, and only if building from a checkout)
+
+Building from a git checkout:
+
+ - autoreconf -fi
+ - continue from "Building from a tarball"
+
+Building from a tarball:
+
+ - ./configure && make && sudo make install
