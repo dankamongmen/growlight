@@ -215,6 +215,7 @@ create_new_device(const char *name){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
 					close(fd);
 					free(model); free(rev);
+					blkid_free_probe(pr);
 					return NULL;
 				}
 				pars = blkid_partlist_numof_partitions(ppl);
@@ -228,12 +229,15 @@ create_new_device(const char *name){
 				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
 				close(fd);
 				free(model); free(rev);
+				blkid_free_probe(pr);
 				return NULL;
 			}
 			// FIXME errorchecking!
 			logsec = blkid_topology_get_logical_sector_size(tpr);
 			physsec = blkid_topology_get_physical_sector_size(tpr);
 			verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
+			blkid_free_probe(pr);
+			close(fd);
 		}
 	}
 	if( (d = malloc(sizeof(*d))) ){
