@@ -13,7 +13,17 @@ AC_PROG_CC_C99
 
 AX_PTHREAD
 
-PKG_CHECK_MODULES(libblkid, blkid, [have_libblkid=yes])
+AX_PROG_XSLTPROC
+if test "$XSLTPROC" = no ; then
+	AC_MSG_ERROR([Cannot find xsltproc.])
+fi
+
+PKG_CHECK_MODULES([libudev], [libudev], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])])
+	CFLAGS+=" $libudev_CFLAGS"
+	LIBS+=" $libudev_LIBS"
+#LIBS+=" -ludev"
+
+PKG_CHECK_MODULES([libblkid], [blkid], [have_libblkid=yes])
 	CFLAGS+=" $libblkid_CFLAGS"
 	LIBS+=" $libblkid_LIBS"
 
