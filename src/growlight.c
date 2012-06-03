@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <blkid.h>
+#include <limits.h>
 #include <locale.h>
 #include <stdarg.h>
 #include <getopt.h>
@@ -244,8 +245,103 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 	return 0;
 }
 
+static int
+parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
+                                unsigned long *dev,unsigned long *func){
+        const char *cur;
+        char *e;
+
+        // FIXME clean this cut-and-paste crap up
+        cur = busid;
+        if(*cur == '-'){ // strtoul() admits leading negations
+                return -1;
+        }
+        if(strtoul(cur,&e,16) == ULONG_MAX){
+                return -1;
+        }
+        if(*e != ':'){
+                return -1;
+        }
+        cur = e + 1;
+        if(*cur == '-'){ // strtoul() admits leading negations
+                return -1;
+        }
+        if(strtoul(cur,&e,16) == ULONG_MAX){
+                return -1;
+        }
+        if(*e != '/'){
+                return -1;
+        }
+        cur = e + 1;
+        if(*cur == '-'){ // strtoul() admits leading negations
+                return -1;
+        }
+        if((*domain = strtoul(cur,&e,16)) == ULONG_MAX){
+                return -1;
+        }
+        if(*e != ':'){
+                return -1;
+        }
+        cur = e + 1;
+        if(*cur == '-'){ // strtoul() admits leading negations
+                return -1;
+        }
+        if((*bus = strtoul(cur,&e,16)) == ULONG_MAX){
+                return -1;
+        }
+        if(*e != ':'){
+                return -1;
+        }
+        cur = e + 1;
+        if(*cur == '-'){ // strtoul() admits leading negations
+                return -1;
+        }
+        if((*dev = strtoul(cur,&e,16)) == ULONG_MAX){
+                return -1;
+        }
+        if(*e != '.'){
+                return -1;
+        }
+        cur = e + 1;
+        if(*cur == '-'){ // strtoul() admits leading negations
+                return -1;
+        }
+        if((*func = strtoul(cur,&e,16)) == ULONG_MAX){
+                return -1;
+        }
+        if(*e != '/'){
+                return -1;
+        }
+        return 0;
+}
+
+// Takes the sysfs link as read when dereferencing /sys/block/*. Only works
+// for virtual/PCI currently.
+static int
+parse_bus_topology(const char *fn,unsigned long *domain,unsigned long *bus,
+			unsigned long *dev,unsigned long *func){
+	const char *pci;
+
+	if(strstr(fn,"/devices/virtual/")){
+		*domain = *bus = *dev = *func = 0;
+		return 0;
+	}
+	if((pci = strstr(fn,"/devices/pci")) == NULL){
+		fprintf(stderr,"Unknown bus type: %s\n",fn);
+		return -1;
+	}
+	pci += strlen("/devices/pci");
+	if(parse_pci_busid(pci,domain,bus,dev,func)){
+		fprintf(stderr,"Couldn't extract PCI address from %s\n",pci);
+		return -1;
+	}
+	verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",*domain,*bus,*dev,*func);
+	return 0;
+}
+
 static inline device *
 create_new_device(const char *name){
+	unsigned long domain,bus,dev,func;
 	char buf[PATH_MAX] = "";
 	device *d,dd;
 	int fd;
@@ -260,6 +356,9 @@ create_new_device(const char *name){
 			SYSROOT,name,strerror(errno));
 	}else{
 		verbf("%s -> %s\n",name,buf);
+	}
+	if(parse_bus_topology(buf,&domain,&bus,&dev,&func)){
+		fprintf(stderr,"Couldn't get physical bus topology for %s\n",name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
