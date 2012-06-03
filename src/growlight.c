@@ -19,6 +19,7 @@
 #include <pciaccess.h>
 #include <src/config.h>
 #include <sys/inotify.h>
+#include <sys/utsname.h>
 
 #include <libblkid.h>
 #include <growlight.h>
@@ -319,12 +320,19 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
 // for virtual/PCI currently.
 static int
-parse_bus_topology(const char *fn){
+parse_bus_topology(const char *fn,char **devname,char **vendor){
 	unsigned long domain,bus,dev,func;
+	const char *pci,*name,*vend;
 	struct pci_device *pcidev;
-	const char *pci;
 
+	*vendor = NULL;
+	*devname = NULL;
 	if(strstr(fn,"/devices/virtual/")){
+		struct utsname u;
+
+		uname(&u);
+		*devname = strdup("virtual device");
+		*vendor = strdup(u.sysname);
 		return 0;
 	}
 	if((pci = strstr(fn,"/devices/pci")) == NULL){
@@ -341,12 +349,19 @@ parse_bus_topology(const char *fn){
 		fprintf(stderr,"Couldn't look up PCI device %s\n",fn);
 		return -1;
 	}
+	if( (name = pci_device_get_device_name(pcidev)) ){
+		*devname = strdup(name);
+	}
+	if( (vend = pci_device_get_vendor_name(pcidev)) ){
+		*vendor = strdup(vend);
+	}
 	return 0;
 }
 
 static inline device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
+	char *devname,*vendor;
 	device *d,dd;
 	int fd;
 
@@ -361,8 +376,11 @@ create_new_device(const char *name){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
-	if(parse_bus_topology(buf)){
+	if(parse_bus_topology(buf,&devname,&vendor)){
 		fprintf(stderr,"Couldn't get physical bus topology for %s\n",name);
+	}
+	if(devname || vendor){
+		verbf("\tController: %s %s\n",vendor,devname);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
