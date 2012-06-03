@@ -12,3 +12,4 @@ Dependencies:
 
  - libudev (tested with Debian's 175-3.1)
  - libblkid (tested with Debian's 2.20.1-5)
+ - xsltproc (buildtime only)
