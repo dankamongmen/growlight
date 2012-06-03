@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <blkid.h>
+#include <locale.h>
 #include <stdarg.h>
 #include <getopt.h>
 #include <unistd.h>
@@ -9,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <scsi/sg.h>
+#include <langinfo.h>
 #include <sys/stat.h>
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
@@ -42,11 +44,11 @@ verbf(const char *fmt,...){
 // partition.
 typedef struct device {
 	struct device *next;
-	char name[PATH_MAX];	// Entry in /dev or /sys/block
-	char path[PATH_MAX];	// Device topology, not filesystem
-	char *model,*revision;  // Arbitrary strings
-	unsigned logsec;	// Logical sector size
-	unsigned physsec;	// Physical sector size
+	char name[PATH_MAX];		// Entry in /dev or /sys/block
+	char path[PATH_MAX];		// Device topology, not filesystem
+	char *model,*revision;		// Arbitrary UTF-8 strings
+	unsigned logsec;		// Logical sector size
+	unsigned physsec;		// Physical sector size
 } device;
 
 static device *devs;
@@ -417,8 +419,17 @@ int main(int argc,char **argv){
 		},
 	};
 	int fd,opt,longidx;
+	const char *enc;
 	DIR *sdir;
 
+	if(setlocale(LC_ALL,"") == NULL){
+		fprintf(stderr,"Couldn't set locale (%s?)\n",strerror(errno));
+		return EXIT_FAILURE;
+	}
+	if((!(enc = nl_langinfo(CODESET))) || strcmp(enc,"UTF-8")){
+		fprintf(stderr,"Output isn't UTF-8, aborting\n");
+		return EXIT_FAILURE;
+	}
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
 	while((opt = getopt_long(argc,argv,"hvV",ops,&longidx)) >= 0){
 		switch(opt){
