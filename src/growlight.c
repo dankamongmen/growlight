@@ -20,7 +20,6 @@
 #include <libblkid.h>
 #include <growlight.h>
 
-#define DEVROOT "/dev/"
 #define SYSROOT "/sys/block/"
 
 static unsigned verbose;
@@ -49,11 +48,26 @@ typedef struct device {
 	char *model,*revision;		// Arbitrary UTF-8 strings
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
+	struct {
+		unsigned realdev: 1;	// Is itself a real block device 
+		unsigned removable: 1;	// Removable media
+	};
+	enum {
+		LAYOUT_NONE,
+		LAYOUT_MDADM,
+	} layout;
 } device;
 
 static device *devs;
-static int devfd = -1; // Hold a reference to DEVROOT
 static int sysfd = -1; // Hold a reference to SYSROOT
+
+static void
+free_device(device *d){
+	if(d){
+		free(d->model);
+		free(d->revision);
+	}
+}
 
 static void
 free_devtable(void){
@@ -61,11 +75,11 @@ free_devtable(void){
 
 	while( (d = devs) ){
 		devs = d->next;
+		free_device(d);
 		free(d);
 	}
-	close(devfd);
 	close(sysfd);
-	devfd = sysfd = -1;
+	sysfd = -1;
 }
 
 	/*if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
@@ -160,17 +174,43 @@ int get_sysfs_bool(int dirfd,const char *node,unsigned *b){
 	return 0;
 }
 
+// Pass a directory handle fd, and the bare name of the device
+int explore_sysfs_node(int fd,const char *name,device *d){
+	struct stat sbuf;
+	unsigned b;
+	int sdevfd;
+
+	if(get_sysfs_bool(fd,"removable",&b)){
+		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
+	}else{
+		d->removable = !!b;
+	}
+	// Check for "device" to determine if it's real or virtual
+	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+		d->realdev = 1;
+		if((d->model = get_sysfs_string(sdevfd,"model")) == NULL){
+			fprintf(stderr,"Couldn't get a model for %s (%s?)\n",name,strerror(errno));
+		}
+		if((d->revision = get_sysfs_string(sdevfd,"rev")) == NULL){
+			fprintf(stderr,"Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
+		}
+		verbf("\tModel: %s revision %s\n",d->model,d->revision);
+		close(sdevfd);
+	}
+	// Check for "md" to determine if it's an MDADM device
+	if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
+		d->layout = LAYOUT_MDADM;
+	}
+	return 0;
+}
+
 static inline device *
 create_new_device(const char *name){
-	unsigned realdev = 0,physsec = 0,logsec = 0,mddev = 0,removable = 0;
-	char *model = NULL,*rev = NULL;
-	char devbuf[PATH_MAX] = "";
 	char buf[PATH_MAX] = "";
-	struct stat sbuf;
-	//DIR *sdevdir;
-	device *d;
-	int fd,sdevfd;
+	device *d,dd;
+	int fd;
 
+	memset(&dd,0,sizeof(dd));
 	if(strlen(name) >= sizeof(d->name)){
 		fprintf(stderr,"Name too long: %s\n",name);
 		return NULL;
@@ -186,49 +226,31 @@ create_new_device(const char *name){
 			SYSROOT,buf,strerror(errno));
 		return NULL;
 	}
-	if(get_sysfs_bool(fd,"removable",&removable)){
-		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
-	}
-	// Check for "device" to determine if it's real or virtual
-	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
-		realdev = 1;
-		if((model = get_sysfs_string(sdevfd,"model")) == NULL){
-			fprintf(stderr,"Couldn't get a model for %s (%s?)\n",name,strerror(errno));
-		}
-		if((rev = get_sysfs_string(sdevfd,"rev")) == NULL){
-			fprintf(stderr,"Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
-		}
-		verbf("\tModel: %s revision %s\n",model,rev);
-		close(sdevfd);
-	}
-	// Check for "md" to determine if it's an MDADM device
-	if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
-		mddev = 1;
+	if(explore_sysfs_node(fd,name,&dd)){
+		close(fd);
+		return NULL;
 	}
 	if(close(fd)){
 		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
-		free(model); free(rev);
+		free_device(&dd);
 		return NULL;
 	}
-	if((unsigned)snprintf(devbuf,sizeof(devbuf),DEVROOT"%s",name) >= sizeof(devbuf)){
-		fprintf(stderr,"Couldn't construct dev path for "DEVROOT"%s\n",name);
-		free(model); free(rev);
-		return NULL;
-	}
-	if(realdev || mddev){
+	if(dd.realdev || (dd.layout == LAYOUT_MDADM)){
+		char devbuf[PATH_MAX];
 		blkid_parttable ptbl;
 		blkid_topology tpr;
 		blkid_partlist ppl;
 		blkid_probe pr;
 		int pars;
 
+		snprintf(devbuf,sizeof(devbuf),"/dev/%s",name);
 		// FIXME move all this to its own function
 		if(probe_blkid_dev(devbuf,&pr) == 0){
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
 					close(fd);
-					free(model); free(rev);
+					free_device(&dd);
 					blkid_free_probe(pr);
 					return NULL;
 				}
@@ -242,34 +264,31 @@ create_new_device(const char *name){
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
 				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
 				close(fd);
-				free(model); free(rev);
+				free_device(&dd);
 				blkid_free_probe(pr);
 				return NULL;
 			}
 			// FIXME errorchecking!
-			logsec = blkid_topology_get_logical_sector_size(tpr);
-			physsec = blkid_topology_get_physical_sector_size(tpr);
-			verbf("\tLogical sector size: %uB Physical sector size: %uB\n",logsec,physsec);
+			dd.logsec = blkid_topology_get_logical_sector_size(tpr);
+			dd.physsec = blkid_topology_get_physical_sector_size(tpr);
+			verbf("\tLogical sector size: %uB Physical sector size: %uB\n",
+					dd.logsec,dd.physsec);
 			blkid_free_probe(pr);
-		}else if(!removable || errno != ENOMEDIUM){
+		}else if(!dd.removable || errno != ENOMEDIUM){
 			fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
 			close(fd);
-			free(model); free(rev);
+			free_device(&dd);
 			return NULL;
 		}else{
 			verbf("\tDevice is unloaded\n");
 		}
 	}
 	if( (d = malloc(sizeof(*d))) ){
-		memset(d,0,sizeof(*d));
+		*d = dd;
 		strcpy(d->name,name);
-		d->logsec = logsec;
-		d->physsec = physsec;
-		d->revision = rev;
-		d->model = model;
 	}else{
 		fprintf(stderr,"Couldn't look up %s (%s?)\n",name,strerror(errno));
-		free(model); free(rev);
+		free_device(&dd);
 	}
 	return d;
 }
@@ -462,9 +481,6 @@ int main(int argc,char **argv){
 		return EXIT_FAILURE;
 	}
 	if((sysfd = get_dir_fd(&sdir,SYSROOT)) < 0){
-		return EXIT_FAILURE;
-	}
-	if((devfd = get_dir_fd(&sdir,DEVROOT)) < 0){
 		return EXIT_FAILURE;
 	}
 	/*if(load_blkid_superblocks()){
