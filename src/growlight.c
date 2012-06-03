@@ -133,9 +133,34 @@ char *get_sysfs_string(int dirfd,const char *node){
 	return strdup(buf);
 }
 
+int get_sysfs_bool(int dirfd,const char *node,unsigned *b){
+	char buf[512]; // FIXME
+	ssize_t r;
+	int fd;
+
+	if((fd = openat(dirfd,node,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+		return -1;
+	}
+	if((r = read(fd,buf,sizeof(buf))) <= 0){
+		int e = errno;
+		close(fd);
+		errno = e;
+		return -1;
+	}
+	if((size_t)r >= sizeof(buf) || buf[r - 1] != '\n'){
+		close(fd);
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+	close(fd);
+	buf[r - 1] = '\0';
+	*b = strcmp(buf,"0") ? 1 : 0;
+	return 0;
+}
+
 static inline device *
 create_new_device(const char *name){
-	unsigned realdev = 0,physsec = 0,logsec = 0,mddev = 0;
+	unsigned realdev = 0,physsec = 0,logsec = 0,mddev = 0,removable = 0;
 	char *model = NULL,*rev = NULL;
 	char devbuf[PATH_MAX] = "";
 	char buf[PATH_MAX] = "";
@@ -158,6 +183,9 @@ create_new_device(const char *name){
 		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
 			SYSROOT,buf,strerror(errno));
 		return NULL;
+	}
+	if(get_sysfs_bool(fd,"removable",&removable)){
+		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
 	}
 	// Check for "device" to determine if it's real or virtual
 	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
@@ -203,40 +231,41 @@ create_new_device(const char *name){
 			blkid_probe pr;
 			int pars;
 
-			// FIXME move this to its own function
-			if(probe_blkid_dev(devbuf,&pr)){
-				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
-				close(fd);
-				free(model); free(rev);
-				return NULL;
-			}
-			if( (ppl = blkid_probe_get_partitions(pr)) ){
-				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
-					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
+			// FIXME move all this to its own function
+			if(probe_blkid_dev(devbuf,&pr) == 0){
+				if( (ppl = blkid_probe_get_partitions(pr)) ){
+					if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
+						fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
+						close(fd);
+						free(model); free(rev);
+						blkid_free_probe(pr);
+						return NULL;
+					}
+					pars = blkid_partlist_numof_partitions(ppl);
+					verbf("\t%d partition%s, table type %s\n",
+							pars,pars == 1 ? "" : "s",
+							blkid_parttable_get_type(ptbl));
+				}else{
+					verbf("\tNo partition table\n");
+				}
+				if((tpr = blkid_probe_get_topology(pr)) == NULL){
+					fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
 					close(fd);
 					free(model); free(rev);
 					blkid_free_probe(pr);
 					return NULL;
 				}
-				pars = blkid_partlist_numof_partitions(ppl);
-				verbf("\t%d partition%s, table type %s\n",
-						pars,pars == 1 ? "" : "s",
-						blkid_parttable_get_type(ptbl));
-			}else{
-				verbf("\tNo partition table\n");
-			}
-			if((tpr = blkid_probe_get_topology(pr)) == NULL){
-				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
+				// FIXME errorchecking!
+				logsec = blkid_topology_get_logical_sector_size(tpr);
+				physsec = blkid_topology_get_physical_sector_size(tpr);
+				verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
+				blkid_free_probe(pr);
+			}else if(!removable || errno != ENOMEDIUM){
+				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
 				close(fd);
 				free(model); free(rev);
-				blkid_free_probe(pr);
 				return NULL;
 			}
-			// FIXME errorchecking!
-			logsec = blkid_topology_get_logical_sector_size(tpr);
-			physsec = blkid_topology_get_physical_sector_size(tpr);
-			verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
-			blkid_free_probe(pr);
 			close(fd);
 		}
 	}
