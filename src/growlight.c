@@ -258,7 +258,7 @@ create_new_device(const char *name){
 				// FIXME errorchecking!
 				logsec = blkid_topology_get_logical_sector_size(tpr);
 				physsec = blkid_topology_get_physical_sector_size(tpr);
-				verbf("\tLogical sectors: %uB Physical sectors: %uB\n",logsec,physsec);
+				verbf("\tLogical sector size: %uB Physical sector size: %uB\n",logsec,physsec);
 				blkid_free_probe(pr);
 			}else if(!removable || errno != ENOMEDIUM){
 				fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
