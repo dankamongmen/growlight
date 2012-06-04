@@ -347,44 +347,17 @@ link_speed(int speed){
 	}
 }
 
-/*
-struct pcicap {
-	uint8_t cap;
-	uint8_t next;
-};
-
-static uint8_t
-pci_get_caps(struct pci_device *pci,unsigned captype){
-	struct pcicap cap;
-	void *r;
-
-	r = &cap;
-	assert(pci_device_cfg_read_u16(pci,r,PCI_CAPABILITY_LIST) == 0);
-	printf("CAP: %x next: %u\n",cap.cap,cap.next);
-	assert(cap.next < 192);
-	assert(pci_device_cfg_read_u16(pci,r,cap.next) == 0);
-	printf("CAP: %x next: %u\n",cap.cap,cap.next);
-	if(cap.cap == captype){
-		return cap.next;
-	}
-	assert(cap.next < 192);
-	assert(pci_device_cfg_read_u16(pci,r,cap.next) == 0);
-	printf("CAP: %x next: %u\n",cap.cap,cap.next);
-	return cap.next;
-}
-*/
-
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
 // for virtual/PCI currently.
 static int
 parse_bus_topology(const char *fn,char **devname){
 	unsigned long domain,bus,dev,func;
-	unsigned char cspace[64];
+	//unsigned char cspace[64];
 	struct pci_dev *pcidev;
+	struct pci_cap *pcicap;
 	char buf[BUFSIZ],*rbuf;
 	const char *pci;
-	/*uint8_t capptr;
-	uint32_t data;*/
+	uint32_t data;
 
 	*devname = NULL;
 	if(strstr(fn,"/devices/virtual/")){
@@ -400,36 +373,31 @@ parse_bus_topology(const char *fn,char **devname){
 		fprintf(stderr,"Couldn't extract PCI address from %s\n",pci);
 		return -1;
 	}
-	verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
+	//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
 	if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
 		fprintf(stderr,"Couldn't look up PCI device %s\n",fn);
 		return -1;
 	}
-	assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|PCI_FILL_SIZES|PCI_FILL_RESCAN));
+	assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
+					PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
+					PCI_FILL_SIZES|PCI_FILL_RESCAN));
 	/* Get the relevant address pointer */
 	if( (rbuf = pci_lookup_name(pciacc,buf,sizeof(buf),PCI_LOOKUP_VENDOR|PCI_LOOKUP_DEVICE,
 					pcidev->vendor_id,pcidev->device_id)) ){
 		*devname = strdup(rbuf);
 	}
-	assert(pci_read_block(pcidev,0,cspace,sizeof(cspace)));
-	pci_free_dev(pcidev);
-	/*pci_device_probe(pcidev);
-	capptr = pci_get_caps(pcidev,PCI_CAP_EXTENDED);
-	if(pci_device_cfg_read_u32(pcidev,&data,capptr + PCI_EXP_LNKSTA)){
-		fprintf(stderr,"Read from PCI config space failed\n");
-		return -1;
+	data = 0;
+	if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_EXP,PCI_CAP_NORMAL)) ){
+		data = pci_read_word(pcidev,pcicap->addr + PCI_EXP_LNKSTA);
+	}else if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_MSI,PCI_CAP_NORMAL)) ){
+		// FIXME?
 	}
-  printf("\t\tLnkSta:\tSpeed %s, Width x%d, TrErr%c Train%c SlotClk%c DLActive%c BWMgmt%c ABWMgmt%c\n",
-        link_speed(data & PCI_EXP_LNKSTA_SPEED),
-        (data & PCI_EXP_LNKSTA_WIDTH) >> 4u,
-        FLAG(data, PCI_EXP_LNKSTA_TR_ERR),
-        FLAG(data, PCI_EXP_LNKSTA_TRAIN),
-        FLAG(data, PCI_EXP_LNKSTA_SL_CLK),
-        FLAG(data, PCI_EXP_LNKSTA_DL_ACT),
-        FLAG(data, PCI_EXP_LNKSTA_BWMGMT),
-        FLAG(data, PCI_EXP_LNKSTA_AUTBW));
-	*/
-
+	pci_free_dev(pcidev);
+	if(data){
+		printf("\tLnkSta:\tSpeed %s, Width x%d\n",
+        		link_speed(data & PCI_EXP_LNKSTA_SPEED),
+        		(data & PCI_EXP_LNKSTA_WIDTH) >> 4u);
+	}
 	return 0;
 }
 
