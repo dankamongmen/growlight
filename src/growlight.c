@@ -485,7 +485,7 @@ create_new_device(const char *name){
 			free_device(&dd);
 			return NULL;
 		}else{
-			verbf("\tDevice is unloaded\n");
+			verbf("\tDevice is unloaded/inaccessible\n");
 		}
 	}
 	if( (d = malloc(sizeof(*d))) ){
