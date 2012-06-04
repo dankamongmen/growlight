@@ -20,9 +20,9 @@ fi
 
 AX_CHECK_DOCBOOK_XSLT
 
-AC_CHECK_LIB(pciaccess,pci_device_find_by_slot, [have_libpciaccess=yes],
-	[AC_MSG_ERROR([Cannot find libpciaccess.])])
-	LIBS+=" -lpciaccess"
+AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
+	[AC_MSG_ERROR([Cannot find libpci.])])
+	LIBS+=" -lpci"
 
 PKG_CHECK_MODULES([libudev], [libudev], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])])
 	CFLAGS+=" $libudev_CFLAGS"

@@ -16,10 +16,8 @@
 #include <sys/stat.h>
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
-#include <pciaccess.h>
 #include <src/config.h>
 #include <sys/inotify.h>
-#include <sys/utsname.h>
 
 #include <pci/pci.h>
 #include <pci/header.h>
@@ -30,6 +28,7 @@
 #define SYSROOT "/sys/block/"
 
 static unsigned verbose;
+static struct pci_access *pciacc;
 
 static inline int
 verbf(const char *fmt,...){
@@ -372,26 +371,23 @@ pci_get_caps(struct pci_device *pci,unsigned captype){
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
 // for virtual/PCI currently.
 static int
-parse_bus_topology(const char *fn,char **devname,char **vendor){
+parse_bus_topology(const char *fn,char **devname){
 	unsigned long domain,bus,dev,func;
-	const char *pci,*name,*vend;
-	struct pci_device *pcidev;
+	unsigned char cspace[64];
+	struct pci_dev *pcidev;
+	char buf[BUFSIZ],*rbuf;
+	const char *pci;
 	/*uint8_t capptr;
 	uint32_t data;*/
 
-	*vendor = NULL;
 	*devname = NULL;
 	if(strstr(fn,"/devices/virtual/")){
-		struct utsname u;
-
-		uname(&u);
-		*devname = strdup("virtual device");
-		*vendor = strdup(u.sysname);
+		*devname = strdup("Virtual device");
 		return 0;
 	}
 	if((pci = strstr(fn,"/devices/pci")) == NULL){
-		fprintf(stderr,"Unknown bus type: %s\n",fn);
-		return -1;
+		*devname = strdup("Unknown bus type");
+		return 0;
 	}
 	pci += strlen("/devices/pci");
 	if(parse_pci_busid(pci,&domain,&bus,&dev,&func)){
@@ -399,18 +395,20 @@ parse_bus_topology(const char *fn,char **devname,char **vendor){
 		return -1;
 	}
 	//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
-	if((pcidev = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
+	if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
 		fprintf(stderr,"Couldn't look up PCI device %s\n",fn);
 		return -1;
 	}
-	if( (name = pci_device_get_device_name(pcidev)) ){
-		*devname = strdup(name);
+	assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|PCI_FILL_SIZES|PCI_FILL_RESCAN));
+	/* Get the relevant address pointer */
+	if( (rbuf = pci_lookup_name(pciacc,buf,sizeof(buf),PCI_LOOKUP_VENDOR|PCI_LOOKUP_DEVICE,
+					pcidev->vendor_id,pcidev->device_id)) ){
+		*devname = strdup(rbuf);
 	}
-	if( (vend = pci_device_get_vendor_name(pcidev)) ){
-		*vendor = strdup(vend);
-	}
-	pci_device_probe(pcidev);
-	/*capptr = pci_get_caps(pcidev,PCI_CAP_EXTENDED);
+	assert(pci_read_block(pcidev,0,cspace,sizeof(cspace)));
+	pci_free_dev(pcidev);
+	/*pci_device_probe(pcidev);
+	capptr = pci_get_caps(pcidev,PCI_CAP_EXTENDED);
 	if(pci_device_cfg_read_u32(pcidev,&data,capptr + PCI_EXP_LNKSTA)){
 		fprintf(stderr,"Read from PCI config space failed\n");
 		return -1;
@@ -433,7 +431,7 @@ parse_bus_topology(const char *fn,char **devname,char **vendor){
 static inline device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
-	char *devname,*vendor;
+	char *devname;
 	device *d,dd;
 	int fd;
 
@@ -448,12 +446,11 @@ create_new_device(const char *name){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
-	if(parse_bus_topology(buf,&devname,&vendor)){
+	if(parse_bus_topology(buf,&devname)){
 		fprintf(stderr,"Couldn't get physical bus topology for %s\n",name);
 		return NULL;
-	}
-	if(devname || vendor){
-		verbf("\tController: %s %s\n",vendor,devname);
+	}else if(devname){
+		verbf("\tController: %s\n",devname);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
@@ -647,6 +644,16 @@ get_dir_fd(DIR **dir,const char *root){
 	return fd;
 }
 
+static int
+pci_system_init(void){
+	if((pciacc = pci_alloc()) == NULL){
+		return -1;
+	}
+	pci_init(pciacc);
+	pci_scan_bus(pciacc);
+	return 0;
+}
+
 int main(int argc,char **argv){
 	static const struct option ops[] = {
 		{
@@ -709,9 +716,10 @@ int main(int argc,char **argv){
 			break;
 		} }
 	}
-	printf("%s %s (libblkid %s)\n",PACKAGE,PACKAGE_VERSION,BLKID_VERSION);
+	printf("%s %s (libblkid %s, libpci 0x%x)\n",PACKAGE,PACKAGE_VERSION,
+			BLKID_VERSION,PCI_LIB_VERSION);
 	if(pci_system_init()){
-		fprintf(stderr,"Couldn't init libpciaccess (%s?)\n",strerror(errno));
+		fprintf(stderr,"Couldn't init libpci (%s?)\n",strerror(errno));
 		return EXIT_FAILURE;
 	}
 	if(chdir(SYSROOT)){
@@ -735,5 +743,6 @@ int main(int argc,char **argv){
 	}
 	close_blkid();
 	free_devtable();
+	pci_cleanup(pciacc);
 	return EXIT_SUCCESS;
 }
