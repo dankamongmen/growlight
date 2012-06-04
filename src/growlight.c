@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
@@ -276,46 +277,51 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
         if(*e != '/'){
                 return -1;
         }
-        cur = e + 1;
-        if(*cur == '-'){ // strtoul() admits leading negations
-                return -1;
-        }
-        if((*domain = strtoul(cur,&e,16)) == ULONG_MAX){
-                return -1;
-        }
-        if(*e != ':'){
-                return -1;
-        }
-        cur = e + 1;
-        if(*cur == '-'){ // strtoul() admits leading negations
-                return -1;
-        }
-        if((*bus = strtoul(cur,&e,16)) == ULONG_MAX){
-                return -1;
-        }
-        if(*e != ':'){
-                return -1;
-        }
-        cur = e + 1;
-        if(*cur == '-'){ // strtoul() admits leading negations
-                return -1;
-        }
-        if((*dev = strtoul(cur,&e,16)) == ULONG_MAX){
-                return -1;
-        }
-        if(*e != '.'){
-                return -1;
-        }
-        cur = e + 1;
-        if(*cur == '-'){ // strtoul() admits leading negations
-                return -1;
-        }
-        if((*func = strtoul(cur,&e,16)) == ULONG_MAX){
-                return -1;
-        }
-        if(*e != '/'){
-                return -1;
-        }
+	*domain = *bus = *dev = *func = 0; // FIXME purge
+	// FIXME hack! we ought check to see if the PCI device we just
+	// resolved is a bridge, and if so, keep going. instead, check
+	// whatever comes next. no bueno!
+	while(cur = e + 1, !isalpha(*cur)){
+		if(*cur == '-'){ // strtoul() admits leading negations
+			return -1;
+		}
+		if((*domain = strtoul(cur,&e,16)) == ULONG_MAX){
+			return -1;
+		}
+		if(*e != ':'){
+			return -1;
+		}
+		cur = e + 1;
+		if(*cur == '-'){ // strtoul() admits leading negations
+			return -1;
+		}
+		if((*bus = strtoul(cur,&e,16)) == ULONG_MAX){
+			return -1;
+		}
+		if(*e != ':'){
+			return -1;
+		}
+		cur = e + 1;
+		if(*cur == '-'){ // strtoul() admits leading negations
+			return -1;
+		}
+		if((*dev = strtoul(cur,&e,16)) == ULONG_MAX){
+			return -1;
+		}
+		if(*e != '.'){
+			return -1;
+		}
+		cur = e + 1;
+		if(*cur == '-'){ // strtoul() admits leading negations
+			return -1;
+		}
+		if((*func = strtoul(cur,&e,16)) == ULONG_MAX){
+			return -1;
+		}
+		if(*e != '/'){
+			return -1;
+		}
+	}
         return 0;
 }
 
@@ -394,7 +400,7 @@ parse_bus_topology(const char *fn,char **devname){
 		fprintf(stderr,"Couldn't extract PCI address from %s\n",pci);
 		return -1;
 	}
-	//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
+	verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
 	if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
 		fprintf(stderr,"Couldn't look up PCI device %s\n",fn);
 		return -1;
