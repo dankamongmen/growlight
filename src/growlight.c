@@ -21,6 +21,9 @@
 #include <sys/inotify.h>
 #include <sys/utsname.h>
 
+#include <pci/pci.h>
+#include <pci/header.h>
+
 #include <libblkid.h>
 #include <growlight.h>
 
@@ -317,6 +320,55 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
         return 0;
 }
 
+#define PCI_EXP_LNKSTA		0x12
+#define  PCI_EXP_LNKSTA_SPEED   0x000f  /* Negotiated Link Speed */
+#define  PCI_EXP_LNKSTA_WIDTH   0x03f0  /* Negotiated Link Width */
+#define  PCI_EXP_LNKSTA_TR_ERR  0x0400  /* Training Error (obsolete) */
+#define  PCI_EXP_LNKSTA_TRAIN   0x0800  /* Link Training */
+#define  PCI_EXP_LNKSTA_SL_CLK  0x1000  /* Slot Clock Configuration */
+#define  PCI_EXP_LNKSTA_DL_ACT  0x2000  /* Data Link Layer in DL_Active State */
+#define  PCI_EXP_LNKSTA_BWMGMT  0x4000  /* Bandwidth Mgmt Status */
+#define  PCI_EXP_LNKSTA_AUTBW   0x8000  /* Autonomous Bandwidth Mgmt Status */
+#define FLAG(x,y) ((x & y) ? '+' : '-')
+
+
+static inline const char *
+link_speed(int speed){
+	switch(speed){
+		case 1: return "2.5GT/s";
+		case 2: return "5GT/s";
+		case 3: return "8GT/s";
+		default: return "unknown";
+	}
+}
+
+/*
+struct pcicap {
+	uint8_t cap;
+	uint8_t next;
+};
+
+static uint8_t
+pci_get_caps(struct pci_device *pci,unsigned captype){
+	struct pcicap cap;
+	void *r;
+
+	r = &cap;
+	assert(pci_device_cfg_read_u16(pci,r,PCI_CAPABILITY_LIST) == 0);
+	printf("CAP: %x next: %u\n",cap.cap,cap.next);
+	assert(cap.next < 192);
+	assert(pci_device_cfg_read_u16(pci,r,cap.next) == 0);
+	printf("CAP: %x next: %u\n",cap.cap,cap.next);
+	if(cap.cap == captype){
+		return cap.next;
+	}
+	assert(cap.next < 192);
+	assert(pci_device_cfg_read_u16(pci,r,cap.next) == 0);
+	printf("CAP: %x next: %u\n",cap.cap,cap.next);
+	return cap.next;
+}
+*/
+
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
 // for virtual/PCI currently.
 static int
@@ -324,6 +376,8 @@ parse_bus_topology(const char *fn,char **devname,char **vendor){
 	unsigned long domain,bus,dev,func;
 	const char *pci,*name,*vend;
 	struct pci_device *pcidev;
+	/*uint8_t capptr;
+	uint32_t data;*/
 
 	*vendor = NULL;
 	*devname = NULL;
@@ -344,7 +398,7 @@ parse_bus_topology(const char *fn,char **devname,char **vendor){
 		fprintf(stderr,"Couldn't extract PCI address from %s\n",pci);
 		return -1;
 	}
-	verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
+	//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
 	if((pcidev = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
 		fprintf(stderr,"Couldn't look up PCI device %s\n",fn);
 		return -1;
@@ -355,8 +409,26 @@ parse_bus_topology(const char *fn,char **devname,char **vendor){
 	if( (vend = pci_device_get_vendor_name(pcidev)) ){
 		*vendor = strdup(vend);
 	}
+	pci_device_probe(pcidev);
+	/*capptr = pci_get_caps(pcidev,PCI_CAP_EXTENDED);
+	if(pci_device_cfg_read_u32(pcidev,&data,capptr + PCI_EXP_LNKSTA)){
+		fprintf(stderr,"Read from PCI config space failed\n");
+		return -1;
+	}
+  printf("\t\tLnkSta:\tSpeed %s, Width x%d, TrErr%c Train%c SlotClk%c DLActive%c BWMgmt%c ABWMgmt%c\n",
+        link_speed(data & PCI_EXP_LNKSTA_SPEED),
+        (data & PCI_EXP_LNKSTA_WIDTH) >> 4u,
+        FLAG(data, PCI_EXP_LNKSTA_TR_ERR),
+        FLAG(data, PCI_EXP_LNKSTA_TRAIN),
+        FLAG(data, PCI_EXP_LNKSTA_SL_CLK),
+        FLAG(data, PCI_EXP_LNKSTA_DL_ACT),
+        FLAG(data, PCI_EXP_LNKSTA_BWMGMT),
+        FLAG(data, PCI_EXP_LNKSTA_AUTBW));
+	*/
+
 	return 0;
 }
+
 
 static inline device *
 create_new_device(const char *name){
@@ -378,6 +450,7 @@ create_new_device(const char *name){
 	}
 	if(parse_bus_topology(buf,&devname,&vendor)){
 		fprintf(stderr,"Couldn't get physical bus topology for %s\n",name);
+		return NULL;
 	}
 	if(devname || vendor){
 		verbf("\tController: %s %s\n",vendor,devname);
