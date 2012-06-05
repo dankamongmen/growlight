@@ -168,7 +168,8 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 			}
 		}
 		pci_free_dev(pcidev);
-		cur = c;
+		c->next = controllers;
+		cur = controllers = c;
 	}
 	return cur;
 }
@@ -205,13 +206,26 @@ free_device(device *d){
 }
 
 static void
+free_controller(controller *c){
+	if(c){
+		free(c->name);
+	}
+}
+
+static void
 free_devtable(void){
+	controller *c;
 	device *d;
 
 	while( (d = devs) ){
 		devs = d->next;
 		free_device(d);
 		free(d);
+	}
+	while( (c = controllers) ){
+		controllers = c->next;
+		free_controller(c);
+		free(c);
 	}
 	close(sysfd);
 	sysfd = -1;
