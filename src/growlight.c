@@ -53,6 +53,7 @@ typedef struct device {
 	char name[PATH_MAX];		// Entry in /dev or /sys/block
 	char path[PATH_MAX];		// Device topology, not filesystem
 	char *model,*revision;		// Arbitrary UTF-8 strings
+	char *controller;		// From libpci database
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	struct {
@@ -73,6 +74,7 @@ free_device(device *d){
 	if(d){
 		free(d->model);
 		free(d->revision);
+		free(d->controller);
 	}
 }
 
@@ -350,7 +352,7 @@ link_speed(int speed){
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
 // for virtual/PCI currently.
 static int
-parse_bus_topology(const char *fn,char **devname){
+parse_bus_topology(const char *fn,device *d){
 	unsigned long domain,bus,dev,func;
 	//unsigned char cspace[64];
 	struct pci_dev *pcidev;
@@ -359,13 +361,12 @@ parse_bus_topology(const char *fn,char **devname){
 	const char *pci;
 	uint32_t data;
 
-	*devname = NULL;
 	if(strstr(fn,"/devices/virtual/")){
-		*devname = strdup("Virtual device");
+		d->controller = strdup("Virtual device");
 		return 0;
 	}
 	if((pci = strstr(fn,"/devices/pci")) == NULL){
-		*devname = strdup("Unknown bus type");
+		d->controller = strdup("Unknown bus type");
 		return 0;
 	}
 	pci += strlen("/devices/pci");
@@ -384,7 +385,7 @@ parse_bus_topology(const char *fn,char **devname){
 	/* Get the relevant address pointer */
 	if( (rbuf = pci_lookup_name(pciacc,buf,sizeof(buf),PCI_LOOKUP_VENDOR|PCI_LOOKUP_DEVICE,
 					pcidev->vendor_id,pcidev->device_id)) ){
-		*devname = strdup(rbuf);
+		d->controller = strdup(rbuf);
 	}
 	data = 0;
 	if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_EXP,PCI_CAP_NORMAL)) ){
@@ -405,7 +406,6 @@ parse_bus_topology(const char *fn,char **devname){
 static inline device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
-	char *devname;
 	device *d,dd;
 	int fd;
 
@@ -420,19 +420,21 @@ create_new_device(const char *name){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
-	if(parse_bus_topology(buf,&devname)){
+	if(parse_bus_topology(buf,&dd)){
 		fprintf(stderr,"Couldn't get physical bus topology for %s\n",name);
 		return NULL;
-	}else if(devname){
-		verbf("\tController: %s\n",devname);
+	}else if(dd.controller){
+		verbf("\tController: %s\n",dd.controller);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
 			SYSROOT,buf,strerror(errno));
+		free_device(&dd);
 		return NULL;
 	}
 	if(explore_sysfs_node(fd,name,&dd)){
 		close(fd);
+		free_device(&dd);
 		return NULL;
 	}
 	if(close(fd)){
