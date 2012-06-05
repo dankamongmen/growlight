@@ -68,13 +68,14 @@ static int
 print_drive(const device *d){
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c   %-6.6s\n",d->name,
+	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s\n",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			d->logsec,d->physsec,
 			d->removable ? 'R' : 'r',
 			d->realdev ? 'v' : 'V',
 			d->layout == LAYOUT_MDADM ? 'M' : 'm',
+			d->rotate ? 'O' : 'o',
 			d->pttable ? d->pttable : "none"
 			);
 	if(rr < 0){
@@ -99,7 +100,7 @@ blockdevs(char * const *args){
 			}
 		}
 	}
-	printf("\n  Flags: (R)emovable, (M)D device, (V)irtual\n\n");
+	printf("\n  Flags: (r)emovable, (v)irtual, (m)dadm, r(o)tational\n\n");
 	return 0;
 }
 

@@ -26,6 +26,7 @@ typedef struct device {
 	struct {
 		unsigned realdev: 1;	// Is itself a real block device 
 		unsigned removable: 1;	// Removable media
+		unsigned rotate: 1;	// Rotational media / spinning platters
 	};
 	enum {
 		LAYOUT_NONE,
