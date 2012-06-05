@@ -6,12 +6,12 @@
 
 #include <growlight.h>
 
+#define ZERO_ARG_CHECK(args) \
+ if(args[1]){ fprintf(stderr,"Usage: %s\n",*args); return -1 ; }
+
 static int
 initiators(char * const *args){
-	while(*args){
-		printf("token: %s\n",*args);
-		++args;
-	}
+	ZERO_ARG_CHECK(args);
 	return 0;
 }
 
@@ -109,7 +109,12 @@ tty_ui(void){
 			if(strcasecmp(fxn->cmd,tokes[0])){
 				continue;
 			}
+			break;
+		}
+		if(fxn->fxn){
 			fxn->fxn(tokes);
+		}else{
+			fprintf(stderr,"Unknown command: %s\n",tokes[0]);
 		}
 		free_tokes(tokes);
 	}
