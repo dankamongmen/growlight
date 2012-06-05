@@ -123,6 +123,10 @@ int main(int argc,char * const *argv){
 	}
 	rl_prep_terminal(1); // 1 == read 8-bit input
 	if(tty_ui()){
+		growlight_stop();
+		return EXIT_FAILURE;
+	}
+	if(growlight_stop()){
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;

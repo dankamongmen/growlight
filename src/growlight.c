@@ -751,11 +751,11 @@ int growlight_init(int argc,char * const *argv){
 
 	if(setlocale(LC_ALL,"") == NULL){
 		fprintf(stderr,"Couldn't set locale (%s?)\n",strerror(errno));
-		return EXIT_FAILURE;
+		goto err;
 	}
 	if((!(enc = nl_langinfo(CODESET))) || strcmp(enc,"UTF-8")){
 		fprintf(stderr,"Output isn't UTF-8, aborting\n");
-		return EXIT_FAILURE;
+		goto err;
 	}
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
 	while((opt = getopt_long(argc,argv,"hvV",ops,&longidx)) >= 0){
@@ -787,29 +787,36 @@ int growlight_init(int argc,char * const *argv){
 			BLKID_VERSION,PCI_LIB_VERSION);
 	if(pci_system_init()){
 		fprintf(stderr,"Couldn't init libpci (%s?)\n",strerror(errno));
-		return EXIT_FAILURE;
+		goto err;
 	}
 	if(chdir(SYSROOT)){
 		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
-		return EXIT_FAILURE;
+		goto err;
 	}
 	if((sysfd = get_dir_fd(&sdir,SYSROOT)) < 0){
-		return EXIT_FAILURE;
+		goto err;
 	}
 	/*if(load_blkid_superblocks()){
 		fprintf(stderr,"Error initializing libblkid (%s?)\n",strerror(errno));
 		free_devtable();
-		return EXIT_FAILURE;
+		goto err;
 	}*/
 	if((fd = inotify_fd()) < 0){
-		return EXIT_FAILURE;
+		goto err;
 	}
 	if(watch_dir(fd,SYSROOT)){
-		free_devtable();
-		return EXIT_FAILURE;
+		goto err;
 	}
+	return 0;
+
+err:
+	growlight_stop();
+	return -1;
+}
+
+int growlight_stop(void){
 	close_blkid();
 	free_devtable();
 	pci_cleanup(pciacc);
-	return EXIT_SUCCESS;
+	return 0;
 }

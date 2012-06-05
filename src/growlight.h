@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 int growlight_init(int,char * const *);
+int growlight_stop(void);
 
 #ifdef __cplusplus
 }
