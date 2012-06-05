@@ -31,6 +31,8 @@
 static unsigned verbose;
 static struct pci_access *pciacc;
 
+static int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
+
 static inline int
 verbf(const char *fmt,...){
 	va_list ap;
@@ -46,14 +48,139 @@ verbf(const char *fmt,...){
 	return v;
 }
 
-// An (non-link) entry in the device hierarchy, representing a disk or
-// partition.
+// A block device controller.
+typedef struct controller {
+	// FIXME if libpci doesn't know about the device, we still ought use
+	// a name determined via inspection of sysfs, just as we do for disks
+	char *name;		// From libpci database
+	enum {
+		BUS_VIRTUAL,
+		BUS_PCIe,
+	} bus;
+	// Union parameterized on bus type
+	union {
+		struct {
+			// PCIe theoretical speeds reach (1 transfer == 1 bit):
+			//
+			//  1.0: 2.5GT/s each way
+			//  2.0: 5GT/s each way
+			//  3.0: 8GT/s each way
+			//
+			// 1.0 and 2.0 use 8/10 encoding, while 3.0 uses 8/128
+			// encoding. 1.0 thus gives you a peak of 250MB/s/lane,
+			// and 2.0 offers 500MB/s/lane. Further overheads can
+			// reduce the useful throughput.
+			unsigned gen;
+			// A physical slot can be incompletely wired, allowing
+			// a card of n lanes to be used in a slot with only m
+			// electronically-wired lanes, n > m.
+			//
+			//  lanes_cap: card capabilities
+			//  lanes_sta: negotiated number of PCIe lanes
+			unsigned lanes_cap,lanes_neg;
+			// PCIe topological addressing
+			unsigned domain,bus,dev,func;
+		} pcie;
+	};
+	struct controller *next;
+} controller;
+
+static controller *controllers;
+
+#define PCI_EXP_LNKSTA		0x12
+#define  PCI_EXP_LNKSTA_SPEED   0x000f  /* Negotiated Link Speed */
+#define  PCI_EXP_LNKSTA_WIDTH   0x03f0  /* Negotiated Link Width */
+#define  PCI_EXP_LNKSTA_TR_ERR  0x0400  /* Training Error (obsolete) */
+#define  PCI_EXP_LNKSTA_TRAIN   0x0800  /* Link Training */
+#define  PCI_EXP_LNKSTA_SL_CLK  0x1000  /* Slot Clock Configuration */
+#define  PCI_EXP_LNKSTA_DL_ACT  0x2000  /* Data Link Layer in DL_Active State */
+#define  PCI_EXP_LNKSTA_BWMGMT  0x4000  /* Bandwidth Mgmt Status */
+#define  PCI_EXP_LNKSTA_AUTBW   0x8000  /* Autonomous Bandwidth Mgmt Status */
+#define FLAG(x,y) ((x & y) ? '+' : '-')
+
+
+static inline const char *
+link_speed(int speed){
+	switch(speed){
+		case 1: return "2.5GT/s";
+		case 2: return "5GT/s";
+		case 3: return "8GT/s";
+		default: return "unknown";
+	}
+}
+
+static const controller *
+find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
+	const controller *cur;
+
+	for(cur = controllers ; cur ; cur = cur->next){
+		if(cur->bus != BUS_PCIe){
+			continue;
+		}
+		if(cur->pcie.domain != domain || cur->pcie.bus != bus){
+			continue;
+		}
+		if(cur->pcie.dev != dev || cur->pcie.func != func){
+			continue;
+		}
+		break;
+	}
+	if(cur == NULL){
+		struct pci_dev *pcidev;
+		char buf[BUFSIZ],*rbuf;
+		controller *c;
+
+		if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
+			fprintf(stderr,"Couldn't look up PCI device\n");
+			return NULL;
+		}
+		assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
+						PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
+						PCI_FILL_SIZES|PCI_FILL_RESCAN));
+		if( (rbuf = pci_lookup_name(pciacc,buf,sizeof(buf),PCI_LOOKUP_VENDOR|PCI_LOOKUP_DEVICE,
+						pcidev->vendor_id,pcidev->device_id)) ){
+		}
+		if( (c = malloc(sizeof(*c))) ){
+			struct pci_cap *pcicap;
+			uint32_t data;
+
+			c->name = NULL;
+			c->bus = BUS_PCIe;
+			c->pcie.domain = domain;
+			c->pcie.bus = bus;
+			c->pcie.dev = dev;
+			c->pcie.func = func;
+			//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
+			/* Get the relevant address pointer */
+			data = 0;
+			if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_EXP,PCI_CAP_NORMAL)) ){
+				data = pci_read_word(pcidev,pcicap->addr + PCI_EXP_LNKSTA);
+			}else if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_MSI,PCI_CAP_NORMAL)) ){
+				// FIXME?
+			}
+			if(data){
+				printf("\tLnkSta:\tSpeed %s, Width x%d\n",
+					link_speed(data & PCI_EXP_LNKSTA_SPEED),
+					(data & PCI_EXP_LNKSTA_WIDTH) >> 4u);
+			}
+			if((c->name = strdup(rbuf)) == NULL){
+				// FIXME?
+			}
+		}
+		pci_free_dev(pcidev);
+		cur = c;
+	}
+	return cur;
+}
+
+// An (non-link) entry in the device hierarchy, representing a block device.
 typedef struct device {
 	struct device *next;
 	char name[PATH_MAX];		// Entry in /dev or /sys/block
 	char path[PATH_MAX];		// Device topology, not filesystem
 	char *model,*revision;		// Arbitrary UTF-8 strings
-	char *controller;		// From libpci database
+	const controller *controller;	// Primary controller route
+					// FIXME how to deal with multipath?
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	struct {
@@ -74,7 +201,6 @@ free_device(device *d){
 	if(d){
 		free(d->model);
 		free(d->revision);
-		free(d->controller);
 	}
 }
 
@@ -327,46 +453,19 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
         return 0;
 }
 
-#define PCI_EXP_LNKSTA		0x12
-#define  PCI_EXP_LNKSTA_SPEED   0x000f  /* Negotiated Link Speed */
-#define  PCI_EXP_LNKSTA_WIDTH   0x03f0  /* Negotiated Link Width */
-#define  PCI_EXP_LNKSTA_TR_ERR  0x0400  /* Training Error (obsolete) */
-#define  PCI_EXP_LNKSTA_TRAIN   0x0800  /* Link Training */
-#define  PCI_EXP_LNKSTA_SL_CLK  0x1000  /* Slot Clock Configuration */
-#define  PCI_EXP_LNKSTA_DL_ACT  0x2000  /* Data Link Layer in DL_Active State */
-#define  PCI_EXP_LNKSTA_BWMGMT  0x4000  /* Bandwidth Mgmt Status */
-#define  PCI_EXP_LNKSTA_AUTBW   0x8000  /* Autonomous Bandwidth Mgmt Status */
-#define FLAG(x,y) ((x & y) ? '+' : '-')
-
-
-static inline const char *
-link_speed(int speed){
-	switch(speed){
-		case 1: return "2.5GT/s";
-		case 2: return "5GT/s";
-		case 3: return "8GT/s";
-		default: return "unknown";
-	}
-}
-
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
 // for virtual/PCI currently.
 static int
 parse_bus_topology(const char *fn,device *d){
 	unsigned long domain,bus,dev,func;
-	//unsigned char cspace[64];
-	struct pci_dev *pcidev;
-	struct pci_cap *pcicap;
-	char buf[BUFSIZ],*rbuf;
 	const char *pci;
-	uint32_t data;
 
 	if(strstr(fn,"/devices/virtual/")){
-		d->controller = strdup("Virtual device");
+		//d->controller = strdup("Virtual device"); FIXME
 		return 0;
 	}
 	if((pci = strstr(fn,"/devices/pci")) == NULL){
-		d->controller = strdup("Unknown bus type");
+		// FIXME d->controller = strdup("Unknown bus type");
 		return 0;
 	}
 	pci += strlen("/devices/pci");
@@ -374,30 +473,8 @@ parse_bus_topology(const char *fn,device *d){
 		fprintf(stderr,"Couldn't extract PCI address from %s\n",pci);
 		return -1;
 	}
-	//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
-	if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
-		fprintf(stderr,"Couldn't look up PCI device %s\n",fn);
+	if((d->controller = find_pcie_controller(domain,bus,dev,func)) == NULL){
 		return -1;
-	}
-	assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
-					PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
-					PCI_FILL_SIZES|PCI_FILL_RESCAN));
-	/* Get the relevant address pointer */
-	if( (rbuf = pci_lookup_name(pciacc,buf,sizeof(buf),PCI_LOOKUP_VENDOR|PCI_LOOKUP_DEVICE,
-					pcidev->vendor_id,pcidev->device_id)) ){
-		d->controller = strdup(rbuf);
-	}
-	data = 0;
-	if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_EXP,PCI_CAP_NORMAL)) ){
-		data = pci_read_word(pcidev,pcicap->addr + PCI_EXP_LNKSTA);
-	}else if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_MSI,PCI_CAP_NORMAL)) ){
-		// FIXME?
-	}
-	pci_free_dev(pcidev);
-	if(data){
-		printf("\tLnkSta:\tSpeed %s, Width x%d\n",
-        		link_speed(data & PCI_EXP_LNKSTA_SPEED),
-        		(data & PCI_EXP_LNKSTA_WIDTH) >> 4u);
 	}
 	return 0;
 }
@@ -424,7 +501,7 @@ create_new_device(const char *name){
 		fprintf(stderr,"Couldn't get physical bus topology for %s\n",name);
 		return NULL;
 	}else if(dd.controller){
-		verbf("\tController: %s\n",dd.controller);
+		verbf("\tController: %s\n",dd.controller->name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
