@@ -11,7 +11,14 @@
 
 static int
 initiators(char * const *args){
+	const controller *c;
+
 	ZERO_ARG_CHECK(args);
+	c = get_controllers();
+	while(c){
+		printf("%s\n",c->name);
+		c = c->next;
+	}
 	return 0;
 }
 
