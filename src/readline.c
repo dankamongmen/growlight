@@ -75,7 +75,7 @@ print_drive(const device *d){
 			d->removable ? 'R' : '.',
 			d->realdev ? '.' : 'V',
 			d->layout == LAYOUT_MDADM ? 'M' : '.',
-			d->realdev ? d->rotate ? 'O' : '.' : 'x',
+			d->realdev ? d->rotate ? 'O' : '.' : '.',
 			d->pttable ? d->pttable : "none"
 			);
 	if(rr < 0){
