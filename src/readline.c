@@ -9,6 +9,43 @@
 #define ZERO_ARG_CHECK(args) \
  if(args[1]){ fprintf(stderr,"Usage: %s\n",*args); return -1 ; }
 
+static const char *
+pcie_gen(unsigned gen){
+	switch(gen){
+		case 1: return "1.0";
+		case 2: return "2.0";
+		case 3: return "3.0";
+		default: return "unknown";
+	}
+}
+
+static int
+print_controller(const controller *c){
+	int r = 0,rr;
+
+	switch(c->bus){
+		case BUS_PCIe:
+			rr = printf("PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)\n",
+					c->pcie.domain,c->pcie.bus,
+					c->pcie.dev,c->pcie.func,
+					c->pcie.lanes_neg,pcie_gen(c->pcie.gen));
+			if(rr < 0){
+				return -1;
+			}
+			r += rr;
+			break;
+		default:
+			fprintf(stderr,"Unknown bus type: %d\n",c->bus);
+			return -1;
+	}
+	rr = printf("\t%s\n",c->name);
+	if(rr < 0){
+		return -1;
+	}
+	r += rr;
+	return r;
+}
+
 static int
 initiators(char * const *args){
 	const controller *c;
@@ -16,7 +53,9 @@ initiators(char * const *args){
 	ZERO_ARG_CHECK(args);
 	c = get_controllers();
 	while(c){
-		printf("%s\n",c->name);
+		if(print_controller(c) < 0){
+			return -1;
+		}
 		c = c->next;
 	}
 	return 0;

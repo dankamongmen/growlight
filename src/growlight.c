@@ -118,7 +118,11 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 			if(data){
 				c->pcie.gen = data & PCI_EXP_LNKSTA_SPEED;
 				c->pcie.lanes_neg = (data & PCI_EXP_LNKSTA_WIDTH) >> 4u;
+			}else{
+				c->pcie.gen = 0;
+				c->pcie.lanes_neg = 0;
 			}
+			c->pcie.lanes_cap = 0; // FIXME
 			if((c->name = strdup(rbuf)) == NULL){
 				// FIXME?
 			}
