@@ -104,6 +104,38 @@ blockdevs(char * const *args){
 	return 0;
 }
 
+static int
+print_partition(const partition *p){
+	int r = 0,rr;
+
+	r += rr = printf("%s\n",p->name);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
+partitions(char * const *args){
+	const controller *c;
+
+	ZERO_ARG_CHECK(args);
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			const partition *p;
+
+			for(p = d->parts ; p ; p = p->next){
+				if(print_partition(p) < 0){
+					return -1;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 static void
 free_tokes(char **tokes){
 	char **toke;
@@ -161,6 +193,7 @@ static const struct fxn {
 #define FXN(x) { .cmd = #x, .fxn = x, }
 	FXN(initiators),
 	FXN(blockdevs),
+	FXN(partitions),
 	FXN(help),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
