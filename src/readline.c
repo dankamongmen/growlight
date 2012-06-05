@@ -9,6 +9,8 @@
 #define ZERO_ARG_CHECK(args) \
  if(args[1]){ fprintf(stderr,"Usage: %s\n",*args); return -1 ; }
 
+static int help(char * const *);
+
 static const char *
 pcie_gen(unsigned gen){
 	switch(gen){
@@ -137,18 +139,33 @@ tokenize(const char *line,char ***tokes){
 	return t;
 }
 
+static const struct fxn {
+	const char *cmd;
+	int (*fxn)(char * const *);
+} fxns[] = {
+#define FXN(x) { .cmd = #x, .fxn = x, }
+	FXN(initiators),
+	FXN(blockdevs),
+	FXN(help),
+	{ .cmd = NULL,		.fxn = NULL, },
+#undef FXN
+};
+
+static int
+help(char * const *args){
+	const struct fxn *fxn;
+
+	ZERO_ARG_CHECK(args);
+	printf("\n\tAvailable commands:\n\n");
+	for(fxn = fxns ; fxn->cmd ; ++fxn){
+		printf("\t  %s\n",fxn->cmd);
+	}
+	printf("\t  quit\n\n");
+	return 0;
+}
+
 static int
 tty_ui(void){
-	const struct fxn {
-		const char *cmd;
-		int (*fxn)(char * const *);
-	} fxns[] = {
-#define FXN(x) { .cmd = #x, .fxn = x, }
-		FXN(initiators),
-		FXN(blockdevs),
-		{ .cmd = NULL,		.fxn = NULL, },
-#undef FXN
-	};
 	const char prompt[] = "[growlight]> ";
 	char *l;
 
@@ -168,15 +185,6 @@ tty_ui(void){
 		if(strcasecmp(tokes[0],"quit") == 0){
 			free_tokes(tokes);
 			break;
-		}
-		if(strcasecmp(tokes[0],"help") == 0){
-			free_tokes(tokes);
-			printf("\n\tAvailable commands:\n\n");
-			for(fxn = fxns ; fxn->cmd ; ++fxn){
-				printf("\t  %s\n",fxn->cmd);
-			}
-			printf("\n");
-			continue;
 		}
 		for(fxn = fxns ; fxn->cmd ; ++fxn){
 			if(strcasecmp(fxn->cmd,tokes[0])){
