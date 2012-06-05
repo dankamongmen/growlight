@@ -53,16 +53,8 @@ static controller *controllers;
 #define PCI_EXP_LNKSTA		0x12
 #define  PCI_EXP_LNKSTA_SPEED   0x000f  /* Negotiated Link Speed */
 #define  PCI_EXP_LNKSTA_WIDTH   0x03f0  /* Negotiated Link Width */
-#define  PCI_EXP_LNKSTA_TR_ERR  0x0400  /* Training Error (obsolete) */
-#define  PCI_EXP_LNKSTA_TRAIN   0x0800  /* Link Training */
-#define  PCI_EXP_LNKSTA_SL_CLK  0x1000  /* Slot Clock Configuration */
-#define  PCI_EXP_LNKSTA_DL_ACT  0x2000  /* Data Link Layer in DL_Active State */
-#define  PCI_EXP_LNKSTA_BWMGMT  0x4000  /* Bandwidth Mgmt Status */
-#define  PCI_EXP_LNKSTA_AUTBW   0x8000  /* Autonomous Bandwidth Mgmt Status */
-#define FLAG(x,y) ((x & y) ? '+' : '-')
 
-
-static inline const char *
+/*static inline const char *
 link_speed(int speed){
 	switch(speed){
 		case 1: return "2.5GT/s";
@@ -70,7 +62,7 @@ link_speed(int speed){
 		case 3: return "8GT/s";
 		default: return "unknown";
 	}
-}
+}*/
 
 static const controller *
 find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
@@ -94,14 +86,16 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 		controller *c;
 
 		if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
-			fprintf(stderr,"Couldn't look up PCI device\n");
+			fprintf(stderr,"Couldn't look up PCIe device\n");
 			return NULL;
 		}
 		assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
 						PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
 						PCI_FILL_SIZES|PCI_FILL_RESCAN));
-		if( (rbuf = pci_lookup_name(pciacc,buf,sizeof(buf),PCI_LOOKUP_VENDOR|PCI_LOOKUP_DEVICE,
-						pcidev->vendor_id,pcidev->device_id)) ){
+		rbuf = pci_lookup_name(pciacc,buf,sizeof(buf),PCI_LOOKUP_VENDOR|PCI_LOOKUP_DEVICE,
+						pcidev->vendor_id,pcidev->device_id);
+		if(rbuf == NULL){
+			rbuf = "Unknown PCIe device\n"; // FIXME terrible
 		}
 		if( (c = malloc(sizeof(*c))) ){
 			struct pci_cap *pcicap;
@@ -122,9 +116,8 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 				// FIXME?
 			}
 			if(data){
-				printf("\tLnkSta:\tSpeed %s, Width x%d\n",
-					link_speed(data & PCI_EXP_LNKSTA_SPEED),
-					(data & PCI_EXP_LNKSTA_WIDTH) >> 4u);
+				c->pcie.gen = data & PCI_EXP_LNKSTA_SPEED;
+				c->pcie.lanes_neg = (data & PCI_EXP_LNKSTA_WIDTH) >> 4u;
 			}
 			if((c->name = strdup(rbuf)) == NULL){
 				// FIXME?
