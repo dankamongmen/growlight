@@ -67,7 +67,14 @@ static int
 print_drive(const device *d){
 	int r = 0,rr;
 
-	r += rr = printf("%s\n",d->model);
+	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c\n",d->name,
+			d->model ? d->model : "n/a",
+			d->revision ? d->revision : "n/a",
+			d->logsec,d->physsec,
+			d->removable ? 'R' : 'r',
+			d->realdev ? 'v' : 'V',
+			d->layout == LAYOUT_MDADM ? 'M' : 'm'
+			);
 	if(rr < 0){
 		return -1;
 	}
@@ -80,12 +87,15 @@ blockdevs(char * const *args){
 
 	ZERO_ARG_CHECK(args);
 	d = get_block_devices();
+	printf("%-10.10s %-16.16s %-4.4s %5.5s %5.5s Flags\n",
+			"Device","Model","Rev","Log","Phys");
 	while(d){
 		if(print_drive(d) < 0){
 			return -1;
 		}
 		d = d->next;
 	}
+	printf("\n  Flags: (R)emovable, (M)D device, (V)irtual\n\n");
 	return 0;
 }
 
