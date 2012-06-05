@@ -32,6 +32,12 @@ PKG_CHECK_MODULES([libblkid], [blkid], [have_libblkid=yes])
 	CFLAGS+=" $libblkid_CFLAGS"
 	LIBS+=" $libblkid_LIBS"
 
+AX_LIB_READLINE
+AC_CHECK_LIB([readline], [main], [have_readline=yes],
+	[AC_MSG_ERROR([Cannot find libreadline.])])
+
 ## output
+AC_SUBST([CFLAGS])
+AC_SUBST([CONFIGURED_UIS])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

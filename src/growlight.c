@@ -721,7 +721,7 @@ pci_system_init(void){
 	return 0;
 }
 
-int main(int argc,char **argv){
+int growlight_init(int argc,char * const *argv){
 	static const struct option ops[] = {
 		{
 			.name = "help",

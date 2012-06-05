@@ -5,9 +5,7 @@
 extern "C" {
 #endif
 
-struct device;
-
-struct device *lookup_device(const char *);
+int growlight_init(int,char * const *);
 
 #ifdef __cplusplus
 }

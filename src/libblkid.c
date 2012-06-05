@@ -43,7 +43,7 @@ blkid_exit(int ret){
 	return ret;
 }
 
-int load_blkid_superblocks(void){
+/* int load_blkid_superblocks(void){
 	blkid_dev_iterate biter;
 	blkid_dev dev;
 	int r;
@@ -66,7 +66,7 @@ int load_blkid_superblocks(void){
 	}
 	blkid_dev_iterate_end(biter);
 	return blkid_exit(r);
-}
+} */
 
 int close_blkid(void){
 	if(blkid_entry()){
