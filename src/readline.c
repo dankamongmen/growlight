@@ -61,6 +61,32 @@ initiators(char * const *args){
 	return 0;
 }
 
+static int
+print_drive(const device *d){
+	int r = 0,rr;
+
+	r += rr = printf("%s\n",d->model);
+	if(rr < 0){
+		return -1;
+	}
+	return 0;
+}
+
+static int
+blockdevs(char * const *args){
+	const device *d;
+
+	ZERO_ARG_CHECK(args);
+	d = get_block_devices();
+	while(d){
+		if(print_drive(d) < 0){
+			return -1;
+		}
+		d = d->next;
+	}
+	return 0;
+}
+
 static void
 free_tokes(char **tokes){
 	char **toke;
@@ -119,6 +145,7 @@ tty_ui(void){
 	} fxns[] = {
 #define FXN(x) { .cmd = #x, .fxn = x, }
 		FXN(initiators),
+		FXN(blockdevs),
 		{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
 	};
