@@ -148,8 +148,22 @@ const controller *get_controllers(void){
 }
 
 static void
+free_partition(partition *p){
+	if(p){
+		free(p->name);
+		free(p);
+	}
+}
+
+static void
 free_device(device *d){
 	if(d){
+		partition *p;
+
+		while( (p = d->parts) ){
+			d->parts = p->next;
+			free_partition(p);
+		}
 		free(d->model);
 		free(d->revision);
 		free(d->pttable);
@@ -176,8 +190,11 @@ free_devtable(void){
 			free(d);
 		}
 		controllers = c->next;
-		free_controller(c);
-		free(c);
+		// FIXME ugh! horrible!
+		if(c->bus != BUS_VIRTUAL && c->bus != BUS_UNKNOWN){
+			free_controller(c);
+			free(c);
+		}
 	}
 	close(sysfd);
 	sysfd = -1;
@@ -288,6 +305,29 @@ get_sysfs_bool(int dirfd,const char *node,unsigned *b){
 	return 0;
 }
 
+static partition *
+add_partition(device *d,const char *name){
+	partition *p;
+
+	if( (p = malloc(sizeof(*p))) ){
+		partition **pre;
+
+		memset(p,0,sizeof(*p));
+		if((p->name = strdup(name)) == NULL){
+			free(p);
+			return NULL;
+		}
+		for(pre = &d->parts ; *pre ; pre = &(*pre)->next){
+			if(strcmp((*pre)->name,name) > 0){ // FIXME 0's no good
+				break;
+			}
+		}
+		p->next = *pre;
+		*pre = p;
+	}
+	return p;
+}
+
 // Pass a directory handle fd, and the bare name of the device
 int explore_sysfs_node(int fd,const char *name,device *d){
 	struct dirent *dire;
@@ -310,7 +350,12 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 				d->layout = LAYOUT_MDADM;
 			}else if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
 				if(sysfs_exist_p(subfd,"partition")){
+					partition *p;
 					verbf("\tPartition at %s\n",dire->d_name);
+					if((p = add_partition(d,dire->d_name)) == NULL){
+						close(subfd);
+						return -1;
+					}
 				}
 				close(subfd);
 			}else{

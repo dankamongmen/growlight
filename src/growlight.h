@@ -13,12 +13,18 @@ extern "C" {
 int growlight_init(int,char * const *);
 int growlight_stop(void);
 
+// A partition corresponds to one and only one block device (which of course
+// might represent multiple devices, or maybe just a file mounted loopback).
+typedef struct partition {
+	char *name;		// Entry in /dev or /sys/class/block
+	struct partition *next;	// Next on this disk
+} partition;
+
 // An (non-link) entry in the device hierarchy, representing a block device.
 typedef struct device {
 	// next block device on this controller
 	struct device *next;
 	char name[PATH_MAX];		// Entry in /dev or /sys/block
-	char path[PATH_MAX];		// Device topology, not filesystem
 	char *pttable;			// Partition table type (can be NULL)
 	char *model,*revision;		// Arbitrary UTF-8 strings
 	unsigned logsec;		// Logical sector size
@@ -32,6 +38,7 @@ typedef struct device {
 		LAYOUT_NONE,
 		LAYOUT_MDADM,
 	} layout;
+	partition *parts;		// Partitions (can be NULL)
 } device;
 
 // A block device controller.
