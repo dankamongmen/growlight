@@ -22,6 +22,26 @@ pcie_gen(unsigned gen){
 }
 
 static int
+print_drive(const device *d){
+	int r = 0,rr;
+
+	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s\n",d->name,
+			d->model ? d->model : "n/a",
+			d->revision ? d->revision : "n/a",
+			d->logsec,d->physsec,
+			d->removable ? 'R' : '.',
+			d->realdev ? '.' : 'V',
+			d->layout == LAYOUT_MDADM ? 'M' : '.',
+			d->realdev ? d->rotate ? 'O' : '.' : '.',
+			d->pttable ? d->pttable : "none"
+			);
+	if(rr < 0){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 print_controller(const controller *c){
 	int r = 0,rr;
 
@@ -54,32 +74,32 @@ initiators(char * const *args){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args);
-	c = get_controllers();
-	while(c){
+	for(c = get_controllers() ; c ; c = c->next){
 		if(print_controller(c) < 0){
 			return -1;
 		}
-		c = c->next;
 	}
 	return 0;
 }
 
 static int
-print_drive(const device *d){
-	int r = 0,rr;
+mdadm(char * const *args){
+	const controller *c;
 
-	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s\n",d->name,
-			d->model ? d->model : "n/a",
-			d->revision ? d->revision : "n/a",
-			d->logsec,d->physsec,
-			d->removable ? 'R' : '.',
-			d->realdev ? '.' : 'V',
-			d->layout == LAYOUT_MDADM ? 'M' : '.',
-			d->realdev ? d->rotate ? 'O' : '.' : '.',
-			d->pttable ? d->pttable : "none"
-			);
-	if(rr < 0){
-		return -1;
+	ZERO_ARG_CHECK(args);
+	for(c = get_controllers() ; c ; c = c->next){
+		device *d;
+
+		if(c->bus != BUS_VIRTUAL){
+			continue;
+		}
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(d->layout == LAYOUT_MDADM){
+				if(print_drive(d) < 0){
+					return -1;
+				}
+			}
+		}
 	}
 	return 0;
 }
@@ -194,6 +214,7 @@ static const struct fxn {
 	FXN(initiators),
 	FXN(blockdevs),
 	FXN(partitions),
+	FXN(mdadm),
 	FXN(help),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
