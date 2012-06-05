@@ -48,7 +48,18 @@ verbf(const char *fmt,...){
 	return v;
 }
 
-static controller *controllers;
+static controller unknown_bus = {
+	.name = "Unknown controller",
+	.bus = BUS_UNKNOWN,
+};
+
+static controller virtual_bus = {
+	.name = "Virtual device",
+	.next = &unknown_bus,
+	.bus = BUS_VIRTUAL,
+};
+
+static controller *controllers = &virtual_bus;
 
 #define PCI_EXP_LNKSTA		0x12
 #define  PCI_EXP_LNKSTA_SPEED   0x000f  /* Negotiated Link Speed */
@@ -64,9 +75,9 @@ link_speed(int speed){
 	}
 }*/
 
-static const controller *
+static controller *
 find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
-	const controller *cur;
+	controller *cur;
 
 	for(cur = controllers ; cur ; cur = cur->next){
 		if(cur->bus != BUS_PCIe){
@@ -101,7 +112,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 			struct pci_cap *pcicap;
 			uint32_t data;
 
-			c->name = NULL;
+			memset(c,0,sizeof(*c));
 			c->bus = BUS_PCIe;
 			c->pcie.domain = domain;
 			c->pcie.bus = bus;
@@ -118,11 +129,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 			if(data){
 				c->pcie.gen = data & PCI_EXP_LNKSTA_SPEED;
 				c->pcie.lanes_neg = (data & PCI_EXP_LNKSTA_WIDTH) >> 4u;
-			}else{
-				c->pcie.gen = 0;
-				c->pcie.lanes_neg = 0;
 			}
-			c->pcie.lanes_cap = 0; // FIXME
 			if((c->name = strdup(rbuf)) == NULL){
 				// FIXME?
 			}
@@ -134,12 +141,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 	return cur;
 }
 
-static device *devs;
 static int sysfd = -1; // Hold a reference to SYSROOT
-
-const device *get_block_devices(void){
-	return devs; // FIXME hugely unsafe
-}
 
 const controller *get_controllers(void){
 	return controllers; // FIXME hugely unsafe
@@ -150,6 +152,7 @@ free_device(device *d){
 	if(d){
 		free(d->model);
 		free(d->revision);
+		free(d->pttable);
 	}
 }
 
@@ -163,14 +166,15 @@ free_controller(controller *c){
 static void
 free_devtable(void){
 	controller *c;
-	device *d;
 
-	while( (d = devs) ){
-		devs = d->next;
-		free_device(d);
-		free(d);
-	}
 	while( (c = controllers) ){
+		device *d;
+
+		while( (d = c->blockdevs) ){
+			c->blockdevs = d->next;
+			free_device(d);
+			free(d);
+		}
 		controllers = c->next;
 		free_controller(c);
 		free(c);
@@ -417,34 +421,30 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
 // for virtual/PCI currently.
-static int
-parse_bus_topology(const char *fn,device *d){
+static controller *
+parse_bus_topology(const char *fn){
 	unsigned long domain,bus,dev,func;
 	const char *pci;
 
 	if(strstr(fn,"/devices/virtual/")){
-		//d->controller = strdup("Virtual device"); FIXME
-		return 0;
+		return &virtual_bus;
 	}
 	if((pci = strstr(fn,"/devices/pci")) == NULL){
-		// FIXME d->controller = strdup("Unknown bus type");
-		return 0;
+		return &unknown_bus;
 	}
 	pci += strlen("/devices/pci");
 	if(parse_pci_busid(pci,&domain,&bus,&dev,&func)){
 		fprintf(stderr,"Couldn't extract PCI address from %s\n",pci);
-		return -1;
+		return NULL;
 	}
-	if((d->controller = find_pcie_controller(domain,bus,dev,func)) == NULL){
-		return -1;
-	}
-	return 0;
+	return find_pcie_controller(domain,bus,dev,func);
 }
 
 
 static inline device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
+	controller *c;
 	device *d,dd;
 	int fd;
 
@@ -459,11 +459,11 @@ create_new_device(const char *name){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
-	if(parse_bus_topology(buf,&dd)){
+	if((c = parse_bus_topology(buf)) == NULL){
 		fprintf(stderr,"Couldn't get physical bus topology for %s\n",name);
 		return NULL;
-	}else if(dd.controller){
-		verbf("\tController: %s\n",dd.controller->name);
+	}else{
+		verbf("\tController: %s\n",c->name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
@@ -493,6 +493,8 @@ create_new_device(const char *name){
 		// FIXME move all this to its own function
 		if(probe_blkid_dev(devbuf,&pr) == 0){
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
+				const char *pttable;
+
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
 					close(fd);
@@ -501,9 +503,16 @@ create_new_device(const char *name){
 					return NULL;
 				}
 				pars = blkid_partlist_numof_partitions(ppl);
+				pttable = blkid_parttable_get_type(ptbl);
 				verbf("\t%d partition%s, table type %s\n",
 						pars,pars == 1 ? "" : "s",
-						blkid_parttable_get_type(ptbl));
+						pttable);
+				if((dd.pttable = strdup(pttable)) == NULL){
+					close(fd);
+					free_device(&dd);
+					blkid_free_probe(pr);
+					return NULL;
+				}
 			}else{
 				verbf("\tNo partition table\n");
 			}
@@ -532,6 +541,8 @@ create_new_device(const char *name){
 	if( (d = malloc(sizeof(*d))) ){
 		*d = dd;
 		strcpy(d->name,name);
+		d->next = c->blockdevs;
+		c->blockdevs = d;
 	}else{
 		fprintf(stderr,"Couldn't look up %s (%s?)\n",name,strerror(errno));
 		free_device(&dd);
@@ -543,6 +554,7 @@ create_new_device(const char *name){
 // must be an entry in /sys/block (and should probably be one in /dev, but
 // we can index back with major/minor numbers...I think).
 device *lookup_device(const char *name){
+	controller *c;
 	device *d;
 	size_t s;
 
@@ -560,16 +572,14 @@ device *lookup_device(const char *name){
 		}
 		name += s;
 	}while(s);
-	for(d = devs ; d ; d = d->next){
-		if(strcmp(name,d->name) == 0){
-			return d;
+	for(c = controllers ; c ; c = c->next){
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(strcmp(name,d->name) == 0){
+				return d;
+			}
 		}
 	}
-	if( (d = create_new_device(name)) ){
-		d->next = devs;
-		devs = d;
-	}
-	return d;
+	return create_new_device(name);
 }
 
 static inline int

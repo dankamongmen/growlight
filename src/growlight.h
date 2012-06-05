@@ -13,12 +13,33 @@ extern "C" {
 int growlight_init(int,char * const *);
 int growlight_stop(void);
 
+// An (non-link) entry in the device hierarchy, representing a block device.
+typedef struct device {
+	// next block device on this controller
+	struct device *next;
+	char name[PATH_MAX];		// Entry in /dev or /sys/block
+	char path[PATH_MAX];		// Device topology, not filesystem
+	char *pttable;			// Partition table type (can be NULL)
+	char *model,*revision;		// Arbitrary UTF-8 strings
+	unsigned logsec;		// Logical sector size
+	unsigned physsec;		// Physical sector size
+	struct {
+		unsigned realdev: 1;	// Is itself a real block device 
+		unsigned removable: 1;	// Removable media
+	};
+	enum {
+		LAYOUT_NONE,
+		LAYOUT_MDADM,
+	} layout;
+} device;
+
 // A block device controller.
 typedef struct controller {
 	// FIXME if libpci doesn't know about the device, we still ought use
 	// a name determined via inspection of sysfs, just as we do for disks
 	char *name;		// From libpci database
 	enum {
+		BUS_UNKNOWN,
 		BUS_VIRTUAL,
 		BUS_PCIe,
 	} bus;
@@ -47,32 +68,12 @@ typedef struct controller {
 			unsigned domain,bus,dev,func;
 		} pcie;
 	};
+	device *blockdevs;
 	struct controller *next;
 } controller;
 
-// An (non-link) entry in the device hierarchy, representing a block device.
-typedef struct device {
-	struct device *next;
-	char name[PATH_MAX];		// Entry in /dev or /sys/block
-	char path[PATH_MAX];		// Device topology, not filesystem
-	char *model,*revision;		// Arbitrary UTF-8 strings
-	const controller *controller;	// Primary controller route
-					// FIXME how to deal with multipath?
-	unsigned logsec;		// Logical sector size
-	unsigned physsec;		// Physical sector size
-	struct {
-		unsigned realdev: 1;	// Is itself a real block device 
-		unsigned removable: 1;	// Removable media
-	};
-	enum {
-		LAYOUT_NONE,
-		LAYOUT_MDADM,
-	} layout;
-} device;
-
 // Currently, we just blindly hand out references to our internal store. This
 // simply will not fly in the long run -- FIXME
-const device *get_block_devices(void);
 const controller *get_controllers(void);
 
 #ifdef __cplusplus

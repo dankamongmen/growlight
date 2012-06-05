@@ -27,24 +27,25 @@ print_controller(const controller *c){
 
 	switch(c->bus){
 		case BUS_PCIe:
-			rr = printf("PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)\n",
+			r += rr = printf("PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)\n",
 					c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func,
 					c->pcie.lanes_neg,pcie_gen(c->pcie.gen));
 			if(rr < 0){
 				return -1;
 			}
-			r += rr;
 			break;
+		case BUS_VIRTUAL:
+		case BUS_UNKNOWN:
+			return 0;
 		default:
 			fprintf(stderr,"Unknown bus type: %d\n",c->bus);
 			return -1;
 	}
-	rr = printf("\t%s\n",c->name);
+	r += rr = printf("\t%s\n",c->name);
 	if(rr < 0){
 		return -1;
 	}
-	r += rr;
 	return r;
 }
 
@@ -67,13 +68,14 @@ static int
 print_drive(const device *d){
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c\n",d->name,
+	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c   %-6.6s\n",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			d->logsec,d->physsec,
 			d->removable ? 'R' : 'r',
 			d->realdev ? 'v' : 'V',
-			d->layout == LAYOUT_MDADM ? 'M' : 'm'
+			d->layout == LAYOUT_MDADM ? 'M' : 'm',
+			d->pttable ? d->pttable : "none"
 			);
 	if(rr < 0){
 		return -1;
@@ -83,17 +85,19 @@ print_drive(const device *d){
 
 static int
 blockdevs(char * const *args){
-	const device *d;
+	const controller *c;
 
 	ZERO_ARG_CHECK(args);
-	d = get_block_devices();
-	printf("%-10.10s %-16.16s %-4.4s %5.5s %5.5s Flags\n",
-			"Device","Model","Rev","Log","Phys");
-	while(d){
-		if(print_drive(d) < 0){
-			return -1;
+	printf("%-10.10s %-16.16s %-4.4s %5.5s %5.5s Flags %-6.6s\n",
+			"Device","Model","Rev","Log","Phys","Table");
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(print_drive(d) < 0){
+				return -1;
+			}
 		}
-		d = d->next;
 	}
 	printf("\n  Flags: (R)emovable, (M)D device, (V)irtual\n\n");
 	return 0;
