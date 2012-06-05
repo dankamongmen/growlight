@@ -72,10 +72,10 @@ print_drive(const device *d){
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			d->logsec,d->physsec,
-			d->removable ? 'R' : 'r',
-			d->realdev ? 'v' : 'V',
-			d->layout == LAYOUT_MDADM ? 'M' : 'm',
-			d->rotate ? 'O' : 'o',
+			d->removable ? 'R' : '.',
+			d->realdev ? '.' : 'V',
+			d->layout == LAYOUT_MDADM ? 'M' : '.',
+			d->realdev ? d->rotate ? 'O' : '.' : 'x',
 			d->pttable ? d->pttable : "none"
 			);
 	if(rr < 0){

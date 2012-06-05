@@ -324,6 +324,11 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 		fprintf(stderr,"Error walking sysfs:%s (%s?)\n",name,strerror(errno));
 		return -1;
 	}
+	if(get_sysfs_bool(fd,"queue/rotational",&b)){
+		fprintf(stderr,"Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
+	}else{
+		d->rotate = !!b;
+	}
 	if(get_sysfs_bool(fd,"removable",&b)){
 		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
 	}else{
