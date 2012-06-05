@@ -30,6 +30,20 @@
 
 static unsigned verbose;
 static struct pci_access *pciacc;
+static int sysfd = -1; // Hold a reference to SYSROOT
+
+static controller unknown_bus = {
+	.name = "Unknown controller",
+	.bus = BUS_UNKNOWN,
+};
+
+static controller virtual_bus = {
+	.name = "Virtual device",
+	.next = &unknown_bus,
+	.bus = BUS_VIRTUAL,
+};
+
+static controller *controllers = &virtual_bus;
 
 static int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
@@ -47,33 +61,6 @@ verbf(const char *fmt,...){
 	va_end(ap);
 	return v;
 }
-
-static controller unknown_bus = {
-	.name = "Unknown controller",
-	.bus = BUS_UNKNOWN,
-};
-
-static controller virtual_bus = {
-	.name = "Virtual device",
-	.next = &unknown_bus,
-	.bus = BUS_VIRTUAL,
-};
-
-static controller *controllers = &virtual_bus;
-
-#define PCI_EXP_LNKSTA		0x12
-#define  PCI_EXP_LNKSTA_SPEED   0x000f  /* Negotiated Link Speed */
-#define  PCI_EXP_LNKSTA_WIDTH   0x03f0  /* Negotiated Link Width */
-
-/*static inline const char *
-link_speed(int speed){
-	switch(speed){
-		case 1: return "2.5GT/s";
-		case 2: return "5GT/s";
-		case 3: return "8GT/s";
-		default: return "unknown";
-	}
-}*/
 
 static controller *
 find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
@@ -140,8 +127,6 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 	}
 	return cur;
 }
-
-static int sysfd = -1; // Hold a reference to SYSROOT
 
 const controller *get_controllers(void){
 	return controllers; // FIXME hugely unsafe
