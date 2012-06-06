@@ -7,7 +7,6 @@
 static blkid_cache cache;
 static unsigned cache_once_success;
 static pthread_once_t cache_once = PTHREAD_ONCE_INIT;
-//static pthread_mutex_t cache_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void
 init_blkid_cache(void){
@@ -29,44 +28,13 @@ blkid_entry(void){
 	if(!cache_once_success){
 		return -1;
 	}
-	/*if(pthread_mutex_lock(&cache_lock)){
-		return -1;
-	}*/
 	return 0;
 }
 
 static inline int
 blkid_exit(int ret){
-	/*if(pthread_mutex_unlock(&cache_lock)){
-		return -1;
-	}*/
 	return ret;
 }
-
-/* int load_blkid_superblocks(void){
-	blkid_dev_iterate biter;
-	blkid_dev dev;
-	int r;
-
-	if(blkid_entry()){
-		return -1;
-	}
-	if((biter = blkid_dev_iterate_begin(cache)) == NULL){
-		return blkid_exit(-1);
-	}
-	r = 0;
-	while(blkid_dev_next(biter,&dev) == 0){
-		const char *name;
-
-		if((name = blkid_dev_devname(dev)) == NULL){
-			r = -1;
-		}else if(lookup_device(name) == NULL){
-			r = -1;
-		}
-	}
-	blkid_dev_iterate_end(biter);
-	return blkid_exit(r);
-} */
 
 int close_blkid(void){
 	if(blkid_entry()){

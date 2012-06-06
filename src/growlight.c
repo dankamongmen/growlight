@@ -791,11 +791,6 @@ int growlight_init(int argc,char * const *argv){
 	if((sysfd = get_dir_fd(&sdir,SYSROOT)) < 0){
 		goto err;
 	}
-	/*if(load_blkid_superblocks()){
-		fprintf(stderr,"Error initializing libblkid (%s?)\n",strerror(errno));
-		free_devtable();
-		goto err;
-	}*/
 	if((fd = inotify_fd()) < 0){
 		goto err;
 	}
