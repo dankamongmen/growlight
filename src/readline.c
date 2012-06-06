@@ -128,7 +128,8 @@ static int
 print_partition(const partition *p){
 	int r = 0,rr;
 
-	r += rr = printf("%s\n",p->name);
+	r += rr = printf("%-10.10s %-37.37s %s\n",p->name,p->uuid ? p->uuid : "n/a",
+			p->pname ? p->pname : "n/a");
 	if(rr < 0){
 		return -1;
 	}
