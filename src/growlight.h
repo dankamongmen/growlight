@@ -40,7 +40,7 @@ typedef struct device {
 		} blkdev;
 		struct {
 			unsigned long disks;	// RAID disks in md
-			unsigned level;		// RAID level
+			char *level;		// RAID level
 		} mddev;
 	};
 	enum {

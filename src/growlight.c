@@ -149,6 +149,13 @@ free_device(device *d){
 	if(d){
 		partition *p;
 
+		switch(d->layout){
+			case LAYOUT_NONE:
+				break;
+			case LAYOUT_MDADM:
+				free(d->mddev.level);
+				break;
+		}
 		while( (p = d->parts) ){
 			d->parts = p->next;
 			free_partition(p);

@@ -25,7 +25,7 @@ static int
 print_mdadm(const device *d){
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s %4uB %4uB %c%c%c%c  %-6.6s%5lu\n",
+	r += rr = printf("%-10.10s %4uB %4uB %c%c%c%c  %-6.6s%5lu %-7.7s\n",
 			d->name,
 			d->logsec,d->physsec,
 			d->blkdev.removable ? 'R' : '.',
@@ -33,7 +33,7 @@ print_mdadm(const device *d){
 			d->layout == LAYOUT_MDADM ? 'M' : '.',
 			d->blkdev.realdev ? d->blkdev.rotate ? 'O' : '.' : '.',
 			d->pttable ? d->pttable : "none",
-			d->mddev.disks
+			d->mddev.disks,d->mddev.level
 			);
 	if(rr < 0){
 		return -1;
@@ -107,8 +107,8 @@ mdadm(char * const *args){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args);
-	printf("%-10.10s %5.5s %5.5s Flags %-6.6s%-6.6s\n",
-			"Device","Log","Phys","Table","Disks");
+	printf("%-10.10s %5.5s %5.5s Flags %-6.6s%-6.6s%-7.7s\n",
+			"Device","Log","Phys","Table","Disks","Level");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
