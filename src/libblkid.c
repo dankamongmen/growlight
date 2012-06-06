@@ -67,6 +67,10 @@ int probe_blkid_dev(const char *dev,blkid_probe *pr){
 		blkid_free_probe(*pr);
 		return blkid_exit(-1);
 	}
+	if(blkid_do_fullprobe(*pr)){
+		blkid_free_probe(*pr);
+		return blkid_exit(-1);
+	}
 	if(blkid_exit(0)){
 		blkid_free_probe(*pr);
 		return -1;
