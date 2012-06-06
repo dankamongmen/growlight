@@ -22,7 +22,8 @@ bin_PROGRAMS=
 bin_PROGRAMS+=growlight-tty
 
 growlight_tty_SOURCES=
-growlight_tty_SOURCES+=src/growlight.c src/libblkid.c src/readline.c
+growlight_tty_SOURCES+=src/growlight.c src/libblkid.c src/readline.c \
+		       src/mdadm.c
 
 %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl $<
