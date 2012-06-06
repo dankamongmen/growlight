@@ -24,6 +24,7 @@
 #include <pci/pci.h>
 #include <pci/header.h>
 
+#include <mdadm.h>
 #include <libblkid.h>
 #include <growlight.h>
 
@@ -363,11 +364,15 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 		int subfd;
 
 		if(dire->d_type == DT_DIR){
-			// Check for "md" to determine if it's an MDADM device
-			if(strcmp(dire->d_name,"md") == 0){
-				d->layout = LAYOUT_MDADM;
-			}else if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
-				if(sysfs_exist_p(subfd,"partition")){
+			if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+				// Check for "md" to determine if it's an MDADM device
+				if(strcmp(dire->d_name,"md") == 0){
+					d->layout = LAYOUT_MDADM;
+					if(explore_md_sysfs(subfd)){
+						close(subfd);
+						return -1;
+					}
+				}else if(sysfs_exist_p(subfd,"partition")){
 					dev_t devno;
 					partition *p;
 
