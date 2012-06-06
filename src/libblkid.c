@@ -59,6 +59,10 @@ int probe_blkid_dev(const char *dev,blkid_probe *pr){
 		blkid_free_probe(*pr);
 		return blkid_exit(-1);
 	}
+	if(blkid_probe_set_superblocks_flags(*pr,~0u)){
+		blkid_free_probe(*pr);
+		return blkid_exit(-1);
+	}
 	if(blkid_probe_enable_partitions(*pr,1)){
 		blkid_free_probe(*pr);
 		return blkid_exit(-1);
