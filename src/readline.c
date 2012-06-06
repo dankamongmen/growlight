@@ -22,6 +22,26 @@ pcie_gen(unsigned gen){
 }
 
 static int
+print_mdadm(const device *d){
+	int r = 0,rr;
+
+	r += rr = printf("%-10.10s %4uB %4uB %c%c%c%c  %-6.6s%5lu\n",
+			d->name,
+			d->logsec,d->physsec,
+			d->blkdev.removable ? 'R' : '.',
+			d->blkdev.realdev ? '.' : 'V',
+			d->layout == LAYOUT_MDADM ? 'M' : '.',
+			d->blkdev.realdev ? d->blkdev.rotate ? 'O' : '.' : '.',
+			d->pttable ? d->pttable : "none",
+			d->mddev.disks
+			);
+	if(rr < 0){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 print_drive(const device *d){
 	int r = 0,rr;
 
@@ -29,10 +49,10 @@ print_drive(const device *d){
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			d->logsec,d->physsec,
-			d->removable ? 'R' : '.',
-			d->realdev ? '.' : 'V',
+			d->blkdev.removable ? 'R' : '.',
+			d->blkdev.realdev ? '.' : 'V',
 			d->layout == LAYOUT_MDADM ? 'M' : '.',
-			d->realdev ? d->rotate ? 'O' : '.' : '.',
+			d->blkdev.realdev ? d->blkdev.rotate ? 'O' : '.' : '.',
 			d->pttable ? d->pttable : "none"
 			);
 	if(rr < 0){
@@ -87,6 +107,8 @@ mdadm(char * const *args){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args);
+	printf("%-10.10s %5.5s %5.5s Flags %-6.6s%-6.6s\n",
+			"Device","Log","Phys","Table","Disks");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -95,7 +117,7 @@ mdadm(char * const *args){
 		}
 		for(d = c->blockdevs ; d ; d = d->next){
 			if(d->layout == LAYOUT_MDADM){
-				if(print_drive(d) < 0){
+				if(print_mdadm(d) < 0){
 					return -1;
 				}
 			}

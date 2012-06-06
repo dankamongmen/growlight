@@ -1,15 +1,14 @@
+#include <stdio.h>
 #include <fcntl.h>
 #include <mdadm.h>
 #include <unistd.h>
 
-int explore_md_sysfs(int dirfd){
-	int fd;
+#include <sysfs.h>
+#include <growlight.h>
 
-	// FIXME use sysfs exploration functions from growlight.c
-	if((fd = openat(dirfd,"raid_disks",O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+int explore_md_sysfs(device *d,int dirfd){
+	if(get_sysfs_uint(dirfd,"raid_disks",&d->mddev.disks)){
 		return -1;
 	}
-	// FIXME read number of disks
-	close(fd);
 	return 0;
 }

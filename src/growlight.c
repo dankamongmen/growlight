@@ -275,7 +275,7 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 				// Check for "md" to determine if it's an MDADM device
 				if(strcmp(dire->d_name,"md") == 0){
 					d->layout = LAYOUT_MDADM;
-					if(explore_md_sysfs(subfd)){
+					if(explore_md_sysfs(d,subfd)){
 						close(subfd);
 						return -1;
 					}
@@ -308,16 +308,16 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 	if(get_sysfs_bool(fd,"queue/rotational",&b)){
 		fprintf(stderr,"Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
 	}else{
-		d->rotate = !!b;
+		d->blkdev.rotate = !!b;
 	}
 	if(get_sysfs_bool(fd,"removable",&b)){
 		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
 	}else{
-		d->removable = !!b;
+		d->blkdev.removable = !!b;
 	}
 	// Check for "device" to determine if it's real or virtual
 	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
-		d->realdev = 1;
+		d->blkdev.realdev = 1;
 		if((d->model = get_sysfs_string(sdevfd,"model")) == NULL){
 			fprintf(stderr,"Couldn't get a model for %s (%s?)\n",name,strerror(errno));
 		}
@@ -467,7 +467,7 @@ create_new_device(const char *name){
 		free_device(&dd);
 		return NULL;
 	}
-	if(dd.realdev || (dd.layout == LAYOUT_MDADM)){
+	if(dd.blkdev.realdev || (dd.layout == LAYOUT_MDADM)){
 		char devbuf[PATH_MAX];
 		blkid_parttable ptbl;
 		blkid_topology tpr;
@@ -535,7 +535,7 @@ create_new_device(const char *name){
 						dd.logsec,dd.physsec);
 			}
 			blkid_free_probe(pr);
-		}else if(!dd.removable || errno != ENOMEDIUM){
+		}else if(!dd.blkdev.removable || errno != ENOMEDIUM){
 			fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
 			close(fd);
 			free_device(&dd);

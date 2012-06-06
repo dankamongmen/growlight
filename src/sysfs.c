@@ -95,3 +95,32 @@ int get_sysfs_bool(int dirfd,const char *node,unsigned *b){
 	*b = strcmp(buf,"0") ? 1 : 0;
 	return 0;
 }
+
+int get_sysfs_uint(int dirfd,const char *node,unsigned long *b){
+	char *end,buf[512]; // FIXME
+	ssize_t r;
+	int fd;
+
+	if((fd = openat(dirfd,node,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+		return -1;
+	}
+	if((r = read(fd,buf,sizeof(buf))) <= 0){
+		int e = errno;
+		close(fd);
+		errno = e;
+		return -1;
+	}
+	if((size_t)r >= sizeof(buf) || buf[r - 1] != '\n'){
+		close(fd);
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+	close(fd);
+	buf[r - 1] = '\0';
+	*b = strtoul(buf,&end,0);
+	if(*end){
+		fprintf(stderr,"Malformed sysfs uint: %s\n",buf);
+		return -1;
+	}
+	return 0;
+}
