@@ -136,7 +136,9 @@ const controller *get_controllers(void){
 static void
 free_partition(partition *p){
 	if(p){
+		free(p->pname);
 		free(p->name);
+		free(p->uuid);
 		free(p);
 	}
 }
@@ -566,6 +568,7 @@ create_new_device(const char *name){
 		if(probe_blkid_dev(devbuf,&pr) == 0){
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				const char *pttable;
+				partition *p;
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
@@ -584,6 +587,23 @@ create_new_device(const char *name){
 					free_device(&dd);
 					blkid_free_probe(pr);
 					return NULL;
+				}
+				for(p = dd.parts ; p ; p = p->next){
+					blkid_partition part;
+
+					part = blkid_partlist_devno_to_partition(ppl,p->devno);
+					if(part){
+						const char *uuid,*pname;
+
+						uuid = blkid_partition_get_uuid(part);
+						if(uuid){
+							p->uuid = strdup(uuid);
+						}
+						pname = blkid_partition_get_name(part);
+						if(pname){
+							p->pname = strdup(pname);
+						}
+					}
 				}
 			}else{
 				verbf("\tNo partition table\n");

@@ -17,6 +17,8 @@ int growlight_stop(void);
 // might represent multiple devices, or maybe just a file mounted loopback).
 typedef struct partition {
 	char *name;		// Entry in /dev or /sys/class/block
+	char *pname;		// Filesystem label
+	char *uuid;		// Filesystem UUID
 	struct partition *next;	// Next on this disk
 	dev_t devno;		// Don't expose this non-persistent datum
 } partition;
