@@ -47,10 +47,7 @@ static controller virtual_bus = {
 
 static controller *controllers = &virtual_bus;
 
-static int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
-
-static inline int
-verbf(const char *fmt,...){
+int verbf(const char *fmt,...){
 	va_list ap;
 	int v;
 

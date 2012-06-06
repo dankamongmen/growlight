@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
+
 #include <limits.h>
 
 	// This isn't really suitable for use as a library to programs beyond

@@ -7,11 +7,15 @@
 #include <growlight.h>
 
 int explore_md_sysfs(device *d,int dirfd){
+	// These files will be empty on incomplete arrays like the md0 that
+	// sometimes pops up.
 	if(get_sysfs_uint(dirfd,"raid_disks",&d->mddev.disks)){
-		return -1;
+		verbf("Warning: no 'raid_disks' content in mdadm device\n");
+		d->mddev.disks = 0;
 	}
 	if((d->mddev.level = get_sysfs_string(dirfd,"level")) == NULL){
-		return -1;
+		verbf("Warning: no 'level' content in mdadm device\n");
+		d->mddev.level = 0;
 	}
 	return 0;
 }
