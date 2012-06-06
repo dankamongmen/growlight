@@ -19,6 +19,7 @@
 #include <sys/ioctl.h>
 #include <src/config.h>
 #include <sys/inotify.h>
+#include <linux/kdev_t.h>
 
 #include <pci/pci.h>
 #include <pci/header.h>
@@ -253,6 +254,35 @@ get_sysfs_string(int dirfd,const char *node){
 	return strdup(buf);
 }
 
+static int
+sysfs_devno(int dirfd,dev_t *devno){
+	int fd = openat(dirfd,"dev",O_RDONLY|O_NONBLOCK|O_CLOEXEC);
+	const char *colon;
+	char buf[512]; // FIXME
+	ssize_t r;
+
+	if(fd < 0){
+		return -1;
+	}
+	if((r = read(fd,buf,sizeof(buf))) <= 0){
+		int e = errno;
+		close(fd);
+		errno = e;
+		return -1;
+	}
+	if((size_t)r >= sizeof(buf) || buf[r - 1] != '\n'){
+		close(fd);
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+	close(fd);
+	if((colon = strchr(buf,':')) == NULL){
+		return -1;
+	}
+	*devno = MKDEV(atoi(buf),atoi(colon + 1));
+	return 0;
+}
+
 static unsigned
 sysfs_exist_p(int dirfd,const char *node){
 	int fd;
@@ -291,7 +321,7 @@ get_sysfs_bool(int dirfd,const char *node,unsigned *b){
 }
 
 static partition *
-add_partition(device *d,const char *name){
+add_partition(device *d,const char *name,dev_t devno){
 	partition *p;
 
 	if( (p = malloc(sizeof(*p))) ){
@@ -307,6 +337,7 @@ add_partition(device *d,const char *name){
 				break;
 			}
 		}
+		p->devno = devno;
 		p->next = *pre;
 		*pre = p;
 	}
@@ -335,9 +366,15 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 				d->layout = LAYOUT_MDADM;
 			}else if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
 				if(sysfs_exist_p(subfd,"partition")){
+					dev_t devno;
 					partition *p;
+
+					if(sysfs_devno(subfd,&devno)){
+						close(subfd);
+						return -1;
+					}
 					verbf("\tPartition at %s\n",dire->d_name);
-					if((p = add_partition(d,dire->d_name)) == NULL){
+					if((p = add_partition(d,dire->d_name,devno)) == NULL){
 						close(subfd);
 						return -1;
 					}

@@ -18,6 +18,7 @@ int growlight_stop(void);
 typedef struct partition {
 	char *name;		// Entry in /dev or /sys/class/block
 	struct partition *next;	// Next on this disk
+	dev_t devno;		// Don't expose this non-persistent datum
 } partition;
 
 // An (non-link) entry in the device hierarchy, representing a block device.
@@ -39,6 +40,7 @@ typedef struct device {
 		LAYOUT_MDADM,
 	} layout;
 	partition *parts;		// Partitions (can be NULL)
+	dev_t devno;		// Don't expose this non-persistent datum
 } device;
 
 // A block device controller.
@@ -78,6 +80,7 @@ typedef struct controller {
 	};
 	device *blockdevs;
 	struct controller *next;
+	dev_t devno;		// Don't expose this non-persistent datum
 } controller;
 
 // Currently, we just blindly hand out references to our internal store. This
