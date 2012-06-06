@@ -1,3 +1,4 @@
+*.o
 aclocal.m4
 autom4te.cache/
 config.guess
@@ -9,16 +10,13 @@ depcomp
 .deps/
 doc/growlight.ent
 growlight-tty
-growlight.o
 growlight.8
 growlight-*.tar.bz2
 growlight-*.tar.gz
 install-sh
-libblkid.o
 Makefile
 Makefile.in
 missing
-readline.o
 src/config.h
 src/config.h.in
 src/config.h.in~
