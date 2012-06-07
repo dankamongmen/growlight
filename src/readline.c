@@ -45,7 +45,7 @@ static int
 print_drive(const device *d){
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s\n",d->name,
+	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s%-20.20s\n",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			d->logsec,d->physsec,
@@ -53,7 +53,8 @@ print_drive(const device *d){
 			d->blkdev.realdev ? '.' : 'V',
 			d->layout == LAYOUT_MDADM ? 'M' : '.',
 			d->blkdev.realdev ? d->blkdev.rotate ? 'O' : '.' : '.',
-			d->pttable ? d->pttable : "none"
+			d->pttable ? d->pttable : "none",
+			d->wwn ? d->wwn : "n/a"
 			);
 	if(rr < 0){
 		return -1;
@@ -131,8 +132,8 @@ blockdevs(char * const *args){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args);
-	printf("%-10.10s %-16.16s %-4.4s %5.5s %5.5s Flags %-6.6s\n",
-			"Device","Model","Rev","Log","Phys","Table");
+	printf("%-10.10s %-16.16s %-4.4s %5.5s %5.5s Flags %-6.6s%-20.20s\n",
+			"Device","Model","Rev","Log","Phys","Table","WWN");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 

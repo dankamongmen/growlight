@@ -32,6 +32,7 @@ typedef struct device {
 	char name[PATH_MAX];		// Entry in /dev or /sys/block
 	char *pttable;			// Partition table type (can be NULL)
 	char *model,*revision;		// Arbitrary UTF-8 strings
+	char *wwn;			// World Wide Name
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	union {

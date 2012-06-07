@@ -29,6 +29,7 @@
 #include <growlight.h>
 
 #define SYSROOT "/sys/block/"
+#define DEVBYID "/dev/disk/by-id/"
 
 static unsigned verbose;
 static struct pci_access *pciacc;
@@ -157,6 +158,7 @@ free_device(device *d){
 			d->parts = p->next;
 			free_partition(p);
 		}
+		free(d->wwn);
 		free(d->model);
 		free(d->revision);
 		free(d->pttable);
@@ -560,8 +562,7 @@ create_new_device(const char *name){
 	return d;
 }
 
-// Strips leading "/dev/"s, "../"s and "./"s, for better or worse. What's left
-// must be an entry in /sys/block (and should probably be one in /dev, but
+// name must be an entry in /sys/block (and should probably be one in /dev, but
 // we can index back with major/minor numbers...I think).
 device *lookup_device(const char *name){
 	controller *c;
@@ -584,12 +585,46 @@ device *lookup_device(const char *name){
 	}while(s);
 	for(c = controllers ; c ; c = c->next){
 		for(d = c->blockdevs ; d ; d = d->next){
+			const partition *p;
+
 			if(strcmp(name,d->name) == 0){
 				return d;
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(strcmp(name,p->name) == 0){
+					return d;
+				}
 			}
 		}
 	}
 	return create_new_device(name);
+}
+
+// Must be an entry in /dev/disk/by-id/
+device *lookup_id(const char *name){
+	char path[PATH_MAX],buf[PATH_MAX];
+	device *d;
+	int rl;
+
+	if(snprintf(path,sizeof(path),"/dev/disk/by-id/%s",name) >= (int)sizeof(path)){
+		return NULL;
+	}
+	if((rl = readlink(path,buf,sizeof(buf))) < 0 || (unsigned)rl >= sizeof(buf)){
+		return NULL;
+	}
+	buf[rl] = '\0';
+	if( (d = lookup_device(buf)) ){
+		if(strncasecmp(name,"wwn-0x",6) == 0){ // World Wide Name
+			char *wwn;
+
+			if((wwn = strdup(name + 6)) == NULL){
+				return NULL;
+			}
+			free(d->wwn);
+			d->wwn = wwn;
+		}
+	}
+	return d;
 }
 
 static inline int
@@ -602,8 +637,10 @@ inotify_fd(void){
 	return fd;
 }
 
+typedef device *(*eventfxn)(const char *);
+
 static inline int
-watch_dir(int fd,const char *dfp){
+watch_dir(int fd,const char *dfp,eventfxn fxn){
 	struct dirent *d;
 	DIR *dir;
 	int wfd,r;
@@ -633,7 +670,7 @@ watch_dir(int fd,const char *dfp){
 		if(d->d_type == DT_LNK){
 			const device *dev;
 
-			if((dev = lookup_device(d->d_name)) == NULL){
+			if((dev = fxn(d->d_name)) == NULL){
 				break;
 			}
 		}
@@ -641,6 +678,9 @@ watch_dir(int fd,const char *dfp){
 	}
 	if(r == 0 && errno){
 		fprintf(stderr,"Error reading %s (%s?)\n",dfp,strerror(errno));
+		r = -1;
+	}else if(r){
+		fprintf(stderr,"Error processing %s\n",d->d_name);
 		r = -1;
 	}
 	closedir(dir);
@@ -767,7 +807,10 @@ int growlight_init(int argc,char * const *argv){
 	if((fd = inotify_fd()) < 0){
 		goto err;
 	}
-	if(watch_dir(fd,SYSROOT)){
+	if(watch_dir(fd,SYSROOT,lookup_device)){
+		goto err;
+	}
+	if(watch_dir(fd,DEVBYID,lookup_id)){
 		goto err;
 	}
 	return 0;
