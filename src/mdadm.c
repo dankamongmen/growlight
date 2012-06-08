@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <mdadm.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -47,13 +48,18 @@ int explore_md_sysfs(device *d,int dirfd){
 			fprintf(stderr,"Couldn't get device from %s\n",lbuf);
 			return -1;
 		}
-		c = lbuf + 4;
+		if((c = strdup(lbuf + 4)) == NULL){
+			return -1;
+		}
 		if((subd = lookup_device(c)) == NULL){
+			free(c);
 			return -1;
 		}
 		if((m = malloc(sizeof(*m))) == NULL){
+			free(c);
 			return -1;
 		}
+		m->name = c;
 		m->next = NULL;
 		*enqm = m;
 		enqm = &m->next;

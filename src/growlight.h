@@ -18,7 +18,9 @@ int growlight_stop(void);
 struct device;
 
 typedef struct mdslave {
-	struct device *component;	// Component of mdadm device
+	char *name;			// Name of component
+	struct device *component;	// Block device holding component of
+					//  mdadm device
 	struct mdslave *next;		// Next in this md device
 } mdslave;
 

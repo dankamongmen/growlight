@@ -36,7 +36,7 @@ print_mdadm(const device *d){
 		return -1;
 	}
 	for(md = d->mddev.slaves ; md ; md = md->next){
-		r += rr = printf("  %s\n",md->component->name);
+		r += rr = printf("  %s\n",md->name);
 		if(rr < 0){
 			return -1;
 		}

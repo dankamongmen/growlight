@@ -145,6 +145,7 @@ free_device(device *d){
 
 				while( (md = d->mddev.slaves) ){
 					d->mddev.slaves = md->next;
+					free(md->name);
 					free(md);
 				}
 				free(d->mddev.level);
