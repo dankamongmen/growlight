@@ -45,11 +45,12 @@ print_mdadm(const device *d){
 }
 
 static int
-print_drive(const device *d){
+print_drive(const device *d,const char *prefix){
 	const device *p;
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s%-20.20s\n",d->name,
+	r += rr = printf("%s%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s%-20.20s\n",
+			prefix ? prefix : "",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			d->logsec,d->physsec,
@@ -63,10 +64,12 @@ print_drive(const device *d){
 	if(rr < 0){
 		return -1;
 	}
-	for(p = d->parts ; p ; p = p->next){
-		r += rr = printf(" %s\n",p->name);
-		if(rr < 0){
-			return -1;
+	if(!prefix){
+		for(p = d->parts ; p ; p = p->next){
+			r += rr = printf(" %s\n",p->name);
+			if(rr < 0){
+				return -1;
+			}
 		}
 	}
 	return r;
@@ -79,10 +82,16 @@ print_controller(const controller *c){
 
 	switch(c->bus){
 		case BUS_PCIe:
-			r += rr = printf("PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)\n",
+			if(c->pcie.lanes_neg == 0){
+				r += rr = printf("Southbridge device %04hx:%02x.%02x.%x\n",
+					c->pcie.domain,c->pcie.bus,
+					c->pcie.dev,c->pcie.func);
+			}else{
+				r += rr = printf("PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)\n",
 					c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func,
 					c->pcie.lanes_neg,pcie_gen(c->pcie.gen));
+			}
 			if(rr < 0){
 				return -1;
 			}
@@ -99,7 +108,7 @@ print_controller(const controller *c){
 		return -1;
 	}
 	for(d = c->blockdevs ; d ; d = d->next){
-		r += rr = printf(" %s\n",d->name);
+		r += rr = print_drive(d," ");
 		if(rr < 0){
 			return -1;
 		}
@@ -155,7 +164,7 @@ blockdevs(char * const *args){
 		const device *d;
 
 		for(d = c->blockdevs ; d ; d = d->next){
-			if(print_drive(d) < 0){
+			if(print_drive(d,NULL) < 0){
 				return -1;
 			}
 		}
