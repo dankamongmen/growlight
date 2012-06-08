@@ -25,6 +25,15 @@ typedef struct partition {
 	dev_t devno;		// Don't expose this non-persistent datum
 } partition;
 
+typedef struct mdslave {
+	void *component;	// Pointer to device or partition struct
+	enum {
+		MDSLAVE_DEVICE,
+		MDSLAVE_PARTITION,
+	} comptype;		// Identifies type of target of ->component
+	struct mdslave *next;	// Next in this md device
+} mdslave;
+
 // An (non-link) entry in the device hierarchy, representing a block device.
 typedef struct device {
 	// next block device on this controller
@@ -44,6 +53,7 @@ typedef struct device {
 		struct {
 			unsigned long disks;	// RAID disks in md
 			char *level;		// RAID level
+			mdslave *slaves;	// RAID components
 		} mddev;
 	};
 	enum {

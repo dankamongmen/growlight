@@ -150,9 +150,16 @@ free_device(device *d){
 		switch(d->layout){
 			case LAYOUT_NONE:
 				break;
-			case LAYOUT_MDADM:
+			case LAYOUT_MDADM:{
+				mdslave *md;
+
+				while( (md = d->mddev.slaves) ){
+					d->mddev.slaves = md->next;
+					free(md);
+				}
 				free(d->mddev.level);
 				break;
+			}
 		}
 		while( (p = d->parts) ){
 			d->parts = p->next;

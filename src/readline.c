@@ -24,6 +24,7 @@ pcie_gen(unsigned gen){
 static int
 print_mdadm(const device *d){
 	int r = 0,rr;
+	mdslave *md;
 
 	r += rr = printf("%-10.10s %4uB %4uB %c%c%c%c  %-6.6s%5lu %-7.7s\n",
 			d->name,
@@ -38,7 +39,26 @@ print_mdadm(const device *d){
 	if(rr < 0){
 		return -1;
 	}
-	return 0;
+	for(md = d->mddev.slaves ; md ; md = md->next){
+		switch(md->comptype){
+			case MDSLAVE_DEVICE:{
+				const device *mdd = md->component;
+				r += rr = printf("  %s\n",mdd->name);
+				break;
+			}case MDSLAVE_PARTITION:{
+				const partition *mdp = md->component;
+				r += rr = printf("  %s\n",mdp->name);
+				break;
+			}default:{
+				fprintf(stderr,"Invalid mdslave type %d\n",md->comptype);
+				return -1;
+			}
+		}
+		if(rr < 0){
+			return -1;
+		}
+	}
+	return r;
 }
 
 static int
@@ -59,7 +79,7 @@ print_drive(const device *d){
 	if(rr < 0){
 		return -1;
 	}
-	return 0;
+	return r;
 }
 
 static int
