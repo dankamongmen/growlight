@@ -26,13 +26,9 @@ print_mdadm(const device *d){
 	int r = 0,rr;
 	mdslave *md;
 
-	r += rr = printf("%-10.10s %4uB %4uB %c%c%c%c  %-6.6s%5lu %-7.7s\n",
+	r += rr = printf("%-10.10s %4uB %4uB %-6.6s%5lu %-7.7s\n",
 			d->name,
 			d->logsec,d->physsec,
-			d->blkdev.removable ? 'R' : '.',
-			d->blkdev.realdev ? '.' : 'V',
-			d->layout == LAYOUT_MDADM ? 'M' : '.',
-			d->blkdev.realdev ? d->blkdev.rotate ? 'O' : '.' : '.',
 			d->pttable ? d->pttable : "none",
 			d->mddev.disks,d->mddev.level
 			);
@@ -115,7 +111,7 @@ mdadm(char * const *args){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args);
-	printf("%-10.10s %5.5s %5.5s Flags %-6.6s%-6.6s%-7.7s\n",
+	printf("%-10.10s %5.5s %5.5s %-6.6s%-6.6s%-7.7s\n",
 			"Device","Log","Phys","Table","Disks","Level");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
@@ -155,11 +151,12 @@ blockdevs(char * const *args){
 }
 
 static int
-print_partition(const partition *p){
+print_partition(const device *p){
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s %-37.37s %s\n",p->name,p->uuid ? p->uuid : "n/a",
-			p->pname ? p->pname : "n/a");
+	r += rr = printf("%-10.10s %-37.37s %s\n",p->name,
+			p->partdev.uuid ? p->partdev.uuid : "n/a",
+			p->partdev.pname ? p->partdev.pname : "n/a");
 	if(rr < 0){
 		return -1;
 	}
@@ -175,7 +172,7 @@ partitions(char * const *args){
 		const device *d;
 
 		for(d = c->blockdevs ; d ; d = d->next){
-			const partition *p;
+			const device *p;
 
 			for(p = d->parts ; p ; p = p->next){
 				if(print_partition(p) < 0){

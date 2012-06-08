@@ -133,19 +133,9 @@ const controller *get_controllers(void){
 }
 
 static void
-free_partition(partition *p){
-	if(p){
-		free(p->pname);
-		free(p->name);
-		free(p->uuid);
-		free(p);
-	}
-}
-
-static void
 free_device(device *d){
 	if(d){
-		partition *p;
+		device *p;
 
 		switch(d->layout){
 			case LAYOUT_NONE:
@@ -159,11 +149,15 @@ free_device(device *d){
 				}
 				free(d->mddev.level);
 				break;
+			}case LAYOUT_PARTITION:{
+				free(d->partdev.pname);
+				free(d->partdev.uuid);
+				break;
 			}
 		}
 		while( (p = d->parts) ){
 			d->parts = p->next;
-			free_partition(p);
+			free_device(p);
 		}
 		free(d->wwn);
 		free(d->model);
@@ -243,18 +237,15 @@ free_devtable(void){
 				}
 			} */
 
-static partition *
+static device *
 add_partition(device *d,const char *name,dev_t devno){
-	partition *p;
+	device *p;
 
 	if( (p = malloc(sizeof(*p))) ){
-		partition **pre;
+		device **pre;
 
 		memset(p,0,sizeof(*p));
-		if((p->name = strdup(name)) == NULL){
-			free(p);
-			return NULL;
-		}
+		strcpy(p->name,name);
 		for(pre = &d->parts ; *pre ; pre = &(*pre)->next){
 			if(strcmp((*pre)->name,name) > 0){ // FIXME 0's no good
 				break;
@@ -294,14 +285,13 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 					}
 				}else if(sysfs_exist_p(subfd,"partition")){
 					dev_t devno;
-					partition *p;
 
 					if(sysfs_devno(subfd,&devno)){
 						close(subfd);
 						return -1;
 					}
 					verbf("\tPartition at %s\n",dire->d_name);
-					if((p = add_partition(d,dire->d_name,devno)) == NULL){
+					if(add_partition(d,dire->d_name,devno) == NULL){
 						close(subfd);
 						return -1;
 					}
@@ -493,7 +483,7 @@ create_new_device(const char *name){
 		if(probe_blkid_dev(devbuf,&pr) == 0){
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				const char *pttable;
-				partition *p;
+				device *p;
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
@@ -522,11 +512,11 @@ create_new_device(const char *name){
 
 						uuid = blkid_partition_get_uuid(part);
 						if(uuid){
-							p->uuid = strdup(uuid);
+							p->partdev.uuid = strdup(uuid);
 						}
 						pname = blkid_partition_get_name(part);
 						if(pname){
-							p->pname = strdup(pname);
+							p->partdev.pname = strdup(pname);
 						}
 					}
 				}
@@ -592,7 +582,7 @@ device *lookup_device(const char *name){
 	}while(s);
 	for(c = controllers ; c ; c = c->next){
 		for(d = c->blockdevs ; d ; d = d->next){
-			const partition *p;
+			const device *p;
 
 			if(strcmp(name,d->name) == 0){
 				return d;

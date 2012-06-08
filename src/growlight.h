@@ -15,16 +15,6 @@ int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 int growlight_init(int,char * const *);
 int growlight_stop(void);
 
-// A partition corresponds to one and only one block device (which of course
-// might represent multiple devices, or maybe just a file mounted loopback).
-typedef struct partition {
-	char *name;		// Entry in /dev or /sys/class/block
-	char *pname;		// Filesystem label
-	char *uuid;		// Filesystem UUID
-	struct partition *next;	// Next on this disk
-	dev_t devno;		// Don't expose this non-persistent datum
-} partition;
-
 struct device;
 
 typedef struct mdslave {
@@ -33,10 +23,12 @@ typedef struct mdslave {
 } mdslave;
 
 // An (non-link) entry in the device hierarchy, representing a block device.
+// A partition corresponds to one and only one block device (which of course
+// might represent multiple devices, or maybe just a file mounted loopback).
 typedef struct device {
 	// next block device on this controller
 	struct device *next;
-	char name[PATH_MAX];		// Entry in /dev or /sys/block
+	char name[NAME_MAX];		// Entry in /dev or /sys/block
 	char *pttable;			// Partition table type (can be NULL)
 	char *model,*revision;		// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
@@ -53,12 +45,18 @@ typedef struct device {
 			char *level;		// RAID level
 			mdslave *slaves;	// RAID components
 		} mddev;
+		struct {
+			char *pname;		// Filesystem label
+			char *uuid;		// Filesystem UUID
+			struct partition *next;	// Next on this disk
+		} partdev;
 	};
 	enum {
 		LAYOUT_NONE,
 		LAYOUT_MDADM,
+		LAYOUT_PARTITION,
 	} layout;
-	partition *parts;		// Partitions (can be NULL)
+	struct device *parts;	// Partitions (can be NULL)
 	dev_t devno;		// Don't expose this non-persistent datum
 } device;
 
