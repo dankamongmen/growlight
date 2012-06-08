@@ -16,7 +16,7 @@ Dependencies:
 
 Building from a git checkout:
 
- - autoreconf -fi
+ - autoreconf -fi -Wall,error
  - continue from "Building from a tarball"
 
 Building from a tarball:
