@@ -75,6 +75,7 @@ print_drive(const device *d){
 static int
 print_controller(const controller *c){
 	int r = 0,rr;
+	device *d;
 
 	switch(c->bus){
 		case BUS_PCIe:
@@ -96,6 +97,12 @@ print_controller(const controller *c){
 	r += rr = printf(" %s\n",c->name);
 	if(rr < 0){
 		return -1;
+	}
+	for(d = c->blockdevs ; d ; d = d->next){
+		r += rr = printf(" %s\n",d->name);
+		if(rr < 0){
+			return -1;
+		}
 	}
 	return r;
 }
