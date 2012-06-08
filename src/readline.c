@@ -36,7 +36,7 @@ print_mdadm(const device *d){
 		return -1;
 	}
 	for(md = d->mddev.slaves ; md ; md = md->next){
-		r += rr = printf("  %s\n",md->name);
+		r += rr = printf(" %s\n",md->name);
 		if(rr < 0){
 			return -1;
 		}
@@ -46,6 +46,7 @@ print_mdadm(const device *d){
 
 static int
 print_drive(const device *d){
+	const device *p;
 	int r = 0,rr;
 
 	r += rr = printf("%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s%-20.20s\n",d->name,
@@ -61,6 +62,12 @@ print_drive(const device *d){
 			);
 	if(rr < 0){
 		return -1;
+	}
+	for(p = d->parts ; p ; p = p->next){
+		r += rr = printf(" %s\n",p->name);
+		if(rr < 0){
+			return -1;
+		}
 	}
 	return r;
 }
@@ -86,7 +93,7 @@ print_controller(const controller *c){
 			fprintf(stderr,"Unknown bus type: %d\n",c->bus);
 			return -1;
 	}
-	r += rr = printf("\t%s\n",c->name);
+	r += rr = printf(" %s\n",c->name);
 	if(rr < 0){
 		return -1;
 	}
