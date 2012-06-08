@@ -11,6 +11,20 @@
 
 static int help(char * const *);
 
+static int
+print_partition(const device *p,const char *prefix){
+	int r = 0,rr;
+
+	r += rr = printf("%s%-10.10s %-37.37s %s\n",
+			prefix ? prefix : "",p->name,
+			p->partdev.uuid ? p->partdev.uuid : "n/a",
+			p->partdev.pname ? p->partdev.pname : "n/a");
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
 static const char *
 pcie_gen(unsigned gen){
 	switch(gen){
@@ -19,29 +33,6 @@ pcie_gen(unsigned gen){
 		case 3: return "3.0";
 		default: return "unknown";
 	}
-}
-
-static int
-print_mdadm(const device *d){
-	int r = 0,rr;
-	mdslave *md;
-
-	r += rr = printf("%-10.10s %4uB %4uB %-6.6s%5lu %-7.7s\n",
-			d->name,
-			d->logsec,d->physsec,
-			d->pttable ? d->pttable : "none",
-			d->mddev.disks,d->mddev.level
-			);
-	if(rr < 0){
-		return -1;
-	}
-	for(md = d->mddev.slaves ; md ; md = md->next){
-		r += rr = printf(" %s\n",md->name);
-		if(rr < 0){
-			return -1;
-		}
-	}
-	return r;
 }
 
 static int
@@ -66,11 +57,48 @@ print_drive(const device *d,const char *prefix){
 	}
 	if(!prefix){
 		for(p = d->parts ; p ; p = p->next){
-			r += rr = printf(" %s\n",p->name);
+			r += rr = print_partition(p," ");
 			if(rr < 0){
 				return -1;
 			}
 		}
+	}
+	return r;
+}
+
+static int
+print_mdadm(const device *d){
+	const mdslave *md;
+	int r = 0,rr;
+
+	r += rr = printf("%-10.10s %4uB %4uB %-6.6s%5lu %-7.7s\n",
+			d->name,
+			d->logsec,d->physsec,
+			d->pttable ? d->pttable : "none",
+			d->mddev.disks,d->mddev.level
+			);
+	if(rr < 0){
+		return -1;
+	}
+	for(md = d->mddev.slaves ; md ; md = md->next){
+		r += rr = print_drive(md->component," ");
+		if(rr < 0){
+			return -1;
+		}
+		if(strcmp(md->name,md->component->name)){
+			const device *p;
+
+			for(p = md->component->parts ; p ; p = p->next){
+				if(strcmp(md->name,p->name)){
+					continue;
+				}
+				r += rr = print_partition(p,"  ");
+				if(rr < 0){
+					return -1;
+				}
+			}
+		}
+
 	}
 	return r;
 }
@@ -174,19 +202,6 @@ blockdevs(char * const *args){
 }
 
 static int
-print_partition(const device *p){
-	int r = 0,rr;
-
-	r += rr = printf("%-10.10s %-37.37s %s\n",p->name,
-			p->partdev.uuid ? p->partdev.uuid : "n/a",
-			p->partdev.pname ? p->partdev.pname : "n/a");
-	if(rr < 0){
-		return -1;
-	}
-	return r;
-}
-
-static int
 partitions(char * const *args){
 	const controller *c;
 
@@ -198,7 +213,7 @@ partitions(char * const *args){
 			const device *p;
 
 			for(p = d->parts ; p ; p = p->next){
-				if(print_partition(p) < 0){
+				if(print_partition(p,NULL) < 0){
 					return -1;
 				}
 			}
