@@ -10,6 +10,7 @@
 
 int explore_md_sysfs(device *d,int dirfd){
 	unsigned long rd;
+	mdslave **enqm;
 
 	// These files will be empty on incomplete arrays like the md0 that
 	// sometimes pops up.
@@ -21,8 +22,11 @@ int explore_md_sysfs(device *d,int dirfd){
 		verbf("Warning: no 'level' content in mdadm device\n");
 		d->mddev.level = 0;
 	}
+	enqm = &d->mddev.slaves;
 	for(rd = 0 ; rd < d->mddev.disks ; ++rd){
 		char buf[NAME_MAX],lbuf[NAME_MAX],*c;
+		device *subd;
+		mdslave *m;
 		int r;
 
 		if(snprintf(buf,sizeof(buf),"rd%lu",rd) >= (int)sizeof(buf)){
@@ -44,7 +48,16 @@ int explore_md_sysfs(device *d,int dirfd){
 			return -1;
 		}
 		c = lbuf + 4;
-		printf("***%s***\n",c);
+		if((subd = lookup_device(c)) == NULL){
+			return -1;
+		}
+		if((m = malloc(sizeof(*m))) == NULL){
+			return -1;
+		}
+		m->next = NULL;
+		*enqm = m;
+		enqm = &m->next;
+		m->component = subd;
 	}
 	return 0;
 }

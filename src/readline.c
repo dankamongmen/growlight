@@ -40,20 +40,7 @@ print_mdadm(const device *d){
 		return -1;
 	}
 	for(md = d->mddev.slaves ; md ; md = md->next){
-		switch(md->comptype){
-			case MDSLAVE_DEVICE:{
-				const device *mdd = md->component;
-				r += rr = printf("  %s\n",mdd->name);
-				break;
-			}case MDSLAVE_PARTITION:{
-				const partition *mdp = md->component;
-				r += rr = printf("  %s\n",mdp->name);
-				break;
-			}default:{
-				fprintf(stderr,"Invalid mdslave type %d\n",md->comptype);
-				return -1;
-			}
-		}
+		r += rr = printf("  %s\n",md->component->name);
 		if(rr < 0){
 			return -1;
 		}

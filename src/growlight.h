@@ -25,13 +25,11 @@ typedef struct partition {
 	dev_t devno;		// Don't expose this non-persistent datum
 } partition;
 
+struct device;
+
 typedef struct mdslave {
-	void *component;	// Pointer to device or partition struct
-	enum {
-		MDSLAVE_DEVICE,
-		MDSLAVE_PARTITION,
-	} comptype;		// Identifies type of target of ->component
-	struct mdslave *next;	// Next in this md device
+	struct device *component;	// Component of mdadm device
+	struct mdslave *next;		// Next in this md device
 } mdslave;
 
 // An (non-link) entry in the device hierarchy, representing a block device.
@@ -107,6 +105,9 @@ typedef struct controller {
 // Currently, we just blindly hand out references to our internal store. This
 // simply will not fly in the long run -- FIXME
 const controller *get_controllers(void);
+
+// This is similarly no good FIXME
+device *lookup_device(const char *name);
 
 #ifdef __cplusplus
 }
