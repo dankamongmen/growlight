@@ -451,8 +451,9 @@ create_new_device(const char *name){
 		return NULL;
 	}
 	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
-		fprintf(stderr,"Couldn't read link at %s/%s (%s?)\n",
+		fprintf(stderr,"Couldn't read link at %s%s (%s?)\n",
 			SYSROOT,name,strerror(errno));
+		return NULL;
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
@@ -463,7 +464,7 @@ create_new_device(const char *name){
 		verbf("\tController: %s\n",c->name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
-		fprintf(stderr,"Couldn't open link at %s/%s (%s?)\n",
+		fprintf(stderr,"Couldn't open link at %s%s (%s?)\n",
 			SYSROOT,buf,strerror(errno));
 		free_device(&dd);
 		return NULL;

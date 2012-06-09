@@ -4,6 +4,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
+#include <config.h>
 #include <growlight.h>
 
 #define ZERO_ARG_CHECK(args,arghelp) \
@@ -279,8 +280,14 @@ mounts(char * const *args,const char *arghelp){
 
 static int
 map(char * const *args,const char *arghelp){
+	device *d;
+
 	TWO_ARG_CHECK(args,arghelp);
-	return -1;
+	if((d = lookup_device(args[1])) == NULL){
+		fprintf(stderr,"Couldn't find device %s\n",args[1]);
+		return -1;
+	}
+	return 0;
 }
 
 static void
@@ -344,7 +351,7 @@ static const struct fxn {
 	FXN(partitions,""),
 	FXN(mdadm,""),
 	FXN(mounts,""),
-	FXN(map,"mountdev mountpoint"),
+	FXN(map,"mountdev mountpoint|\"swap\""),
 	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
@@ -365,7 +372,7 @@ help(char * const *args,const char *arghelp){
 
 static int
 tty_ui(void){
-	const char prompt[] = "[growlight]> ";
+	const char prompt[] = "[" PACKAGE "]> ";
 	char *l;
 
 	// FIXME need command line completion!
