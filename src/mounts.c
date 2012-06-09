@@ -3,16 +3,17 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
 
+#include <mmap.h>
 #include <mounts.h>
 
 int parse_mounts(const char *fn){
+	off_t len;
+	void *map;
 	int fd;
 
-	if((fd = open(fn,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
-		int e = errno;
-		fprintf(stderr,"Couldn't open %s (%s?)\n",fn,strerror(errno));
-		errno = e;
+	if((map = map_virt_file(fn,&fd,&len)) == MAP_FAILED){
 		return -1;
 	}
 	close(fd);
