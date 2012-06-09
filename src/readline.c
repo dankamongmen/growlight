@@ -222,6 +222,45 @@ partitions(char * const *args){
 	return 0;
 }
 
+static int
+print_mount(const device *d,char *prefix){
+	int r = 0,rr;
+
+	r += rr = printf("%s%s",prefix,d->mnt);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
+mounts(char * const *args){
+	const controller *c;
+
+	ZERO_ARG_CHECK(args);
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			const device *p;
+
+			if(d->mnt){
+				if(print_mount(d,NULL) < 0){
+					return -1;
+				}
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(p->mnt){
+					if(print_mount(p,NULL) < 0){
+						return -1;
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 static void
 free_tokes(char **tokes){
 	char **toke;
@@ -281,6 +320,7 @@ static const struct fxn {
 	FXN(blockdevs),
 	FXN(partitions),
 	FXN(mdadm),
+	FXN(mounts),
 	FXN(help),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN

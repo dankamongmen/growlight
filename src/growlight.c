@@ -162,6 +162,7 @@ free_device(device *d){
 			d->parts = p->next;
 			free_device(p);
 		}
+		free(d->mnt);
 		free(d->wwn);
 		free(d->model);
 		free(d->revision);

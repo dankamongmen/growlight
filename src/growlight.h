@@ -34,6 +34,7 @@ typedef struct device {
 	char *pttable;			// Partition table type (can be NULL)
 	char *model,*revision;		// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
+	char *mnt;			// Active mount point
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	union {
