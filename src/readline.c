@@ -12,15 +12,33 @@
 static int help(char * const *);
 
 static int
-print_partition(const device *p,const char *prefix){
+print_mount(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%s%-10.10s %-37.37s %s\n",
-			prefix ? prefix : "",p->name,
+	r += rr = printf("%*.*s%s %s on %s %s\n",prefix,prefix,"",d->name,
+			d->mnttype,d->mnt,d->mntops);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
+print_partition(const device *p,int prefix){
+	int r = 0,rr;
+
+	r += rr = printf("%*.*s%-10.10s %-37.37s %s\n",
+			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			p->partdev.pname ? p->partdev.pname : "n/a");
 	if(rr < 0){
 		return -1;
+	}
+	if(p->mnt){
+		r += rr = print_mount(p,prefix + 1);
+		if(rr < 0){
+			return -1;
+		}
 	}
 	return r;
 }
@@ -36,12 +54,12 @@ pcie_gen(unsigned gen){
 }
 
 static int
-print_drive(const device *d,const char *prefix){
+print_drive(const device *d,int prefix){
 	const device *p;
 	int r = 0,rr;
 
-	r += rr = printf("%s%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s%-20.20s\n",
-			prefix ? prefix : "",d->name,
+	r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s%-20.20s\n",
+			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			d->logsec,d->physsec,
@@ -55,9 +73,15 @@ print_drive(const device *d,const char *prefix){
 	if(rr < 0){
 		return -1;
 	}
+	if(d->mnt){
+		r += rr = print_mount(d,prefix + 1);
+		if(rr < 0){
+			return -1;
+		}
+	}
 	if(!prefix){
 		for(p = d->parts ; p ; p = p->next){
-			r += rr = print_partition(p," ");
+			r += rr = print_partition(p,prefix + 1);
 			if(rr < 0){
 				return -1;
 			}
@@ -81,7 +105,7 @@ print_mdadm(const device *d){
 		return -1;
 	}
 	for(md = d->mddev.slaves ; md ; md = md->next){
-		r += rr = print_drive(md->component," ");
+		r += rr = print_drive(md->component,1);
 		if(rr < 0){
 			return -1;
 		}
@@ -92,7 +116,7 @@ print_mdadm(const device *d){
 				if(strcmp(md->name,p->name)){
 					continue;
 				}
-				r += rr = print_partition(p,"  ");
+				r += rr = print_partition(p,1);
 				if(rr < 0){
 					return -1;
 				}
@@ -136,7 +160,7 @@ print_controller(const controller *c){
 		return -1;
 	}
 	for(d = c->blockdevs ; d ; d = d->next){
-		r += rr = print_drive(d," ");
+		r += rr = print_drive(d,1);
 		if(rr < 0){
 			return -1;
 		}
@@ -192,7 +216,7 @@ blockdevs(char * const *args){
 		const device *d;
 
 		for(d = c->blockdevs ; d ; d = d->next){
-			if(print_drive(d,NULL) < 0){
+			if(print_drive(d,0) < 0){
 				return -1;
 			}
 		}
@@ -213,24 +237,13 @@ partitions(char * const *args){
 			const device *p;
 
 			for(p = d->parts ; p ; p = p->next){
-				if(print_partition(p,NULL) < 0){
+				if(print_partition(p,0) < 0){
 					return -1;
 				}
 			}
 		}
 	}
 	return 0;
-}
-
-static int
-print_mount(const device *d,char *prefix){
-	int r = 0,rr;
-
-	r += rr = printf("%s%s",prefix,d->mnt);
-	if(rr < 0){
-		return -1;
-	}
-	return r;
 }
 
 static int
@@ -245,13 +258,13 @@ mounts(char * const *args){
 			const device *p;
 
 			if(d->mnt){
-				if(print_mount(d,NULL) < 0){
+				if(print_mount(d,0) < 0){
 					return -1;
 				}
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if(p->mnt){
-					if(print_mount(p,NULL) < 0){
+					if(print_mount(p,0) < 0){
 						return -1;
 					}
 				}

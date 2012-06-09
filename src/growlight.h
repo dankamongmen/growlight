@@ -35,6 +35,8 @@ typedef struct device {
 	char *model,*revision;		// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
 	char *mnt;			// Active mount point
+	char *mnttype;			// Type of mount
+	char *mntops;			// Mount options
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	union {

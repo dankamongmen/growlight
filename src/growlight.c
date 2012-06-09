@@ -164,6 +164,8 @@ free_device(device *d){
 			d->parts = p->next;
 			free_device(p);
 		}
+		free(d->mntops);
+		free(d->mnttype);
 		free(d->mnt);
 		free(d->wwn);
 		free(d->model);
@@ -567,8 +569,6 @@ create_new_device(const char *name){
 
 // name must be an entry in /sys/device/block, and also one in /dev
 device *lookup_device(const char *name){
-	char buf[PATH_MAX + 1];
-	struct stat st;
 	controller *c;
 	device *d;
 	size_t s;
@@ -587,20 +587,6 @@ device *lookup_device(const char *name){
 		}
 		name += s;
 	}while(s);
-	if(fstatat(devfd,name,&st,AT_NO_AUTOMOUNT|AT_SYMLINK_NOFOLLOW)){
-		return NULL;
-	}
-	if(S_ISLNK(st.st_mode)){
-		int r;
-		if((r = readlinkat(devfd,name,buf,sizeof(buf))) < 0){
-			return NULL;
-		}
-		if((size_t)r >= sizeof(buf)){
-			return NULL;
-		}
-		buf[r] = '\0';
-		name = buf;
-	}
 	for(c = controllers ; c ; c = c->next){
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;

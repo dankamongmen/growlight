@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/stat.h>
 
 #include <mmap.h>
 #include <mounts.h>
@@ -110,6 +111,25 @@ err:
 	return -1;
 }
 
+static device *
+lookup_dentry(device *d,const char *name){
+	if(name[0] == '/'){
+	       	if((name = strrchr(name,'/')) == NULL){
+			return NULL;
+		}
+		++name;
+	}
+	if(strcmp(d->name,name) == 0){
+		return d;
+	}
+	for(d = d->parts ; d ; d = d->next){
+		if(strcmp(d->name,name) == 0){
+			break;
+		}
+	}
+	return d;
+}
+
 int parse_mounts(const char *fn){
 	char *mnt,*dev,*ops,*fs;
 	off_t len,idx;
@@ -122,6 +142,9 @@ int parse_mounts(const char *fn){
 	idx = 0;
 	dev = mnt = fs = ops = NULL;
 	while(idx < len){
+		char buf[PATH_MAX + 1],*rp;
+		struct stat st;
+		device *d;
 		int r;
 
 		free(dev); free(mnt); free(fs); free(ops);
@@ -132,9 +155,38 @@ int parse_mounts(const char *fn){
 		if(dev[0] != '/'){
 			continue;
 		}
-		if(lookup_device(dev) == NULL){
+		if(lstat(dev,&st)){
 			goto err;
 		}
+		if(S_ISLNK(st.st_mode)){
+			int r;
+
+			if((r = readlink(dev,buf,sizeof(buf))) < 0){
+				goto err;
+			}
+			if((size_t)r >= sizeof(buf)){
+				goto err;
+			}
+			buf[r] = '\0';
+			rp = buf;
+		}else{
+			rp = dev;
+		}
+		if((d = lookup_device(rp)) == NULL){
+			goto err;
+		}
+		if((d = lookup_dentry(d,rp)) == NULL){
+			goto err;
+		}
+		if(d->mnt){
+			fprintf(stderr,"Already had mount for %s|%s: %s|%s\n",
+					dev,mnt,d->name,d->mnt);
+			goto err;
+		}
+		d->mnt = mnt;
+		d->mnttype = fs;
+		d->mntops = ops;
+		mnt = fs = ops = NULL;
 	}
 	free(dev); free(mnt); free(fs); free(ops);
 	dev = mnt = fs = ops = NULL;
