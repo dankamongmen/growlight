@@ -25,10 +25,12 @@
 
 #include <mdadm.h>
 #include <sysfs.h>
+#include <mounts.h>
 #include <libblkid.h>
 #include <growlight.h>
 
 #define SYSROOT "/sys/block/"
+#define MOUNTS	"/proc/mounts"
 #define DEVBYID "/dev/disk/by-id/"
 
 static unsigned verbose;
@@ -809,6 +811,9 @@ int growlight_init(int argc,char * const *argv){
 		goto err;
 	}
 	if(watch_dir(fd,DEVBYID,lookup_id)){
+		goto err;
+	}
+	if(parse_mounts(MOUNTS)){
 		goto err;
 	}
 	return 0;
