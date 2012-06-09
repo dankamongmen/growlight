@@ -53,7 +53,7 @@ read_map_virt_fd(int fd,off_t *len){
 	return map;
 
 maperr:
-	fprintf(stderr,"Couldn't extend map of %d past %ju (%s?)\n", fd,*len,strerror(errno));
+	fprintf(stderr,"Couldn't extend map of %d past %ju (%s?)\n",fd,(uintmax_t)*len,strerror(errno));
 	*len = -1;
 	return MAP_FAILED;
 }
