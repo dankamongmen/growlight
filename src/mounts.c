@@ -9,6 +9,7 @@
 
 #include <mmap.h>
 #include <mounts.h>
+#include <growlight.h>
 
 static int
 parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops){
@@ -119,23 +120,30 @@ int parse_mounts(const char *fn){
 		return -1;
 	}
 	idx = 0;
+	dev = mnt = fs = ops = NULL;
 	while(idx < len){
 		int r;
 
+		free(dev); free(mnt); free(fs); free(ops);
 		if((r = parse_mount(map + idx,len - idx,&dev,&mnt,&fs,&ops)) < 0){
 			goto err;
 		}
-		free(mnt);
-		free(dev);
-		free(ops);
-		free(fs);
 		idx += r;
+		if(dev[0] != '/'){
+			continue;
+		}
+		if(lookup_device(dev) == NULL){
+			goto err;
+		}
 	}
+	free(dev); free(mnt); free(fs); free(ops);
+	dev = mnt = fs = ops = NULL;
 	munmap_virt(map,len);
 	close(fd);
 	return 0;
 
 err:
+	free(dev); free(mnt); free(fs); free(ops);
 	munmap_virt(map,len);
 	close(fd);
 	return -1;

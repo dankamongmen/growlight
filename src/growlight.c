@@ -31,11 +31,13 @@
 
 #define SYSROOT "/sys/block/"
 #define MOUNTS	"/proc/mounts"
-#define DEVBYID "/dev/disk/by-id/"
+#define DEVROOT "/dev"
+#define DEVBYID DEVROOT "/disk/by-id/"
 
 static unsigned verbose;
 static struct pci_access *pciacc;
 static int sysfd = -1; // Hold a reference to SYSROOT
+static int devfd = -1; // Hold a reference to DEVROOT
 
 static controller unknown_bus = {
 	.name = "Unknown controller",
@@ -196,8 +198,8 @@ free_devtable(void){
 			free(c);
 		}
 	}
-	close(sysfd);
-	sysfd = -1;
+	close(sysfd); sysfd = -1;
+	close(devfd); devfd = -1;
 }
 
 	/*if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
@@ -563,9 +565,10 @@ create_new_device(const char *name){
 	return d;
 }
 
-// name must be an entry in /sys/block (and should probably be one in /dev, but
-// we can index back with major/minor numbers...I think).
+// name must be an entry in /sys/device/block, and also one in /dev
 device *lookup_device(const char *name){
+	char buf[PATH_MAX + 1];
+	struct stat st;
 	controller *c;
 	device *d;
 	size_t s;
@@ -584,6 +587,20 @@ device *lookup_device(const char *name){
 		}
 		name += s;
 	}while(s);
+	if(fstatat(devfd,name,&st,AT_NO_AUTOMOUNT|AT_SYMLINK_NOFOLLOW)){
+		return NULL;
+	}
+	if(S_ISLNK(st.st_mode)){
+		int r;
+		if((r = readlinkat(devfd,name,buf,sizeof(buf))) < 0){
+			return NULL;
+		}
+		if((size_t)r >= sizeof(buf)){
+			return NULL;
+		}
+		buf[r] = '\0';
+		name = buf;
+	}
 	for(c = controllers ; c ; c = c->next){
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;
@@ -803,6 +820,9 @@ int growlight_init(int argc,char * const *argv){
 		goto err;
 	}
 	if((sysfd = get_dir_fd(&sdir,SYSROOT)) < 0){
+		goto err;
+	}
+	if((devfd = get_dir_fd(&sdir,DEVROOT)) < 0){
 		goto err;
 	}
 	if((fd = inotify_fd()) < 0){
