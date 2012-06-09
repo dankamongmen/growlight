@@ -6,10 +6,13 @@
 
 #include <growlight.h>
 
-#define ZERO_ARG_CHECK(args) \
- if(args[1]){ fprintf(stderr,"Usage: %s\n",*args); return -1 ; }
+#define ZERO_ARG_CHECK(args,arghelp) \
+ if(args[1]){ fprintf(stderr,"Usage: %s %s\n",*args,arghelp); return -1 ; }
 
-static int help(char * const *);
+#define TWO_ARG_CHECK(args,arghelp) \
+ if(!args[1] || !args[2] || args[3]){ fprintf(stderr,"Usage: %s %s\n",*args,arghelp); return -1 ; }
+
+static int help(char * const *,const char *);
 
 static int
 print_mount(const device *d,int prefix){
@@ -169,10 +172,10 @@ print_controller(const controller *c){
 }
 
 static int
-initiators(char * const *args){
+initiators(char * const *args,const char *arghelp){
 	const controller *c;
 
-	ZERO_ARG_CHECK(args);
+	ZERO_ARG_CHECK(args,arghelp);
 	for(c = get_controllers() ; c ; c = c->next){
 		if(print_controller(c) < 0){
 			return -1;
@@ -182,10 +185,10 @@ initiators(char * const *args){
 }
 
 static int
-mdadm(char * const *args){
+mdadm(char * const *args,const char *arghelp){
 	const controller *c;
 
-	ZERO_ARG_CHECK(args);
+	ZERO_ARG_CHECK(args,arghelp);
 	printf("%-10.10s %5.5s %5.5s %-6.6s%-6.6s%-7.7s\n",
 			"Device","Log","Phys","Table","Disks","Level");
 	for(c = get_controllers() ; c ; c = c->next){
@@ -206,10 +209,10 @@ mdadm(char * const *args){
 }
 
 static int
-blockdevs(char * const *args){
+blockdevs(char * const *args,const char *arghelp){
 	const controller *c;
 
-	ZERO_ARG_CHECK(args);
+	ZERO_ARG_CHECK(args,arghelp);
 	printf("%-10.10s %-16.16s %-4.4s %5.5s %5.5s Flags %-6.6s%-20.20s\n",
 			"Device","Model","Rev","Log","Phys","Table","WWN");
 	for(c = get_controllers() ; c ; c = c->next){
@@ -226,10 +229,10 @@ blockdevs(char * const *args){
 }
 
 static int
-partitions(char * const *args){
+partitions(char * const *args,const char *arghelp){
 	const controller *c;
 
-	ZERO_ARG_CHECK(args);
+	ZERO_ARG_CHECK(args,arghelp);
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -247,10 +250,10 @@ partitions(char * const *args){
 }
 
 static int
-mounts(char * const *args){
+mounts(char * const *args,const char *arghelp){
 	const controller *c;
 
-	ZERO_ARG_CHECK(args);
+	ZERO_ARG_CHECK(args,arghelp);
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -272,6 +275,12 @@ mounts(char * const *args){
 		}
 	}
 	return 0;
+}
+
+static int
+map(char * const *args,const char *arghelp){
+	TWO_ARG_CHECK(args,arghelp);
+	return -1;
 }
 
 static void
@@ -326,27 +335,29 @@ tokenize(const char *line,char ***tokes){
 
 static const struct fxn {
 	const char *cmd;
-	int (*fxn)(char * const *);
+	int (*fxn)(char * const *,const char *);
+	const char *arghelp;
 } fxns[] = {
-#define FXN(x) { .cmd = #x, .fxn = x, }
-	FXN(initiators),
-	FXN(blockdevs),
-	FXN(partitions),
-	FXN(mdadm),
-	FXN(mounts),
-	FXN(help),
+#define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
+	FXN(initiators,""),
+	FXN(blockdevs,""),
+	FXN(partitions,""),
+	FXN(mdadm,""),
+	FXN(mounts,""),
+	FXN(map,"mountdev mountpoint"),
+	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
 };
 
 static int
-help(char * const *args){
+help(char * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
-	ZERO_ARG_CHECK(args);
+	ZERO_ARG_CHECK(args,arghelp);
 	printf("\n\tAvailable commands:\n\n");
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
-		printf("\t  %s\n",fxn->cmd);
+		printf("\t  %s %s\n",fxn->cmd,fxn->arghelp);
 	}
 	printf("\t  quit\n\n");
 	return 0;
@@ -381,7 +392,7 @@ tty_ui(void){
 			break;
 		}
 		if(fxn->fxn){
-			fxn->fxn(tokes);
+			fxn->fxn(tokes,fxn->arghelp);
 		}else{
 			fprintf(stderr,"Unknown command: %s\n",tokes[0]);
 		}
