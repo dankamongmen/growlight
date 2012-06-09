@@ -7,8 +7,8 @@
 #include <string.h>
 #include <linux/kdev_t.h>
 
-// FIXME use libudev for this crap
-// FIXME sysfs is UTF-8 not ASCII
+// FIXME use libudev or at least mmap.c for this crap
+// FIXME sysfs is UTF-8 not ASCII!
 char *get_sysfs_string(int dirfd,const char *node){
 	char buf[512]; // FIXME
 	ssize_t r;
