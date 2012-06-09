@@ -17,6 +17,18 @@
 static int help(char * const *,const char *);
 
 static int
+print_target(const mount *m,int prefix){
+	int r = 0,rr;
+
+	r += rr = printf("%*.*s%s %s on %s %s\n",prefix,prefix,"",
+			m->dev,m->fs,m->path,m->ops);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
 print_mount(const device *d,int prefix){
 	int r = 0,rr;
 
@@ -41,6 +53,11 @@ print_partition(const device *p,int prefix){
 	}
 	if(p->mnt){
 		r += rr = print_mount(p,prefix + 1);
+		if(rr < 0){
+			return -1;
+		}
+	}else if(p->target){
+		r += rr = print_target(p->target,prefix + 1);
 		if(rr < 0){
 			return -1;
 		}
@@ -80,6 +97,11 @@ print_drive(const device *d,int prefix){
 	}
 	if(d->mnt){
 		r += rr = print_mount(d,prefix + 1);
+		if(rr < 0){
+			return -1;
+		}
+	}else if(d->target){
+		r += rr = print_target(d->target,prefix + 1);
 		if(rr < 0){
 			return -1;
 		}
@@ -266,10 +288,18 @@ mounts(char * const *args,const char *arghelp){
 				if(print_mount(d,0) < 0){
 					return -1;
 				}
+			}else if(p->target){
+				if(print_target(p->target,0) < 0){
+					return -1;
+				}
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if(p->mnt){
 					if(print_mount(p,0) < 0){
+						return -1;
+					}
+				}else if(p->target){
+					if(print_target(p->target,0) < 0){
 						return -1;
 					}
 				}
