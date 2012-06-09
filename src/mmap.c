@@ -98,3 +98,6 @@ void *map_virt_file(const char *fn,int *fd,off_t *len){
 	return map;
 }
 
+int munmap_virt(void *map,off_t len){
+	return munmap(map,len);
+}

@@ -9,6 +9,7 @@ extern "C" {
 
 void *map_virt_fd(int,off_t *);
 void *map_virt_file(const char *,int *,off_t *);
+int munmap_virt(void *,off_t);
 
 #ifdef __cplusplus
 }
