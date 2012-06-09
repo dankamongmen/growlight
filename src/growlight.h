@@ -8,6 +8,7 @@ extern "C" {
 int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
 #include <limits.h>
+#include <sys/types.h>
 
 	// This isn't really suitable for use as a library to programs beyond
 	// growlight. Not yet, in any case.
@@ -34,9 +35,12 @@ typedef struct device {
 	char *pttable;			// Partition table type (can be NULL)
 	char *model,*revision;		// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
+	// Only one of mnt and target can be set at a time. Iff either is set,
+	// mnttype and mntops must be also both be set.
 	char *mnt;			// Active mount point
-	char *mnttype;			// Type of mount
-	char *mntops;			// Mount options
+	char *target;			// Future mount point
+	char *mnttype;			// Type of mount (either way)
+	char *mntops;			// Mount options (either way)
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	union {

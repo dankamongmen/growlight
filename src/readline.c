@@ -5,6 +5,7 @@
 #include <readline/readline.h>
 
 #include <config.h>
+#include <target.h>
 #include <growlight.h>
 
 #define ZERO_ARG_CHECK(args,arghelp) \
@@ -285,6 +286,14 @@ map(char * const *args,const char *arghelp){
 	TWO_ARG_CHECK(args,arghelp);
 	if((d = lookup_device(args[1])) == NULL){
 		fprintf(stderr,"Couldn't find device %s\n",args[1]);
+		return -1;
+	}
+	if(args[2][0] != '/'){
+		fprintf(stderr,"Not an absolute path: %s\n",args[2]);
+		return -1;
+	}
+	// FIXME need fstype, options, label
+	if(prepare_mount(d,args[2],"ext4","noatime")){
 		return -1;
 	}
 	return 0;
