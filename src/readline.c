@@ -79,14 +79,13 @@ genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
         if(div != mult){
                 div /= mult;
                 val /= decimal;
-                if(val % div || omitdec == 0){
+		if((val % div) / ((div + 99) / 100) || omitdec == 0){
                         snprintf(buf,bsize,"%ju.%02ju%c%c",val / div,(val % div) / ((div + 99) / 100),
                                         prefixes[consumed - 1],uprefix);
                 }else{
                         snprintf(buf,bsize,"%ju%c%c",val / div,prefixes[consumed - 1],uprefix);
                 }
         }else{
-		assert(val == 0);
                 if(val % decimal || omitdec == 0){
                         snprintf(buf,bsize,"%ju.%02ju",val / decimal,val % decimal);
                 }else{
@@ -114,7 +113,7 @@ print_partition(const device *p,int prefix){
 	r += rr = printf("%*.*s%-10.10s %-37.37s " PREFIXFMT " %s\n",
 			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
-			qprefix(p->size * p->logsec,1,buf,sizeof(buf),1),
+			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
 			p->partdev.pname ? p->partdev.pname : "n/a");
 	if(rr < 0){
 		return -1;
@@ -153,7 +152,7 @@ print_drive(const device *d,int prefix){
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
-			qprefix(d->logsec * d->size,1,buf,sizeof(buf),1),
+			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec,
 			d->blkdev.removable ? 'R' : '.',
 			d->blkdev.realdev ? '.' : 'V',
@@ -189,12 +188,14 @@ print_drive(const device *d,int prefix){
 
 static int
 print_mdadm(const device *d){
+	char buf[PREFIXSTRLEN + 1];
 	const mdslave *md;
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s %4uB %4uB %-6.6s%5lu %-7.7s\n",
+	r += rr = printf("%-10.10s " PREFIXFMT " %4uB %-6.6s%5lu %-7.7s\n",
 			d->name,
-			d->logsec,d->physsec,
+			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+			d->physsec,
 			d->pttable ? d->pttable : "none",
 			d->mddev.disks,d->mddev.level
 			);
