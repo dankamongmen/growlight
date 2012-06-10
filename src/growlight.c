@@ -249,7 +249,7 @@ free_devtable(void){
 			} */
 
 static device *
-add_partition(device *d,const char *name,dev_t devno){
+add_partition(device *d,const char *name,dev_t devno,uintmax_t sz){
 	device *p;
 
 	if( (p = malloc(sizeof(*p))) ){
@@ -264,6 +264,7 @@ add_partition(device *d,const char *name,dev_t devno){
 		}
 		p->devno = devno;
 		p->next = *pre;
+		p->size = sz;
 		*pre = p;
 	}
 	return p;
@@ -282,11 +283,38 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 				fd,name,strerror(errno));
 		return -1;
 	}
+	if(get_sysfs_bool(fd,"queue/rotational",&b)){
+		fprintf(stderr,"Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
+	}else{
+		d->blkdev.rotate = !!b;
+	}
+	if(get_sysfs_bool(fd,"removable",&b)){
+		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
+	}else{
+		d->blkdev.removable = !!b;
+	}
+	if(get_sysfs_uint(fd,"size",&d->size)){
+		fprintf(stderr,"Couldn't determine size for %s (%s?)\n",name,strerror(errno));
+	}
+	// Check for "device" to determine if it's real or virtual
+	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+		d->blkdev.realdev = 1;
+		if((d->model = get_sysfs_string(sdevfd,"model")) == NULL){
+			fprintf(stderr,"Couldn't get a model for %s (%s?)\n",name,strerror(errno));
+		}
+		if((d->revision = get_sysfs_string(sdevfd,"rev")) == NULL){
+			fprintf(stderr,"Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
+		}
+		verbf("\tModel: %s revision %s\n",d->model,d->revision);
+		close(sdevfd);
+	}
 	while(errno = 0, (dire = readdir(dir)) ){
 		int subfd;
 
 		if(dire->d_type == DT_DIR){
 			if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+				dev_t devno;
+
 				// Check for "md" to determine if it's an MDADM device
 				if(strcmp(dire->d_name,"md") == 0){
 					d->layout = LAYOUT_MDADM;
@@ -295,14 +323,19 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 						return -1;
 					}
 				}else if(sysfs_exist_p(subfd,"partition")){
-					dev_t devno;
+					uintmax_t sz;
 
 					if(sysfs_devno(subfd,&devno)){
 						close(subfd);
 						return -1;
 					}
 					verbf("\tPartition at %s\n",dire->d_name);
-					if(add_partition(d,dire->d_name,devno) == NULL){
+					if(get_sysfs_uint(fd,"size",&sz)){
+						fprintf(stderr,"Couldn't determine size for %s (%s?)\n",
+								dire->d_name,strerror(errno));
+						sz = 0;
+					}
+					if(add_partition(d,dire->d_name,devno,sz) == NULL){
 						close(subfd);
 						return -1;
 					}
@@ -318,28 +351,6 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 	if(errno){
 		fprintf(stderr,"Error walking sysfs:%s (%s?)\n",name,strerror(errno));
 		return -1;
-	}
-	if(get_sysfs_bool(fd,"queue/rotational",&b)){
-		fprintf(stderr,"Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
-	}else{
-		d->blkdev.rotate = !!b;
-	}
-	if(get_sysfs_bool(fd,"removable",&b)){
-		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
-	}else{
-		d->blkdev.removable = !!b;
-	}
-	// Check for "device" to determine if it's real or virtual
-	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
-		d->blkdev.realdev = 1;
-		if((d->model = get_sysfs_string(sdevfd,"model")) == NULL){
-			fprintf(stderr,"Couldn't get a model for %s (%s?)\n",name,strerror(errno));
-		}
-		if((d->revision = get_sysfs_string(sdevfd,"rev")) == NULL){
-			fprintf(stderr,"Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
-		}
-		verbf("\tModel: %s revision %s\n",d->model,d->revision);
-		close(sdevfd);
 	}
 	return 0;
 }
@@ -547,8 +558,14 @@ create_new_device(const char *name){
 			dd.logsec = blkid_topology_get_logical_sector_size(tpr);
 			dd.physsec = blkid_topology_get_physical_sector_size(tpr);
 			if(dd.logsec || dd.physsec){
+				device *p;
+
 				verbf("\tLogical sector size: %uB Physical sector size: %uB\n",
 						dd.logsec,dd.physsec);
+				for(p = dd.parts ; p ; p = p->next){
+					p->logsec = dd.logsec;
+					p->physsec = dd.physsec;
+				}
 			}
 			blkid_free_probe(pr);
 		}else if(!dd.blkdev.removable || errno != ENOMEDIUM){

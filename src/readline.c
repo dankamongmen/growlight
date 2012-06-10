@@ -46,11 +46,21 @@ print_mount(const device *d,int prefix){
 	return r;
 }
 
+// Takes an arbitrarily large number, and prints it into a fixed-size buffer by
+// adding the necessary SI suffix. Usually, pass a |PREFIXSTRLEN+1|-sized
+// buffer to generate up to PREFIXSTRLEN characters.
+//
+// val: value to print
+// decimal: scaling. '1' if none has taken place.
+// buf: buffer in which string will be generated
+// bsize: size of buffer. ought be at least PREFIXSTRLEN
+// omitdec: inhibit printing of all-0 decimal portions
+// mult: base of suffix system (1000 or 1024)
+// uprefix: character to print following suffix ('i' for kibibytes basically)
+//
 // For full safety, pass in a buffer that can hold the decimal representation
 // of the largest uintmax_t plus three (one for the unit, one for the decimal
-// separator, and one for the NUL byte). If omitdec is non-zero, and the
-// decimal portion is all 0's, the decimal portion will not be printed. decimal
-// indicates scaling, and should be '1' if no scaling has taken place.
+// separator, and one for the NUL byte).
 static const char *
 genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
                         int omitdec,unsigned mult,int uprefix){
@@ -76,6 +86,7 @@ genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
                         snprintf(buf,bsize,"%ju%c%c",val / div,prefixes[consumed - 1],uprefix);
                 }
         }else{
+		assert(val == 0);
                 if(val % decimal || omitdec == 0){
                         snprintf(buf,bsize,"%ju.%02ju",val / decimal,val % decimal);
                 }else{
@@ -134,14 +145,16 @@ pcie_gen(unsigned gen){
 
 static int
 print_drive(const device *d,int prefix){
+	char buf[PREFIXSTRLEN + 1];
 	const device *p;
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s %4uB %4uB %c%c%c%c  %-6.6s%-20.20s\n",
+	r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-20.20s\n",
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
-			d->logsec,d->physsec,
+			qprefix(d->logsec * d->size,1,buf,sizeof(buf),1),
+			d->physsec,
 			d->blkdev.removable ? 'R' : '.',
 			d->blkdev.realdev ? '.' : 'V',
 			d->layout == LAYOUT_MDADM ? 'M' : '.',
@@ -270,8 +283,8 @@ zpool(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-10.10s %5.5s %5.5s %-6.6s%-6.6s%-7.7s\n",
-			"Device","Log","Phys","Table","Disks","Level");
+	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
+			"Device","Bytes","PSect","Table","Disks","Level");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -292,8 +305,8 @@ mdadm(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-10.10s %5.5s %5.5s %-6.6s%-6.6s%-7.7s\n",
-			"Device","Log","Phys","Table","Disks","Level");
+	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
+			"Device","Bytes","PSect","Table","Disks","Level");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -316,8 +329,8 @@ blockdevs(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-10.10s %-16.16s %-4.4s %5.5s %5.5s Flags %-6.6s%-20.20s\n",
-			"Device","Model","Rev","Log","Phys","Table","WWN");
+	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags %-6.6s%-20.20s\n",
+			"Device","Model","Rev","Bytes","PSect","Table","WWN");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
