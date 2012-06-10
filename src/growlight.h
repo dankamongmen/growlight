@@ -64,6 +64,7 @@ typedef struct device {
 		LAYOUT_NONE,
 		LAYOUT_MDADM,
 		LAYOUT_PARTITION,
+		LAYOUT_ZPOOL,
 	} layout;
 	struct device *parts;	// Partitions (can be NULL)
 	dev_t devno;		// Don't expose this non-persistent datum

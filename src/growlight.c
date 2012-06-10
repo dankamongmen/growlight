@@ -159,6 +159,9 @@ free_device(device *d){
 				free(d->partdev.uuid);
 				break;
 			}
+			case LAYOUT_ZPOOL:{
+				break;
+			}
 		}
 		while( (p = d->parts) ){
 			d->parts = p->next;

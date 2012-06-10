@@ -209,6 +209,28 @@ initiators(char * const *args,const char *arghelp){
 }
 
 static int
+zpool(char * const *args,const char *arghelp){
+	const controller *c;
+
+	ZERO_ARG_CHECK(args,arghelp);
+	printf("%-10.10s %5.5s %5.5s %-6.6s%-6.6s%-7.7s\n",
+			"Device","Log","Phys","Table","Disks","Level");
+	for(c = get_controllers() ; c ; c = c->next){
+		device *d;
+
+		if(c->bus != BUS_VIRTUAL){
+			continue;
+		}
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(d->layout == LAYOUT_ZPOOL){
+				// FIXME
+			}
+		}
+	}
+	return 0;
+}
+
+static int
 mdadm(char * const *args,const char *arghelp){
 	const controller *c;
 
@@ -391,6 +413,7 @@ static const struct fxn {
 	FXN(mdadm,""),
 	FXN(mounts,""),
 	FXN(map,"mountdev mountpoint|\"swap\""),
+	FXN(zpool,""),
 	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
@@ -420,6 +443,7 @@ tty_ui(void){
 		char **tokes;
 		int z;
 
+		add_history(l);
 		z = tokenize(l,&tokes);
 		free(l);
 		if(z == 0){
