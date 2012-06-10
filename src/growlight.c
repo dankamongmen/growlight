@@ -273,6 +273,7 @@ add_partition(device *d,const char *name,dev_t devno,uintmax_t sz){
 // Pass a directory handle fd, and the bare name of the device
 int explore_sysfs_node(int fd,const char *name,device *d){
 	struct dirent *dire;
+	unsigned long ul;
 	unsigned b;
 	int sdevfd;
 	DIR *dir;
@@ -293,8 +294,10 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 	}else{
 		d->blkdev.removable = !!b;
 	}
-	if(get_sysfs_uint(fd,"size",&d->size)){
+	if(get_sysfs_uint(fd,"size",&ul)){
 		fprintf(stderr,"Couldn't determine size for %s (%s?)\n",name,strerror(errno));
+	}else{
+		d->size = ul;
 	}
 	// Check for "device" to determine if it's real or virtual
 	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
@@ -323,7 +326,7 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 						return -1;
 					}
 				}else if(sysfs_exist_p(subfd,"partition")){
-					uintmax_t sz;
+					unsigned long sz;
 
 					if(sysfs_devno(subfd,&devno)){
 						close(subfd);
