@@ -8,6 +8,7 @@ extern "C" {
 int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
 #include <limits.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 #include <mounts.h>
@@ -41,6 +42,7 @@ typedef struct device {
 	char *mnttype;			// Type of mount
 	char *mntops;			// Mount options
 	mount *target;			// Future mount point
+	uintmax_t size;			// Size in bytes
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	union {
