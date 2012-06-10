@@ -177,11 +177,12 @@ struct scsi_sg_io_hdr {
 
 int sg_interrogate(device *d,int fd){
 #define IDSECTORS 1
-	uint16_t buf[512 * IDSECTORS / 2]/*,maj,min*/; // FIXME
+	uint16_t buf[512 * IDSECTORS / 2],maj,min; // FIXME
 	unsigned char cdb[SG_ATA_16_LEN];
 	struct scsi_sg_io_hdr io;
 	char sb[32];
 
+	memset(buf,0,sizeof(buf));
 	memset(cdb,0,sizeof(cdb));
 	cdb[0]= SG_ATA_16;
 	cdb[1] = SG_ATA_PROTO_PIO_IN;
@@ -207,16 +208,9 @@ int sg_interrogate(device *d,int fd){
 		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
 		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
 	}
-	/* maj = ntohs(buf[TRANSPORT_MAJOR]);
+	// FIXME something's busted here...
+	maj = ntohs(buf[TRANSPORT_MAJOR]);
 	min = ntohs(buf[TRANSPORT_MINOR]);
-	switch(maj >> 12u){
-		case 1: fprintf(stderr,"SATA!\n");
-			if(min & 0x2f){
-				printf("%u\n",min);
-			}
-			break;
-		case 0: fprintf(stderr,"PATA!\n"); break;
-		default: printf("%u\n",maj >> 12u); break;
-	}*/
+	d->blkdev.transport = (maj << 16u) | min;
 	return 0;
 }

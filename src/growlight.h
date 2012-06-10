@@ -47,6 +47,7 @@ typedef struct device {
 	unsigned physsec;		// Physical sector size
 	union {
 		struct {
+			unsigned transport;	// Physical layer spec
 			unsigned realdev: 1;	// Is itself a real block device
 			unsigned removable: 1;	// Removable media
 			unsigned rotate: 1;	// Rotational media / spinning platters
