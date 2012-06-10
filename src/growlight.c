@@ -53,6 +53,9 @@ static controller virtual_bus = {
 
 static controller *controllers = &virtual_bus;
 
+static const char *last_ptable = NULL;
+static const char **ptable_types = &last_ptable;
+
 int verbf(const char *fmt,...){
 	va_list ap;
 	int v;
@@ -877,4 +880,8 @@ int growlight_stop(void){
 	free_devtable();
 	pci_cleanup(pciacc);
 	return 0;
+}
+
+const char **get_ptable_types(void){
+	return ptable_types;
 }

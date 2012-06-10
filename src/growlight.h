@@ -121,6 +121,9 @@ const controller *get_controllers(void);
 // This is similarly no good FIXME
 device *lookup_device(const char *name);
 
+// Supported partition table types
+const char **get_ptable_types(void);
+
 #ifdef __cplusplus
 }
 #endif

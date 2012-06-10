@@ -15,10 +15,10 @@
 #define PREFIXFMT "%7s"
 
 #define ZERO_ARG_CHECK(args,arghelp) \
- if(args[1]){ fprintf(stderr,"Usage: %s %s\n",*args,arghelp); return -1 ; }
+ if(args[1]){ fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp); return -1 ; }
 
 #define TWO_ARG_CHECK(args,arghelp) \
- if(!args[1] || !args[2] || args[3]){ fprintf(stderr,"Usage: %s %s\n",*args,arghelp); return -1 ; }
+ if(!args[1] || !args[2] || args[3]){ fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp); return -1 ; }
 
 static int help(char * const *,const char *);
 
@@ -465,6 +465,36 @@ print_map(void){
 }
 
 static int
+print_tabletypes(void){
+	const char **types,*cr;
+	int rr,r = 0;
+
+	types = get_ptable_types();
+	while( (cr = *types) ){
+		unsigned last = !*++types;
+
+		r += rr = printf("%s%c",cr,last ? '\n' : ',');
+		if(rr < 0){
+			return -1;
+		}
+	}
+	return r;
+}
+
+static int
+mktable(char * const *args,const char *arghelp){
+	if(!args[1]){
+		if(print_tabletypes() < 0){
+			return -1;
+		}
+		return 0;
+	}
+	TWO_ARG_CHECK(args,arghelp);
+	// FIXME
+	return 0;
+}
+
+static int
 map(char * const *args,const char *arghelp){
 	device *d;
 
@@ -549,10 +579,15 @@ static const struct fxn {
 	FXN(controllers,""),
 	FXN(blockdevs,""),
 	FXN(partitions,""),
-	FXN(mdadm,"\t[ create dev ]"),
+	FXN(mdadm,"[ create name devcount level devices ]\n"
+			"\t\tno argument lists mdadm devices"),
 	FXN(mounts,""),
-	FXN(map,"\t[ mountdev mountpoint type options\n\t\t\t  |\"swap\" ]"),
 	FXN(zpool,""),
+	FXN(mktable,"[ blockdev tabletype ]\n"
+			"\t\tno arguments lists supported types"),
+	FXN(map,"[ mountdev mountpoint type options\n"
+			"\t\t  | mountdev \"swap\" ]\n"
+			"\t\tno arguments lists current target map"),
 	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
@@ -565,7 +600,7 @@ help(char * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	printf("\n\tAvailable commands:\n\n");
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
-		printf("\t  %s\t%s\n",fxn->cmd,fxn->arghelp);
+		printf("\t%s\t%s\n",fxn->cmd,fxn->arghelp);
 	}
 	printf("\t  quit\n\n");
 	return 0;
