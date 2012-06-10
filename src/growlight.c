@@ -330,7 +330,7 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 						return -1;
 					}
 					verbf("\tPartition at %s\n",dire->d_name);
-					if(get_sysfs_uint(fd,"size",&sz)){
+					if(get_sysfs_uint(subfd,"size",&sz)){
 						fprintf(stderr,"Couldn't determine size for %s (%s?)\n",
 								dire->d_name,strerror(errno));
 						sz = 0;
