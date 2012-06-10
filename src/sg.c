@@ -7,17 +7,25 @@
 #include <string.h>
 #include <unistd.h>
 #include <scsi/sg.h>
+#include <arpa/inet.h>
 #include <sys/ioctl.h>
 
 #include <sg.h>
 #include <sysfs.h>
 #include <growlight.h>
 
+// Taken from hdparm-9.39's sgio.h
 #define SG_ATA_16	0x85
 #define SG_ATA_16_LEN	16
 #define SG_ATA_PROTO_NON_DATA	( 3 << 1)
+#define SG_ATA_LBA48            1
+#define SG_ATA_PROTO_NON_DATA   ( 3 << 1)
+#define SG_ATA_PROTO_PIO_IN     ( 4 << 1)
+#define SG_ATA_PROTO_PIO_OUT    ( 5 << 1)
+#define SG_ATA_PROTO_DMA        ( 6 << 1)
+#define SG_ATA_PROTO_UDMA_IN    (11 << 1) /* not yet supported in libata */
+#define SG_ATA_PROTO_UDMA_OUT   (12 << 1) /* not yet supported in libata */
 
-// Taken from hdparm-9.39's sgio.h
 enum {
         SG_CDB2_TLEN_NODATA     = 0 << 0,
         SG_CDB2_TLEN_FEAT       = 1 << 0,
@@ -116,16 +124,19 @@ struct scsi_sg_io_hdr {
 };
 
 int sg_interrogate(device *d,int fd){
+#define IDSECTORS 1
+	uint16_t buf[512 * IDSECTORS / 2]; // FIXME
 	unsigned char cdb[SG_ATA_16_LEN];
 	struct scsi_sg_io_hdr io;
 	char sb[32];
 
 	memset(cdb,0,sizeof(cdb));
 	cdb[0]= SG_ATA_16;
-	cdb[1] = SG_ATA_PROTO_NON_DATA;
-	cdb[2] = SG_CDB2_CHECK_COND;
-	cdb[8] = ATA_USING_LBA;
-	cdb[9] = ATA_OP_IDENTIFY;
+	cdb[1] = SG_ATA_PROTO_PIO_IN;
+	cdb[2] = SG_CDB2_TLEN_NSECT | SG_CDB2_TLEN_SECTORS | SG_CDB2_TDIR_FROM_DEV;
+	cdb[6] = IDSECTORS;
+	cdb[13] = ATA_USING_LBA;
+	cdb[14] = ATA_OP_IDENTIFY;
 	// data size: 512
 	memset(&io,0,sizeof(io));
 	io.interface_id = 'S';
@@ -133,11 +144,16 @@ int sg_interrogate(device *d,int fd){
 	io.sbp = sb;
 	io.cmd_len = sizeof(cdb);
 	io.cmdp = cdb;
-	io.dxfer_direction = SG_DXFER_NONE;
+	io.dxfer_direction = SG_DXFER_FROM_DEV;
+	io.dxfer_len = sizeof(buf);
+	io.dxferp = buf;
 	if(ioctl(fd,SG_IO,&io)){
 		fprintf(stderr,"Couldn't perform SG_IO ioctl on %d (%s?)\n",fd,strerror(errno));
 		return -1;
 	}
-	assert(d); // FIXME
+	if(ntohs(buf[82]) & 0x0020){
+		d->blkdev.wcache = !!(ntohs(buf[85]) & 0x0020);
+		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
+	}
 	return 0;
 }
