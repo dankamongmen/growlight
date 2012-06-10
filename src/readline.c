@@ -332,9 +332,45 @@ mounts(char * const *args,const char *arghelp){
 }
 
 static int
+print_map(void){
+	const controller *c;
+	int rr,r = 0;
+
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			const device *p;
+
+			if(d->target){
+				r += rr = print_target(d->target,0);
+				if(rr < 0){
+					return -1;
+				}
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(p->target){
+					r += rr = print_target(p->target,0);
+					if(rr < 0){
+						return -1;
+					}
+				}
+			}
+		}
+	}
+	return r;
+}
+
+static int
 map(char * const *args,const char *arghelp){
 	device *d;
 
+	if(!args[1]){
+		if(print_map() < 0){
+			return -1;
+		}
+		return 0;
+	}
 	TWO_ARG_CHECK(args,arghelp);
 	if((d = lookup_device(args[1])) == NULL){
 		fprintf(stderr,"Couldn't find device %s\n",args[1]);
@@ -410,9 +446,9 @@ static const struct fxn {
 	FXN(initiators,""),
 	FXN(blockdevs,""),
 	FXN(partitions,""),
-	FXN(mdadm,""),
+	FXN(mdadm,"\t[ create dev ]"),
 	FXN(mounts,""),
-	FXN(map,"mountdev mountpoint|\"swap\""),
+	FXN(map,"\t[ mountdev mountpoint type options\n\t\t\t  |\"swap\" ]"),
 	FXN(zpool,""),
 	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
@@ -426,7 +462,7 @@ help(char * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	printf("\n\tAvailable commands:\n\n");
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
-		printf("\t  %s %s\n",fxn->cmd,fxn->arghelp);
+		printf("\t  %s\t%s\n",fxn->cmd,fxn->arghelp);
 	}
 	printf("\t  quit\n\n");
 	return 0;
