@@ -15,6 +15,13 @@
 #include <growlight.h>
 
 // Taken from hdparm-9.39's sgio.h
+enum {
+	FEATURE_SMART = 1u,
+	FEATURE_SECMODE = 1u << 1,	// Security Mode feature set
+	FEATURE_REMMODE = 1u << 2,	// Removable Media feature set
+	FEATURE_WRITE_CACHE = 1u << 4,
+} scsi_features;
+
 #define SG_ATA_16	0x85
 #define SG_ATA_16_LEN	16
 #define SG_ATA_PROTO_NON_DATA	( 3 << 1)
@@ -25,6 +32,51 @@
 #define SG_ATA_PROTO_DMA        ( 6 << 1)
 #define SG_ATA_PROTO_UDMA_IN    (11 << 1) /* not yet supported in libata */
 #define SG_ATA_PROTO_UDMA_OUT   (12 << 1) /* not yet supported in libata */
+
+#define PKT_REL                 71  /* typical #ns from PKT cmd to bus rel */
+#define SVC_NBSY                72  /* typical #ns from SERVICE cmd to !BSY */
+#define CDR_MAJOR               73  /* CD ROM: major version number */
+#define CDR_MINOR               74  /* CD ROM: minor version number */
+#define QUEUE_DEPTH             75  /* queue depth */
+#define SATA_CAP_0              76  /* Serial ATA Capabilities */
+#define SATA_RESERVED_77        77  /* reserved for future Serial ATA definitions */
+#define SATA_SUPP_0             78  /* Serial ATA features supported */
+#define SATA_EN_0               79  /* Serial ATA features enabled */
+#define MAJOR                   80  /* major version number */
+#define MINOR                   81  /* minor version number */
+#define CMDS_SUPP_0             82  /* command/feature set(s) supported */
+#define CMDS_SUPP_1             83
+#define CMDS_SUPP_2             84
+#define CMDS_EN_0               85  /* command/feature set(s) enabled */
+#define CMDS_EN_1               86
+#define CMDS_EN_2               87
+#define ULTRA_DMA               88  /* ultra DMA modes */
+                                    /* time to complete security erase */
+#define ERASE_TIME              89  /*   - ordinary */
+#define ENH_ERASE_TIME          90  /*   - enhanced */
+#define ADV_PWR                 91  /* current advanced power management level
+				                                              in low byte, 0x40 in high byte. */  
+#define PSWD_CODE               92  /* master password revision code    */
+#define HWRST_RSLT              93  /* hardware reset result */
+#define ACOUSTIC                94  /* acoustic mgmt values ( >= ATA-6) */
+#define LBA_LSB                 100 /* LBA: maximum.  Currently only 48 */
+#define LBA_MID                 101 /*      bits are used, but addr 103 */
+#define LBA_48_MSB              102 /*      has been reserved for LBA in */
+#define LBA_64_MSB              103 /*      the future. */
+#define CMDS_SUPP_3             119
+#define CMDS_EN_3               120
+#define RM_STAT                 127 /* removable media status notification feature */
+#define SECU_STATUS             128 /* security status */
+#define CFA_PWR_MODE            160 /* CFA power mode 1 */
+#define START_MEDIA             176 /* media serial number */
+#define LENGTH_MEDIA            20  /* 20 words (40 bytes or characters)*/
+#define START_MANUF             196 /* media manufacturer I.D. */
+#define LENGTH_MANUF            10  /* 10 words (20 bytes or characters) */
+#define SCT_SUPP                206 /* SMART command transport (SCT) support */
+#define TRANSPORT_MAJOR         222 /* PATA vs. SATA etc.. */
+#define TRANSPORT_MINOR         223 /* minor revision number */
+#define NMRR                    217 /* nominal media rotation rate */
+#define INTEGRITY               255 /* integrity word */
 
 enum {
         SG_CDB2_TLEN_NODATA     = 0 << 0,
@@ -125,7 +177,7 @@ struct scsi_sg_io_hdr {
 
 int sg_interrogate(device *d,int fd){
 #define IDSECTORS 1
-	uint16_t buf[512 * IDSECTORS / 2]; // FIXME
+	uint16_t buf[512 * IDSECTORS / 2]/*,maj,min*/; // FIXME
 	unsigned char cdb[SG_ATA_16_LEN];
 	struct scsi_sg_io_hdr io;
 	char sb[32];
@@ -151,9 +203,20 @@ int sg_interrogate(device *d,int fd){
 		fprintf(stderr,"Couldn't perform SG_IO ioctl on %d (%s?)\n",fd,strerror(errno));
 		return -1;
 	}
-	if(ntohs(buf[82]) & 0x0020){
-		d->blkdev.wcache = !!(ntohs(buf[85]) & 0x0020);
+	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
+		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
 		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
 	}
+	/* maj = ntohs(buf[TRANSPORT_MAJOR]);
+	min = ntohs(buf[TRANSPORT_MINOR]);
+	switch(maj >> 12u){
+		case 1: fprintf(stderr,"SATA!\n");
+			if(min & 0x2f){
+				printf("%u\n",min);
+			}
+			break;
+		case 0: fprintf(stderr,"PATA!\n"); break;
+		default: printf("%u\n",maj >> 12u); break;
+	}*/
 	return 0;
 }
