@@ -483,6 +483,8 @@ print_tabletypes(void){
 
 static int
 mktable(char * const *args,const char *arghelp){
+	device *d;
+
 	if(!args[1]){
 		if(print_tabletypes() < 0){
 			return -1;
@@ -490,7 +492,13 @@ mktable(char * const *args,const char *arghelp){
 		return 0;
 	}
 	TWO_ARG_CHECK(args,arghelp);
-	// FIXME
+	if((d = lookup_device(args[1])) == NULL){
+		fprintf(stderr,"Couldn't find device %s\n",args[1]);
+		return -1;
+	}
+	if(make_partition_table(d,args[2])){
+		return -1;
+	}
 	return 0;
 }
 
