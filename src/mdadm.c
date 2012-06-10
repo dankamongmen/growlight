@@ -23,6 +23,13 @@ int explore_md_sysfs(device *d,int dirfd){
 		verbf("Warning: no 'level' content in mdadm device\n");
 		d->mddev.level = 0;
 	}
+	if((d->revision = get_sysfs_string(dirfd,"metadata_version")) == NULL){
+		verbf("Warning: no 'level' content in mdadm device\n");
+		d->mddev.level = 0;
+	}
+	if((d->model = strdup("Linux mdadm")) == NULL){
+		return -1;
+	}
 	enqm = &d->mddev.slaves;
 	for(rd = 0 ; rd < d->mddev.disks ; ++rd){
 		char buf[NAME_MAX],lbuf[NAME_MAX],*c;
