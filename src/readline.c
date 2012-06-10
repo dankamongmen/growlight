@@ -528,6 +528,33 @@ map(char * const *args,const char *arghelp){
 	return 0;
 }
 
+static int
+swap(char * const *args,const char *arghelp){
+	device *d;
+	if(!args[1]){
+		// FIXME list swaps (/proc/swaps)
+		return 0;
+	}
+	TWO_ARG_CHECK(args,arghelp);
+	if(strcmp(args[1],"file") == 0){
+		// FIXME
+		return 0;
+	}
+	if((d = lookup_device(args[2])) == NULL){
+		fprintf(stderr,"Couldn't find device %s\n",args[2]);
+		return -1;
+	}
+	if(strcmp(args[1],"on") == 0){
+		// FIXME
+	}else if(strcmp(args[1],"off") == 0){
+		// FIXME
+	}else{
+		fprintf(stderr,"Invalid command to %s: %s\n",args[0],args[1]);
+		return -1;
+	}
+	return 0;
+}
+
 static void
 free_tokes(char **tokes){
 	char **toke;
@@ -584,18 +611,25 @@ static const struct fxn {
 	const char *arghelp;
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
-	FXN(controllers,""),
-	FXN(blockdevs,""),
-	FXN(partitions,""),
-	FXN(mdadm,"[ create name devcount level devices ]\n"
-			"\t\tno argument lists mdadm devices"),
+	FXN(controllers,"[ \"reset\" device ]\n"
+			"\t\t\t | no arguments lists devices"),
+	FXN(blockdevs,"[ \"reset\" device ]\n"
+			"\t\t\t | no arguments lists devices"),
+	FXN(partitions,"[ \"delete\" device ]\n"
+			"\t\t\t | no arguments lists partitions"),
+	FXN(mdadm,"\t[ \"create\" name devcount level devices ]\n"
+			"\t\t\t | no arguments lists mdadm devices"),
+	FXN(swap,"\t[ \"on\" device\n"
+			"\t\t\t | \"off\" device ]\n"
+			"\t\t\t | \"file\" path ]\n"
+			"\t\t\t | no arguments lists current swaps"),
 	FXN(mounts,""),
 	FXN(zpool,""),
-	FXN(mktable,"[ blockdev tabletype ]\n"
-			"\t\tno arguments lists supported types"),
-	FXN(map,"[ mountdev mountpoint type options\n"
-			"\t\t  | mountdev \"swap\" ]\n"
-			"\t\tno arguments lists current target map"),
+	FXN(mktable,"\t[ blockdev tabletype ]\n"
+			"\t\t\t | no arguments lists supported types"),
+	FXN(map,"\t[ mountdev mountpoint type options\n"
+			"\t\t\t | mountdev \"swap\" ]\n"
+			"\t\t\t | no arguments lists current target map"),
 	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
@@ -610,7 +644,7 @@ help(char * const *args,const char *arghelp){
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
 		printf("\t%s\t%s\n",fxn->cmd,fxn->arghelp);
 	}
-	printf("\t  quit\n\n");
+	printf("\tquit\n\n");
 	return 0;
 }
 
