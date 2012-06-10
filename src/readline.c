@@ -310,7 +310,7 @@ mounts(char * const *args,const char *arghelp){
 				if(print_mount(d,0) < 0){
 					return -1;
 				}
-			}else if(p->target){
+			}else if(d->target){
 				if(print_target(p->target,0) < 0){
 					return -1;
 				}

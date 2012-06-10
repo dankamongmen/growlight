@@ -542,6 +542,7 @@ create_new_device(const char *name){
 				blkid_free_probe(pr);
 				return NULL;
 			}
+			dd.logsec = dd.physsec = 0;
 			// FIXME errorchecking!
 			dd.logsec = blkid_topology_get_logical_sector_size(tpr);
 			dd.physsec = blkid_topology_get_physical_sector_size(tpr);
