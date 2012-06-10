@@ -148,19 +148,50 @@ print_drive(const device *d,int prefix){
 	const device *p;
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-20.20s\n",
+	switch(d->layout){
+	case LAYOUT_NONE:{
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c  %-6.6s%-19.19s\n",
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec,
 			d->blkdev.removable ? 'R' : '.',
-			d->blkdev.realdev ? '.' : 'V',
-			d->layout == LAYOUT_MDADM ? 'M' : '.',
-			d->blkdev.realdev ? d->blkdev.rotate ? 'O' : '.' : '.',
+			'.',
+			'.',
+			d->blkdev.rotate ? 'O' : '.',
+			d->blkdev.wcache ? 'W' : '.',
 			d->pttable ? d->pttable : "none",
 			d->wwn ? d->wwn : "n/a"
 			);
+		break;
+	}case LAYOUT_MDADM:{
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c  %-6.6s%-19.19s\n",
+			prefix,prefix,"",d->name,
+			d->model ? d->model : "n/a",
+			d->revision ? d->revision : "n/a",
+			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+			d->physsec, '.', 'V', 'M', '.', '.',
+			d->pttable ? d->pttable : "none",
+			d->wwn ? d->wwn : "n/a"
+			);
+		break;
+	}case LAYOUT_ZPOOL:{
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c  %-6.6s%-19.19s\n",
+			prefix,prefix,"",d->name,
+			d->model ? d->model : "n/a",
+			d->revision ? d->revision : "n/a",
+			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+			d->physsec, '.', 'V', '.', '.', '.',
+			d->pttable ? d->pttable : "none",
+			d->wwn ? d->wwn : "n/a"
+			);
+		break;
+	}case LAYOUT_PARTITION:{
+		return -1;
+	}default:
+		return -1;
+	}
 	if(rr < 0){
 		return -1;
 	}
@@ -267,7 +298,7 @@ print_controller(const controller *c){
 }
 
 static int
-initiators(char * const *args,const char *arghelp){
+controllers(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
@@ -330,7 +361,7 @@ blockdevs(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags %-6.6s%-20.20s\n",
+	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
 			"Device","Model","Rev","Bytes","PSect","Table","WWN");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
@@ -341,7 +372,8 @@ blockdevs(char * const *args,const char *arghelp){
 			}
 		}
 	}
-	printf("\n  Flags: (r)emovable, (v)irtual, (m)dadm, r(o)tational\n\n");
+	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
+			"\t\t(W)ritecache enabled\n");
 	return 0;
 }
 
@@ -514,7 +546,7 @@ static const struct fxn {
 	const char *arghelp;
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
-	FXN(initiators,""),
+	FXN(controllers,""),
 	FXN(blockdevs,""),
 	FXN(partitions,""),
 	FXN(mdadm,"\t[ create dev ]"),
