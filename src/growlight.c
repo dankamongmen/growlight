@@ -23,6 +23,7 @@
 #include <pci/pci.h>
 #include <pci/header.h>
 
+#include <sg.h>
 #include <mdadm.h>
 #include <sysfs.h>
 #include <mounts.h>
@@ -503,8 +504,24 @@ create_new_device(const char *name){
 		blkid_partlist ppl;
 		blkid_probe pr;
 		int pars;
+		int dfd;
 
-		snprintf(devbuf,sizeof(devbuf),"/dev/%s",name);
+		if(dd.blkdev.realdev){
+			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+				fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
+				close(fd);
+				free_device(&dd);
+				return NULL;
+			}
+			if(sg_interrogate(&dd,dfd)){
+				close(dfd);
+				close(fd);
+				free_device(&dd);
+				return NULL;
+			}
+			close(dfd);
+		}
+		snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
 		// FIXME move all this to its own function
 		if(probe_blkid_dev(devbuf,&pr) == 0){
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
