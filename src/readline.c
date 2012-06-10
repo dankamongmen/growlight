@@ -8,6 +8,12 @@
 #include <target.h>
 #include <growlight.h>
 
+#define U64STRLEN 20    // Does not include a '\0' (18,446,744,073,709,551,616)
+#define U64FMT "%-20ju"
+#define U32FMT "%-10ju"
+#define PREFIXSTRLEN 7  // Does not include a '\0' (xxx.xxU)
+#define PREFIXFMT "%7s"
+
 #define ZERO_ARG_CHECK(args,arghelp) \
  if(args[1]){ fprintf(stderr,"Usage: %s %s\n",*args,arghelp); return -1 ; }
 
@@ -40,13 +46,64 @@ print_mount(const device *d,int prefix){
 	return r;
 }
 
+// For full safety, pass in a buffer that can hold the decimal representation
+// of the largest uintmax_t plus three (one for the unit, one for the decimal
+// separator, and one for the NUL byte). If omitdec is non-zero, and the
+// decimal portion is all 0's, the decimal portion will not be printed. decimal
+// indicates scaling, and should be '1' if no scaling has taken place.
+static const char *
+genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
+                        int omitdec,unsigned mult,int uprefix){
+        const char prefixes[] = "KMGTPEY";
+        unsigned consumed = 0;
+        uintmax_t div;
+
+        div = mult;
+        while((val / decimal) >= div && consumed < strlen(prefixes)){
+                div *= mult;
+                if(UINTMAX_MAX / div < mult){ // watch for overflow
+                        break;
+                }
+                ++consumed;
+        }
+        if(div != mult){
+                div /= mult;
+                val /= decimal;
+                if(val % div || omitdec == 0){
+                        snprintf(buf,bsize,"%ju.%02ju%c%c",val / div,(val % div) / ((div + 99) / 100),
+                                        prefixes[consumed - 1],uprefix);
+                }else{
+                        snprintf(buf,bsize,"%ju%c%c",val / div,prefixes[consumed - 1],uprefix);
+                }
+        }else{
+                if(val % decimal || omitdec == 0){
+                        snprintf(buf,bsize,"%ju.%02ju",val / decimal,val % decimal);
+                }else{
+                        snprintf(buf,bsize,"%ju",val / decimal);
+                }
+        }
+        return buf;
+}
+
+static inline const char *
+qprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
+        return genprefix(val,decimal,buf,bsize,omitdec,1000,'\0');
+}
+
+static inline const char *
+bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
+        return genprefix(val,decimal,buf,bsize,omitdec,1024,'i');
+}
+
 static int
 print_partition(const device *p,int prefix){
+	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-37.37s %s\n",
+	r += rr = printf("%*.*s%-10.10s %-37.37s " PREFIXFMT " %s\n",
 			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
+			qprefix(p->size * p->logsec,1,buf,sizeof(buf),1),
 			p->partdev.pname ? p->partdev.pname : "n/a");
 	if(rr < 0){
 		return -1;
