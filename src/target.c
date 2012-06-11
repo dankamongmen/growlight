@@ -56,6 +56,10 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 		fprintf(stderr,"%s is already mapped to %s\n",d->name,d->target->path);
 		return -1;
 	}
+	if(d->swapprio){
+		fprintf(stderr,"%s is used as swap\n",d->name);
+		return -1;
+	}
 	if(targets == NULL){
 		if(strcmp(path,"/")){
 			fprintf(stderr,"Need a root ('/') before mapping %s\n",path);
