@@ -504,11 +504,28 @@ mktable(char * const *args,const char *arghelp){
 }
 
 static int
-map(char * const *args,const char *arghelp){
+print_fstypes(void){
+	const char **types,*cr;
+	int rr,r = 0;
+
+	types = get_fs_types();
+	while( (cr = *types) ){
+		unsigned last = !*++types;
+
+		r += rr = printf("%s%c",cr,last ? '\n' : ',');
+		if(rr < 0){
+			return -1;
+		}
+	}
+	return r;
+}
+
+static int
+mkfs(char * const *args,const char *arghelp){
 	device *d;
 
 	if(!args[1]){
-		if(print_map() < 0){
+		if(print_fstypes() < 0){
 			return -1;
 		}
 		return 0;
@@ -518,12 +535,36 @@ map(char * const *args,const char *arghelp){
 		fprintf(stderr,"Couldn't find device %s\n",args[1]);
 		return -1;
 	}
+	/* FIXME
+	if(make_filesystem(d,args[2])){
+		return -1;
+	} */
+	return 0;
+}
+
+static int
+map(char * const *args,const char *arghelp){
+	device *d;
+
+	if(!args[1]){
+		if(print_map() < 0){
+			return -1;
+		}
+		return 0;
+	}
+	if(!args[2] || !args[3] || !args[4] || args[5]){
+		fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+		return -1;
+	}
+	if((d = lookup_device(args[1])) == NULL){
+		fprintf(stderr,"Couldn't find device %s\n",args[1]);
+		return -1;
+	}
 	if(args[2][0] != '/'){
 		fprintf(stderr,"Not an absolute path: %s\n",args[2]);
 		return -1;
 	}
-	// FIXME need fstype, options, label
-	if(prepare_mount(d,args[2],"ext4","noatime")){
+	if(prepare_mount(d,args[2],args[3],args[4])){
 		return -1;
 	}
 	return 0;
@@ -632,9 +673,11 @@ static const struct fxn {
 	FXN(zpool,""),
 	FXN(mktable,"\t[ blockdev tabletype ]\n"
 			"\t\t\t | no arguments lists supported types"),
+	FXN(mkfs,"\t[ blockdev fstype ]\n"
+			"\t\t\t | no arguments lists supported filesystems"),
 	FXN(map,"\t[ mountdev mountpoint type options\n"
 			"\t\t\t | mountdev \"swap\" ]\n"
-			"\t\t\t | no arguments lists current target map"),
+			"\t\t\t | no arguments generates target fstab"),
 	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN

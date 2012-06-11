@@ -8,7 +8,7 @@ extern "C" {
 struct device;
 
 // Create the given type of partition table on this device
-int explore_md_sysfs(struct device *,const char *);
+int make_partition_table(struct device *,const char *);
 
 #ifdef __cplusplus
 }

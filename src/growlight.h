@@ -124,6 +124,9 @@ device *lookup_device(const char *name);
 // Supported partition table types
 const char **get_ptable_types(void);
 
+// Supported filesystem types
+const char **get_fs_types(void);
+
 int make_partition_table(device *,const char *);
 
 #ifdef __cplusplus
