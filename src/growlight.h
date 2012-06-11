@@ -45,6 +45,7 @@ typedef struct device {
 	uintmax_t size;			// Size in bytes
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
+	unsigned swapprio;		// Priority as a swap device
 	union {
 		struct {
 			unsigned transport;	// Physical layer spec
@@ -74,7 +75,6 @@ typedef struct device {
 		LAYOUT_MDADM,
 		LAYOUT_PARTITION,
 		LAYOUT_ZPOOL,
-		LAYOUT_SWAP,
 	} layout;
 	struct device *parts;	// Partitions (can be NULL)
 	dev_t devno;		// Don't expose this non-persistent datum

@@ -601,17 +601,25 @@ walk_devices(int (*fxn)(const device *)){
 
 static int
 print_swaps(const device *d){
-	if(d->layout != LAYOUT_SWAP){
+	int rr,r = 0;
+
+	if(d->swapprio == 0){
 		return 0;
 	}
-	printf("SWAPPIN: %s\n",d->name);
-	return 0;
+	r += rr = printf("%s\t%u\n",d->name,d->swapprio);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
 }
 
 static int
 swap(char * const *args,const char *arghelp){
 	device *d;
 	if(!args[1]){
+		if(printf("Device\tPrio\n") < 0){
+			return -1;
+		}
 		if(walk_devices(print_swaps)){
 			return -1;
 		}

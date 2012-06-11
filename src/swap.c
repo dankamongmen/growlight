@@ -102,7 +102,7 @@ int parse_swaps(void){
 		if((d = lookup_device(buf)) == NULL){
 			goto err;
 		}
-		d->layout = LAYOUT_SWAP;
+		d->swapprio = 1; // FIXME
 	}
 	fclose(fp);
 	return 0;

@@ -144,9 +144,9 @@ free_device(device *d){
 		device *p;
 
 		switch(d->layout){
-			case LAYOUT_NONE:
+			case LAYOUT_NONE:{
 				break;
-			case LAYOUT_MDADM:{
+			}case LAYOUT_MDADM:{
 				mdslave *md;
 
 				while( (md = d->mddev.slaves) ){
@@ -160,12 +160,7 @@ free_device(device *d){
 				free(d->partdev.pname);
 				free(d->partdev.uuid);
 				break;
-			}case LAYOUT_SWAP:{
-				free(d->swapdev.sname);
-				free(d->swapdev.uuid);
-				break;
-			}
-			case LAYOUT_ZPOOL:{
+			}case LAYOUT_ZPOOL:{
 				break;
 			}
 		}
