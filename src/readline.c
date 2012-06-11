@@ -649,6 +649,47 @@ swap(char * const *args,const char *arghelp){
 	return 0;
 }
 
+static int
+badblocks(char * const *args,const char *arghelp){
+	device *d;
+
+	if(!args[1]){
+		fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+		return -1;
+	}
+	if(args[2] == NULL){
+		d = lookup_device(args[1]);
+	}else if(args[3]){
+		fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+		return -1;
+	}else{
+		if(strcmp(args[1],"rw")){
+			fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+			return -1;
+		}
+		d = lookup_device(args[2]);
+	}
+	if(d == NULL){
+		return -1;
+	}
+	// FIXME perform check
+	return 0;
+}
+
+static int
+troubleshoot(char * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+	fprintf(stderr,"Sorry, not yet implemented\n");
+	// FIXME things to do:
+	// FIXME check PCIe bandwidth against SATA bandwidth
+	// FIXME check for proper alignment of partitions
+	// FIXME check for msdos, apm or bsd partition tables
+	// FIXME check for filesystems without noatime
+	// FIXME check for SSD erase block size alignment
+	// FIXME check for GPT partition table validity
+	return -1;
+}
+
 static void
 free_tokes(char **tokes){
 	char **toke;
@@ -706,7 +747,7 @@ static const struct fxn {
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
 	FXN(controllers,"[ \"reset\" device ]\n"
-			"\t\t\t | no arguments lists devices"),
+			"\t\t\t | no arguments lists controllers"),
 	FXN(blockdevs,"[ \"reset\" device ]\n"
 			"\t\t\t | no arguments lists devices"),
 	FXN(partitions,"[ \"delete\" device ]\n"
@@ -726,6 +767,8 @@ static const struct fxn {
 	FXN(map,"\t[ mountdev mountpoint type options\n"
 			"\t\t\t | mountdev \"swap\" ]\n"
 			"\t\t\t | no arguments generates target fstab"),
+	FXN(badblocks,"[ \"rw\" ] device"),
+	FXN(troubleshoot,""),
 	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
@@ -736,7 +779,7 @@ help(char * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("\n\tAvailable commands:\n\n");
+	printf("\nAvailable commands:\n\n");
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
 		printf("\t%s\t%s\n",fxn->cmd,fxn->arghelp);
 	}
