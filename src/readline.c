@@ -208,12 +208,14 @@ print_drive(const device *d,int prefix){
 		}
 	}
 	if(!prefix){
+		printf("\e[1;34m");
 		for(p = d->parts ; p ; p = p->next){
 			r += rr = print_partition(p,prefix + 1);
 			if(rr < 0){
 				return -1;
 			}
 		}
+		printf("\e[1;35m");
 	}
 	return r;
 }
@@ -224,6 +226,7 @@ print_mdadm(const device *d){
 	const mdslave *md;
 	int r = 0,rr;
 
+	printf("\e[1;37m");
 	r += rr = printf("%-10.10s " PREFIXFMT " %4uB %-6.6s%5lu %-7.7s\n",
 			d->name,
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
@@ -234,6 +237,7 @@ print_mdadm(const device *d){
 	if(rr < 0){
 		return -1;
 	}
+	printf("\e[1;35m");
 	for(md = d->mddev.slaves ; md ; md = md->next){
 		r += rr = print_drive(md->component,1);
 		if(rr < 0){
@@ -316,8 +320,10 @@ zpool(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	printf("\e[1;37m");
 	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
 			"Device","Bytes","PSect","Table","Disks","Level");
+	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -338,8 +344,10 @@ mdadm(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	printf("\e[1;37m");
 	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
 			"Device","Bytes","PSect","Table","Disks","Level");
+	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -362,8 +370,10 @@ blockdevs(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	printf("\e[1;37m");
 	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
 			"Device","Model","Rev","Bytes","PSect","Table","WWN");
+	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -373,6 +383,7 @@ blockdevs(char * const *args,const char *arghelp){
 			}
 		}
 	}
+	printf("\e[1;37m");
 	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
 			"\t\t(W)ritecache enabled\n");
 	return 0;
@@ -746,6 +757,7 @@ static const struct fxn {
 	const char *arghelp;
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
+	FXN(mounts,""),
 	FXN(controllers,"[ \"reset\" device ]\n"
 			"\t\t\t | no arguments lists controllers"),
 	FXN(blockdevs,"[ \"reset\" device ]\n"
@@ -758,8 +770,8 @@ static const struct fxn {
 			"\t\t\t | \"off\" device ]\n"
 			"\t\t\t | \"file\" path ]\n"
 			"\t\t\t | no arguments lists current swaps"),
-	FXN(mounts,""),
-	FXN(zpool,""),
+	FXN(zpool,"\t[ \"create\" name devcount level vdevs ]\n"
+			"\t\t\t | no arguments lists zpools"),
 	FXN(mktable,"\t[ blockdev tabletype ]\n"
 			"\t\t\t | no arguments lists supported types"),
 	FXN(mkfs,"\t[ blockdev fstype ]\n"
@@ -779,11 +791,11 @@ help(char * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("\nAvailable commands:\n\n");
+	printf("\n  Available commands:\n\n");
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
-		printf("\t%s\t%s\n",fxn->cmd,fxn->arghelp);
+		printf("\t\e[1;32m%s\t\e[0;32m%s\n",fxn->cmd,fxn->arghelp);
 	}
-	printf("\tquit\n\n");
+	printf("\t\e[1;32mquit\n\n");
 	return 0;
 }
 
@@ -798,7 +810,7 @@ tty_ui(void){
 		char **tokes;
 		int z;
 
-		printf("\e[1;32m");
+		printf("\e[1;34m");
 		fflush(stdout);
 		add_history(l);
 		z = tokenize(l,&tokes);
