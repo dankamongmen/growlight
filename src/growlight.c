@@ -631,14 +631,14 @@ device *lookup_device(const char *name){
 	}while(s);
 	for(c = controllers ; c ; c = c->next){
 		for(d = c->blockdevs ; d ; d = d->next){
-			const device *p;
+			device *p;
 
 			if(strcmp(name,d->name) == 0){
 				return d;
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if(strcmp(name,p->name) == 0){
-					return d;
+					return p;
 				}
 			}
 		}

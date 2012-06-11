@@ -4,6 +4,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
+#include <swap.h>
 #include <config.h>
 #include <target.h>
 #include <growlight.h>
@@ -545,9 +546,13 @@ swap(char * const *args,const char *arghelp){
 		return -1;
 	}
 	if(strcmp(args[1],"on") == 0){
-		// FIXME
+		if(swapondev(d)){
+			return -1;
+		}
 	}else if(strcmp(args[1],"off") == 0){
-		// FIXME
+		if(swapoffdev(d)){
+			return -1;
+		}
 	}else{
 		fprintf(stderr,"Invalid command to %s: %s\n",args[0],args[1]);
 		return -1;
