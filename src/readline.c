@@ -698,7 +698,7 @@ help(char * const *args,const char *arghelp){
 
 static int
 tty_ui(void){
-	const char prompt[] = "[" PACKAGE "]> ";
+	const char prompt[] = "\e[30m[\e[1;37m" PACKAGE "\e[30m]> \e[1;36m";
 	char *l;
 
 	// FIXME need command line completion!
@@ -707,6 +707,8 @@ tty_ui(void){
 		char **tokes;
 		int z;
 
+		printf("\e[1;32m");
+		fflush(stdout);
 		add_history(l);
 		z = tokenize(l,&tokes);
 		free(l);
