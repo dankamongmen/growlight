@@ -14,7 +14,7 @@ int swapondev(struct device *);
 int swapoffdev(struct device *);
 
 // Parse /proc/swaps to detect active swap devices
-int load_swaps(void);
+int parse_swaps(void);
 
 #ifdef __cplusplus
 }

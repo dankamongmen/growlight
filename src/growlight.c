@@ -24,6 +24,7 @@
 #include <pci/header.h>
 
 #include <sg.h>
+#include <swap.h>
 #include <mdadm.h>
 #include <sysfs.h>
 #include <mounts.h>
@@ -867,6 +868,9 @@ int growlight_init(int argc,char * const *argv){
 		goto err;
 	}
 	if(parse_mounts(MOUNTS)){
+		goto err;
+	}
+	if(parse_swaps()){
 		goto err;
 	}
 	return 0;

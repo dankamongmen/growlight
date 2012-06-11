@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -74,4 +75,39 @@ int swapoffdev(device *d){
 		return -1;
 	}
 	return 0;
+}
+
+// Parse /proc/swaps to detect active swap devices
+int parse_swaps(void){
+	char buf[BUFSIZ];
+	int line = 0;
+	FILE *fp;
+
+	if((fp = fopen("/proc/swaps","r")) == NULL){
+		fprintf(stderr,"Couldn't open /proc/swaps (%s?)\n",strerror(errno));
+		return -1;
+	}
+	// First line is a legend
+	while(fgets(buf,sizeof(buf),fp)){
+		char *toke = buf;
+		device *d;
+
+		if(++line == 1){
+			continue;
+		}
+		while(isgraph(*toke)){
+			++toke;
+		}
+		*toke = '\0';
+		if((d = lookup_device(buf)) == NULL){
+			goto err;
+		}
+		d->layout = LAYOUT_SWAP;
+	}
+	fclose(fp);
+	return 0;
+
+err:
+	fclose(fp);
+	return -1;
 }
