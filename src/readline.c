@@ -801,7 +801,7 @@ help(char * const *args,const char *arghelp){
 
 static int
 tty_ui(void){
-	const char prompt[] = "\e[30m[\e[1;37m" PACKAGE "\e[30m]> \e[1;36m";
+	char prompt[80] = "\e[30m[\e[1;37m" PACKAGE "\e[30m](0)> \e[1;36m";
 	char *l;
 
 	// FIXME need command line completion!
@@ -831,11 +831,14 @@ tty_ui(void){
 			break;
 		}
 		if(fxn->fxn){
-			fxn->fxn(tokes,fxn->arghelp);
+			z = fxn->fxn(tokes,fxn->arghelp);
 		}else{
 			fprintf(stderr,"Unknown command: %s\n",tokes[0]);
+			z = -1;
 		}
 		free_tokes(tokes);
+		snprintf(prompt,sizeof(prompt),"\e[30m[\e[1;37m" PACKAGE "\e[30m](%d)> \e[1;36m",z);
+		rl_set_prompt(prompt);
 	}
 	printf("\n");
 	return 0;
