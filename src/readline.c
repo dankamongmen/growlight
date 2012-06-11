@@ -570,11 +570,51 @@ map(char * const *args,const char *arghelp){
 	return 0;
 }
 
+// Walk the block devices, evaluating *fxn on each. The return value will be
+// accumulated in r, unless -1 is ever returned, in which case we abort
+// immediately and return -1.
+static int
+walk_devices(int (*fxn)(const device *)){
+	const controller *c;
+	int rr,r = 0;
+
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			const device *p;
+
+			r += rr = fxn(d);
+			if(rr < 0){
+				return -1;
+			}
+			for(p = d->parts ; p ; p = p->next){
+				r += rr = fxn(p);
+				if(rr < 0){
+					return -1;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+static int
+print_swaps(const device *d){
+	if(d->layout != LAYOUT_SWAP){
+		return 0;
+	}
+	printf("SWAPPIN: %s\n",d->name);
+	return 0;
+}
+
 static int
 swap(char * const *args,const char *arghelp){
 	device *d;
 	if(!args[1]){
-		// FIXME list swaps (/proc/swaps)
+		if(walk_devices(print_swaps)){
+			return -1;
+		}
 		return 0;
 	}
 	TWO_ARG_CHECK(args,arghelp);

@@ -13,6 +13,9 @@ int swapondev(struct device *);
 // Deactive the swap on this partition (if applicable)
 int swapoffdev(struct device *);
 
+// Parse /proc/swaps to detect active swap devices
+int load_swaps(void);
+
 #ifdef __cplusplus
 }
 #endif

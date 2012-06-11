@@ -159,6 +159,10 @@ free_device(device *d){
 				free(d->partdev.pname);
 				free(d->partdev.uuid);
 				break;
+			}case LAYOUT_SWAP:{
+				free(d->swapdev.sname);
+				free(d->swapdev.uuid);
+				break;
 			}
 			case LAYOUT_ZPOOL:{
 				break;

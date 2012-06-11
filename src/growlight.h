@@ -63,12 +63,18 @@ typedef struct device {
 			char *uuid;		// Filesystem UUID
 			struct partition *next;	// Next on this disk
 		} partdev;
+		struct {
+			char *sname;		// Swap device label
+			char *uuid;		// Swap device UUID
+			struct partition *next;	// Next on this disk
+		} swapdev;
 	};
 	enum {
 		LAYOUT_NONE,
 		LAYOUT_MDADM,
 		LAYOUT_PARTITION,
 		LAYOUT_ZPOOL,
+		LAYOUT_SWAP,
 	} layout;
 	struct device *parts;	// Partitions (can be NULL)
 	dev_t devno;		// Don't expose this non-persistent datum
