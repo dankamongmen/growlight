@@ -13,15 +13,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <scsi/sg.h>
+#include <pci/pci.h>
 #include <langinfo.h>
 #include <sys/stat.h>
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
 #include <src/config.h>
-#include <sys/inotify.h>
-
-#include <pci/pci.h>
 #include <pci/header.h>
+#include <sys/inotify.h>
+#include <libdevmapper.h>
 
 #include <sg.h>
 #include <swap.h>
@@ -800,6 +800,7 @@ int growlight_init(int argc,char * const *argv){
 		},
 	};
 	int fd,opt,longidx;
+	char buf[BUFSIZ];
 	const char *enc;
 	DIR *sdir;
 
@@ -837,8 +838,9 @@ int growlight_init(int argc,char * const *argv){
 			break;
 		} }
 	}
-	printf("%s %s (libblkid %s, libpci 0x%x)\n",PACKAGE,PACKAGE_VERSION,
-			BLKID_VERSION,PCI_LIB_VERSION);
+	dm_get_library_version(buf,sizeof(buf));
+	printf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s\n",PACKAGE,
+			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf);
 	if(pci_system_init()){
 		fprintf(stderr,"Couldn't init libpci (%s?)\n",strerror(errno));
 		goto err;

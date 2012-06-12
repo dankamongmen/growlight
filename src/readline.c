@@ -15,11 +15,17 @@
 #define PREFIXSTRLEN 7  // Does not include a '\0' (xxx.xxU)
 #define PREFIXFMT "%7s"
 
+static inline int
+usage(char * const *args,const char *arghelp){
+	fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+	return -1;
+}
+
 #define ZERO_ARG_CHECK(args,arghelp) \
- if(args[1]){ fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp); return -1 ; }
+ if(args[1]){ usage(args,arghelp); return -1 ; }
 
 #define TWO_ARG_CHECK(args,arghelp) \
- if(!args[1] || !args[2] || args[3]){ fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp); return -1 ; }
+ if(!args[1] || !args[2] || args[3]){ usage(args,arghelp); return -1 ; }
 
 static int help(char * const *,const char *);
 
@@ -303,7 +309,7 @@ print_controller(const controller *c){
 }
 
 static int
-controllers(char * const *args,const char *arghelp){
+adapter(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
@@ -366,31 +372,107 @@ mdadm(char * const *args,const char *arghelp){
 }
 
 static int
-blockdevs(char * const *args,const char *arghelp){
-	const controller *c;
+print_tabletypes(void){
+	const char **types,*cr;
+	int rr,r = 0;
 
-	ZERO_ARG_CHECK(args,arghelp);
-	printf("\e[1;37m");
-	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
-			"Device","Model","Rev","Bytes","PSect","Table","WWN");
-	printf("\e[1;35m");
-	for(c = get_controllers() ; c ; c = c->next){
-		const device *d;
+	types = get_ptable_types();
+	while( (cr = *types) ){
+		unsigned last = !*++types;
 
-		for(d = c->blockdevs ; d ; d = d->next){
-			if(print_drive(d,0) < 0){
-				return -1;
-			}
+		r += rr = printf("%s%c",cr,last ? '\n' : ',');
+		if(rr < 0){
+			return -1;
 		}
 	}
-	printf("\e[1;37m");
-	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
-			"\t\t(W)ritecache enabled\n");
-	return 0;
+	return r;
 }
 
 static int
-partitions(char * const *args,const char *arghelp){
+print_fstypes(void){
+	const char **types,*cr;
+	int rr,r = 0;
+
+	types = get_fs_types();
+	while( (cr = *types) ){
+		unsigned last = !*++types;
+
+		r += rr = printf("%s%c",cr,last ? '\n' : ',');
+		if(rr < 0){
+			return -1;
+		}
+	}
+	return r;
+}
+
+static int
+blockdev(char * const *args,const char *arghelp){
+	const controller *c;
+	device *d;
+
+	if(args[1] == NULL){
+		printf("\e[1;37m");
+		printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
+				"Device","Model","Rev","Bytes","PSect","Table","WWN");
+		printf("\e[1;35m");
+		for(c = get_controllers() ; c ; c = c->next){
+			const device *d;
+
+			for(d = c->blockdevs ; d ; d = d->next){
+				if(print_drive(d,0) < 0){
+					return -1;
+				}
+			}
+		}
+		printf("\e[1;37m");
+		printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
+				"\t\t(W)ritecache enabled\n");
+		return 0;
+	}
+	if(args[2] == NULL){
+		usage(args,arghelp);
+		return -1;
+	}
+	if((d = lookup_device(args[1])) == NULL){
+		return -1;
+	}
+	if(strcmp(args[2],"mktable") == 0){
+		if(args[3] == NULL){
+			if(print_tabletypes() < 0){
+				return -1;
+			}
+			return 0;
+		}else if(args[4] == NULL){
+			if(make_partition_table(d,args[3])){
+				return -1;
+			}
+			return 0;
+		}
+	}else if(strcmp(args[2],"mkfs") == 0){
+		if(args[3] == NULL){
+			if(print_fstypes() < 0){
+				return -1;
+			}
+			return 0;
+		}else if(args[4] == NULL){
+			/* FIXME
+			if(make_filesystem(d,args[3])){
+				return -1;
+			}
+			return 0;
+			*/
+			return -1;
+		}
+	}else if(strcmp(args[2],"reset") == 0){
+		// FIXME implement!
+		return -1;
+	}
+	usage(args,arghelp);
+	return -1;
+}
+
+static int
+partition(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
@@ -478,83 +560,6 @@ print_map(void){
 		}
 	}
 	return r;
-}
-
-static int
-print_tabletypes(void){
-	const char **types,*cr;
-	int rr,r = 0;
-
-	types = get_ptable_types();
-	while( (cr = *types) ){
-		unsigned last = !*++types;
-
-		r += rr = printf("%s%c",cr,last ? '\n' : ',');
-		if(rr < 0){
-			return -1;
-		}
-	}
-	return r;
-}
-
-static int
-mktable(char * const *args,const char *arghelp){
-	device *d;
-
-	if(!args[1]){
-		if(print_tabletypes() < 0){
-			return -1;
-		}
-		return 0;
-	}
-	TWO_ARG_CHECK(args,arghelp);
-	if((d = lookup_device(args[1])) == NULL){
-		fprintf(stderr,"Couldn't find device %s\n",args[1]);
-		return -1;
-	}
-	if(make_partition_table(d,args[2])){
-		return -1;
-	}
-	return 0;
-}
-
-static int
-print_fstypes(void){
-	const char **types,*cr;
-	int rr,r = 0;
-
-	types = get_fs_types();
-	while( (cr = *types) ){
-		unsigned last = !*++types;
-
-		r += rr = printf("%s%c",cr,last ? '\n' : ',');
-		if(rr < 0){
-			return -1;
-		}
-	}
-	return r;
-}
-
-static int
-mkfs(char * const *args,const char *arghelp){
-	device *d;
-
-	if(!args[1]){
-		if(print_fstypes() < 0){
-			return -1;
-		}
-		return 0;
-	}
-	TWO_ARG_CHECK(args,arghelp);
-	if((d = lookup_device(args[1])) == NULL){
-		fprintf(stderr,"Couldn't find device %s\n",args[1]);
-		return -1;
-	}
-	/* FIXME
-	if(make_filesystem(d,args[2])){
-		return -1;
-	} */
-	return 0;
 }
 
 static int
@@ -692,6 +697,15 @@ badblocks(char * const *args,const char *arghelp){
 }
 
 static int
+benchmark(char * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+	fprintf(stderr,"Sorry, not yet implemented\n");
+	// FIXME things to do:
+	// FIXME run bonnie++?
+	return -1;
+}
+
+static int
 troubleshoot(char * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	fprintf(stderr,"Sorry, not yet implemented\n");
@@ -761,29 +775,31 @@ static const struct fxn {
 	const char *arghelp;
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
+	FXN(adapter,"[ adapter \"reset\" ]\n"
+			"                 | no arguments to detail all host bus adapters"),
+	FXN(blockdev,"[ blockdev \"reset\" ]\n"
+			"                 | [ blockdev \"mktable\" [ tabletype ] ]\n"
+			"                    | no argument to list supported table types\n"
+			"                 | [ blockdev \"mkfs\" [ fstype ] ]\n"
+			"                    | no argument to list supported fs types\n"
+			"                 | no arguments to detail all blockdevs"),
+	FXN(partition,"[ partition \"delete\" ]\n"
+			"                 | [ partition \"mkfs\" [ fstype ] ]\n"
+			"                    | no argument to list supported fs types\n"
+			"                 | no arguments to detail all partitions"),
+	FXN(mdadm,"[ mdname \"create\" devcount level devices ]\n"
+			"                 | no arguments to detail all mdadm devices"),
+	FXN(zpool,"[ zname \"create\" devcount level vdevs ]\n"
+			"                 | no arguments to detail all zpools"),
+	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
+			"                 | [ \"file\" path ]\n"
+			"                 | no arguments to detail all swaps"),
+	FXN(map,"[ device mountpoint type options ]\n"
+			"                 | [ mountdev \"swap\" ]\n"
+			"                 | no arguments generates target fstab"),
 	FXN(mounts,""),
-	FXN(controllers,"[ \"reset\" device ]\n"
-			"\t\t\t | no arguments lists controllers"),
-	FXN(blockdevs,"[ \"reset\" device ]\n"
-			"\t\t\t | no arguments lists devices"),
-	FXN(partitions,"[ \"delete\" device ]\n"
-			"\t\t\t | no arguments lists partitions"),
-	FXN(mdadm,"\t[ \"create\" name devcount level devices ]\n"
-			"\t\t\t | no arguments lists mdadm devices"),
-	FXN(swap,"\t[ \"on\" device\n"
-			"\t\t\t | \"off\" device ]\n"
-			"\t\t\t | \"file\" path ]\n"
-			"\t\t\t | no arguments lists current swaps"),
-	FXN(zpool,"\t[ \"create\" name devcount level vdevs ]\n"
-			"\t\t\t | no arguments lists zpools"),
-	FXN(mktable,"\t[ blockdev tabletype ]\n"
-			"\t\t\t | no arguments lists supported types"),
-	FXN(mkfs,"\t[ blockdev fstype ]\n"
-			"\t\t\t | no arguments lists supported filesystems"),
-	FXN(map,"\t[ mountdev mountpoint type options\n"
-			"\t\t\t | mountdev \"swap\" ]\n"
-			"\t\t\t | no arguments generates target fstab"),
 	FXN(badblocks,"[ \"rw\" ] device"),
+	FXN(benchmark,"fs"),
 	FXN(troubleshoot,""),
 	FXN(help,""),
 	{ .cmd = NULL, .fxn = NULL, .arghelp = NULL, },
@@ -795,11 +811,13 @@ help(char * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("\n  Available commands:\n\n");
+	printf("\e[1;37m");
+	printf("%-15.15s %s\n","Command","Arguments");
+	printf("\e[1;35m");
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
-		printf("\t\e[1;32m%s\t\e[0;32m%s\n",fxn->cmd,fxn->arghelp);
+		printf("\e[1;32m%-15.15s \e[0;32m%s\n",fxn->cmd,fxn->arghelp);
 	}
-	printf("\t\e[1;32mquit\n\n");
+	printf("\e[1;32mquit\n");
 	return 0;
 }
 
@@ -878,6 +896,8 @@ growlight_completion(const char *text,int start,int end __attribute__ ((unused))
 }
 
 int main(int argc,char * const *argv){
+	printf("\e[1;37m");
+	fflush(stdout);
 	if(growlight_init(argc,argv)){
 		return EXIT_FAILURE;
 	}
