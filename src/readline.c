@@ -394,6 +394,10 @@ partitions(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	printf("\e[1;37m");
+	printf("%-10.10s %-37.37s " PREFIXFMT " %s\n",
+			"Partition","UUID","Bytes","Name");
+	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
