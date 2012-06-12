@@ -208,12 +208,14 @@ print_drive(const device *d,int prefix){
 		}
 	}
 	if(!prefix){
+		printf("\e[1;34m");
 		for(p = d->parts ; p ; p = p->next){
 			r += rr = print_partition(p,prefix + 1);
 			if(rr < 0){
 				return -1;
 			}
 		}
+		printf("\e[1;35m");
 	}
 	return r;
 }
@@ -224,6 +226,7 @@ print_mdadm(const device *d){
 	const mdslave *md;
 	int r = 0,rr;
 
+	printf("\e[1;37m");
 	r += rr = printf("%-10.10s " PREFIXFMT " %4uB %-6.6s%5lu %-7.7s\n",
 			d->name,
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
@@ -234,6 +237,7 @@ print_mdadm(const device *d){
 	if(rr < 0){
 		return -1;
 	}
+	printf("\e[1;35m");
 	for(md = d->mddev.slaves ; md ; md = md->next){
 		r += rr = print_drive(md->component,1);
 		if(rr < 0){
@@ -316,8 +320,10 @@ zpool(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	printf("\e[1;37m");
 	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
 			"Device","Bytes","PSect","Table","Disks","Level");
+	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -338,8 +344,10 @@ mdadm(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	printf("\e[1;37m");
 	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
 			"Device","Bytes","PSect","Table","Disks","Level");
+	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -362,8 +370,10 @@ blockdevs(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	printf("\e[1;37m");
 	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
 			"Device","Model","Rev","Bytes","PSect","Table","WWN");
+	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -373,6 +383,7 @@ blockdevs(char * const *args,const char *arghelp){
 			}
 		}
 	}
+	printf("\e[1;37m");
 	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
 			"\t\t(W)ritecache enabled\n");
 	return 0;
@@ -649,6 +660,47 @@ swap(char * const *args,const char *arghelp){
 	return 0;
 }
 
+static int
+badblocks(char * const *args,const char *arghelp){
+	device *d;
+
+	if(!args[1]){
+		fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+		return -1;
+	}
+	if(args[2] == NULL){
+		d = lookup_device(args[1]);
+	}else if(args[3]){
+		fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+		return -1;
+	}else{
+		if(strcmp(args[1],"rw")){
+			fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+			return -1;
+		}
+		d = lookup_device(args[2]);
+	}
+	if(d == NULL){
+		return -1;
+	}
+	// FIXME perform check
+	return 0;
+}
+
+static int
+troubleshoot(char * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+	fprintf(stderr,"Sorry, not yet implemented\n");
+	// FIXME things to do:
+	// FIXME check PCIe bandwidth against SATA bandwidth
+	// FIXME check for proper alignment of partitions
+	// FIXME check for msdos, apm or bsd partition tables
+	// FIXME check for filesystems without noatime
+	// FIXME check for SSD erase block size alignment
+	// FIXME check for GPT partition table validity
+	return -1;
+}
+
 static void
 free_tokes(char **tokes){
 	char **toke;
@@ -705,8 +757,9 @@ static const struct fxn {
 	const char *arghelp;
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
+	FXN(mounts,""),
 	FXN(controllers,"[ \"reset\" device ]\n"
-			"\t\t\t | no arguments lists devices"),
+			"\t\t\t | no arguments lists controllers"),
 	FXN(blockdevs,"[ \"reset\" device ]\n"
 			"\t\t\t | no arguments lists devices"),
 	FXN(partitions,"[ \"delete\" device ]\n"
@@ -717,8 +770,8 @@ static const struct fxn {
 			"\t\t\t | \"off\" device ]\n"
 			"\t\t\t | \"file\" path ]\n"
 			"\t\t\t | no arguments lists current swaps"),
-	FXN(mounts,""),
-	FXN(zpool,""),
+	FXN(zpool,"\t[ \"create\" name devcount level vdevs ]\n"
+			"\t\t\t | no arguments lists zpools"),
 	FXN(mktable,"\t[ blockdev tabletype ]\n"
 			"\t\t\t | no arguments lists supported types"),
 	FXN(mkfs,"\t[ blockdev fstype ]\n"
@@ -726,6 +779,8 @@ static const struct fxn {
 	FXN(map,"\t[ mountdev mountpoint type options\n"
 			"\t\t\t | mountdev \"swap\" ]\n"
 			"\t\t\t | no arguments generates target fstab"),
+	FXN(badblocks,"[ \"rw\" ] device"),
+	FXN(troubleshoot,""),
 	FXN(help,""),
 	{ .cmd = NULL,		.fxn = NULL, },
 #undef FXN
@@ -736,17 +791,17 @@ help(char * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("\n\tAvailable commands:\n\n");
+	printf("\n  Available commands:\n\n");
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
-		printf("\t%s\t%s\n",fxn->cmd,fxn->arghelp);
+		printf("\t\e[1;32m%s\t\e[0;32m%s\n",fxn->cmd,fxn->arghelp);
 	}
-	printf("\tquit\n\n");
+	printf("\t\e[1;32mquit\n\n");
 	return 0;
 }
 
 static int
 tty_ui(void){
-	const char prompt[] = "\e[30m[\e[1;37m" PACKAGE "\e[30m]> \e[1;36m";
+	char prompt[80] = "\e[30m[\e[1;37m" PACKAGE "\e[30m](0)> \e[1;36m";
 	char *l;
 
 	// FIXME need command line completion!
@@ -755,7 +810,7 @@ tty_ui(void){
 		char **tokes;
 		int z;
 
-		printf("\e[1;32m");
+		printf("\e[1;34m");
 		fflush(stdout);
 		add_history(l);
 		z = tokenize(l,&tokes);
@@ -776,11 +831,14 @@ tty_ui(void){
 			break;
 		}
 		if(fxn->fxn){
-			fxn->fxn(tokes,fxn->arghelp);
+			z = fxn->fxn(tokes,fxn->arghelp);
 		}else{
 			fprintf(stderr,"Unknown command: %s\n",tokes[0]);
+			z = -1;
 		}
 		free_tokes(tokes);
+		snprintf(prompt,sizeof(prompt),"\e[30m[\e[1;37m" PACKAGE "\e[30m](%d)> \e[1;36m",z);
+		rl_set_prompt(prompt);
 	}
 	printf("\n");
 	return 0;

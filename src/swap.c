@@ -66,6 +66,7 @@ int swapondev(device *d){
 		fprintf(stderr,"Couldn't swap on %s (%s?)\n",fn,strerror(errno));
 		return -1;
 	}
+	d->swapprio = 1; // FIXME
 	return 0;
 }
 
@@ -78,6 +79,7 @@ int swapoffdev(device *d){
 		fprintf(stderr,"Couldn't stop swapping on %s (%s?)\n",fn,strerror(errno));
 		return -1;
 	}
+	d->swapprio = 0;
 	return 0;
 }
 
