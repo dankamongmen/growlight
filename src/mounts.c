@@ -114,12 +114,22 @@ err:
 
 static device *
 lookup_dentry(device *d,const char *name){
-	if(name[0] == '/'){
-	       	if((name = strrchr(name,'/')) == NULL){
-			return NULL;
+	size_t s;
+
+	do{
+		if(strncmp(name,"/",1) == 0){
+			s = 1;
+		}else if(strncmp(name,"./",2) == 0){
+			s = 2;
+		}else if(strncmp(name,"../",3) == 0){
+			s = 3;
+		}else if(strncmp(name,"dev/",4) == 0){
+			s = 4;
+		}else{
+			s = 0;
 		}
-		++name;
-	}
+		name += s;
+	}while(s);
 	if(strcmp(d->name,name) == 0){
 		return d;
 	}
