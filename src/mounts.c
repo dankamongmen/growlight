@@ -104,6 +104,7 @@ parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops
 	return r;
 
 err:
+	fprintf(stderr,"Couldn't extract mount info from %s\n",map);
 	free(*dev);
 	free(*mnt);
 	free(*fs);
@@ -156,15 +157,18 @@ int parse_mounts(const char *fn){
 			continue;
 		}
 		if(lstat(dev,&st)){
+			fprintf(stderr,"Couldn't stat %s (%s?)\n",dev,strerror(errno));
 			goto err;
 		}
 		if(S_ISLNK(st.st_mode)){
 			int r;
 
 			if((r = readlink(dev,buf,sizeof(buf))) < 0){
+				fprintf(stderr,"Couldn't deref %s (%s?)\n",dev,strerror(errno));
 				goto err;
 			}
 			if((size_t)r >= sizeof(buf)){
+				fprintf(stderr,"Name too long for %s (%d?)\n",dev,r);
 				goto err;
 			}
 			buf[r] = '\0';
@@ -176,6 +180,7 @@ int parse_mounts(const char *fn){
 			goto err;
 		}
 		if((d = lookup_dentry(d,rp)) == NULL){
+			fprintf(stderr,"Couldn't find device %s\n",rp);
 			goto err;
 		}
 		if(d->mnt){
