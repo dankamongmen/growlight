@@ -786,7 +786,7 @@ static const struct fxn {
 	FXN(badblocks,"[ \"rw\" ] device"),
 	FXN(troubleshoot,""),
 	FXN(help,""),
-	{ .cmd = NULL,		.fxn = NULL, },
+	{ .cmd = NULL, .fxn = NULL, .arghelp = NULL, },
 #undef FXN
 };
 
@@ -848,10 +848,41 @@ tty_ui(void){
 	return 0;
 }
 
+static char *
+completion_engine(const char *text,int state){
+	static const struct fxn *fxn;
+	static size_t len;
+
+	// 'state' tells us whether readline has tried to complete already
+	if(state == 0){
+		len = strlen(text);
+		fxn = fxns;
+	}else{
+		++fxn;
+	}
+	while(fxn->cmd){
+		if(strncmp(fxn->cmd,text,len) == 0){
+			return strdup(fxn->cmd);
+		}
+		++fxn;
+	}
+	return NULL;
+}
+
+static char **
+growlight_completion(const char *text,int start,int end __attribute__ ((unused))){
+	if(start == 0){
+		return rl_completion_matches(text,completion_engine);
+	}
+	return NULL;
+}
+
 int main(int argc,char * const *argv){
 	if(growlight_init(argc,argv)){
 		return EXIT_FAILURE;
 	}
+	rl_readline_name = PACKAGE;
+	rl_attempted_completion_function = growlight_completion;
 	rl_prep_terminal(1); // 1 == read 8-bit input
 	if(tty_ui()){
 		growlight_stop();
