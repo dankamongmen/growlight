@@ -1,3 +1,7 @@
+#include <assert.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <pthread.h>
 #include <blkid/blkid.h>
 
@@ -64,6 +68,10 @@ int probe_blkid_dev(const char *dev,blkid_probe *pr){
 		return blkid_exit(-1);
 	}
 	if(blkid_probe_enable_partitions(*pr,1)){
+		blkid_free_probe(*pr);
+		return blkid_exit(-1);
+	}
+	if(blkid_probe_set_partitions_flags(*pr,BLKID_PARTS_ENTRY_DETAILS)){
 		blkid_free_probe(*pr);
 		return blkid_exit(-1);
 	}
