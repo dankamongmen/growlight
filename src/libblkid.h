@@ -8,6 +8,7 @@ extern "C" {
 #include <blkid/blkid.h>
 
 int probe_blkid_dev(const char *,blkid_probe *);
+int probe_blkid_superblock(const char *);
 int close_blkid(void);
 
 #ifdef __cplusplus

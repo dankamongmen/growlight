@@ -541,6 +541,11 @@ create_new_device(const char *name){
 					blkid_free_probe(pr);
 					return NULL;
 				}
+				if(probe_blkid_superblock(devbuf)){
+					free_device(&dd);
+					blkid_free_probe(pr);
+					return NULL;
+				}
 				for(p = dd.parts ; p ; p = p->next){
 					blkid_partition part;
 
@@ -555,6 +560,11 @@ create_new_device(const char *name){
 						pname = blkid_partition_get_name(part);
 						if(pname){
 							p->partdev.pname = strdup(pname);
+						}
+						if(probe_blkid_superblock(p->name)){
+							free_device(&dd);
+							blkid_free_probe(pr);
+							return NULL;
 						}
 					}
 				}
