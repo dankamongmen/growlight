@@ -112,35 +112,6 @@ err:
 	return -1;
 }
 
-static device *
-lookup_dentry(device *d,const char *name){
-	size_t s;
-
-	do{
-		if(strncmp(name,"/",1) == 0){
-			s = 1;
-		}else if(strncmp(name,"./",2) == 0){
-			s = 2;
-		}else if(strncmp(name,"../",3) == 0){
-			s = 3;
-		}else if(strncmp(name,"dev/",4) == 0){
-			s = 4;
-		}else{
-			s = 0;
-		}
-		name += s;
-	}while(s);
-	if(strcmp(d->name,name) == 0){
-		return d;
-	}
-	for(d = d->parts ; d ; d = d->next){
-		if(strcmp(d->name,name) == 0){
-			break;
-		}
-	}
-	return d;
-}
-
 int parse_mounts(const char *fn){
 	char *mnt,*dev,*ops,*fs;
 	off_t len,idx;

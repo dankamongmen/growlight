@@ -541,7 +541,7 @@ create_new_device(const char *name){
 					blkid_free_probe(pr);
 					return NULL;
 				}
-				if(probe_blkid_superblock(devbuf)){
+				if(probe_blkid_superblock(devbuf,&dd)){
 					free_device(&dd);
 					blkid_free_probe(pr);
 					return NULL;
@@ -561,7 +561,7 @@ create_new_device(const char *name){
 						if(pname){
 							p->partdev.pname = strdup(pname);
 						}
-						if(probe_blkid_superblock(p->name)){
+						if(probe_blkid_superblock(p->name,p)){
 							free_device(&dd);
 							blkid_free_probe(pr);
 							return NULL;
@@ -647,6 +647,36 @@ device *lookup_device(const char *name){
 		}
 	}
 	return create_new_device(name);
+}
+
+// Doesn't create devices. Returns the partition device rather than the
+// blockdev device if that's more appropriate.
+device *lookup_dentry(device *d,const char *name){
+	size_t s;
+
+	do{
+		if(strncmp(name,"/",1) == 0){
+			s = 1;
+		}else if(strncmp(name,"./",2) == 0){
+			s = 2;
+		}else if(strncmp(name,"../",3) == 0){
+			s = 3;
+		}else if(strncmp(name,"dev/",4) == 0){
+			s = 4;
+		}else{
+			s = 0;
+		}
+		name += s;
+	}while(s);
+	if(strcmp(d->name,name) == 0){
+		return d;
+	}
+	for(d = d->parts ; d ; d = d->next){
+		if(strcmp(d->name,name) == 0){
+			break;
+		}
+	}
+	return d;
 }
 
 // Must be an entry in /dev/disk/by-id/

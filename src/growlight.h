@@ -39,8 +39,10 @@ typedef struct device {
 	char *model,*revision;		// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
 	char *mnt;			// Active mount point
-	char *mnttype;			// Type of mount
 	char *mntops;			// Mount options
+	// If the filesystem is not mounted, but is found, only mnttype will be
+	// set from among mnt, mntops and mnttype
+	char *mnttype;			// Type of mount
 	mount *target;			// Future mount point
 	uintmax_t size;			// Size in bytes
 	unsigned logsec;		// Logical sector size
@@ -126,6 +128,8 @@ const controller *get_controllers(void);
 
 // This is similarly no good FIXME
 device *lookup_device(const char *name);
+
+device *lookup_dentry(device *,const char *);
 
 // Supported partition table types
 const char **get_ptable_types(void);

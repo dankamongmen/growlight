@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <blkid/blkid.h>
@@ -109,7 +110,7 @@ int probe_blkid_dev(const char *dev,blkid_probe *pr){
 
 // Takes a /dev/ path, and examines the superblock therein for a valid
 // filesystem or raid superblock.
-int probe_blkid_superblock(const char *dev){
+int probe_blkid_superblock(const char *dev,device *d){
 	const char *val,*name;
 	char buf[PATH_MAX];
 	blkid_probe bp;
@@ -156,7 +157,26 @@ int probe_blkid_superblock(const char *dev){
 	n = blkid_probe_numof_values(bp);
 	while(n--){
 		blkid_probe_get_value(bp,n,&name,&val,&len);
-		printf("%s: %s\n",name,val);
+		if(strcmp(name,"TYPE") == 0){
+			if(strcmp(val,"swap") == 0){
+				d->swapprio = 2;
+				// FIXME use list of filesystems from wherever
+			}else if(strcmp(val,"ext4") == 0){
+				char *m = strdup(val);
+
+				if(d->mnttype == NULL){
+					d->mnttype = m;
+				}else if(strcmp(val,d->mnttype)){
+
+					// FIXME?
+					fprintf(stderr,"FS type changed (%s->%s)\n",d->mnttype,val);
+					if(m){
+						free(d->mnttype);
+						d->mnttype = m;
+					}
+				}
+			}
+		}
 	}
 	blkid_free_probe(bp);
 	return 0;
