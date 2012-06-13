@@ -70,46 +70,46 @@ print_mount(const device *d,int prefix){
 // separator, and one for the NUL byte).
 static const char *
 genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
-                        int omitdec,unsigned mult,int uprefix){
-        const char prefixes[] = "KMGTPEY";
-        unsigned consumed = 0;
-        uintmax_t div;
+			int omitdec,unsigned mult,int uprefix){
+	const char prefixes[] = "KMGTPEY";
+	unsigned consumed = 0;
+	uintmax_t div;
 
-        div = mult;
-        while((val / decimal) >= div && consumed < strlen(prefixes)){
-                div *= mult;
-                if(UINTMAX_MAX / div < mult){ // watch for overflow
-                        break;
-                }
-                ++consumed;
-        }
-        if(div != mult){
-                div /= mult;
-                val /= decimal;
+	div = mult;
+	while((val / decimal) >= div && consumed < strlen(prefixes)){
+		div *= mult;
+		if(UINTMAX_MAX / div < mult){ // watch for overflow
+			break;
+		}
+		++consumed;
+	}
+	if(div != mult){
+		div /= mult;
+		val /= decimal;
 		if((val % div) / ((div + 99) / 100) || omitdec == 0){
-                        snprintf(buf,bsize,"%ju.%02ju%c%c",val / div,(val % div) / ((div + 99) / 100),
-                                        prefixes[consumed - 1],uprefix);
-                }else{
-                        snprintf(buf,bsize,"%ju%c%c",val / div,prefixes[consumed - 1],uprefix);
-                }
-        }else{
-                if(val % decimal || omitdec == 0){
-                        snprintf(buf,bsize,"%ju.%02ju",val / decimal,val % decimal);
-                }else{
-                        snprintf(buf,bsize,"%ju",val / decimal);
-                }
-        }
-        return buf;
+			snprintf(buf,bsize,"%ju.%02ju%c%c",val / div,(val % div) / ((div + 99) / 100),
+					prefixes[consumed - 1],uprefix);
+		}else{
+			snprintf(buf,bsize,"%ju%c%c",val / div,prefixes[consumed - 1],uprefix);
+		}
+	}else{
+		if(val % decimal || omitdec == 0){
+			snprintf(buf,bsize,"%ju.%02ju",val / decimal,val % decimal);
+		}else{
+			snprintf(buf,bsize,"%ju",val / decimal);
+		}
+	}
+	return buf;
 }
 
 static inline const char *
 qprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
-        return genprefix(val,decimal,buf,bsize,omitdec,1000,'\0');
+	return genprefix(val,decimal,buf,bsize,omitdec,1000,'\0');
 }
 
 static inline const char *
 bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
-        return genprefix(val,decimal,buf,bsize,omitdec,1024,'i');
+	return genprefix(val,decimal,buf,bsize,omitdec,1024,'i');
 }
 
 static int
@@ -214,14 +214,13 @@ print_drive(const device *d,int prefix){
 		}
 	}
 	if(!prefix){
-		printf("\e[1;34m");
 		for(p = d->parts ; p ; p = p->next){
 			r += rr = print_partition(p,prefix + 1);
 			if(rr < 0){
 				return -1;
 			}
 		}
-		printf("\e[1;35m");
+		
 	}
 	return r;
 }
@@ -232,7 +231,6 @@ print_mdadm(const device *d){
 	const mdslave *md;
 	int r = 0,rr;
 
-	printf("\e[1;37m");
 	r += rr = printf("%-10.10s " PREFIXFMT " %4uB %-6.6s%5lu %-7.7s\n",
 			d->name,
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
@@ -243,7 +241,6 @@ print_mdadm(const device *d){
 	if(rr < 0){
 		return -1;
 	}
-	printf("\e[1;35m");
 	for(md = d->mddev.slaves ; md ; md = md->next){
 		r += rr = print_drive(md->component,1);
 		if(rr < 0){
@@ -326,10 +323,8 @@ zpool(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("\e[1;37m");
 	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
 			"Device","Bytes","PSect","Table","Disks","Level");
-	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -350,10 +345,8 @@ mdadm(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("\e[1;37m");
 	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
 			"Device","Bytes","PSect","Table","Disks","Level");
-	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
@@ -411,10 +404,8 @@ blockdev(char * const *args,const char *arghelp){
 	device *d;
 
 	if(args[1] == NULL){
-		printf("\e[1;37m");
 		printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
 				"Device","Model","Rev","Bytes","PSect","Table","WWN");
-		printf("\e[1;35m");
 		for(c = get_controllers() ; c ; c = c->next){
 			const device *d;
 
@@ -424,7 +415,6 @@ blockdev(char * const *args,const char *arghelp){
 				}
 			}
 		}
-		printf("\e[1;37m");
 		printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
 				"\t\t(W)ritecache enabled\n");
 		return 0;
@@ -476,10 +466,8 @@ partition(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("\e[1;37m");
 	printf("%-10.10s %-37.37s " PREFIXFMT " %s\n",
 			"Partition","UUID","Bytes","Name");
-	printf("\e[1;35m");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -811,19 +799,17 @@ help(char * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("\e[1;37m");
 	printf("%-15.15s %s\n","Command","Arguments");
-	printf("\e[1;35m");
 	for(fxn = fxns ; fxn->cmd ; ++fxn){
-		printf("\e[1;32m%-15.15s \e[0;32m%s\n",fxn->cmd,fxn->arghelp);
+		printf("%-15.15s %s\n",fxn->cmd,fxn->arghelp);
 	}
-	printf("\e[1;32mquit\n");
+	printf("quit\n");
 	return 0;
 }
 
 static int
 tty_ui(void){
-	char prompt[80] = "\e[30m[\e[1;37m" PACKAGE "\e[30m](0)> \e[1;36m";
+	char prompt[80] = "[" PACKAGE "](0)> ";
 	char *l;
 
 	// FIXME need command line completion!
@@ -831,8 +817,7 @@ tty_ui(void){
 		const struct fxn *fxn;
 		char **tokes;
 		int z;
-
-		printf("\e[1;34m");
+		
 		fflush(stdout);
 		add_history(l);
 		z = tokenize(l,&tokes);
@@ -859,7 +844,7 @@ tty_ui(void){
 			z = -1;
 		}
 		free_tokes(tokes);
-		snprintf(prompt,sizeof(prompt),"\e[30m[\e[1;37m" PACKAGE "\e[30m](%d)> \e[1;36m",z);
+		snprintf(prompt,sizeof(prompt),"[" PACKAGE "](%d)> ",z);
 		rl_set_prompt(prompt);
 	}
 	printf("\n");
@@ -896,7 +881,7 @@ growlight_completion(const char *text,int start,int end __attribute__ ((unused))
 }
 
 int main(int argc,char * const *argv){
-	printf("\e[1;37m");
+	
 	fflush(stdout);
 	if(growlight_init(argc,argv)){
 		return EXIT_FAILURE;
