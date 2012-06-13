@@ -455,7 +455,6 @@ parse_bus_topology(const char *fn){
 	return find_pcie_controller(domain,bus,dev,func);
 }
 
-
 static inline device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
@@ -509,13 +508,11 @@ create_new_device(const char *name){
 		if(dd.blkdev.realdev){
 			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 				fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
-				close(fd);
 				free_device(&dd);
 				return NULL;
 			}
 			if(sg_interrogate(&dd,dfd)){
 				close(dfd);
-				close(fd);
 				free_device(&dd);
 				return NULL;
 			}
@@ -530,7 +527,6 @@ create_new_device(const char *name){
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
-					close(fd);
 					free_device(&dd);
 					blkid_free_probe(pr);
 					return NULL;
@@ -541,7 +537,6 @@ create_new_device(const char *name){
 						pars,pars == 1 ? "" : "s",
 						pttable);
 				if((dd.pttable = strdup(pttable)) == NULL){
-					close(fd);
 					free_device(&dd);
 					blkid_free_probe(pr);
 					return NULL;
@@ -568,7 +563,6 @@ create_new_device(const char *name){
 			}
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
 				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
-				close(fd);
 				free_device(&dd);
 				blkid_free_probe(pr);
 				return NULL;
@@ -590,7 +584,6 @@ create_new_device(const char *name){
 			blkid_free_probe(pr);
 		}else if(!dd.blkdev.removable || errno != ENOMEDIUM){
 			fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
-			close(fd);
 			free_device(&dd);
 			return NULL;
 		}else{
