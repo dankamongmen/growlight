@@ -47,7 +47,14 @@ typedef struct device {
 	uintmax_t size;			// Size in bytes
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
-	unsigned swapprio;		// Priority as a swap device
+	// Ranges from 0 to 32565, 0 highest priority. For our purposes, we
+	// also use -1, indicating "unused", and -2, indicating "not swap".
+	enum {
+		SWAP_INVALID = -2,
+		SWAP_INACTIVE = -1,
+		SWAP_MAXPRIO = 0,
+		SWAP_MINPRIO = 65535,
+	} swapprio;			// Priority as a swap device
 	char *uuid;			// applies to mnt/swap, can be NULL
 	char *label;			// applies to mnt/swap, can be NULL
 	union {

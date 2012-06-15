@@ -155,8 +155,11 @@ int probe_blkid_superblock(const char *dev,device *d){
 		blkid_probe_get_value(bp,n,&name,&val,&len);
 		if(strcmp(name,"TYPE") == 0){
 			if(strcmp(val,"swap") == 0){
-				d->swapprio = 2;
-				// FIXME use list of filesystems from wherever
+				if((mnttype = strdup("swap")) == NULL){
+					goto err;
+				}
+				d->swapprio = SWAP_INACTIVE;
+			// FIXME use list of filesystems from wherever
 			}else if(strcmp(val,"ext4") == 0){
 				if((mnttype = strdup(val)) == NULL){
 					goto err;
