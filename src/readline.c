@@ -566,6 +566,8 @@ blockdev(char * const *args,const char *arghelp){
 	}
 	if(args[2] == NULL){
 		if(strcmp(args[1],"-q") == 0){
+			printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
+					"Device","Model","Rev","Bytes","PSect","Table","WWN");
 			for(c = get_controllers() ; c ; c = c->next){
 				const device *d;
 
