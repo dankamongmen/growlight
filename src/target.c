@@ -17,11 +17,14 @@ create_target(const char *path,const char *dev,const char *fs,const char *ops){
 	struct target *t;
 
 	if( (t = malloc(sizeof(*t))) ){
+		t->m.label = t->m.uuid = NULL;
 		t->m.path = strdup(path);
 		t->m.dev = strdup(dev);
 		t->m.fs = strdup(fs);
 		t->m.ops = strdup(ops);
 		t->next = NULL;
+	}else{
+		fprintf(stderr,"Failure creating %s on %s\n",fs,dev);
 	}
 	return t;
 }
@@ -29,6 +32,8 @@ create_target(const char *path,const char *dev,const char *fs,const char *ops){
 static void
 free_target(struct target *t){
 	if(t){
+		free(t->m.label);
+		free(t->m.uuid);
 		free(t->m.path);
 		free(t->m.dev);
 		free(t->m.fs);
@@ -65,6 +70,9 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 			fprintf(stderr,"Need a root ('/') before mapping %s\n",path);
 			return -1;
 		}
+		d->swapprio = SWAP_INVALID;
+		free(d->mnttype);
+		d->mnttype = NULL;
 		if((targets = create_target(path,d->name,fs,ops)) == NULL){
 			return -1;
 		}
@@ -81,10 +89,12 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 			break;
 		}
 	}
+	d->swapprio = SWAP_INVALID;
+	free(d->mnttype);
+	d->mnttype = NULL;
 	if((m = create_target(path,d->name,fs,ops)) == NULL){
 		return -1;
 	}
-	d->swapprio = SWAP_INVALID;
 	d->target = &m->m;
 	m->next = *pre;
 	*pre = m;
