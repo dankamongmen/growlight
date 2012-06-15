@@ -1,9 +1,10 @@
 LANG=C
 LC_ALL=c
 
-AM_CFLAGS=-O2 -Wall -W -Werror -Wextra -fvisibility=hidden $(PTHREAD_CFLAGS)
+AM_CFLAGS=-O2 -Wall -W -Werror -Wextra -fvisibility=hidden \
+	$(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES)
 AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common \
-	$(PTHREAD_LIBS)
+	$(PTHREAD_LIBS) $(OPENSSL_LIBS)
 AM_CC=$(PTHREAD_CC)
 
 man8_MANS = growlight.8
@@ -22,7 +23,7 @@ bin_PROGRAMS=
 bin_PROGRAMS+=growlight-tty
 
 growlight_tty_SOURCES=
-growlight_tty_SOURCES+=src/growlight.c src/libblkid.c src/readline.c \
+growlight_tty_SOURCES+=src/growlight.c src/libblkid.c src/readline.c src/mbr.c \
 		       src/mdadm.c src/sysfs.c src/mounts.c src/mmap.c \
 		       src/target.c src/sg.c src/ptable.c src/swap.c src/fs.c
 
