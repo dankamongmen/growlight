@@ -14,6 +14,7 @@
 #define U32FMT "%-10ju"
 #define PREFIXSTRLEN 7  // Does not include a '\0' (xxx.xxU)
 #define PREFIXFMT "%7s"
+#define UUIDSTRLEN 37
 
 static inline int
 usage(char * const *args,const char *arghelp){
@@ -79,12 +80,10 @@ static int
 print_swap(const device *p,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %s %s %s %d\n",
-			prefix,prefix,"",
+	r += rr = printf("%*.*s%s%-*.*s %-37.37s %s pri=%u\n",prefix,prefix,"",
+			p->mnttype,
 			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
-			p->name,
-			p->uuid ? p->uuid : "n/a",
-			p->mnttype,p->swapprio);
+			p->uuid ? p->uuid : "n/a",p->name,p->swapprio);
 	if(rr < 0){
 		return -1;
 	}
@@ -655,7 +654,9 @@ print_swaps(const device *d){
 	if(d->swapprio == 0){
 		return 0;
 	}
-	r += rr = printf("%s\t%u\n",d->name,d->swapprio);
+	r += rr = printf("%-*.*s %-5u %-37.37s %s\n",
+			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+			d->swapprio,d->uuid ? d->uuid : "n/a",d->name);
 	if(rr < 0){
 		return -1;
 	}
@@ -666,7 +667,8 @@ static int
 swap(char * const *args,const char *arghelp){
 	device *d;
 	if(!args[1]){
-		if(printf("Device\tPrio\n") < 0){
+		if(printf("%-*.*s %-5.5s %-37.37s %s\n",FSLABELSIZ,FSLABELSIZ,
+					"Label","Prio","UUID","Device") < 0){
 			return -1;
 		}
 		if(walk_devices(print_swaps)){
