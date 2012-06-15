@@ -11,8 +11,13 @@ Dependencies:
  - libudev (tested with Debian's 175-3.1)
  - libblkid (tested with Debian's 2.20.1-5)
  - libpci (tested with Debian's 3.1.9-3)
- - xsltproc (buildtime only)
- - autotools (buildtime only, and only if building from a checkout)
+ - libdevmapper (tested with Debian's 1.02.74)
+ - OpenSSL (tested with Debian's 1.0.1)
+
+Build-only dependencies:
+
+ - xsltproc (tested with 20800/10126/815)
+ - autotools (tested with 1.11)
 
 Building from a git checkout:
 
