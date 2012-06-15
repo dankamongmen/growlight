@@ -43,13 +43,13 @@ typedef struct device {
 	// If the filesystem is not mounted, but is found, only mnttype will be
 	// set from among mnt, mntops and mnttype
 	char *mnttype;			// Type of mount
-	char *mntuuid;			// Goes with mnttype, might be NULL.
-	char *mntlabel;			// Goes with mnttype, might be NULL.
 	mount *target;			// Future mount point
 	uintmax_t size;			// Size in bytes
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	unsigned swapprio;		// Priority as a swap device
+	char *uuid;			// applies to mnt/swap, can be NULL
+	char *label;			// applies to mnt/swap, can be NULL
 	union {
 		struct {
 			unsigned transport;	// Physical layer spec
