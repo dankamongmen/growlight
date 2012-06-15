@@ -257,7 +257,7 @@ print_drive(const device *d,int prefix,int descend){
 
 	switch(d->layout){
 	case LAYOUT_NONE:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c  %-6.6s%-19.19s\n",
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-19.19s\n",
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
@@ -268,28 +268,29 @@ print_drive(const device *d,int prefix,int descend){
 			'.',
 			d->blkdev.rotate ? 'O' : '.',
 			d->blkdev.wcache ? 'W' : '.',
+			d->blkdev.biosboot ? 'B' : '.',
 			d->pttable ? d->pttable : "none",
 			d->wwn ? d->wwn : "n/a"
 			);
 		break;
 	}case LAYOUT_MDADM:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c  %-6.6s%-19.19s\n",
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-19.19s\n",
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
-			d->physsec, '.', 'V', 'M', '.', '.',
+			d->physsec, '.', 'V', 'M', '.', '.', '.',
 			d->pttable ? d->pttable : "none",
 			d->wwn ? d->wwn : "n/a"
 			);
 		break;
 	}case LAYOUT_ZPOOL:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c  %-6.6s%-19.19s\n",
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-19.19s\n",
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
-			d->physsec, '.', 'V', '.', '.', '.',
+			d->physsec, '.', 'V', '.', '.', '.', '.',
 			d->pttable ? d->pttable : "none",
 			d->wwn ? d->wwn : "n/a"
 			);
@@ -561,7 +562,7 @@ blockdev(char * const *args,const char *arghelp){
 			}
 		}
 		printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
-				"\t\t(W)ritecache enabled\n");
+				"\t\t(W)ritecache enabled, (B)IOS boot\n");
 		return 0;
 	}
 	if(args[2] == NULL){
