@@ -34,25 +34,27 @@ static int
 print_target(const mount *m,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%s %s on %s %s\n",prefix,prefix,"",
-			m->dev,m->fs,m->path,m->ops);
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s %s %s\n",
+			prefix,prefix,"",
+			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
+			m->fs,
+			m->uuid ? m->uuid : "n/a",
+			m->dev,m->path,m->ops);
 	if(rr < 0){
 		return -1;
 	}
 	return r;
 }
 
-#define FSLABELSIZ 17
-
 static int
 print_mount(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %s %-36.36s %s %s %s\n",
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s %s %s\n",
 			prefix,prefix,"",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->name,
-			d->uuid ? d->uuid : "n/a",d->mnttype,
+			d->mnttype,
+			d->uuid ? d->uuid : "n/a",d->name,
 			d->mnt,d->mntops);
 	if(rr < 0){
 		return -1;
@@ -61,15 +63,14 @@ print_mount(const device *d,int prefix){
 }
 
 static int
-print_fs(const device *d,int prefix){
+print_unmount(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %s %-36.36s %s\n",
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s\n",
 			prefix,prefix,"",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->name,
-			d->uuid ? d->uuid : "n/a",
-			d->mnttype);
+			d->mnttype,
+			d->uuid ? d->uuid : "n/a",d->name);
 	if(rr < 0){
 		return -1;
 	}
@@ -81,10 +82,10 @@ print_swap(const device *p,int prefix){
 	int r = 0,rr;
 
 	assert(p->mnttype);
-	r += rr = printf("%*.*s%-*.*s %s %-36.36s %s",prefix,prefix,"",
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s",prefix,prefix,"",
 			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
-			p->name,
-			p->uuid ? p->uuid : "n/a",p->mnttype);
+			p->mnttype,
+			p->uuid ? p->uuid : "n/a",p->name);
 	if(rr < 0){
 		return -1;
 	}
@@ -160,6 +161,29 @@ bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
 }
 
 static int
+print_fs(const device *p){
+	int r = 0,rr;
+
+	if(p->mnttype == NULL){
+		return 0;
+	}
+	if(p->swapprio != SWAP_INVALID){
+		return 0;
+	}
+	if(p->target){
+		r += rr = print_target(p->target,0);
+		if(rr < 0){
+			return -1;
+		}
+	}
+	r += rr = print_mount(p,0);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
 print_partition(const device *p,int prefix){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
@@ -173,12 +197,16 @@ print_partition(const device *p,int prefix){
 		return -1;
 	}
 	if(p->mnt){
+		printf("1-SWAPVAL: %d\n",p->swapprio);
 		r += rr = print_mount(p,prefix + 1);
 	}else if(p->swapprio >= SWAP_INACTIVE){
+		printf("2-SWAPVAL: %d\n",p->swapprio);
 		r += rr = print_swap(p,prefix + 1);
 	}else if(p->mnttype){
-		r += rr = print_fs(p,prefix + 1);
-	}else if(p->target){
+		printf("3-SWAPVAL: %d\n",p->swapprio);
+		r += rr = print_unmount(p,prefix + 1);
+	}
+	if(p->target){
 		r += rr = print_target(p->target,prefix + 1);
 	}
 	if(rr < 0){
@@ -253,11 +281,12 @@ print_drive(const device *d,int prefix){
 	if(d->mnt){
 		r += rr = print_mount(d,prefix + 1);
 	}else if(d->mnttype){
-		r += rr = print_fs(d,prefix + 1);
-	}else if(d->target){
-		r += rr = print_target(d->target,prefix + 1);
+		r += rr = print_unmount(d,prefix + 1);
 	}else if(d->swapprio >= SWAP_INACTIVE){
 		r += rr = print_swap(d,prefix + 1);
+	}
+	if(d->target){
+		r += rr = print_target(d->target,prefix + 1);
 	}
 	if(rr < 0){
 		return -1;
@@ -613,7 +642,7 @@ map(char * const *args,const char *arghelp){
 		fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
 		return -1;
 	}
-	if((d = lookup_device(args[1])) == NULL){
+	if((d = lookup_device(args[1])) == NULL || (d = lookup_dentry(d,args[1])) == NULL){
 		fprintf(stderr,"Couldn't find device %s\n",args[1]);
 		return -1;
 	}
@@ -676,6 +705,18 @@ print_swaps(const device *d){
 		return -1;
 	}
 	return r;
+}
+
+static int
+fs(char * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+	printf("%-*.*s %-5.5s %-36.36s %s %s\n",
+			FSLABELSIZ,FSLABELSIZ,"Label",
+			"Type","UUID","Mount","Options");
+	if(walk_devices(print_fs)){
+		return -1;
+	}
+	return 0;
 }
 
 static int
@@ -850,6 +891,7 @@ static const struct fxn {
 			"                 | [ partition \"mkfs\" [ fstype ] ]\n"
 			"                    | no argument to list supported fs types\n"
 			"                 | no arguments to detail all partitions"),
+	FXN(fs,""),
 	FXN(mdadm,"[ mdname \"create\" devcount level devices ]\n"
 			"                 | no arguments to detail all mdadm devices"),
 	FXN(zpool,"[ zname \"create\" devcount level vdevs ]\n"
