@@ -148,6 +148,8 @@ free_device(device *d){
 		d->target = NULL;
 		switch(d->layout){
 			case LAYOUT_NONE:{
+				free(d->blkdev.label);
+				free(d->blkdev.uuid);
 				break;
 			}case LAYOUT_MDADM:{
 				mdslave *md;
@@ -160,7 +162,7 @@ free_device(device *d){
 				free(d->mddev.level);
 				break;
 			}case LAYOUT_PARTITION:{
-				free(d->partdev.pname);
+				free(d->partdev.label);
 				free(d->partdev.uuid);
 				break;
 			}case LAYOUT_ZPOOL:{
@@ -566,7 +568,7 @@ create_new_device(const char *name){
 						}
 						pname = blkid_partition_get_name(part);
 						if(pname){
-							p->partdev.pname = strdup(pname);
+							p->partdev.label = strdup(pname);
 						}
 						if(probe_blkid_superblock(p->name,p)){
 							free_device(&dd);

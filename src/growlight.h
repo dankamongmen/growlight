@@ -66,6 +66,10 @@ typedef struct device {
 			unsigned removable: 1;	// Removable media
 			unsigned rotate: 1;	// Rotational media / spinning platters
 			unsigned wcache: 1;	// Write cache enabled
+			// These are the *disk's* UUID and label, not the
+			// filesystem's or partition's.
+			char *uuid,*label;
+			struct partition *next;	// Next on this disk
 		} blkdev;
 		struct {
 			unsigned long disks;	// RAID disks in md
@@ -73,15 +77,11 @@ typedef struct device {
 			mdslave *slaves;	// RAID components
 		} mddev;
 		struct {
-			char *pname;		// Filesystem label
-			char *uuid;		// Filesystem UUID
+			// These are the *partition* UUID and label, not the
+			// filesystem's or disk's.
+			char *uuid,*label;
 			struct partition *next;	// Next on this disk
 		} partdev;
-		struct {
-			char *sname;		// Swap device label
-			char *uuid;		// Swap device UUID
-			struct partition *next;	// Next on this disk
-		} swapdev;
 	};
 	enum {
 		LAYOUT_NONE,

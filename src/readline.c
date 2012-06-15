@@ -188,22 +188,19 @@ print_partition(const device *p,int prefix){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %s\n",
+	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %-17.17s\n",
 			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
-			p->partdev.pname ? p->partdev.pname : "n/a");
+			p->partdev.label ? p->partdev.label : "n/a");
 	if(rr < 0){
 		return -1;
 	}
 	if(p->mnt){
-		printf("1-SWAPVAL: %d\n",p->swapprio);
 		r += rr = print_mount(p,prefix + 1);
 	}else if(p->swapprio >= SWAP_INACTIVE){
-		printf("2-SWAPVAL: %d\n",p->swapprio);
 		r += rr = print_swap(p,prefix + 1);
 	}else if(p->mnttype){
-		printf("3-SWAPVAL: %d\n",p->swapprio);
 		r += rr = print_unmount(p,prefix + 1);
 	}
 	if(p->target){
