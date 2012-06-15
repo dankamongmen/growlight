@@ -111,12 +111,13 @@ int probe_blkid_dev(const char *dev,blkid_probe *pr){
 // Takes a /dev/ path, and examines the superblock therein for a valid
 // filesystem or raid superblock.
 int probe_blkid_superblock(const char *dev,device *d){
+	char buf[PATH_MAX],*mnttype,*uuid;
 	const char *val,*name;
-	char buf[PATH_MAX];
 	blkid_probe bp;
 	int n;
 	size_t len;
 
+	uuid = mnttype = NULL;
 	if(strncmp(dev,"/dev/",5)){
 		if(snprintf(buf,sizeof(buf),"/dev/%s",dev) >= (int)sizeof(buf)){
 			fprintf(stderr,"Bad name: %s\n",dev);
@@ -130,29 +131,24 @@ int probe_blkid_superblock(const char *dev,device *d){
 	}
 	if(blkid_probe_enable_partitions(bp,1)){
 		fprintf(stderr,"Couldn't enable blkid partitionprobe for %s (%s?)\n",dev,strerror(errno));
-		blkid_free_probe(bp);
-		return -1;
+		goto err;
 	}
 	if(blkid_probe_set_partitions_flags(bp,BLKID_PARTS_ENTRY_DETAILS)){
 		fprintf(stderr,"Couldn't set blkid partitionflags for %s (%s?)\n",dev,strerror(errno));
-		blkid_free_probe(bp);
-		return -1;
+		goto err;
 	}
 	if(blkid_probe_enable_superblocks(bp,1)){
 		fprintf(stderr,"Couldn't enable blkid superprobe for %s (%s?)\n",dev,strerror(errno));
-		blkid_free_probe(bp);
-		return -1;
+		goto err;
 	}
 	if(blkid_probe_set_superblocks_flags(bp,BLKID_SUBLKS_DEFAULT |
 						BLKID_SUBLKS_VERSION)){
 		fprintf(stderr,"Couldn't set blkid superflags for %s (%s?)\n",dev,strerror(errno));
-		blkid_free_probe(bp);
-		return -1;
+		goto err;
 	}
 	if(blkid_do_fullprobe(bp)){
 		fprintf(stderr,"Couldn't run blkid fullprobe for %s (%s?)\n",dev,strerror(errno));
-		blkid_free_probe(bp);
-		return -1;
+		goto err;
 	}
 	n = blkid_probe_numof_values(bp);
 	while(n--){
@@ -162,22 +158,38 @@ int probe_blkid_superblock(const char *dev,device *d){
 				d->swapprio = 2;
 				// FIXME use list of filesystems from wherever
 			}else if(strcmp(val,"ext4") == 0){
-				char *m = strdup(val);
-
-				if(d->mnttype == NULL){
-					d->mnttype = m;
-				}else if(strcmp(val,d->mnttype)){
-
-					// FIXME?
-					fprintf(stderr,"FS type changed (%s->%s)\n",d->mnttype,val);
-					if(m){
-						free(d->mnttype);
-						d->mnttype = m;
-					}
+				if((mnttype = strdup(val)) == NULL){
+					goto err;
 				}
+			}
+		}else if(strcmp(name,"UUID") == 0){
+			if((uuid = strdup(val)) == NULL){
+				goto err;
 			}
 		}
 	}
+	if(d->mnttype == NULL){
+		d->mnttype = mnttype;
+	}else if(strcmp(val,d->mnttype)){
+		fprintf(stderr,"FS type changed (%s->%s)\n",d->mnttype,
+				mnttype ? mnttype : "none");
+		free(d->mnttype);
+		d->mnttype = mnttype;
+	}
+	if(d->mntuuid == NULL){
+		d->mntuuid = uuid;
+	}else if(strcmp(val,d->mntuuid)){
+		fprintf(stderr,"FS UUID changed (%s->%s)\n",d->mntuuid,
+				uuid ? uuid : "none");
+		free(d->mntuuid);
+		d->mntuuid = uuid;
+	}
 	blkid_free_probe(bp);
 	return 0;
+
+err:
+	blkid_free_probe(bp);
+	free(mnttype);
+	free(uuid);
+	return -1;
 }
