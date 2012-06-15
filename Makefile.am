@@ -1,9 +1,9 @@
 LANG=C
 LC_ALL=c
 
-AM_LIBS=$(PTHREAD_LIBS)
 AM_CFLAGS=-O2 -Wall -W -Werror -Wextra -fvisibility=hidden $(PTHREAD_CFLAGS)
-AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
+AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common \
+	$(PTHREAD_LIBS) $(CURSES_LIB)
 AM_CC=$(PTHREAD_CC)
 
 man8_MANS = growlight.8
