@@ -111,13 +111,13 @@ int probe_blkid_dev(const char *dev,blkid_probe *pr){
 // Takes a /dev/ path, and examines the superblock therein for a valid
 // filesystem or raid superblock.
 int probe_blkid_superblock(const char *dev,device *d){
-	char buf[PATH_MAX],*mnttype,*uuid;
+	char buf[PATH_MAX],*mnttype,*uuid,*label;
 	const char *val,*name;
 	blkid_probe bp;
 	int n;
 	size_t len;
 
-	uuid = mnttype = NULL;
+	uuid = label = mnttype = NULL;
 	if(strncmp(dev,"/dev/",5)){
 		if(snprintf(buf,sizeof(buf),"/dev/%s",dev) >= (int)sizeof(buf)){
 			fprintf(stderr,"Bad name: %s\n",dev);
@@ -166,6 +166,10 @@ int probe_blkid_superblock(const char *dev,device *d){
 			if((uuid = strdup(val)) == NULL){
 				goto err;
 			}
+		}else if(strcmp(name,"LABEL") == 0){
+			if((label = strdup(val)) == NULL){
+				goto err;
+			}
 		}
 	}
 	if(d->mnttype == NULL){
@@ -184,12 +188,21 @@ int probe_blkid_superblock(const char *dev,device *d){
 		free(d->mntuuid);
 		d->mntuuid = uuid;
 	}
+	if(d->mntlabel == NULL){
+		d->mntlabel = label;
+	}else if(strcmp(val,d->mntlabel)){
+		fprintf(stderr,"FS label changed (%s->%s)\n",d->mntlabel,
+				label ? label : "none");
+		free(d->mntlabel);
+		d->mntlabel = label;
+	}
 	blkid_free_probe(bp);
 	return 0;
 
 err:
 	blkid_free_probe(bp);
 	free(mnttype);
+	free(label);
 	free(uuid);
 	return -1;
 }
