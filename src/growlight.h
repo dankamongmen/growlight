@@ -57,8 +57,8 @@ typedef struct device {
 		SWAP_MAXPRIO = 0,
 		SWAP_MINPRIO = 65535,
 	} swapprio;			// Priority as a swap device
-	char *uuid;			// applies to mnt/swap, can be NULL
-	char *label;			// applies to mnt/swap, can be NULL
+	char *uuid;			// applies to fs/swap/mdadm, can be NULL
+	char *label;			// applies to fs/swap/mdadm, can be NULL
 	union {
 		struct {
 			unsigned transport;	// Physical layer spec

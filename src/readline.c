@@ -316,8 +316,9 @@ print_mdadm(const device *d){
 	const mdslave *md;
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s " PREFIXFMT " %4uB %-6.6s%5lu %-7.7s\n",
+	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
 			d->name,
+			d->uuid ? d->uuid : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec,
 			d->pttable ? d->pttable : "none",
@@ -430,8 +431,8 @@ mdadm(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
-			"Device","Bytes","PSect","Table","Disks","Level");
+	printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
+			"Device","UUID","Bytes","PSect","Table","Disks","Level");
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d;
 
