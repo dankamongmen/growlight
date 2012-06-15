@@ -14,7 +14,7 @@
 #define U32FMT "%-10ju"
 #define PREFIXSTRLEN 7  // Does not include a '\0' (xxx.xxU)
 #define PREFIXFMT "%7s"
-#define UUIDSTRLEN 37
+#define UUIDSTRLEN 36
 
 static inline int
 usage(char * const *args,const char *arghelp){
@@ -48,7 +48,7 @@ static int
 print_mount(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %s %s %s %s %s\n",
+	r += rr = printf("%*.*s%-*.*s %s %-36.36s %s %s %s\n",
 			prefix,prefix,"",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->name,
@@ -64,7 +64,7 @@ static int
 print_fs(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %s %s %s\n",
+	r += rr = printf("%*.*s%-*.*s %s %-36.36s %s\n",
 			prefix,prefix,"",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->name,
@@ -80,10 +80,19 @@ static int
 print_swap(const device *p,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%s%-*.*s %-37.37s %s pri=%u\n",prefix,prefix,"",
-			p->mnttype,
+	assert(p->mnttype);
+	r += rr = printf("%*.*s%-*.*s %s %-36.36s %s",prefix,prefix,"",
 			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
-			p->uuid ? p->uuid : "n/a",p->name,p->swapprio);
+			p->name,
+			p->uuid ? p->uuid : "n/a",p->mnttype);
+	if(rr < 0){
+		return -1;
+	}
+	if(p->swapprio >= SWAP_MAXPRIO){
+		r += rr = printf(" pri=%d\n",p->swapprio);
+	}else{
+		r += rr = printf("\n");
+	}
 	if(rr < 0){
 		return -1;
 	}
@@ -155,7 +164,7 @@ print_partition(const device *p,int prefix){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-37.37s " PREFIXFMT " %s\n",
+	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %s\n",
 			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
@@ -165,12 +174,12 @@ print_partition(const device *p,int prefix){
 	}
 	if(p->mnt){
 		r += rr = print_mount(p,prefix + 1);
+	}else if(p->swapprio >= SWAP_INACTIVE){
+		r += rr = print_swap(p,prefix + 1);
 	}else if(p->mnttype){
 		r += rr = print_fs(p,prefix + 1);
 	}else if(p->target){
 		r += rr = print_target(p->target,prefix + 1);
-	}else if(p->swapprio){
-		r += rr = print_swap(p,prefix + 1);
 	}
 	if(rr < 0){
 		return -1;
@@ -247,7 +256,7 @@ print_drive(const device *d,int prefix){
 		r += rr = print_fs(d,prefix + 1);
 	}else if(d->target){
 		r += rr = print_target(d->target,prefix + 1);
-	}else if(d->swapprio){
+	}else if(d->swapprio >= SWAP_INACTIVE){
 		r += rr = print_swap(d,prefix + 1);
 	}
 	if(rr < 0){
@@ -506,7 +515,7 @@ partition(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-10.10s %-37.37s " PREFIXFMT " %s\n",
+	printf("%-10.10s %-36.36s " PREFIXFMT " %s\n",
 			"Partition","UUID","Bytes","Name");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
@@ -651,12 +660,18 @@ static int
 print_swaps(const device *d){
 	int rr,r = 0;
 
-	if(d->swapprio == 0){
+	if(d->swapprio == SWAP_INVALID){
 		return 0;
 	}
-	r += rr = printf("%-*.*s %-5u %-37.37s %s\n",
-			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->swapprio,d->uuid ? d->uuid : "n/a",d->name);
+	if(d->swapprio != SWAP_INACTIVE){
+		r += rr = printf("%-*.*s %-5d %-36.36s %s\n",
+				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+				d->swapprio,d->uuid ? d->uuid : "n/a",d->name);
+	}else{
+		r += rr = printf("%-*.*s %-5.5s %-36.36s %s\n",
+				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+				"off",d->uuid ? d->uuid : "n/a",d->name);
+	}
 	if(rr < 0){
 		return -1;
 	}
@@ -667,7 +682,7 @@ static int
 swap(char * const *args,const char *arghelp){
 	device *d;
 	if(!args[1]){
-		if(printf("%-*.*s %-5.5s %-37.37s %s\n",FSLABELSIZ,FSLABELSIZ,
+		if(printf("%-*.*s %-5.5s %-36.36s %s\n",FSLABELSIZ,FSLABELSIZ,
 					"Label","Prio","UUID","Device") < 0){
 			return -1;
 		}
@@ -677,19 +692,15 @@ swap(char * const *args,const char *arghelp){
 		return 0;
 	}
 	TWO_ARG_CHECK(args,arghelp);
-	if(strcmp(args[1],"file") == 0){
-		// FIXME
-		return 0;
-	}
-	if((d = lookup_device(args[2])) == NULL){
+	if((d = lookup_device(args[1])) == NULL){
 		fprintf(stderr,"Couldn't find device %s\n",args[2]);
 		return -1;
 	}
-	if(strcmp(args[1],"on") == 0){
+	if(strcmp(args[2],"on") == 0){
 		if(swapondev(d)){
 			return -1;
 		}
-	}else if(strcmp(args[1],"off") == 0){
+	}else if(strcmp(args[2],"off") == 0){
 		if(swapoffdev(d)){
 			return -1;
 		}
@@ -844,7 +855,6 @@ static const struct fxn {
 	FXN(zpool,"[ zname \"create\" devcount level vdevs ]\n"
 			"                 | no arguments to detail all zpools"),
 	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
-			"                 | [ \"file\" path ]\n"
 			"                 | no arguments to detail all swaps"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
