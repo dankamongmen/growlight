@@ -45,8 +45,21 @@ static int
 print_mount(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%s %s on %s %s\n",prefix,prefix,"",d->name,
-			d->mnttype,d->mnt,d->mntops);
+	r += rr = printf("%*.*s%s %s %s %s %s\n",prefix,prefix,"",d->name,
+			d->mnttype,d->mntuuid ? d->mntuuid : "n/a",
+			d->mnt,d->mntops);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
+print_fs(const device *d,int prefix){
+	int r = 0,rr;
+
+	r += rr = printf("%*.*s%s %s %s\n",prefix,prefix,"",d->name,
+			d->mnttype,d->mntuuid ? d->mntuuid : "n/a");
 	if(rr < 0){
 		return -1;
 	}
@@ -127,14 +140,13 @@ print_partition(const device *p,int prefix){
 	}
 	if(p->mnt){
 		r += rr = print_mount(p,prefix + 1);
-		if(rr < 0){
-			return -1;
-		}
+	}else if(p->mnttype){
+		r += rr = print_fs(p,prefix + 1);
 	}else if(p->target){
 		r += rr = print_target(p->target,prefix + 1);
-		if(rr < 0){
-			return -1;
-		}
+	}
+	if(rr < 0){
+		return -1;
 	}
 	return r;
 }
@@ -707,6 +719,27 @@ troubleshoot(char * const *args,const char *arghelp){
 	return -1;
 }
 
+static int
+uefiboot(char * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+	// FIXME ensure the partition is a viable ESP
+	// FIXME ensure kernel is in ESP
+	// FIXME prepare protective MBR
+	// FIXME install rEFIt to ESP
+	// FIXME point rEFIt at kernel
+	return -1;
+}
+
+static int
+biosboot(char * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+	// FIXME ensure the partition has its boot flag set
+	// FIXME ensure it's a primary partition
+	// FIXME install grub to MBR
+	// FIXME point grub at kernel
+	return -1;
+}
+
 static void
 free_tokes(char **tokes){
 	char **toke;
@@ -786,6 +819,8 @@ static const struct fxn {
 			"                 | [ mountdev \"swap\" ]\n"
 			"                 | no arguments generates target fstab"),
 	FXN(mounts,""),
+	FXN(uefiboot,"device"),
+	FXN(biosboot,"device"),
 	FXN(badblocks,"[ \"rw\" ] device"),
 	FXN(benchmark,"fs"),
 	FXN(troubleshoot,""),
