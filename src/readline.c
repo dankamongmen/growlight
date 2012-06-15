@@ -26,86 +26,6 @@ usage(char * const *args,const char *arghelp){
 	return -1;
 }
 
-#define ZERO_ARG_CHECK(args,arghelp) \
- if(args[1]){ usage(args,arghelp); return -1 ; }
-
-#define TWO_ARG_CHECK(args,arghelp) \
- if(!args[1] || !args[2] || args[3]){ usage(args,arghelp); return -1 ; }
-
-static int help(char * const *,const char *);
-static int print_mdadm(const device *,int);
-
-static int
-print_target(const mount *m,int prefix){
-	int r = 0,rr;
-
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s %s %s\n",
-			prefix,prefix,"",
-			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
-			m->fs,
-			m->uuid ? m->uuid : "n/a",
-			m->dev,m->path,m->ops);
-	if(rr < 0){
-		return -1;
-	}
-	return r;
-}
-
-static int
-print_mount(const device *d,int prefix){
-	int r = 0,rr;
-
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s %s %s\n",
-			prefix,prefix,"",
-			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->mnttype,
-			d->uuid ? d->uuid : "n/a",d->name,
-			d->mnt,d->mntops);
-	if(rr < 0){
-		return -1;
-	}
-	return r;
-}
-
-static int
-print_unmount(const device *d,int prefix){
-	int r = 0,rr;
-
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s -\n",
-			prefix,prefix,"",
-			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->mnttype,
-			d->uuid ? d->uuid : "n/a",d->name);
-	if(rr < 0){
-		return -1;
-	}
-	return r;
-}
-
-static int
-print_swap(const device *p,int prefix){
-	int r = 0,rr;
-
-	assert(p->mnttype);
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s",prefix,prefix,"",
-			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
-			p->mnttype,
-			p->uuid ? p->uuid : "n/a",p->name);
-	if(rr < 0){
-		return -1;
-	}
-	if(p->swapprio >= SWAP_MAXPRIO){
-		r += rr = printf(" pri=%d\n",p->swapprio);
-	}else{
-		r += rr = printf("\n");
-	}
-	if(rr < 0){
-		return -1;
-	}
-	return r;
-}
-
-
 // Takes an arbitrarily large number, and prints it into a fixed-size buffer by
 // adding the necessary SI suffix. Usually, pass a |PREFIXSTRLEN+1|-sized
 // buffer to generate up to PREFIXSTRLEN characters.
@@ -165,6 +85,95 @@ bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
 	return genprefix(val,decimal,buf,bsize,omitdec,1024,'i');
 }
 
+#define ZERO_ARG_CHECK(args,arghelp) \
+ if(args[1]){ usage(args,arghelp); return -1 ; }
+
+#define TWO_ARG_CHECK(args,arghelp) \
+ if(!args[1] || !args[2] || args[3]){ usage(args,arghelp); return -1 ; }
+
+static int help(char * const *,const char *);
+static int print_mdadm(const device *,int);
+
+static int
+print_target(const mount *m,int prefix){
+	int r = 0,rr;
+
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n%*.*s %s %s\n",
+			prefix,prefix,"",
+			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
+			m->fs,
+			m->uuid ? m->uuid : "n/a",
+			"-1", // FIXME
+			m->dev,
+			prefix,prefix,"",
+			m->path,m->ops);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
+print_mount(const device *d,int prefix){
+	char buf[PREFIXSTRLEN + 1];
+	int r = 0,rr;
+
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n%*.*s %s %s\n",
+			prefix,prefix,"",
+			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+			d->mnttype,
+			d->uuid ? d->uuid : "n/a",
+			qprefix(d->size * d->logsec,1,buf,sizeof(buf),0),
+			d->name,
+			prefix,prefix,"",
+			d->mnt,d->mntops);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
+print_unmount(const device *d,int prefix){
+	char buf[PREFIXSTRLEN + 1];
+	int r = 0,rr;
+
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n",
+			prefix,prefix,"",
+			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+			d->mnttype,
+			d->uuid ? d->uuid : "n/a",
+			qprefix(d->size * d->logsec,1,buf,sizeof(buf),0),
+			d->name);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
+print_swap(const device *p,int prefix){
+	int r = 0,rr;
+
+	assert(p->mnttype);
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s",prefix,prefix,"",
+			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
+			p->mnttype,
+			p->uuid ? p->uuid : "n/a",p->name);
+	if(rr < 0){
+		return -1;
+	}
+	if(p->swapprio >= SWAP_MAXPRIO){
+		r += rr = printf(" pri=%d\n",p->swapprio);
+	}else{
+		r += rr = printf("\n");
+	}
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
 static int
 print_fs(const device *p){
 	int r = 0,rr;
@@ -197,17 +206,17 @@ print_partition(const device *p,int prefix){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %-3.3s%s %-17.17s\n",
+	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %-4.4s %-17.17s\n",
 			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
-			p->partdev.partrole == PARTROLE_PRIMARY ? "Pri" :
+			(p->partdev.partrole == PARTROLE_PRIMARY && (p->partdev.flags & 0xffu) == 0x80) ? "Boot" :
+				p->partdev.partrole == PARTROLE_PRIMARY ? "Pri" :
 				p->partdev.partrole == PARTROLE_EXTENDED ? "Ext" :
 				p->partdev.partrole == PARTROLE_LOGICAL ? "Log" :
 				p->partdev.partrole == PARTROLE_GPT ? "GPT" :
 				p->partdev.partrole == PARTROLE_EPS ? "EPS" : "Unk",
-				(p->partdev.partrole == PARTROLE_PRIMARY && (p->partdev.flags & 0xffu) == 0x80) ? "*" : " ",
-			p->partdev.label ? p->partdev.label : "n/a");
+				p->label ? p->label : p->partdev.label ? p->partdev.label : "n/a");
 	if(rr < 0){
 		return -1;
 	}
@@ -717,19 +726,24 @@ walk_devices(int (*fxn)(const device *)){
 
 static int
 print_swaps(const device *d){
+	char buf[PREFIXSTRLEN + 1];
 	int rr,r = 0;
 
 	if(d->swapprio == SWAP_INVALID){
 		return 0;
 	}
 	if(d->swapprio != SWAP_INACTIVE){
-		r += rr = printf("%-*.*s %-5d %-36.36s %s\n",
+		r += rr = printf("%-*.*s %-5d %-36.36s " PREFIXFMT " %s\n",
 				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-				d->swapprio,d->uuid ? d->uuid : "n/a",d->name);
+				d->swapprio,d->uuid ? d->uuid : "n/a",
+				qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+				d->name);
 	}else{
-		r += rr = printf("%-*.*s %-5.5s %-36.36s %s\n",
+		r += rr = printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s\n",
 				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-				"off",d->uuid ? d->uuid : "n/a",d->name);
+				"off",d->uuid ? d->uuid : "n/a",
+				qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+				d->name);
 	}
 	if(rr < 0){
 		return -1;
@@ -740,9 +754,9 @@ print_swaps(const device *d){
 static int
 fs(char * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-*.*s %-5.5s %-36.36s %s %s+%s\n",
+	printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s\n",
 			FSLABELSIZ,FSLABELSIZ,"Label",
-			"Type","UUID","Device","Mount","Opts");
+			"Type","UUID","Bytes","Device");
 	if(walk_devices(print_fs)){
 		return -1;
 	}
@@ -753,8 +767,8 @@ static int
 swap(char * const *args,const char *arghelp){
 	device *d;
 	if(!args[1]){
-		if(printf("%-*.*s %-5.5s %-36.36s %s\n",FSLABELSIZ,FSLABELSIZ,
-					"Label","Prio","UUID","Device") < 0){
+		if(printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s\n",FSLABELSIZ,FSLABELSIZ,
+					"Label","Prio","UUID","Bytes","Device") < 0){
 			return -1;
 		}
 		if(walk_devices(print_swaps)){

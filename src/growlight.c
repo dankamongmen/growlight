@@ -265,6 +265,7 @@ add_partition(device *d,const char *name,dev_t devno,uintmax_t sz){
 
 		memset(p,0,sizeof(*p));
 		p->swapprio = SWAP_INVALID;
+		p->layout = LAYOUT_PARTITION;
 		strcpy(p->name,name);
 		for(pre = &d->parts ; *pre ; pre = &(*pre)->next){
 			if(strcmp((*pre)->name,name) > 0){ // FIXME 0's no good
