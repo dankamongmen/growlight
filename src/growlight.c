@@ -560,8 +560,10 @@ create_new_device(const char *name){
 
 					part = blkid_partlist_devno_to_partition(ppl,p->devno);
 					if(part){
+						unsigned long long flags;
 						const char *uuid,*pname;
 
+						flags = blkid_partition_get_flags(part);
 						// FIXME need find UEFI EPS partitions
 						if(strcmp(pttable,"gpt") == 0){
 							p->partdev.partrole = PARTROLE_GPT;
@@ -572,6 +574,18 @@ create_new_device(const char *name){
 						}else if(blkid_partition_is_primary(part)){
 							p->partdev.partrole = PARTROLE_PRIMARY;
 						}
+// BIOS boot flag byte ought not be set to anything but 0 unless we're on a
+// primary partition and doing BIOS+MBR booting, in which case it must be 0x80.
+						if((flags & 0xff) != 0){
+							if(p->partdev.partrole != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)){
+								fprintf(stderr,"Warning: BIOS+MBR boot byte was %02llx on %s\n",
+										flags & 0xffu,p->name);
+								free_device(&dd);
+								blkid_free_probe(pr);
+								return NULL;
+							}
+						}
+						p->partdev.flags = flags;
 						uuid = blkid_partition_get_uuid(part);
 						if(uuid){
 							p->partdev.uuid = strdup(uuid);

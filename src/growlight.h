@@ -81,6 +81,9 @@ typedef struct device {
 			// filesystem's or disk's.
 			char *uuid,*label;
 			struct partition *next;	// Next on this disk
+			// The BIOS+MBR partition record (including the first
+			// byte, the 'boot flag') and GPT attributes.
+			unsigned long long flags;
 			enum {
 				PARTROLE_UNKNOWN,
 				PARTROLE_PRIMARY,	// BIOS+MBR
