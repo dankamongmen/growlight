@@ -66,6 +66,7 @@ typedef struct device {
 			unsigned removable: 1;	// Removable media
 			unsigned rotate: 1;	// Rotational media / spinning platters
 			unsigned wcache: 1;	// Write cache enabled
+			unsigned biosboot: 1;	// Non-zero bytes in MBR code area
 			// These are the *disk's* UUID and label, not the
 			// filesystem's or partition's.
 			char *uuid,*label;
