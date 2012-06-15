@@ -24,6 +24,7 @@
 #include <libdevmapper.h>
 
 #include <sg.h>
+#include <mbr.h>
 #include <swap.h>
 #include <mdadm.h>
 #include <sysfs.h>
@@ -551,6 +552,23 @@ create_new_device(const char *name){
 				verbf("\t%d partition%s, table type %s\n",
 						pars,pars == 1 ? "" : "s",
 						pttable);
+				if(strcmp(pttable,"dos") == 0){
+					char shabuf[20];
+
+					if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+						fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
+						free_device(&dd);
+						blkid_free_probe(pr);
+						return NULL;
+					}
+					if(mbrsha1(dfd,shabuf)){
+						close(dfd);
+						free_device(&dd);
+						blkid_free_probe(pr);
+						return NULL;
+					}
+					close(dfd);
+				}
 				if((dd.pttable = strdup(pttable)) == NULL){
 					free_device(&dd);
 					blkid_free_probe(pr);
