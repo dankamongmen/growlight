@@ -92,7 +92,7 @@ bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
  if(!args[1] || !args[2] || args[3]){ usage(args,arghelp); return -1 ; }
 
 static int help(char * const *,const char *);
-static int print_mdadm(const device *,int);
+static int print_mdadm(const device *,int,int);
 
 static int
 print_target(const mount *m,int prefix){
@@ -202,7 +202,7 @@ print_fs(const device *p){
 }
 
 static int
-print_partition(const device *p,int prefix){
+print_partition(const device *p,int prefix,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
@@ -219,6 +219,9 @@ print_partition(const device *p,int prefix){
 				p->label ? p->label : p->partdev.label ? p->partdev.label : "n/a");
 	if(rr < 0){
 		return -1;
+	}
+	if(!descend){
+		return r;
 	}
 	if(p->mnt){
 		r += rr = print_mount(p,prefix + 1);
@@ -247,7 +250,7 @@ pcie_gen(unsigned gen){
 }
 
 static int
-print_drive(const device *d,int prefix){
+print_drive(const device *d,int prefix,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	const device *p;
 	int r = 0,rr;
@@ -299,6 +302,9 @@ print_drive(const device *d,int prefix){
 	if(rr < 0){
 		return -1;
 	}
+	if(!descend){
+		return r;
+	}
 	if(d->mnt){
 		r += rr = print_mount(d,prefix + 1);
 	}else if(d->mnttype){
@@ -314,7 +320,7 @@ print_drive(const device *d,int prefix){
 	}
 	if(!prefix){
 		for(p = d->parts ; p ; p = p->next){
-			r += rr = print_partition(p,prefix + 1);
+			r += rr = print_partition(p,prefix + 1,descend);
 			if(rr < 0){
 				return -1;
 			}
@@ -325,23 +331,23 @@ print_drive(const device *d,int prefix){
 }
 
 static int
-print_dev_mplex(const device *d,int prefix){
+print_dev_mplex(const device *d,int prefix,int descend){
 	switch(d->layout){
 		case LAYOUT_NONE:
-			return print_drive(d,prefix);
+			return print_drive(d,prefix,descend);
 		case LAYOUT_PARTITION:
-			return print_partition(d,prefix);
+			return print_partition(d,prefix,descend);
 		case LAYOUT_MDADM:
-			return print_mdadm(d,prefix);
+			return print_mdadm(d,prefix,descend);
 		case LAYOUT_ZPOOL:
-			// FIXME return print_zpool(d,prefix);
+			// FIXME return print_zpool(d,prefix,descend);
 		default:
 			return -1;
 	}
 }
 
 static int
-print_mdadm(const device *d,int prefix){
+print_mdadm(const device *d,int prefix,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	const mdslave *md;
 	int r = 0,rr;
@@ -358,8 +364,11 @@ print_mdadm(const device *d,int prefix){
 	if(rr < 0){
 		return -1;
 	}
+	if(!descend){
+		return r;
+	}
 	for(md = d->mddev.slaves ; md ; md = md->next){
-		r += rr = print_dev_mplex(md->component,1);
+		r += rr = print_dev_mplex(md->component,1,descend);
 		if(rr < 0){
 			return -1;
 		}
@@ -370,7 +379,7 @@ print_mdadm(const device *d,int prefix){
 				if(strcmp(md->name,p->name)){
 					continue;
 				}
-				r += rr = print_partition(p,1);
+				r += rr = print_partition(p,1,descend);
 				if(rr < 0){
 					return -1;
 				}
@@ -382,7 +391,7 @@ print_mdadm(const device *d,int prefix){
 }
 
 static int
-print_controller(const controller *c){
+print_controller(const controller *c,int descend){
 	int r = 0,rr;
 	device *d;
 
@@ -413,8 +422,11 @@ print_controller(const controller *c){
 	if(rr < 0){
 		return -1;
 	}
+	if(!descend){
+		return r;
+	}
 	for(d = c->blockdevs ; d ; d = d->next){
-		r += rr = print_drive(d,1);
+		r += rr = print_drive(d,1,descend);
 		if(rr < 0){
 			return -1;
 		}
@@ -425,10 +437,18 @@ print_controller(const controller *c){
 static int
 adapter(char * const *args,const char *arghelp){
 	const controller *c;
+	int descend;
 
-	ZERO_ARG_CHECK(args,arghelp);
+	if(args[1] == NULL){
+		descend = 1;
+	}else if(strcmp(args[1],"-q") == 0 && args[2] == NULL){
+		descend = 0;
+	}else{
+		usage(args,arghelp);
+		return -1;
+	}
 	for(c = get_controllers() ; c ; c = c->next){
-		if(print_controller(c) < 0){
+		if(print_controller(c,descend) < 0){
 			return -1;
 		}
 	}
@@ -460,8 +480,16 @@ zpool(char * const *args,const char *arghelp){
 static int
 mdadm(char * const *args,const char *arghelp){
 	const controller *c;
+	int descend;
 
-	ZERO_ARG_CHECK(args,arghelp);
+	if(args[1] == NULL){
+		descend = 1;
+	}else if(strcmp(args[1],"-q") == 0 && args[2] == NULL){
+		descend = 0;
+	}else{
+		usage(args,arghelp);
+		return -1;
+	}
 	printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
 			"Device","UUID","Bytes","PSect","Table","Disks","Level");
 	for(c = get_controllers() ; c ; c = c->next){
@@ -472,7 +500,7 @@ mdadm(char * const *args,const char *arghelp){
 		}
 		for(d = c->blockdevs ; d ; d = d->next){
 			if(d->layout == LAYOUT_MDADM){
-				if(print_mdadm(d,0) < 0){
+				if(print_mdadm(d,0,descend) < 0){
 					return -1;
 				}
 			}
@@ -527,7 +555,7 @@ blockdev(char * const *args,const char *arghelp){
 			const device *d;
 
 			for(d = c->blockdevs ; d ; d = d->next){
-				if(print_drive(d,0) < 0){
+				if(print_drive(d,0,1) < 0){
 					return -1;
 				}
 			}
@@ -537,6 +565,21 @@ blockdev(char * const *args,const char *arghelp){
 		return 0;
 	}
 	if(args[2] == NULL){
+		if(strcmp(args[1],"-q") == 0){
+			for(c = get_controllers() ; c ; c = c->next){
+				const device *d;
+
+				for(d = c->blockdevs ; d ; d = d->next){
+					if(print_drive(d,0,0) < 0){
+						return -1;
+					}
+				}
+			}
+			printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
+					"\t\t(W)ritecache enabled\n");
+			return 0;
+
+		}
 		usage(args,arghelp);
 		return -1;
 	}
@@ -581,8 +624,16 @@ blockdev(char * const *args,const char *arghelp){
 static int
 partition(char * const *args,const char *arghelp){
 	const controller *c;
+	int descend;
 
-	ZERO_ARG_CHECK(args,arghelp);
+	if(args[1] == NULL){
+		descend = 1;
+	}else if(strcmp(args[1],"-q") == 0 && args[2] == NULL){
+		descend = 0;
+	}else{
+		usage(args,arghelp);
+		return -1;
+	}
 	printf("%-10.10s %-36.36s " PREFIXFMT " %-4.4s %s\n",
 			"Partition","UUID","Bytes","Role","Name");
 	for(c = get_controllers() ; c ; c = c->next){
@@ -592,7 +643,7 @@ partition(char * const *args,const char *arghelp){
 			const device *p;
 
 			for(p = d->parts ; p ; p = p->next){
-				if(print_partition(p,0) < 0){
+				if(print_partition(p,0,descend) < 0){
 					return -1;
 				}
 			}
@@ -931,22 +982,22 @@ static const struct fxn {
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
 	FXN(adapter,"[ adapter \"reset\" ]\n"
-			"                 | no arguments to detail all host bus adapters"),
+			"                 | [ -q ] no arguments to detail all host bus adapters"),
 	FXN(blockdev,"[ blockdev \"reset\" ]\n"
 			"                 | [ blockdev \"mktable\" [ tabletype ] ]\n"
 			"                    | no argument to list supported table types\n"
 			"                 | [ blockdev \"mkfs\" [ fstype ] ]\n"
 			"                    | no argument to list supported fs types\n"
-			"                 | no arguments to detail all blockdevs"),
+			"                 | [ -q ] no arguments to detail all blockdevs"),
 	FXN(partition,"[ partition \"delete\" ]\n"
 			"                 | [ partition \"mkfs\" [ fstype ] ]\n"
 			"                    | no argument to list supported fs types\n"
-			"                 | no arguments to detail all partitions"),
+			"                 | [ -q ] no arguments to detail all partitions"),
 	FXN(fs,""),
 	FXN(mdadm,"[ mdname \"create\" devcount level devices ]\n"
-			"                 | no arguments to detail all mdadm devices"),
+			"                 | [ -q ] no arguments to detail all mdadm devices"),
 	FXN(zpool,"[ zname \"create\" devcount level vdevs ]\n"
-			"                 | no arguments to detail all zpools"),
+			"                 | [ -q ] no arguments to detail all zpools"),
 	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
 			"                 | no arguments to detail all swaps"),
 	FXN(map,"[ device mountpoint type options ]\n"
