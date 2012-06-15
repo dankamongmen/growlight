@@ -41,12 +41,17 @@ print_target(const mount *m,int prefix){
 	return r;
 }
 
+#define FSLABELSIZ 17
+
 static int
 print_mount(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%s %s %s %s %s\n",prefix,prefix,"",d->name,
-			d->mnttype,d->mntuuid ? d->mntuuid : "n/a",
+	r += rr = printf("%*.*s%-*.*s %s %s %s %s %s\n",
+			prefix,prefix,"",
+			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+			d->name,
+			d->uuid ? d->uuid : "n/a",d->mnttype,
 			d->mnt,d->mntops);
 	if(rr < 0){
 		return -1;
@@ -58,13 +63,34 @@ static int
 print_fs(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%s %s %s\n",prefix,prefix,"",d->name,
-			d->mnttype,d->mntuuid ? d->mntuuid : "n/a");
+	r += rr = printf("%*.*s%-*.*s %s %s %s\n",
+			prefix,prefix,"",
+			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+			d->name,
+			d->uuid ? d->uuid : "n/a",
+			d->mnttype);
 	if(rr < 0){
 		return -1;
 	}
 	return r;
 }
+
+static int
+print_swap(const device *p,int prefix){
+	int r = 0,rr;
+
+	r += rr = printf("%*.*s%-*.*s %s %s %s %d\n",
+			prefix,prefix,"",
+			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
+			p->name,
+			p->uuid ? p->uuid : "n/a",
+			p->mnttype,p->swapprio);
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
 
 // Takes an arbitrarily large number, and prints it into a fixed-size buffer by
 // adding the necessary SI suffix. Usually, pass a |PREFIXSTRLEN+1|-sized
@@ -144,6 +170,8 @@ print_partition(const device *p,int prefix){
 		r += rr = print_fs(p,prefix + 1);
 	}else if(p->target){
 		r += rr = print_target(p->target,prefix + 1);
+	}else if(p->swapprio){
+		r += rr = print_swap(p,prefix + 1);
 	}
 	if(rr < 0){
 		return -1;
@@ -216,14 +244,15 @@ print_drive(const device *d,int prefix){
 	}
 	if(d->mnt){
 		r += rr = print_mount(d,prefix + 1);
-		if(rr < 0){
-			return -1;
-		}
+	}else if(d->mnttype){
+		r += rr = print_fs(d,prefix + 1);
 	}else if(d->target){
 		r += rr = print_target(d->target,prefix + 1);
-		if(rr < 0){
-			return -1;
-		}
+	}else if(d->swapprio){
+		r += rr = print_swap(d,prefix + 1);
+	}
+	if(rr < 0){
+		return -1;
 	}
 	if(!prefix){
 		for(p = d->parts ; p ; p = p->next){
