@@ -33,6 +33,7 @@ usage(char * const *args,const char *arghelp){
  if(!args[1] || !args[2] || args[3]){ usage(args,arghelp); return -1 ; }
 
 static int help(char * const *,const char *);
+static int print_mdadm(const device *,int);
 
 static int
 print_target(const mount *m,int prefix){
@@ -70,7 +71,7 @@ static int
 print_unmount(const device *d,int prefix){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s\n",
+	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s -\n",
 			prefix,prefix,"",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
@@ -180,7 +181,11 @@ print_fs(const device *p){
 			return -1;
 		}
 	}
-	r += rr = print_mount(p,0);
+	if(p->mnt){
+		r += rr = print_mount(p,0);
+	}else{
+		r += rr = print_unmount(p,0);
+	}
 	if(rr < 0){
 		return -1;
 	}
@@ -311,12 +316,29 @@ print_drive(const device *d,int prefix){
 }
 
 static int
-print_mdadm(const device *d){
+print_dev_mplex(const device *d,int prefix){
+	switch(d->layout){
+		case LAYOUT_NONE:
+			return print_drive(d,prefix);
+		case LAYOUT_PARTITION:
+			return print_partition(d,prefix);
+		case LAYOUT_MDADM:
+			return print_mdadm(d,prefix);
+		case LAYOUT_ZPOOL:
+			// FIXME return print_zpool(d,prefix);
+		default:
+			return -1;
+	}
+}
+
+static int
+print_mdadm(const device *d,int prefix){
 	char buf[PREFIXSTRLEN + 1];
 	const mdslave *md;
 	int r = 0,rr;
 
-	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
+	r += rr = printf("%-*.*s%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
+			prefix,prefix,"",
 			d->name,
 			d->uuid ? d->uuid : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
@@ -328,7 +350,7 @@ print_mdadm(const device *d){
 		return -1;
 	}
 	for(md = d->mddev.slaves ; md ; md = md->next){
-		r += rr = print_drive(md->component,1);
+		r += rr = print_dev_mplex(md->component,1);
 		if(rr < 0){
 			return -1;
 		}
@@ -441,7 +463,7 @@ mdadm(char * const *args,const char *arghelp){
 		}
 		for(d = c->blockdevs ; d ; d = d->next){
 			if(d->layout == LAYOUT_MDADM){
-				if(print_mdadm(d) < 0){
+				if(print_mdadm(d,0) < 0){
 					return -1;
 				}
 			}
@@ -718,9 +740,9 @@ print_swaps(const device *d){
 static int
 fs(char * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-*.*s %-5.5s %-36.36s %s %s\n",
+	printf("%-*.*s %-5.5s %-36.36s %s %s+%s\n",
 			FSLABELSIZ,FSLABELSIZ,"Label",
-			"Type","UUID","Mount","Options");
+			"Type","UUID","Device","Mount","Opts");
 	if(walk_devices(print_fs)){
 		return -1;
 	}
