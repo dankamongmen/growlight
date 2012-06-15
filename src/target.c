@@ -56,7 +56,7 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 		fprintf(stderr,"%s is already mapped to %s\n",d->name,d->target->path);
 		return -1;
 	}
-	if(d->swapprio){
+	if(d->swapprio >= SWAP_MAXPRIO){
 		fprintf(stderr,"%s is used as swap\n",d->name);
 		return -1;
 	}
@@ -84,6 +84,7 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 	if((m = create_target(path,d->name,fs,ops)) == NULL){
 		return -1;
 	}
+	d->swapprio = SWAP_INVALID;
 	d->target = &m->m;
 	m->next = *pre;
 	*pre = m;
