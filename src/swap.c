@@ -24,11 +24,11 @@ int mkswap(device *d){
 				d->name,d->mnt);
 		return -1;
 	}
-	if(d->swapprio){
+	if(d->swapprio >= SWAP_MAXPRIO){
 		fprintf(stderr,"Already swapping on %s\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/mkswap /dev/%s",d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"/sbin/mkswap -L SprezzaSwap /dev/%s",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Error building command line for %s\n",d->name);
 		return -1;
 	}
@@ -57,17 +57,23 @@ int mkswap(device *d){
 
 // Create swap on the device, and use it
 int swapondev(device *d){
-	char fn[PATH_MAX];
+	char fn[PATH_MAX],*mt;
 
 	if(mkswap(d)){
 		return -1;
 	}
 	snprintf(fn,sizeof(fn),"/dev/%s",d->name);
-	if(swapon(fn,0)){
-		fprintf(stderr,"Couldn't swap on %s (%s?)\n",fn,strerror(errno));
+	if((mt = strdup("swap")) == NULL){
 		return -1;
 	}
-	d->swapprio = 1; // FIXME
+	if(swapon(fn,0)){
+		fprintf(stderr,"Couldn't swap on %s (%s?)\n",fn,strerror(errno));
+		free(mt);
+		return -1;
+	}
+	free(d->mnttype);
+	d->mnttype = mt;
+	d->swapprio = SWAP_MAXPRIO; // FIXME take as param
 	return 0;
 }
 
@@ -80,7 +86,7 @@ int swapoffdev(device *d){
 		fprintf(stderr,"Couldn't stop swapping on %s (%s?)\n",fn,strerror(errno));
 		return -1;
 	}
-	d->swapprio = 0;
+	d->swapprio = SWAP_INACTIVE;
 	return 0;
 }
 
@@ -118,7 +124,7 @@ int parse_swaps(void){
 			goto err;
 		}
 		// FIXME we can get the real priority from the last field
-		d->swapprio = 1; // FIXME
+		d->swapprio = SWAP_MAXPRIO; // FIXME
 	}
 	fclose(fp);
 	return 0;
