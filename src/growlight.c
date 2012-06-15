@@ -143,6 +143,9 @@ free_device(device *d){
 	if(d){
 		device *p;
 
+		// free_targets() has references to, and frees, all the various
+		// target structures. do not free them here!
+		d->target = NULL;
 		switch(d->layout){
 			case LAYOUT_NONE:{
 				break;

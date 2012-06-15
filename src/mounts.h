@@ -10,6 +10,8 @@ typedef struct mount {
 	char *dev;
 	char *fs;
 	char *ops;
+	char *label;
+	char *uuid;
 } mount;
 
 // (Re)parse the specified file having /proc/mounts format. Remember that
