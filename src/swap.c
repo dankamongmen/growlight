@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/swap.h>
 
@@ -108,6 +109,15 @@ int parse_swaps(void){
 		if((d = lookup_device(buf)) == NULL){
 			goto err;
 		}
+		if(d->mnttype){
+			fprintf(stderr,"Warning: %s went from %s to swap\n",d->name,d->mnttype);
+			free(d->mnttype);
+			// FIXME...
+		}
+		if((d->mnttype = strdup("swap")) == NULL){
+			goto err;
+		}
+		// FIXME we can get the real priority from the last field
 		d->swapprio = 1; // FIXME
 	}
 	fclose(fp);
