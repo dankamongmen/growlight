@@ -180,21 +180,21 @@ int probe_blkid_superblock(const char *dev,device *d){
 		free(d->mnttype);
 		d->mnttype = mnttype;
 	}
-	if(d->mntuuid == NULL){
-		d->mntuuid = uuid;
-	}else if(strcmp(val,d->mntuuid)){
-		fprintf(stderr,"FS UUID changed (%s->%s)\n",d->mntuuid,
+	if(d->uuid == NULL){
+		d->uuid = uuid;
+	}else if(strcmp(val,d->uuid)){
+		fprintf(stderr,"FS UUID changed (%s->%s)\n",d->uuid,
 				uuid ? uuid : "none");
-		free(d->mntuuid);
-		d->mntuuid = uuid;
+		free(d->uuid);
+		d->uuid = uuid;
 	}
-	if(d->mntlabel == NULL){
-		d->mntlabel = label;
-	}else if(strcmp(val,d->mntlabel)){
-		fprintf(stderr,"FS label changed (%s->%s)\n",d->mntlabel,
+	if(d->label == NULL){
+		d->label = label;
+	}else if(strcmp(val,d->label)){
+		fprintf(stderr,"FS label changed (%s->%s)\n",d->label,
 				label ? label : "none");
-		free(d->mntlabel);
-		d->mntlabel = label;
+		free(d->label);
+		d->label = label;
 	}
 	blkid_free_probe(bp);
 	return 0;
