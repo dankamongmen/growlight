@@ -530,6 +530,11 @@ create_new_device(const char *name){
 		snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
 		// FIXME move all this to its own function
 		if(probe_blkid_dev(devbuf,&pr) == 0){
+			if(probe_blkid_superblock(devbuf,&dd)){
+				free_device(&dd);
+				blkid_free_probe(pr);
+				return NULL;
+			}
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				const char *pttable;
 				device *p;
@@ -546,11 +551,6 @@ create_new_device(const char *name){
 						pars,pars == 1 ? "" : "s",
 						pttable);
 				if((dd.pttable = strdup(pttable)) == NULL){
-					free_device(&dd);
-					blkid_free_probe(pr);
-					return NULL;
-				}
-				if(probe_blkid_superblock(devbuf,&dd)){
 					free_device(&dd);
 					blkid_free_probe(pr);
 					return NULL;
