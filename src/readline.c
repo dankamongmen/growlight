@@ -192,10 +192,15 @@ print_partition(const device *p,int prefix){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %-17.17s\n",
+	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %-4.4s %-17.17s\n",
 			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
+			p->partdev.partrole == PARTROLE_PRIMARY ? "Pri" :
+				p->partdev.partrole == PARTROLE_EXTENDED ? "Ext" :
+				p->partdev.partrole == PARTROLE_LOGICAL ? "Log" :
+				p->partdev.partrole == PARTROLE_GPT ? "GPT" :
+				p->partdev.partrole == PARTROLE_EPS ? "EPS" : "Unk",
 			p->partdev.label ? p->partdev.label : "n/a");
 	if(rr < 0){
 		return -1;
@@ -545,8 +550,8 @@ partition(char * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-10.10s %-36.36s " PREFIXFMT " %s\n",
-			"Partition","UUID","Bytes","Name");
+	printf("%-10.10s %-36.36s " PREFIXFMT " %-4.4s %s\n",
+			"Partition","UUID","Bytes","Role","Name");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -878,7 +883,6 @@ static int
 quit(char * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	lights_off = 1;
-	printf("LIGHTS TURNED OFF!\n");
 	return 0;
 }
 
