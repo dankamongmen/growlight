@@ -81,6 +81,14 @@ typedef struct device {
 			// filesystem's or disk's.
 			char *uuid,*label;
 			struct partition *next;	// Next on this disk
+			enum {
+				PARTROLE_UNKNOWN,
+				PARTROLE_PRIMARY,	// BIOS+MBR
+				PARTROLE_EXTENDED,
+				PARTROLE_LOGICAL,
+				PARTROLE_EPS,		// UEFI
+				PARTROLE_GPT,
+			} partrole;
 		} partdev;
 	};
 	enum {

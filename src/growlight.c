@@ -562,6 +562,16 @@ create_new_device(const char *name){
 					if(part){
 						const char *uuid,*pname;
 
+						// FIXME need find UEFI EPS partitions
+						if(strcmp(pttable,"gpt") == 0){
+							p->partdev.partrole = PARTROLE_GPT;
+						}else if(blkid_partition_is_extended(part)){
+							p->partdev.partrole = PARTROLE_EXTENDED;
+						}else if(blkid_partition_is_logical(part)){
+							p->partdev.partrole = PARTROLE_LOGICAL;
+						}else if(blkid_partition_is_primary(part)){
+							p->partdev.partrole = PARTROLE_PRIMARY;
+						}
 						uuid = blkid_partition_get_uuid(part);
 						if(uuid){
 							p->partdev.uuid = strdup(uuid);
