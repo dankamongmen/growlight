@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <locale.h>
@@ -16,9 +17,12 @@
 #define PREFIXFMT "%7s"
 #define UUIDSTRLEN 36
 
+// Used by quit() to communicate back to the main readline loop
+static unsigned lights_off;
+
 static inline int
 usage(char * const *args,const char *arghelp){
-	fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
+	fprintf(stderr,"Usage: %s %s\n",*args,arghelp);
 	return -1;
 }
 
@@ -870,6 +874,14 @@ tokenize(const char *line,char ***tokes){
 	return t;
 }
 
+static int
+quit(char * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+	lights_off = 1;
+	printf("LIGHTS TURNED OFF!\n");
+	return 0;
+}
+
 static const struct fxn {
 	const char *cmd;
 	int (*fxn)(char * const *,const char *);
@@ -904,7 +916,8 @@ static const struct fxn {
 	FXN(badblocks,"[ \"rw\" ] device"),
 	FXN(benchmark,"fs"),
 	FXN(troubleshoot,""),
-	FXN(help,""),
+	FXN(help,"[ command ]"),
+	FXN(quit,""),
 	{ .cmd = NULL, .fxn = NULL, .arghelp = NULL, },
 #undef FXN
 };
@@ -913,12 +926,24 @@ static int
 help(char * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
-	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-15.15s %s\n","Command","Arguments");
-	for(fxn = fxns ; fxn->cmd ; ++fxn){
-		printf("%-15.15s %s\n",fxn->cmd,fxn->arghelp);
+	if(args[1] == NULL){
+		printf("%-15.15s %s\n","Command","Arguments");
+		for(fxn = fxns ; fxn->cmd ; ++fxn){
+			printf("%-15.15s %s\n",fxn->cmd,fxn->arghelp);
+		}
+	}else if(args[2] == NULL){
+		for(fxn = fxns ; fxn->cmd ; ++fxn){
+			if(strcmp(fxn->cmd,args[1]) == 0){
+				printf("%15.15s %s\n",args[1],fxn->arghelp);
+				return 0;
+			}
+		}
+		printf("Unknown command: %s\n",args[1]);
+		return -1;
+	}else{
+		usage(args,arghelp);
+		return -1;
 	}
-	printf("quit\n");
 	return 0;
 }
 
@@ -927,7 +952,6 @@ tty_ui(void){
 	char prompt[80] = "[" PACKAGE "](0)> ";
 	char *l;
 
-	// FIXME need command line completion!
 	while( (l = readline(prompt)) ){
 		const struct fxn *fxn;
 		char **tokes;
@@ -941,10 +965,6 @@ tty_ui(void){
 			continue;
 		}else if(z < 0){
 			return -1;
-		}
-		if(strcasecmp(tokes[0],"quit") == 0){
-			free_tokes(tokes);
-			break;
 		}
 		for(fxn = fxns ; fxn->cmd ; ++fxn){
 			if(strcasecmp(fxn->cmd,tokes[0])){
@@ -961,6 +981,9 @@ tty_ui(void){
 		free_tokes(tokes);
 		snprintf(prompt,sizeof(prompt),"[" PACKAGE "](%d)> ",z);
 		rl_set_prompt(prompt);
+		if(lights_off){
+			return 0;
+		}
 	}
 	printf("\n");
 	return 0;
