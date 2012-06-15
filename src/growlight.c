@@ -171,6 +171,7 @@ free_device(device *d){
 		free(d->mntops);
 		free(d->mnttype);
 		free(d->mntuuid);
+		free(d->mntlabel);
 		free(d->mnt);
 		free(d->wwn);
 		free(d->model);
