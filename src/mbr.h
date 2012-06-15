@@ -10,6 +10,8 @@ extern "C" {
 // checksum is taken over the first 444 bytes, not all 512 bytes of the MBR.
 int mbrsha1(int,void *);
 
+int zerombrp(const void *);
+
 #ifdef __cplusplus
 }
 #endif

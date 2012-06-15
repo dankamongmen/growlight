@@ -22,6 +22,7 @@
 #include <pci/header.h>
 #include <sys/inotify.h>
 #include <libdevmapper.h>
+#include <openssl/ssl.h>
 
 #include <sg.h>
 #include <mbr.h>
@@ -539,6 +540,7 @@ create_new_device(const char *name){
 			}
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				const char *pttable;
+				char shabuf[20];
 				device *p;
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
@@ -552,23 +554,20 @@ create_new_device(const char *name){
 				verbf("\t%d partition%s, table type %s\n",
 						pars,pars == 1 ? "" : "s",
 						pttable);
-				if(strcmp(pttable,"dos") == 0){
-					char shabuf[20];
 
-					if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
-						fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
-						free_device(&dd);
-						blkid_free_probe(pr);
-						return NULL;
-					}
-					if(mbrsha1(dfd,shabuf)){
-						close(dfd);
-						free_device(&dd);
-						blkid_free_probe(pr);
-						return NULL;
-					}
-					close(dfd);
+				if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+					fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
+					free_device(&dd);
+					blkid_free_probe(pr);
+					return NULL;
 				}
+				if(mbrsha1(dfd,shabuf)){
+					close(dfd);
+					free_device(&dd);
+					blkid_free_probe(pr);
+					return NULL;
+				}
+				close(dfd);
 				if((dd.pttable = strdup(pttable)) == NULL){
 					free_device(&dd);
 					blkid_free_probe(pr);
@@ -592,6 +591,7 @@ create_new_device(const char *name){
 							p->partdev.partrole = PARTROLE_LOGICAL;
 						}else if(blkid_partition_is_primary(part)){
 							p->partdev.partrole = PARTROLE_PRIMARY;
+							dd.blkdev.biosboot = !zerombrp(shabuf);
 						}
 // BIOS boot flag byte ought not be set to anything but 0 unless we're on a
 // primary partition and doing BIOS+MBR booting, in which case it must be 0x80.
@@ -897,6 +897,7 @@ int growlight_init(int argc,char * const *argv){
 		fprintf(stderr,"Output isn't UTF-8, aborting\n");
 		goto err;
 	}
+	SSL_library_init();
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
 	while((opt = getopt_long(argc,argv,"hvV",ops,&longidx)) >= 0){
 		switch(opt){
