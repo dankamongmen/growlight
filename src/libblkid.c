@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <blkid/blkid.h>
 
+#include <fs.h>
 #include <libblkid.h>
 #include <growlight.h>
 
@@ -159,12 +160,16 @@ int probe_blkid_superblock(const char *dev,device *d){
 					goto err;
 				}
 				d->swapprio = SWAP_INACTIVE;
-			// FIXME use list of filesystems from wherever
 			}else{
-			}
-			if(strcmp(val,"ext4") == 0){
-				if((mnttype = strdup(val)) == NULL){
-					goto err;
+				const char **fst;
+
+				for(fst = get_fs_types() ; *fst ; ++fst){
+					if(strcmp(val,*fst) == 0){
+						if((mnttype = strdup(val)) == NULL){
+							goto err;
+						}
+						break;
+					}
 				}
 			}
 		}else if(strcmp(name,"UUID") == 0){
