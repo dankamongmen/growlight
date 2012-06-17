@@ -995,6 +995,7 @@ int growlight_stop(void){
 
 int reset_blockdev(device *d){
 	char buf[PATH_MAX];
+	unsigned t;
 	int fd;
 
 	if(snprintf(buf,sizeof(buf),"/sys/block/%s/device/rescan",d->name) >= (int)sizeof(buf)){
@@ -1008,11 +1009,18 @@ int reset_blockdev(device *d){
 	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC)) < 0){
 		return -1;
 	}
-	if(ioctl(fd,BLKRRPART,NULL)){
-		fprintf(stderr,"Error calling BLKRRPART on %s (%s?)\n",buf,strerror(errno));
-		close(fd);
-		return -1;
+	sync();
+	// The ioctl can fail for a number of reasons, usually because the
+	// work's still being done. Give it a try or two.
+	for(t = 0 ; t < 3 ; ++t){
+		if(ioctl(fd,BLKRRPART,NULL) == 0){
+			close(fd);
+			printf("Updated kernel partition table\n");
+			return 0;
+		}
+		fprintf(stderr,"Error calling BLKRRPART on %s (%s?), retrying in 5s...\n",buf,strerror(errno));
+		sleep(5);
 	}
 	close(fd);
-	return 0;
+	return -1;
 }
