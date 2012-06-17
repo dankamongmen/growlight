@@ -263,7 +263,7 @@ print_drive(const device *d,int prefix,int descend){
 
 	switch(d->layout){
 	case LAYOUT_NONE:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-19.19s\n",
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
@@ -276,8 +276,13 @@ print_drive(const device *d,int prefix,int descend){
 			d->blkdev.wcache ? 'W' : '.',
 			d->blkdev.biosboot ? 'B' : '.',
 			d->blkdev.pttable ? d->blkdev.pttable : "none",
-			d->wwn ? d->wwn : "n/a"
-			);
+			d->wwn ? d->wwn : "n/a",
+			d->blkdev.transport == SERIAL_ATAIII ? "III" :
+			 d->blkdev.transport == SERIAL_ATAII ? "II" :
+			 d->blkdev.transport == SERIAL_ATAI ? "I" :
+			 d->blkdev.transport == SERIAL_ATA8 ? "AST" :
+			 d->blkdev.transport == SERIAL_UNKNOWN ? "Srl" :
+			 d->blkdev.transport == PARALLEL_ATA ? "Par" : "Ukn");
 		break;
 	}case LAYOUT_MDADM:{
 		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-19.19s\n",
@@ -553,8 +558,8 @@ static inline int
 blockdev_dump(int descend){
 	const controller *c;
 
-	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
-			"Device","Model","Rev","Bytes","PSect","Table","WWN");
+	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-16.16s %-3.3s\n",
+			"Device","Model","Rev","Bytes","PSect","Table","WWN","PHY");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -577,7 +582,7 @@ blockdev_details(const device *d){
 		return -1;
 	}
 	if(d->blkdev.biossha1){
-		if(printf("BIOS boot code SHA-1:\n") < 0){
+		if(printf("\nBIOS boot code SHA-1:\n") < 0){
 			return -1;
 		}
 		for(z = 0 ; z < 2 ; ++z){
@@ -596,6 +601,7 @@ blockdev_details(const device *d){
 			}
 		}
 	}
+	printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
 	return 0;
 }
 

@@ -60,7 +60,15 @@ typedef struct device {
 	char *label;			// *Filesystem* label
 	union {
 		struct {
-			unsigned transport;	// Physical layer spec
+			enum {
+				UNKNOWN_ATA,
+				PARALLEL_ATA,
+				SERIAL_UNKNOWN,
+				SERIAL_ATA8,
+				SERIAL_ATAI,
+				SERIAL_ATAII,
+				SERIAL_ATAIII,
+			} transport;
 			unsigned realdev: 1;	// Is itself a real block device
 			unsigned removable: 1;	// Removable media
 			unsigned rotate: 1;	// Rotational media / spinning platters
@@ -68,6 +76,7 @@ typedef struct device {
 			unsigned biosboot: 1;	// Non-zero bytes in MBR code area
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
+			char *serial;		// Serial number (can be NULL)
 		} blkdev;
 		struct {
 			unsigned long disks;	// RAID disks in md

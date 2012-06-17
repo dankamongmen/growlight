@@ -152,6 +152,7 @@ void free_device(device *d){
 			case LAYOUT_NONE:{
 				free(d->blkdev.biossha1);
 				free(d->blkdev.pttable);
+				free(d->blkdev.serial);
 				break;
 			}case LAYOUT_MDADM:{
 				mdslave *md;
@@ -325,7 +326,10 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 		if((d->revision = get_sysfs_string(sdevfd,"rev")) == NULL){
 			fprintf(stderr,"Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
 		}
-		verbf("\tModel: %s revision %s\n",d->model,d->revision);
+		verbf("\tModel: %s revision %s S/N %s\n",
+				d->model ? d->model : "n/a",
+				d->revision ? d->revision : "n/a",
+				d->blkdev.serial ? d->blkdev.serial : "n/a");
 		close(sdevfd);
 	}
 	while(errno = 0, (dire = readdir(dir)) ){

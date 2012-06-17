@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <errno.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <mdadm.h>
@@ -33,6 +34,46 @@ enum {
 #define SG_ATA_PROTO_UDMA_IN    (11 << 1) /* not yet supported in libata */
 #define SG_ATA_PROTO_UDMA_OUT   (12 << 1) /* not yet supported in libata */
 
+#define GEN_CONFIG              0   /* general configuration */
+#define LCYLS                   1   /* number of logical cylinders */
+#define CONFIG                  2   /* specific configuration */
+#define LHEADS                  3   /* number of logical heads */
+#define TRACK_BYTES             4   /* number of bytes/track (ATA-1) */
+#define SECT_BYTES              5   /* number of bytes/sector (ATA-1) */
+#define LSECTS                  6   /* number of logical sectors/track */
+#define START_SERIAL            10  /* ASCII serial number */
+#define LENGTH_SERIAL           10  /* 10 words (20 bytes or characters) */
+#define BUF_TYPE                20  /* buffer type (ATA-1) */
+#define BUF_SIZE                21  /* buffer size (ATA-1) */
+#define RW_LONG                 22  /* extra bytes in R/W LONG cmd ( < ATA-4)*/
+#define START_FW_REV            23  /* ASCII firmware revision */
+#define LENGTH_FW_REV            4  /*  4 words (8 bytes or characters) */
+#define START_MODEL             27  /* ASCII model number */
+#define LENGTH_MODEL            20  /* 20 words (40 bytes or characters) */
+#define SECTOR_XFER_MAX         47  /* r/w multiple: max sectors xfered */
+#define DWORD_IO                48  /* can do double-word IO (ATA-1 only) */
+#define CAPAB_0                 49  /* capabilities */
+#define CAPAB_1                 50
+#define PIO_MODE                51  /* max PIO mode supported (obsolete)*/
+#define DMA_MODE                52  /* max Singleword DMA mode supported (obs)*/
+#define WHATS_VALID             53  /* what fields are valid */
+#define LCYLS_CUR               54  /* current logical cylinders */
+#define LHEADS_CUR              55  /* current logical heads */
+#define LSECTS_CUR              56  /* current logical sectors/track */
+#define CAPACITY_LSB            57  /* current capacity in sectors */
+#define CAPACITY_MSB            58
+#define SECTOR_XFER_CUR         59  /* r/w multiple: current sectors xfered */
+#define LBA_SECTS_LSB           60  /* LBA: total number of user */
+#define LBA_SECTS_MSB           61  /*      addressable sectors */
+#define SINGLE_DMA              62  /* singleword DMA modes */
+#define MULTI_DMA               63  /* multiword DMA modes */
+#define ADV_PIO_MODES           64  /* advanced PIO modes supported */
+                                    /* multiword DMA xfer cycle time: */
+#define DMA_TIME_MIN            65  /*   - minimum */
+#define DMA_TIME_NORM           66  /*   - manufacturer's recommended   */
+                                    /* minimum PIO xfer cycle time: */
+#define PIO_NO_FLOW             67  /*   - without flow control */
+#define PIO_FLOW                68  /*   - with IORDY flow control */
 #define PKT_REL                 71  /* typical #ns from PKT cmd to bus rel */
 #define SVC_NBSY                72  /* typical #ns from SERVICE cmd to !BSY */
 #define CDR_MAJOR               73  /* CD ROM: major version number */
@@ -181,6 +222,7 @@ int sg_interrogate(device *d,int fd){
 	unsigned char cdb[SG_ATA_16_LEN];
 	struct scsi_sg_io_hdr io;
 	char sb[32];
+	unsigned n;
 
 	memset(buf,0,sizeof(buf));
 	memset(cdb,0,sizeof(cdb));
@@ -204,13 +246,51 @@ int sg_interrogate(device *d,int fd){
 		fprintf(stderr,"Couldn't perform SG_IO ioctl on %d (%s?)\n",fd,strerror(errno));
 		return -1;
 	}
+	// FIXME need to check various validity flags
 	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
 		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
 		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
 	}
-	// FIXME something's busted here...
-	maj = ntohs(buf[TRANSPORT_MAJOR]);
-	min = ntohs(buf[TRANSPORT_MINOR]);
-	d->blkdev.transport = (maj << 16u) | min;
+	for(n = START_SERIAL ; n < START_SERIAL + LENGTH_SERIAL ; ++n){
+		unsigned char c1 = (buf[n] & 0xff00) >> 8u;
+		unsigned char c2 = (buf[n] & 0xff);
+
+		if(!isprint(c1) || !isprint(c2)){
+			break;
+		}
+		buf[n] = ntohs(buf[n]);
+	}
+	if(n == START_SERIAL + LENGTH_SERIAL){
+		d->blkdev.serial = malloc(LENGTH_SERIAL * sizeof(*buf) + 1);
+		if(d->blkdev.serial){
+			// FIXME this copies over whitespace
+			memcpy(d->blkdev.serial,buf + START_SERIAL,LENGTH_SERIAL * sizeof(*buf));
+			d->blkdev.serial[LENGTH_SERIAL * sizeof(*buf)] = '\0';
+		}
+	}
+	maj = buf[TRANSPORT_MAJOR] >> 12u;
+	min = buf[TRANSPORT_MAJOR] & 0xfffu;
+	switch(maj){
+		case 0:
+			fprintf(stderr,"%d is PARALLEL (%04hx / %04hx)\n",fd,maj,min);
+			d->blkdev.transport = PARALLEL_ATA;
+		break;
+		case 1:
+			if(min & (1u << 5u)){
+				d->blkdev.transport = SERIAL_ATAIII;
+			}else if(min & (1u << 2u)){
+				d->blkdev.transport = SERIAL_ATAII;
+			}else if(min & (1u << 1u)){
+				d->blkdev.transport = SERIAL_ATAI;
+			}else if(min & 1u){
+				d->blkdev.transport = SERIAL_ATA8;
+			}else{
+				d->blkdev.transport = SERIAL_UNKNOWN;
+			}
+		break;
+		default:
+			fprintf(stderr,"Warning: unknown transport type %hu\n",maj);
+			break;
+	}
 	return 0;
 }
