@@ -3,10 +3,50 @@
 #include <string.h>
 #include <growlight.h>
 
+// FIXME surely there's a less grotesque way of doing this? parse blkid -k?
 static const struct fs {
 	const char *name;
 } fss[] = {
+	{ .name = "vfat", },
+	{ .name = "swsuspend", },
+	{ .name = "swap", },
+	{ .name = "xfs", },
+	{ .name = "ext4dev", },
 	{ .name = "ext4", },
+	{ .name = "ext3", },
+	{ .name = "ext2", },
+	{ .name = "jbd", },
+	{ .name = "reiserfs", },
+	{ .name = "reiser4", },
+	{ .name = "jfs", },
+	{ .name = "udf", },
+	{ .name = "iso9660", },
+	{ .name = "zfs_member", },
+	{ .name = "hfsplus", },
+	{ .name = "hfs", },
+	{ .name = "ufs", },
+	{ .name = "hpfs", },
+	{ .name = "sysv", },
+	{ .name = "xenix", },
+	{ .name = "ntfs", },
+	{ .name = "cramfs", },
+	{ .name = "romfs", },
+	{ .name = "minix", },
+	{ .name = "gfs", },
+	{ .name = "gfs2", },
+	{ .name = "ocfs", },
+	{ .name = "ocfs2", },
+	{ .name = "oracleasm", },
+	{ .name = "vxfs", },
+	{ .name = "squashfs", },
+	{ .name = "nss", },
+	{ .name = "btrfs", },
+	{ .name = "ubifs", },
+	{ .name = "bfs", },
+	{ .name = "VMFS", },
+	{ .name = "befs", },
+	{ .name = "nilfs2", },
+	{ .name = "exfat", },
 	{ .name = NULL, }
 };
 
