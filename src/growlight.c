@@ -717,6 +717,11 @@ device *lookup_device(const char *name){
 	return create_new_device(name);
 }
 
+static int
+scan_device(const char *name){
+	return lookup_device(name) ? 0 : -1;
+}
+
 // Doesn't create devices. Returns the partition device rather than the
 // blockdev device if that's more appropriate.
 device *lookup_dentry(device *d,const char *name){
@@ -748,16 +753,17 @@ device *lookup_dentry(device *d,const char *name){
 }
 
 // Must be an entry in /dev/disk/by-id/
-device *lookup_id(const char *name){
+static int
+lookup_id(const char *name){
 	char path[PATH_MAX],buf[PATH_MAX];
 	device *d;
 	int rl;
 
 	if(snprintf(path,sizeof(path),"/dev/disk/by-id/%s",name) >= (int)sizeof(path)){
-		return NULL;
+		return -1;
 	}
 	if((rl = readlink(path,buf,sizeof(buf))) < 0 || (unsigned)rl >= sizeof(buf)){
-		return NULL;
+		return -1;
 	}
 	buf[rl] = '\0';
 	if( (d = lookup_device(buf)) ){
@@ -765,13 +771,15 @@ device *lookup_id(const char *name){
 			char *wwn;
 
 			if((wwn = strdup(name + 6)) == NULL){
-				return NULL;
+				return -1;
 			}
 			free(d->wwn);
 			d->wwn = wwn;
 		}
+	}else{
+		fprintf(stderr,"Warning: couldn't trace down %s\n",path);
 	}
-	return d;
+	return 0;
 }
 
 static inline int
@@ -784,7 +792,7 @@ inotify_fd(void){
 	return fd;
 }
 
-typedef device *(*eventfxn)(const char *);
+typedef int (*eventfxn)(const char *);
 
 static inline int
 watch_dir(int fd,const char *dfp,eventfxn fxn){
@@ -815,9 +823,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 	while( errno = 0, (d = readdir(dir)) ){
 		r = -1;
 		if(d->d_type == DT_LNK){
-			const device *dev;
-
-			if((dev = fxn(d->d_name)) == NULL){
+			if(fxn(d->d_name)){
 				break;
 			}
 		}
@@ -960,7 +966,7 @@ int growlight_init(int argc,char * const *argv){
 	if((fd = inotify_fd()) < 0){
 		goto err;
 	}
-	if(watch_dir(fd,SYSROOT,lookup_device)){
+	if(watch_dir(fd,SYSROOT,scan_device)){
 		goto err;
 	}
 	if(watch_dir(fd,DEVBYID,lookup_id)){
