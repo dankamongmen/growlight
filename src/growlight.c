@@ -297,6 +297,10 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 				fd,name,strerror(errno));
 		return -1;
 	}
+	if(sysfs_exist_p(fd,"partition")){
+		fprintf(stderr,"We were passed a partition (%s)!\n",name);
+		return -1;
+	}
 	if(get_sysfs_bool(fd,"queue/rotational",&b)){
 		fprintf(stderr,"Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
 	}else{
@@ -334,6 +338,7 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 				// Check for "md" to determine if it's an MDADM device
 				if(strcmp(dire->d_name,"md") == 0){
 					d->layout = LAYOUT_MDADM;
+					memset(&d->mddev,0,sizeof(d->mddev));
 					if(explore_md_sysfs(d,subfd)){
 						close(subfd);
 						return -1;
@@ -533,12 +538,7 @@ create_new_device(const char *name){
 		}
 		snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
 		// FIXME move all this to its own function
-		if(probe_blkid_dev(devbuf,&pr) == 0){
-			if(probe_blkid_superblock(devbuf,&dd)){
-				free_device(&dd);
-				blkid_free_probe(pr);
-				return NULL;
-			}
+		if(probe_blkid_superblock(devbuf,&pr,&dd) == 0){
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				const char *pttable;
 				device *p;
@@ -622,7 +622,7 @@ create_new_device(const char *name){
 						if(pname){
 							p->partdev.label = strdup(pname);
 						}
-						if(probe_blkid_superblock(p->name,p)){
+						if(probe_blkid_superblock(p->name,NULL,p)){
 							free_device(&dd);
 							blkid_free_probe(pr);
 							return NULL;
@@ -630,7 +630,14 @@ create_new_device(const char *name){
 					}
 				}
 			}else{
+				device *p;
+
 				verbf("\tNo partition table\n");
+				while( (p = dd.parts) ){
+					fprintf(stderr,"Eliminating malingering partition %s\n",p->name);
+					dd.parts = p->next;
+					free_device(p);
+				}
 			}
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
 				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));

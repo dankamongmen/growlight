@@ -50,68 +50,9 @@ int close_blkid(void){
 	return blkid_exit(0);
 }
 
-int probe_blkid_dev(const char *dev,blkid_probe *pr){
-	if(blkid_entry()){
-		return -1;
-	}
-	if((*pr = blkid_new_probe_from_filename(dev)) == NULL){
-		return blkid_exit(-1);
-	}
-	if(blkid_probe_enable_topology(*pr,1)){
-		blkid_free_probe(*pr);
-		return blkid_exit(-1);
-	}
-	if(blkid_probe_enable_superblocks(*pr,1)){
-		fprintf(stderr,"Couldn't enable blkid superprobe for %s (%s?)\n",dev,strerror(errno));
-		blkid_free_probe(*pr);
-		return blkid_exit(-1);
-	}
-	if(blkid_probe_set_superblocks_flags(*pr,~0u)){
-		blkid_free_probe(*pr);
-		return blkid_exit(-1);
-	}
-	if(blkid_probe_enable_partitions(*pr,1)){
-		fprintf(stderr,"Couldn't enable blkid partitionprobe for %s (%s?)\n",dev,strerror(errno));
-		blkid_free_probe(*pr);
-		return blkid_exit(-1);
-	}
-	if(blkid_probe_set_partitions_flags(*pr,BLKID_PARTS_ENTRY_DETAILS)){
-		fprintf(stderr,"Couldn't set blkid partitionflags for %s (%s?)\n",dev,strerror(errno));
-		blkid_free_probe(*pr);
-		return blkid_exit(-1);
-	}
-	if(blkid_do_fullprobe(*pr)){
-		blkid_free_probe(*pr);
-		return blkid_exit(-1);
-	}
-	if(blkid_exit(0)){
-		blkid_free_probe(*pr);
-		return -1;
-	}
-	return 0;
-}
-
-/*int crap_blk_probe(void){
-	int n;
-	size_t len;
-	const char *val,*name;
-
-	blkid_probe bp = blkid_new_probe_from_filename("/dev/sde1");
-	blkid_probe_enable_partitions(bp,1);
-	blkid_probe_set_partitions_flags(bp,BLKID_PARTS_ENTRY_DETAILS);
-	blkid_probe_enable_superblocks(bp,BLKID_SUBLKS_DEFAULT | BLKID_SUBLKS_VERSION);
-	blkid_do_fullprobe(bp);
-	n = blkid_probe_numof_values(bp);
-	while(n--){
-		blkid_probe_get_value(bp,n,&name,&val,&len);
-		printf("%s: %s\n",name,val);
-	}
-	return 0;
-}*/
-
 // Takes a /dev/ path, and examines the superblock therein for a valid
 // filesystem or raid superblock.
-int probe_blkid_superblock(const char *dev,device *d){
+int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 	char buf[PATH_MAX],*mnttype,*uuid,*label;
 	const char *val,*name;
 	blkid_probe bp;
@@ -127,8 +68,14 @@ int probe_blkid_superblock(const char *dev,device *d){
 		dev = buf;
 	}
 	if((bp = blkid_new_probe_from_filename(dev)) == NULL){
-		fprintf(stderr,"Couldn't get blkid probe for %s (%s?)\n",dev,strerror(errno));
+		if(errno != ENOMEDIUM){
+			fprintf(stderr,"Couldn't get blkid probe for %s (%s?)\n",dev,strerror(errno));
+		}
 		return -1;
+	}
+	if(blkid_probe_enable_topology(bp,1)){
+		fprintf(stderr,"Couldn't enable blkid topology for %s (%s?)\n",dev,strerror(errno));
+		return blkid_exit(-1);
 	}
 	if(blkid_probe_enable_partitions(bp,1)){
 		fprintf(stderr,"Couldn't enable blkid partitionprobe for %s (%s?)\n",dev,strerror(errno));
@@ -205,7 +152,11 @@ int probe_blkid_superblock(const char *dev,device *d){
 		free(d->label);
 		d->label = label;
 	}
-	blkid_free_probe(bp);
+	if(sbp){
+		*sbp = bp;
+	}else{
+		blkid_free_probe(bp);
+	}
 	return 0;
 
 err:

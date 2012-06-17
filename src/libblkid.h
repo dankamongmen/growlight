@@ -9,8 +9,7 @@ extern "C" {
 
 struct device;
 
-int probe_blkid_dev(const char *,blkid_probe *);
-int probe_blkid_superblock(const char *,struct device *);
+int probe_blkid_superblock(const char *,blkid_probe *,struct device *);
 int close_blkid(void);
 
 #ifdef __cplusplus
