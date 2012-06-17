@@ -213,12 +213,12 @@ print_partition(const device *p,int prefix,int descend){
 			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
-			(p->partdev.partrole == PARTROLE_PRIMARY && (p->partdev.flags & 0xffu) == 0x80) ? "Boot" :
+			((p->partdev.partrole == PARTROLE_PRIMARY || p->partdev.partrole == PARTROLE_GPT) && (p->partdev.flags & 0xffu) == 0x80) ? "Boot" :
 				p->partdev.partrole == PARTROLE_PRIMARY ? "Pri" :
 				p->partdev.partrole == PARTROLE_EXTENDED ? "Ext" :
 				p->partdev.partrole == PARTROLE_LOGICAL ? "Log" :
 				p->partdev.partrole == PARTROLE_GPT ? "GPT" :
-				p->partdev.partrole == PARTROLE_EPS ? "EPS" : "Unk",
+				p->partdev.partrole == PARTROLE_EPS ? "ESP" : "Unk",
 				p->label ? p->label : p->partdev.label ? p->partdev.label : "n/a");
 	if(rr < 0){
 		return -1;
