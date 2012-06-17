@@ -16,6 +16,7 @@ struct device;
 
 int wipe_biosboot(struct device *);
 int wipe_dosmbr(struct device *);
+int wipe_dos_ptable(struct device *);
 
 #ifdef __cplusplus
 }
