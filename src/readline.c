@@ -572,22 +572,24 @@ blockdev_details(const device *d){
 	if(print_drive(d,0,1) < 0){
 		return -1;
 	}
-	if(printf("BIOS boot code SHA-1:\n") < 0){
-		return -1;
-	}
-	for(z = 0 ; z < 2 ; ++z){
-		unsigned y;
-
-		if(printf("\t%02x:",((const unsigned char *)d->blkdev.biossha1)[10 * z]) < 0){
+	if(d->blkdev.biossha1){
+		if(printf("BIOS boot code SHA-1:\n") < 0){
 			return -1;
 		}
-		for(y = 1 ; y < 9 ; ++y){
-			if(printf("%02x:",((const unsigned char *)d->blkdev.biossha1)[(10 * z) + y]) < 0){
+		for(z = 0 ; z < 2 ; ++z){
+			unsigned y;
+
+			if(printf("\t%02x:",((const unsigned char *)d->blkdev.biossha1)[10 * z]) < 0){
 				return -1;
 			}
-		}
-		if(printf("%02x\n",((const unsigned char *)d->blkdev.biossha1)[10 * (z + 1) - 1]) < 0){
-			return -1;
+			for(y = 1 ; y < 9 ; ++y){
+				if(printf("%02x:",((const unsigned char *)d->blkdev.biossha1)[(10 * z) + y]) < 0){
+					return -1;
+				}
+			}
+			if(printf("%02x\n",((const unsigned char *)d->blkdev.biossha1)[10 * (z + 1) - 1]) < 0){
+				return -1;
+			}
 		}
 	}
 	return 0;
@@ -604,45 +606,69 @@ blockdev(char * const *args,const char *arghelp){
 		if(strcmp(args[1],"-q") == 0){
 			return blockdev_dump(0);
 		}
-		if((d = lookup_device(args[1])) == NULL){
-			return -1;
-		}
-		return blockdev_details(d);
-	}
-	if((d = lookup_device(args[1])) == NULL){
-		return -1;
-	}
-	if(strcmp(args[2],"mktable") == 0){
-		if(args[3] == NULL){
+		if(strcmp(args[1],"mktable") == 0){
 			if(print_tabletypes() < 0){
 				return -1;
 			}
 			return 0;
-		}else if(args[4] == NULL){
-			if(make_partition_table(d,args[3])){
-				return -1;
-			}
-			return 0;
-		}
-		usage(args,arghelp);
-		return -1;
-	}else if(strcmp(args[2],"mkfs") == 0){
-		if(args[3] == NULL){
+		}else if(strcmp(args[1],"mkfs") == 0){
 			if(print_fstypes() < 0){
 				return -1;
 			}
 			return 0;
-		}else if(args[4] == NULL){
-			if(make_filesystem(d,args[3])){
-				return -1;
-			}
-			return 0;
 		}
 		usage(args,arghelp);
 		return -1;
-	}else if(strcmp(args[2],"reset") == 0){
-		// FIXME implement!
+	}
+	// Everything else has a required device argument
+	if((d = lookup_device(args[2])) == NULL){
 		return -1;
+	}
+	if(strcmp(args[1],"reset") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME reset it
+		return 0;
+	}else if(strcmp(args[1],"wipebiosboot") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME wipe it (440)
+		return 0;
+	}else if(strcmp(args[1],"wipedosmbr") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME wipe it (512)
+		return 0;
+	}else if(strcmp(args[1],"detail") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		return blockdev_details(d);
+	}else if(strcmp(args[1],"mktable") == 0){
+		if(args[3] == NULL || args[4]){
+			usage(args,arghelp);
+			return -1;
+		}
+		if(make_partition_table(d,args[3])){
+			return -1;
+		}
+		return 0;
+	}else if(strcmp(args[1],"mkfs") == 0){
+		if(args[3] == NULL || args[4]){
+			usage(args,arghelp);
+			return -1;
+		}
+		if(make_filesystem(d,args[3])){
+			return -1;
+		}
+		return 0;
 	}
 	usage(args,arghelp);
 	return -1;
@@ -1010,12 +1036,14 @@ static const struct fxn {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
 	FXN(adapter,"[ adapter \"reset\" ]\n"
 			"                 | [ -q ] no arguments to detail all host bus adapters"),
-	FXN(blockdev,"[ blockdev \"reset\" ]\n"
-			"                 | [ blockdev \"mktable\" [ tabletype ] ]\n"
-			"                    | no argument to list supported table types\n"
-			"                 | [ blockdev \"mkfs\" [ fstype ] ]\n"
-			"                    | no argument to list supported fs types\n"
-			"                 | [ blockdev ] no arguments to detail blockdev\n"
+	FXN(blockdev,"[ \"reset\" blockdev ]\n"
+			"                 | [ \"wipebiosboot\" blockdev ]\n"
+			"                 | [ \"wipedosmbr\" blockdev ]\n"
+			"                 | [ \"mktable\" [ blockdev tabletype ] ]\n"
+			"                    | no arguments to list supported table types\n"
+			"                 | [ \"mkfs\" [ blockdev fstype ] ]\n"
+			"                    | no arguments to list supported fs types\n"
+			"                 | [ \"detail\" blockdev ]\n"
 			"                 | [ -q ] no arguments to list all blockdevs"),
 	FXN(partition,"[ partition \"delete\" ]\n"
 			"                 | [ partition \"mkfs\" [ fstype ] ]\n"
