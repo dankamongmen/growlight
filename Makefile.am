@@ -26,7 +26,7 @@ growlight_tty_SOURCES=
 growlight_tty_SOURCES+=src/growlight.c src/libblkid.c src/readline.c src/mbr.c \
 		       src/mdadm.c src/sysfs.c src/mounts.c src/mmap.c \
 		       src/target.c src/sg.c src/ptable.c src/swap.c src/fs.c \
-		       src/popen.c
+		       src/popen.c src/health.c
 
 %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl $<

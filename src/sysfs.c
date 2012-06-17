@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <sysfs.h>
 #include <fcntl.h>

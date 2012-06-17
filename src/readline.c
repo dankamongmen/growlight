@@ -12,6 +12,7 @@
 #include <config.h>
 #include <target.h>
 #include <ptable.h>
+#include <health.h>
 #include <growlight.h>
 
 #define U64STRLEN 20    // Does not include a '\0' (18,446,744,073,709,551,616)
@@ -636,6 +637,17 @@ blockdev(char * const *args,const char *arghelp){
 			return -1;
 		}
 		return 0;
+	}else if(strcmp(args[1],"badblocks") == 0){
+		unsigned rw = 0;
+
+		if(args[3]){
+			if(args[4] || strcmp(args[3],"rw")){
+				usage(args,arghelp);
+				return -1;
+			}
+			rw = 1;
+		}
+		return badblock_scan(d,rw);
 	}else if(strcmp(args[1],"rmtable") == 0){
 		if(args[3]){
 			usage(args,arghelp);
@@ -910,33 +922,6 @@ swap(char * const *args,const char *arghelp){
 }
 
 static int
-badblocks(char * const *args,const char *arghelp){
-	device *d;
-
-	if(!args[1]){
-		fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
-		return -1;
-	}
-	if(args[2] == NULL){
-		d = lookup_device(args[1]);
-	}else if(args[3]){
-		fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
-		return -1;
-	}else{
-		if(strcmp(args[1],"rw")){
-			fprintf(stderr,"Usage:\t%s\t%s\n",*args,arghelp);
-			return -1;
-		}
-		d = lookup_device(args[2]);
-	}
-	if(d == NULL){
-		return -1;
-	}
-	// FIXME perform check
-	return 0;
-}
-
-static int
 benchmark(char * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	fprintf(stderr,"Sorry, not yet implemented\n");
@@ -1046,6 +1031,7 @@ static const struct fxn {
 	FXN(adapter,"[ adapter \"reset\" ]\n"
 			"                 | [ -q ] no arguments to detail all host bus adapters"),
 	FXN(blockdev,"[ \"reset\" blockdev ]\n"
+			"                 | [ \"badblocks\" blockdev [ \"rw\" ] ]\n"
 			"                 | [ \"wipebiosboot\" blockdev ]\n"
 			"                 | [ \"wipedosmbr\" blockdev ]\n"
 			"                 | [ \"rmtable\" blockdev ]\n"
@@ -1055,24 +1041,25 @@ static const struct fxn {
 			"                    | no arguments to list supported fs types\n"
 			"                 | [ \"detail\" blockdev ]\n"
 			"                 | [ -q ] no arguments to list all blockdevs"),
-	FXN(partition,"[ partition \"delete\" ]\n"
-			"                 | [ partition \"mkfs\" [ fstype ] ]\n"
-			"                    | no argument to list supported fs types\n"
-			"                 | [ -q ] no arguments to detail all partitions"),
-	FXN(fs,""),
+	FXN(partition,"[ \"del\" partition ]\n"
+			"                 | [ \"add\" blockdev name size ]\n"
+			"                 | [ -q ] no arguments to list all partitions"),
+	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
+			"                 | [ \"fsck\" fs ]\n"
+			"                 | [ \"wipefs\" fs ]\n"
+			"                 | [ -q ] no arguments to list all filesystems"),
+	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
+			"                 | no arguments to detail all swaps"),
 	FXN(mdadm,"[ mdname \"create\" devcount level devices ]\n"
 			"                 | [ -q ] no arguments to detail all mdadm devices"),
 	FXN(zpool,"[ zname \"create\" devcount level vdevs ]\n"
 			"                 | [ -q ] no arguments to detail all zpools"),
-	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
-			"                 | no arguments to detail all swaps"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
 			"                 | no arguments generates target fstab"),
 	FXN(mounts,""),
 	FXN(uefiboot,"device"),
 	FXN(biosboot,"device"),
-	FXN(badblocks,"[ \"rw\" ] device"),
 	FXN(benchmark,"fs"),
 	FXN(troubleshoot,""),
 	FXN(help,"[ command ]"),

@@ -14,7 +14,7 @@ Dependencies:
  - libdevmapper (tested with Debian's 1.02.74)
  - OpenSSL (tested with Debian's 1.0.1)
  - mkswap(8) from util-linux
- - mkfs.ext4(8), mkfs.ext3(8), mkfs.ext3(8) from e2fsprogs
+ - badblocks(8), mkfs.ext4(8), mkfs.ext3(8), mkfs.ext3(8) from e2fsprogs
  - zpool(8), zfs(8) from zfs
  - sgdisk(8) from gdisk
 
