@@ -13,6 +13,24 @@
 #include <target.h>
 #include <growlight.h>
 
+#ifdef HAVE_NCURSES_CURSES_H
+#include <ncurses/curses.h>
+#else
+#ifdef HAVE_NCURSESW_CURSES_H
+#include <ncursesw/curses.h>
+#else
+#ifdef HAVE_NCURSES_H
+#include <ncurses.h>
+#else
+#ifdef HAVE_CURSES_H
+#include <curses.h>
+#else
+#define NOCURSES
+#endif
+#endif
+#endif
+#endif
+
 #define U64STRLEN 20    // Does not include a '\0' (18,446,744,073,709,551,616)
 #define U64FMT "%-20ju"
 #define U32FMT "%-10ju"
@@ -1169,8 +1187,35 @@ growlight_completion(const char *text,int start,int end __attribute__ ((unused))
 	return NULL;
 }
 
+#ifndef NOCURSES
+static SCREEN *
+init_ncurses(void){
+	SCREEN *s;
+
+	if((s = newterm(NULL,stdout,stdin)) == NULL){
+		return NULL;
+	}
+	if(start_color()){
+		return NULL;
+	}
+	printf("libncurses %s\n",curses_version());
+}
+
+static int
+stop_ncurses(SCREEN *s){
+	delscreen(s);
+	return 0;
+}
+#else
+typedef void SCREEN;
+
+static SCREEN *init_ncurses(void){ return init_ncurses; }
+static int stop_ncurses(SCREEN *s __attribute__ ((unused))){ return 0; }
+#endif
+
 int main(int argc,char * const *argv){
-	
+	SCREEN *s;
+
 	fflush(stdout);
 	if(growlight_init(argc,argv)){
 		return EXIT_FAILURE;
@@ -1178,11 +1223,19 @@ int main(int argc,char * const *argv){
 	rl_readline_name = PACKAGE;
 	rl_attempted_completion_function = growlight_completion;
 	rl_prep_terminal(1); // 1 == read 8-bit input
+	if((s = init_ncurses()) == NULL){
+		return EXIT_FAILURE;
+	}
 	if(tty_ui()){
 		growlight_stop();
+		stop_ncurses(s);
 		return EXIT_FAILURE;
 	}
 	if(growlight_stop()){
+		stop_ncurses(s);
+		return EXIT_FAILURE;
+	}
+	if(stop_ncurses(s)){
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
