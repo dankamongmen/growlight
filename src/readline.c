@@ -581,27 +581,29 @@ blockdev_details(const device *d){
 	if(print_drive(d,0,1) < 0){
 		return -1;
 	}
+	printf("\n");
 	if(d->blkdev.biossha1){
-		if(printf("\nBIOS boot code SHA-1:\n") < 0){
+		if(printf("\nBIOS boot SHA-1: ") < 0){
 			return -1;
 		}
-		for(z = 0 ; z < 2 ; ++z){
-			unsigned y;
-
-			if(printf("\t%02x:",((const unsigned char *)d->blkdev.biossha1)[10 * z]) < 0){
+		for(z = 0 ; z < 19 ; ++z){
+			if(printf("%02x:",((const unsigned char *)d->blkdev.biossha1)[z]) < 0){
 				return -1;
 			}
-			for(y = 1 ; y < 9 ; ++y){
-				if(printf("%02x:",((const unsigned char *)d->blkdev.biossha1)[(10 * z) + y]) < 0){
-					return -1;
-				}
-			}
-			if(printf("%02x\n",((const unsigned char *)d->blkdev.biossha1)[10 * (z + 1) - 1]) < 0){
-				return -1;
-			}
+		}
+		if(printf("%02x\n",((const unsigned char *)d->blkdev.biossha1)[z]) < 0){
+			return -1;
 		}
 	}
 	printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
+	printf("Transport: %s\n",
+			d->blkdev.transport == SERIAL_ATAIII ? "SATA 3.0" :
+			 d->blkdev.transport == SERIAL_ATAII ? "SATA 2.0" :
+			 d->blkdev.transport == SERIAL_ATAI ? "SATA 1.0" :
+			 d->blkdev.transport == SERIAL_ATA8 ? "ATA8-AST" :
+			 d->blkdev.transport == SERIAL_UNKNOWN ? "Serial ATA" :
+			 d->blkdev.transport == PARALLEL_ATA ? "Parallel ATA" :
+			 "Unknown");
 	return 0;
 }
 
