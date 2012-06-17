@@ -6,6 +6,7 @@
 #include <readline/readline.h>
 
 #include <fs.h>
+#include <mbr.h>
 #include <swap.h>
 #include <config.h>
 #include <target.h>
@@ -636,15 +637,13 @@ blockdev(char * const *args,const char *arghelp){
 			usage(args,arghelp);
 			return -1;
 		}
-		// FIXME wipe it (440)
-		return 0;
+		return wipe_biosboot(d);
 	}else if(strcmp(args[1],"wipedosmbr") == 0){
 		if(args[3]){
 			usage(args,arghelp);
 			return -1;
 		}
-		// FIXME wipe it (512)
-		return 0;
+		return wipe_dosmbr(d);
 	}else if(strcmp(args[1],"detail") == 0){
 		if(args[3]){
 			usage(args,arghelp);

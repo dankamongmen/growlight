@@ -12,6 +12,11 @@ int mbrsha1(int,void *);
 
 int zerombrp(const void *);
 
+struct device;
+
+int wipe_biosboot(struct device *);
+int wipe_dosmbr(struct device *);
+
 #ifdef __cplusplus
 }
 #endif
