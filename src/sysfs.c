@@ -125,11 +125,11 @@ int get_sysfs_uint(int dirfd,const char *node,unsigned long *b){
 	return 0;
 }
 
-int write_sysfs(int dirfd,const char *name,const char *str){
+int write_sysfs(const char *name,const char *str){
 	ssize_t w;
 	int fd;
 
-	if((fd = openat(dirfd,name,O_WRONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+	if((fd = open(name,O_WRONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 		return -1;
 	}
 	if((w = write(fd,str,strlen(str))) <= 0 || w < (int)strlen(str)){

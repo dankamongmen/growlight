@@ -8,6 +8,7 @@
 #include <fs.h>
 #include <mbr.h>
 #include <swap.h>
+#include <sysfs.h>
 #include <config.h>
 #include <target.h>
 #include <growlight.h>
@@ -630,7 +631,9 @@ blockdev(char * const *args,const char *arghelp){
 			usage(args,arghelp);
 			return -1;
 		}
-		// FIXME reset it
+		if(reset_blockdev(d)){
+			return -1;
+		}
 		return 0;
 	}else if(strcmp(args[1],"wipebiosboot") == 0){
 		if(args[3]){

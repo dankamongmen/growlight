@@ -15,6 +15,7 @@
 #include <scsi/sg.h>
 #include <pci/pci.h>
 #include <langinfo.h>
+#include <linux/fs.h>
 #include <sys/stat.h>
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
@@ -989,5 +990,29 @@ int growlight_stop(void){
 	close_blkid();
 	free_devtable();
 	pci_cleanup(pciacc);
+	return 0;
+}
+
+int reset_blockdev(device *d){
+	char buf[PATH_MAX];
+	int fd;
+
+	if(snprintf(buf,sizeof(buf),"/sys/block/%s/device/rescan",d->name) >= (int)sizeof(buf)){
+		fprintf(stderr,"Name too long: %s\n",d->name);
+		return -1;
+	}
+	if(write_sysfs(buf,"1\n")){
+		return -1;
+	}
+	printf("Wrote '1' to %s\n",buf);
+	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC)) < 0){
+		return -1;
+	}
+	if(ioctl(fd,BLKRRPART,NULL)){
+		fprintf(stderr,"Error calling BLKRRPART on %s (%s?)\n",buf,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	close(fd);
 	return 0;
 }

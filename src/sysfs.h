@@ -12,7 +12,7 @@ unsigned sysfs_exist_p(int,const char *);
 char *get_sysfs_string(int,const char *);
 int get_sysfs_bool(int,const char *,unsigned *);
 int get_sysfs_uint(int,const char *,unsigned long *);
-int write_sysfs(int,const char *,const char *);
+int write_sysfs(const char *,const char *);
 
 #ifdef __cplusplus
 }
