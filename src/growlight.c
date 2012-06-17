@@ -154,6 +154,7 @@ free_device(device *d){
 				free(d->blkdev.label);
 				free(d->blkdev.uuid);
 				free(d->blkdev.biossha1);
+				free(d->blkdev.pttable);
 				break;
 			}case LAYOUT_MDADM:{
 				mdslave *md;
@@ -185,7 +186,6 @@ free_device(device *d){
 		free(d->wwn);
 		free(d->model);
 		free(d->revision);
-		free(d->pttable);
 	}
 }
 
@@ -515,7 +515,8 @@ create_new_device(const char *name){
 		free_device(&dd);
 		return NULL;
 	}
-	if(dd.blkdev.realdev || (dd.layout == LAYOUT_MDADM)){
+	if((dd.layout == LAYOUT_NONE && dd.blkdev.realdev) ||
+			(dd.layout == LAYOUT_MDADM)){
 		char devbuf[PATH_MAX];
 		blkid_parttable ptbl;
 		blkid_topology tpr;
@@ -524,7 +525,7 @@ create_new_device(const char *name){
 		int pars;
 		int dfd;
 
-		if(dd.blkdev.realdev){
+		if(dd.layout == LAYOUT_NONE && dd.blkdev.realdev){
 			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 				fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
 				free_device(&dd);
@@ -535,6 +536,18 @@ create_new_device(const char *name){
 				free_device(&dd);
 				return NULL;
 			}
+			if((dd.blkdev.biossha1 = malloc(20)) == NULL){
+				fprintf(stderr,"Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
+				free_device(&dd);
+				return NULL;
+			}
+			if(mbrsha1(dfd,dd.blkdev.biossha1)){
+				if(!dd.blkdev.removable){
+					fprintf(stderr,"Warning: Couldn't read MBR for %s\n",name);
+				}
+				free(dd.blkdev.biossha1);
+				dd.blkdev.biossha1 = NULL;
+			}
 			close(dfd);
 		}
 		snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
@@ -544,12 +557,6 @@ create_new_device(const char *name){
 				const char *pttable;
 				device *p;
 
-				if((dd.blkdev.biossha1 = malloc(20)) == NULL){
-					fprintf(stderr,"Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
-					free_device(&dd);
-					blkid_free_probe(pr);
-					return NULL;
-				}
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
 					free_device(&dd);
@@ -561,21 +568,7 @@ create_new_device(const char *name){
 				verbf("\t%d partition%s, table type %s\n",
 						pars,pars == 1 ? "" : "s",
 						pttable);
-
-				if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
-					fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
-					free_device(&dd);
-					blkid_free_probe(pr);
-					return NULL;
-				}
-				if(mbrsha1(dfd,dd.blkdev.biossha1)){
-					close(dfd);
-					free_device(&dd);
-					blkid_free_probe(pr);
-					return NULL;
-				}
-				close(dfd);
-				if((dd.pttable = strdup(pttable)) == NULL){
+				if((dd.blkdev.pttable = strdup(pttable)) == NULL){
 					free_device(&dd);
 					blkid_free_probe(pr);
 					return NULL;

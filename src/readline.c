@@ -11,25 +11,8 @@
 #include <sysfs.h>
 #include <config.h>
 #include <target.h>
+#include <ptable.h>
 #include <growlight.h>
-
-#ifdef HAVE_NCURSES_CURSES_H
-#include <ncurses/curses.h>
-#else
-#ifdef HAVE_NCURSESW_CURSES_H
-#include <ncursesw/curses.h>
-#else
-#ifdef HAVE_NCURSES_H
-#include <ncurses.h>
-#else
-#ifdef HAVE_CURSES_H
-#include <curses.h>
-#else
-#define NOCURSES
-#endif
-#endif
-#endif
-#endif
 
 #define U64STRLEN 20    // Does not include a '\0' (18,446,744,073,709,551,616)
 #define U64FMT "%-20ju"
@@ -290,7 +273,7 @@ print_drive(const device *d,int prefix,int descend){
 			d->blkdev.rotate ? 'O' : '.',
 			d->blkdev.wcache ? 'W' : '.',
 			d->blkdev.biosboot ? 'B' : '.',
-			d->pttable ? d->pttable : "none",
+			d->blkdev.pttable ? d->blkdev.pttable : "none",
 			d->wwn ? d->wwn : "n/a"
 			);
 		break;
@@ -301,7 +284,7 @@ print_drive(const device *d,int prefix,int descend){
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec, '.', 'V', 'M', '.', '.', '.',
-			d->pttable ? d->pttable : "none",
+			"n/a",
 			d->wwn ? d->wwn : "n/a"
 			);
 		break;
@@ -312,7 +295,7 @@ print_drive(const device *d,int prefix,int descend){
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec, '.', 'V', '.', '.', '.', '.',
-			d->pttable ? d->pttable : "none",
+			"n/a",
 			d->wwn ? d->wwn : "n/a"
 			);
 		break;
@@ -379,8 +362,7 @@ print_mdadm(const device *d,int prefix,int descend){
 			d->name,
 			d->uuid ? d->uuid : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
-			d->physsec,
-			d->pttable ? d->pttable : "none",
+			d->physsec, "n/a",
 			d->mddev.disks,d->mddev.level
 			);
 	if(rr < 0){
@@ -653,6 +635,12 @@ blockdev(char * const *args,const char *arghelp){
 			return -1;
 		}
 		return 0;
+	}else if(strcmp(args[1],"rmtable") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		return wipe_ptable(d);
 	}else if(strcmp(args[1],"wipebiosboot") == 0){
 		if(args[3]){
 			usage(args,arghelp);
@@ -1059,6 +1047,7 @@ static const struct fxn {
 	FXN(blockdev,"[ \"reset\" blockdev ]\n"
 			"                 | [ \"wipebiosboot\" blockdev ]\n"
 			"                 | [ \"wipedosmbr\" blockdev ]\n"
+			"                 | [ \"rmtable\" blockdev ]\n"
 			"                 | [ \"mktable\" [ blockdev tabletype ] ]\n"
 			"                    | no arguments to list supported table types\n"
 			"                 | [ \"mkfs\" [ blockdev fstype ] ]\n"
@@ -1187,35 +1176,7 @@ growlight_completion(const char *text,int start,int end __attribute__ ((unused))
 	return NULL;
 }
 
-#ifndef NOCURSES
-static SCREEN *
-init_ncurses(void){
-	SCREEN *s;
-
-	if((s = newterm(NULL,stdout,stdin)) == NULL){
-		return NULL;
-	}
-	if(start_color()){
-		return NULL;
-	}
-	printf("libncurses %s\n",curses_version());
-}
-
-static int
-stop_ncurses(SCREEN *s){
-	delscreen(s);
-	return 0;
-}
-#else
-typedef void SCREEN;
-
-static SCREEN *init_ncurses(void){ return init_ncurses; }
-static int stop_ncurses(SCREEN *s __attribute__ ((unused))){ return 0; }
-#endif
-
 int main(int argc,char * const *argv){
-	SCREEN *s;
-
 	fflush(stdout);
 	if(growlight_init(argc,argv)){
 		return EXIT_FAILURE;
@@ -1223,19 +1184,11 @@ int main(int argc,char * const *argv){
 	rl_readline_name = PACKAGE;
 	rl_attempted_completion_function = growlight_completion;
 	rl_prep_terminal(1); // 1 == read 8-bit input
-	if((s = init_ncurses()) == NULL){
-		return EXIT_FAILURE;
-	}
 	if(tty_ui()){
 		growlight_stop();
-		stop_ncurses(s);
 		return EXIT_FAILURE;
 	}
 	if(growlight_stop()){
-		stop_ncurses(s);
-		return EXIT_FAILURE;
-	}
-	if(stop_ncurses(s)){
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;

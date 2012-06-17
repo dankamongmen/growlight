@@ -41,9 +41,18 @@ int make_partition_table(device *d,const char *ptype){
 			if(reset_blockdev(d)){
 				return -1;
 			}
-			return 0;
+			return -1;
 		}
 	}
 	fprintf(stderr,"Unsupported partition table type: %s\n",ptype);
+	return -1;
+}
+
+int wipe_ptable(device *d){
+	if(d->layout != LAYOUT_NONE){
+		fprintf(stderr,"Will only create a partition table on raw block devices\n");
+		return -1;
+	}
+	// FIXME
 	return -1;
 }

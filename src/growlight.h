@@ -37,7 +37,6 @@ typedef struct device {
 	// next block device on this controller
 	struct device *next;
 	char name[NAME_MAX];		// Entry in /dev or /sys/block
-	char *pttable;			// Partition table type (can be NULL)
 	char *model,*revision;		// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
 	char *mnt;			// Active mount point
@@ -71,7 +70,8 @@ typedef struct device {
 			// filesystem's or partition's.
 			char *uuid,*label;
 			void *biossha1;		// SHA1 of first 440 bytes
-			struct partition *next;	// Next on this disk
+			char *pttable;		// Partition table type (can be NULL)
+			//struct partition *next;	// Next on this disk
 		} blkdev;
 		struct {
 			unsigned long disks;	// RAID disks in md

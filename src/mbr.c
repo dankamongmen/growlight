@@ -27,9 +27,7 @@ int mbrsha1(int fd,void *buf){
 		return -1;
 	}
 	if((r = read(fd,mbr,sizeof(mbr))) < 0 || r < (int)sizeof(mbr)){
-		int e = errno;
-		fprintf(stderr,"Couldn't read first sector of %d (%s?)\n",fd,strerror(errno));
-		errno = e;
+		verbf("Read %zd/%zu of %d (%s?)\n",r,sizeof(mbr),fd,strerror(errno));
 		return -1;
 	}
 	if(SHA1(mbr,sizeof(mbr),buf) == NULL){
