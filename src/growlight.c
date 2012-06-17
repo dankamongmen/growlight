@@ -141,8 +141,7 @@ const controller *get_controllers(void){
 	return controllers; // FIXME hugely unsafe
 }
 
-static void
-free_device(device *d){
+void free_device(device *d){
 	if(d){
 		device *p;
 

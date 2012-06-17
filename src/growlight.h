@@ -164,6 +164,7 @@ const char **get_fs_types(void);
 int make_partition_table(device *,const char *);
 
 int reset_blockdev(device *);
+void free_device(device *);
 
 #ifdef __cplusplus
 }

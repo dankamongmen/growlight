@@ -1,6 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <mbr.h>
+#include <popen.h>
 #include <growlight.h>
 
 static int
@@ -11,8 +14,28 @@ gpt_make_table(device *d){
 
 static int
 gpt_zap_table(device *d){
+	char cmd[PATH_MAX];
+
+	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --zap-all /dev/%s",d->name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad name: %s\n",d->name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
+dos_make_table(device *d){
+	// FIXME
 	assert(d);
 	return -1;
+}
+
+static int
+dos_zap_table(device *d){
+	return wipe_dos_ptable(d);
 }
 
 static const struct ptable {
@@ -24,6 +47,11 @@ static const struct ptable {
 		.name = "gpt",
 		.make = gpt_make_table,
 		.zap = gpt_zap_table,
+	},
+	{
+		.name = "dos",
+		.make = dos_make_table,
+		.zap = dos_zap_table,
 	},
 	{ .name = NULL, }
 };
