@@ -37,7 +37,7 @@ typedef struct device {
 	// next block device on this controller
 	struct device *next;
 	char name[NAME_MAX];		// Entry in /dev or /sys/block
-	char *model,*revision;		// Arbitrary UTF-8 strings
+	char *model,*revision,*sn;	// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
 	char *mnt;			// Active mount point
 	char *mntops;			// Mount options
@@ -56,8 +56,8 @@ typedef struct device {
 		SWAP_MAXPRIO = 0,
 		SWAP_MINPRIO = 65535,
 	} swapprio;			// Priority as a swap device
-	char *uuid;			// applies to fs/swap/mdadm, can be NULL
-	char *label;			// applies to fs/swap/mdadm, can be NULL
+	char *uuid;			// *Filesystem* UUID
+	char *label;			// *Filesystem* label
 	union {
 		struct {
 			unsigned transport;	// Physical layer spec
@@ -66,23 +66,24 @@ typedef struct device {
 			unsigned rotate: 1;	// Rotational media / spinning platters
 			unsigned wcache: 1;	// Write cache enabled
 			unsigned biosboot: 1;	// Non-zero bytes in MBR code area
-			// These are the *disk's* UUID and label, not the
-			// filesystem's or partition's.
-			char *uuid,*label;
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
-			//struct partition *next;	// Next on this disk
 		} blkdev;
 		struct {
 			unsigned long disks;	// RAID disks in md
 			char *level;		// RAID level
 			mdslave *slaves;	// RAID components
+			char *uuid;
+			char *mdname;
 		} mddev;
 		struct {
 			// These are the *partition* UUID and label, not the
 			// filesystem's or disk's.
 			char *uuid,*label;
-			struct partition *next;	// Next on this disk
+			char *pname;		// Partition name, if it has
+						// one (GPT has a UTF-16 name).
+
+			//struct partition *next;	// Next on this disk
 			// The BIOS+MBR partition record (including the first
 			// byte, the 'boot flag') and GPT attributes.
 			unsigned long long flags;

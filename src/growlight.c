@@ -150,8 +150,6 @@ void free_device(device *d){
 		d->target = NULL;
 		switch(d->layout){
 			case LAYOUT_NONE:{
-				free(d->blkdev.label);
-				free(d->blkdev.uuid);
 				free(d->blkdev.biossha1);
 				free(d->blkdev.pttable);
 				break;
@@ -164,8 +162,11 @@ void free_device(device *d){
 					free(md);
 				}
 				free(d->mddev.level);
+				free(d->mddev.uuid);
+				free(d->mddev.mdname);
 				break;
 			}case LAYOUT_PARTITION:{
+				free(d->partdev.pname);
 				free(d->partdev.label);
 				free(d->partdev.uuid);
 				break;
@@ -179,7 +180,6 @@ void free_device(device *d){
 		}
 		free(d->mntops);
 		free(d->mnttype);
-		free(d->label);
 		free(d->uuid);
 		free(d->mnt);
 		free(d->wwn);

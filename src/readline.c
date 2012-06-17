@@ -220,7 +220,8 @@ print_partition(const device *p,int prefix,int descend){
 				p->partdev.partrole == PARTROLE_LOGICAL ? "Log" :
 				p->partdev.partrole == PARTROLE_GPT ? "GPT" :
 				p->partdev.partrole == PARTROLE_EPS ? "ESP" : "Unk",
-				p->label ? p->label : p->partdev.label ? p->partdev.label : "n/a");
+				p->partdev.pname ? p->partdev.pname :
+				 p->partdev.label ? p->partdev.label : "n/a");
 	if(rr < 0){
 		return -1;
 	}

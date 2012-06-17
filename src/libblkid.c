@@ -124,6 +124,10 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 			if((label = strdup(val)) == NULL){
 				goto err;
 			}
+		}else if(strcmp(name,"PART_ENTRY_NAME") == 0){
+			if((label = strdup(val)) == NULL){
+				goto err;
+			}
 		}else{
 			verbf("attr %s=%s for %s\n",name,val,dev);
 		}
