@@ -591,6 +591,8 @@ create_new_device(const char *name){
 						// FIXME need find UEFI EPS partitions
 						if(strcmp(pttable,"gpt") == 0){
 							p->partdev.partrole = PARTROLE_GPT;
+							dd.blkdev.biosboot = !zerombrp(dd.blkdev.biossha1);
+							// FIXME verify bootable flag?
 						}else if(blkid_partition_is_extended(part)){
 							p->partdev.partrole = PARTROLE_EXTENDED;
 						}else if(blkid_partition_is_logical(part)){
@@ -598,6 +600,7 @@ create_new_device(const char *name){
 						}else if(blkid_partition_is_primary(part)){
 							p->partdev.partrole = PARTROLE_PRIMARY;
 							dd.blkdev.biosboot = !zerombrp(dd.blkdev.biossha1);
+							// FIXME verify bootable flag?
 						}
 // BIOS boot flag byte ought not be set to anything but 0 unless we're on a
 // primary partition and doing BIOS+MBR booting, in which case it must be 0x80.
