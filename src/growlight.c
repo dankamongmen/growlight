@@ -152,6 +152,7 @@ free_device(device *d){
 			case LAYOUT_NONE:{
 				free(d->blkdev.label);
 				free(d->blkdev.uuid);
+				free(d->blkdev.biossha1);
 				break;
 			}case LAYOUT_MDADM:{
 				mdslave *md;
@@ -540,9 +541,14 @@ create_new_device(const char *name){
 			}
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				const char *pttable;
-				char shabuf[20];
 				device *p;
 
+				if((dd.blkdev.biossha1 = malloc(20)) == NULL){
+					fprintf(stderr,"Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
+					free_device(&dd);
+					blkid_free_probe(pr);
+					return NULL;
+				}
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
 					free_device(&dd);
@@ -561,7 +567,7 @@ create_new_device(const char *name){
 					blkid_free_probe(pr);
 					return NULL;
 				}
-				if(mbrsha1(dfd,shabuf)){
+				if(mbrsha1(dfd,dd.blkdev.biossha1)){
 					close(dfd);
 					free_device(&dd);
 					blkid_free_probe(pr);
@@ -591,7 +597,7 @@ create_new_device(const char *name){
 							p->partdev.partrole = PARTROLE_LOGICAL;
 						}else if(blkid_partition_is_primary(part)){
 							p->partdev.partrole = PARTROLE_PRIMARY;
-							dd.blkdev.biosboot = !zerombrp(shabuf);
+							dd.blkdev.biosboot = !zerombrp(dd.blkdev.biossha1);
 						}
 // BIOS boot flag byte ought not be set to anything but 0 unless we're on a
 // primary partition and doing BIOS+MBR booting, in which case it must be 0x80.

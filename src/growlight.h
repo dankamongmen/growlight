@@ -70,6 +70,7 @@ typedef struct device {
 			// These are the *disk's* UUID and label, not the
 			// filesystem's or partition's.
 			char *uuid,*label;
+			void *biossha1;		// SHA1 of first 440 bytes
 			struct partition *next;	// Next on this disk
 		} blkdev;
 		struct {

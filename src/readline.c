@@ -565,6 +565,34 @@ blockdev_dump(int descend){
 	return 0;
 }
 
+static inline int
+blockdev_details(const device *d){
+	unsigned z;
+
+	if(print_drive(d,0,1) < 0){
+		return -1;
+	}
+	if(printf("BIOS boot code SHA-1:\n") < 0){
+		return -1;
+	}
+	for(z = 0 ; z < 2 ; ++z){
+		unsigned y;
+
+		if(printf("\t%02x:",((const unsigned char *)d->blkdev.biossha1)[10 * z]) < 0){
+			return -1;
+		}
+		for(y = 1 ; y < 9 ; ++y){
+			if(printf("%02x:",((const unsigned char *)d->blkdev.biossha1)[(10 * z) + y]) < 0){
+				return -1;
+			}
+		}
+		if(printf("%02x\n",((const unsigned char *)d->blkdev.biossha1)[10 * (z + 1) - 1]) < 0){
+			return -1;
+		}
+	}
+	return 0;
+}
+
 static int
 blockdev(char * const *args,const char *arghelp){
 	device *d;
@@ -576,8 +604,10 @@ blockdev(char * const *args,const char *arghelp){
 		if(strcmp(args[1],"-q") == 0){
 			return blockdev_dump(0);
 		}
-		usage(args,arghelp);
-		return -1;
+		if((d = lookup_device(args[1])) == NULL){
+			return -1;
+		}
+		return blockdev_details(d);
 	}
 	if((d = lookup_device(args[1])) == NULL){
 		return -1;
@@ -985,7 +1015,8 @@ static const struct fxn {
 			"                    | no argument to list supported table types\n"
 			"                 | [ blockdev \"mkfs\" [ fstype ] ]\n"
 			"                    | no argument to list supported fs types\n"
-			"                 | [ -q ] no arguments to detail all blockdevs"),
+			"                 | [ blockdev ] no arguments to detail blockdev\n"
+			"                 | [ -q ] no arguments to list all blockdevs"),
 	FXN(partition,"[ partition \"delete\" ]\n"
 			"                 | [ partition \"mkfs\" [ fstype ] ]\n"
 			"                    | no argument to list supported fs types\n"
