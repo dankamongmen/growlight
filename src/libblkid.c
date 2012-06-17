@@ -160,7 +160,9 @@ int probe_blkid_superblock(const char *dev,device *d){
 				}
 				d->swapprio = SWAP_INACTIVE;
 			// FIXME use list of filesystems from wherever
-			}else if(strcmp(val,"ext4") == 0){
+			}else{
+			}
+			if(strcmp(val,"ext4") == 0){
 				if((mnttype = strdup(val)) == NULL){
 					goto err;
 				}

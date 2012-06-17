@@ -5,6 +5,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
+#include <fs.h>
 #include <swap.h>
 #include <config.h>
 #include <target.h>
@@ -544,44 +545,36 @@ print_fstypes(void){
 	return r;
 }
 
+static inline int
+blockdev_dump(int descend){
+	const controller *c;
+
+	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
+			"Device","Model","Rev","Bytes","PSect","Table","WWN");
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(print_drive(d,0,descend) < 0){
+				return -1;
+			}
+		}
+	}
+	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
+			"\t\t(W)ritecache enabled, (B)IOS boot\n");
+	return 0;
+}
+
 static int
 blockdev(char * const *args,const char *arghelp){
-	const controller *c;
 	device *d;
 
 	if(args[1] == NULL){
-		printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
-				"Device","Model","Rev","Bytes","PSect","Table","WWN");
-		for(c = get_controllers() ; c ; c = c->next){
-			const device *d;
-
-			for(d = c->blockdevs ; d ; d = d->next){
-				if(print_drive(d,0,1) < 0){
-					return -1;
-				}
-			}
-		}
-		printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
-				"\t\t(W)ritecache enabled, (B)IOS boot\n");
-		return 0;
+		return blockdev_dump(1);
 	}
 	if(args[2] == NULL){
 		if(strcmp(args[1],"-q") == 0){
-			printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-19.19s\n",
-					"Device","Model","Rev","Bytes","PSect","Table","WWN");
-			for(c = get_controllers() ; c ; c = c->next){
-				const device *d;
-
-				for(d = c->blockdevs ; d ; d = d->next){
-					if(print_drive(d,0,0) < 0){
-						return -1;
-					}
-				}
-			}
-			printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
-					"\t\t(W)ritecache enabled\n");
-			return 0;
-
+			return blockdev_dump(0);
 		}
 		usage(args,arghelp);
 		return -1;
@@ -601,6 +594,8 @@ blockdev(char * const *args,const char *arghelp){
 			}
 			return 0;
 		}
+		usage(args,arghelp);
+		return -1;
 	}else if(strcmp(args[2],"mkfs") == 0){
 		if(args[3] == NULL){
 			if(print_fstypes() < 0){
@@ -608,14 +603,13 @@ blockdev(char * const *args,const char *arghelp){
 			}
 			return 0;
 		}else if(args[4] == NULL){
-			/* FIXME
 			if(make_filesystem(d,args[3])){
 				return -1;
 			}
 			return 0;
-			*/
-			return -1;
 		}
+		usage(args,arghelp);
+		return -1;
 	}else if(strcmp(args[2],"reset") == 0){
 		// FIXME implement!
 		return -1;
