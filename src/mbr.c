@@ -102,7 +102,9 @@ wipe_first_sector(device *d,size_t wipe){
 	// FIXME we still have valid filesystems, but no longer have valid
 	//   partition table entries for them (iff we were using MBR). add
 	//   "recovery"? gparted can supposedly find lost filesystems....
-	// FIXME update kernel crap. remove partition entries
+	if(reset_blockdev(d)){
+		return -1;
+	}
 	return 0;
 }
 
@@ -111,5 +113,9 @@ int wipe_biosboot(device *d){
 }
 
 int wipe_dosmbr(device *d){
-	return wipe_first_sector(d,MBR_SIZE);
+	if(wipe_first_sector(d,MBR_SIZE)){
+		return -1;
+	}
+	// FIXME remove partition entries
+	return 0;
 }

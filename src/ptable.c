@@ -38,6 +38,9 @@ int make_partition_table(device *d,const char *ptype){
 	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,ptype) == 0){
 			// FIXME
+			if(reset_blockdev(d)){
+				return -1;
+			}
 			return 0;
 		}
 	}
