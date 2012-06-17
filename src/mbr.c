@@ -44,14 +44,14 @@ int zerombrp(const void *buf){
 }
 
 static inline int
-wipe_first_sector(device *d,size_t wipe){
+wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	static char buf[MBR_SIZE];
 	char dbuf[PATH_MAX];
 	ssize_t w;
 	int fd;
 
-	if(wipe > sizeof(buf)){
-		fprintf(stderr,"Can't wipe %zu\n",wipe);
+	if(wipeend > sizeof(buf) || wipe >= wipeend){
+		fprintf(stderr,"Can't wipe %zu/%zu/%zu\n",wipe,wipeend,sizeof(buf));
 		return -1;
 	}
 	if(d->layout != LAYOUT_NONE){
@@ -68,14 +68,14 @@ wipe_first_sector(device *d,size_t wipe){
 		errno = e;
 		return -1;
 	}
-	if(lseek(fd,0,SEEK_SET)){
+	if(lseek(fd,wipe,SEEK_SET)){
 		int e = errno;
-		fprintf(stderr,"Couldn't seek to first byte of %s (%s?)\n",dbuf,strerror(errno));
+		fprintf(stderr,"Couldn't seek to byte %zu of %s (%s?)\n",wipe,dbuf,strerror(errno));
 		close(fd);
 		errno = e;
 		return -1;
 	}
-	if((w = write(fd,buf,wipe)) < 0 || w < (int)wipe){
+	if((w = write(fd,buf,wipeend - wipe)) < 0 || w < (int)(wipeend - wipe)){
 		int e = errno;
 		fprintf(stderr,"Couldn't write to first sector of %s (%s?)\n",dbuf,strerror(errno));
 		close(fd);
@@ -107,13 +107,39 @@ wipe_first_sector(device *d,size_t wipe){
 }
 
 int wipe_biosboot(device *d){
-	return wipe_first_sector(d,MBR_CODE_SIZE);
+	return wipe_first_sector(d,0,MBR_CODE_SIZE);
 }
 
 int wipe_dosmbr(device *d){
-	if(wipe_first_sector(d,MBR_SIZE)){
+	if(wipe_first_sector(d,0,MBR_SIZE)){
 		return -1;
 	}
-	// FIXME remove partition entries
+	if(strcmp(d->blkdev.pttable,"dos") == 0){
+		device *p;
+
+		while( (p = d->parts) ){
+			d->parts = p->next;
+			free_device(p);
+		}
+		free(d->blkdev.pttable);
+		d->blkdev.pttable = NULL;
+	}
+	return 0;
+}
+
+int wipe_dos_ptable(device *d){
+	if(wipe_first_sector(d,MBR_CODE_SIZE,MBR_SIZE)){
+		return -1;
+	}
+	if(strcmp(d->blkdev.pttable,"dos") == 0){
+		device *p;
+
+		while( (p = d->parts) ){
+			d->parts = p->next;
+			free_device(p);
+		}
+		free(d->blkdev.pttable);
+		d->blkdev.pttable = NULL;
+	}
 	return 0;
 }
