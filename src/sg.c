@@ -272,7 +272,6 @@ int sg_interrogate(device *d,int fd){
 	min = buf[TRANSPORT_MAJOR] & 0xfffu;
 	switch(maj){
 		case 0:
-			fprintf(stderr,"%d is PARALLEL (%04hx / %04hx)\n",fd,maj,min);
 			d->blkdev.transport = PARALLEL_ATA;
 		break;
 		case 1:
