@@ -159,18 +159,15 @@ int probe_blkid_superblock(const char *dev,device *d){
 				if((mnttype = strdup("swap")) == NULL){
 					goto err;
 				}
-				d->swapprio = SWAP_INACTIVE;
-			}else{
-				const char **fst;
-
-				for(fst = get_fs_types() ; *fst ; ++fst){
-					if(strcmp(val,*fst) == 0){
-						if((mnttype = strdup(val)) == NULL){
-							goto err;
-						}
-						break;
-					}
+				if(d->swapprio == SWAP_INVALID){
+					d->swapprio = SWAP_INACTIVE;
 				}
+			}else if(blkid_known_fstype(val)){
+				if((mnttype = strdup(val)) == NULL){
+					goto err;
+				}
+			}else{
+				fprintf(stderr,"Warning: unknown type %s for %s\n",val,dev);
 			}
 		}else if(strcmp(name,"UUID") == 0){
 			if((uuid = strdup(val)) == NULL){
@@ -180,6 +177,8 @@ int probe_blkid_superblock(const char *dev,device *d){
 			if((label = strdup(val)) == NULL){
 				goto err;
 			}
+		}else{
+			verbf("attr %s=%s for %s\n",name,val,dev);
 		}
 	}
 	if(d->mnttype == NULL){
