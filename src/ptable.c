@@ -8,8 +8,16 @@
 
 static int
 gpt_make_table(device *d){
-	assert(d);
-	return -1;
+	char cmd[PATH_MAX];
+
+	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s mklabel msdos",d->name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad name: %s\n",d->name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		return -1;
+	}
+	return 0;
 }
 
 static int
@@ -28,9 +36,16 @@ gpt_zap_table(device *d){
 
 static int
 dos_make_table(device *d){
-	// FIXME
-	assert(d);
-	return -1;
+	char cmd[PATH_MAX];
+
+	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s mklabel msdos",d->name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad name: %s\n",d->name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		return -1;
+	}
+	return 0;
 }
 
 static int
