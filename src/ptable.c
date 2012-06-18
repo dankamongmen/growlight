@@ -140,3 +140,32 @@ int wipe_ptable(device *d){
 	fprintf(stderr,"Unsupported partition table type: %s\n",d->blkdev.pttable);
 	return -1;
 }
+
+int add_partition(device *d,const char *name,size_t size){
+	if(d->layout != LAYOUT_NONE){
+		fprintf(stderr,"Will only add partitions to real block devices\n");
+		return -1;
+	}
+	fprintf(stderr,"FIXME not yet implemented for %s / %zu\n",name,size);
+	return -1;
+}
+
+int wipe_partition(device *p,device *d){
+	char cmd[PATH_MAX];
+
+	if(d->layout != LAYOUT_PARTITION){
+		fprintf(stderr,"Will only remove actual partitions\n");
+		return -1;
+	}
+	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s rm /dev/%s",p->name,d->name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad names: %s / %s\n",p->name,d->name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		return -1;
+	}
+	if(reset_blockdev(p)){
+		return -1;
+	}
+	return 0;
+}

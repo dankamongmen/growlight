@@ -713,6 +713,57 @@ partition(char * const *args,const char *arghelp){
 	}else if(strcmp(args[1],"-q") == 0 && args[2] == NULL){
 		descend = 0;
 	}else{
+		device *d;
+
+		if(args[2] == NULL){ // add and del both have at least one arg
+			usage(args,arghelp);
+			return -1;
+		}
+		if((d = lookup_device(args[2])) == NULL){
+			usage(args,arghelp);
+			return -1;
+		}
+		if(strcmp(args[1],"add") == 0){
+			unsigned long long ull;
+			char *e;
+
+			// target dev == 2, 3 == name, 4 == size
+			if(!args[3] || !args[4] || args[5]){
+				usage(args,arghelp);
+				return -1;
+			}
+			ull = strtoull(args[4],&e,0);
+			if(add_partition(d,args[3],ull)){
+				return -1;
+			}
+			return 0;
+		}else if(strcmp(args[1],"del") == 0){
+			device *par = NULL,*p;
+
+			if(args[3]){
+				usage(args,arghelp);
+				return -1;
+			}
+			for(c = get_controllers() ; c ; c = c->next){
+				for(par = c->blockdevs ; par ; par = par->next){
+					for(p = par->parts ; p ; p = p->next){
+						if(p == d){
+							break;
+						}
+					}
+					if(p == d){
+						break;
+					}
+				}
+				if(p == d){
+					break;
+				}
+			}
+			if(wipe_partition(par,d)){
+				return -1;
+			}
+			return 0;
+		}
 		usage(args,arghelp);
 		return -1;
 	}
