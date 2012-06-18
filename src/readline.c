@@ -451,9 +451,9 @@ adapter(char * const *args,const char *arghelp){
 	int descend;
 
 	if(args[1] == NULL){
-		descend = 1;
-	}else if(strcmp(args[1],"-q") == 0 && args[2] == NULL){
 		descend = 0;
+	}else if(strcmp(args[1],"-v") == 0 && args[2] == NULL){
+		descend = 1;
 	}else{
 		usage(args,arghelp);
 		return -1;
@@ -494,9 +494,9 @@ mdadm(char * const *args,const char *arghelp){
 	int descend;
 
 	if(args[1] == NULL){
-		descend = 1;
-	}else if(strcmp(args[1],"-q") == 0 && args[2] == NULL){
 		descend = 0;
+	}else if(strcmp(args[1],"-v") == 0 && args[2] == NULL){
+		descend = 1;
 	}else{
 		usage(args,arghelp);
 		return -1;
@@ -612,13 +612,12 @@ blockdev(char * const *args,const char *arghelp){
 	device *d;
 
 	if(args[1] == NULL){
-		return blockdev_dump(1);
+		return blockdev_dump(0);
 	}
 	if(args[2] == NULL){
-		if(strcmp(args[1],"-q") == 0){
-			return blockdev_dump(0);
-		}
-		if(strcmp(args[1],"mktable") == 0){
+		if(strcmp(args[1],"-v") == 0){
+			return blockdev_dump(1);
+		}else if(strcmp(args[1],"mktable") == 0){
 			if(print_tabletypes() < 0){
 				return -1;
 			}
@@ -732,9 +731,9 @@ partition(char * const *args,const char *arghelp){
 	int descend;
 
 	if(args[1] == NULL){
-		descend = 1;
-	}else if(strcmp(args[1],"-q") == 0 && args[2] == NULL){
 		descend = 0;
+	}else if(strcmp(args[1],"-v") == 0 && args[2] == NULL){
+		descend = 1;
 	}else{
 		device *d;
 
@@ -1140,7 +1139,7 @@ static const struct fxn {
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
 	FXN(adapter,"[ adapter \"reset\" ]\n"
-			"                 | [ -q ] no arguments to detail all host bus adapters"),
+			"                 | [ -v ] no arguments to detail all host bus adapters"),
 	FXN(blockdev,"[ \"reset\" blockdev ]\n"
 			"                 | [ \"badblocks\" blockdev [ \"rw\" ] ]\n"
 			"                 | [ \"wipebiosboot\" blockdev ]\n"
@@ -1151,21 +1150,21 @@ static const struct fxn {
 			"                 | [ \"mkfs\" [ blockdev fstype ] ]\n"
 			"                    | no arguments to list supported fs types\n"
 			"                 | [ \"detail\" blockdev ]\n"
-			"                 | [ -q ] no arguments to list all blockdevs"),
+			"                 | [ -v ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
 			"                 | [ \"add\" blockdev name size ]\n"
 			"                 | [ \"name\" partition name ]\n"
-			"                 | [ -q ] no arguments to list all partitions"),
+			"                 | [ -v ] no arguments to list all partitions"),
 	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
 			"                 | [ \"fsck\" fs ]\n"
 			"                 | [ \"wipefs\" fs ]\n"
-			"                 | [ -q ] no arguments to list all filesystems"),
+			"                 | [ -v ] no arguments to list all filesystems"),
 	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
 			"                 | no arguments to detail all swaps"),
 	FXN(mdadm,"[ mdname \"create\" devcount level devices ]\n"
-			"                 | [ -q ] no arguments to detail all mdadm devices"),
+			"                 | [ -v ] no arguments to detail all mdadm devices"),
 	FXN(zpool,"[ zname \"create\" devcount level vdevs ]\n"
-			"                 | [ -q ] no arguments to detail all zpools"),
+			"                 | [ -v ] no arguments to detail all zpools"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
 			"                 | no arguments generates target fstab"),
