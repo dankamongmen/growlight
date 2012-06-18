@@ -10,7 +10,7 @@ static int
 gpt_make_table(device *d){
 	char cmd[PATH_MAX];
 
-	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s mklabel msdos",d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s mklabel gpt",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
 		return -1;
 	}
