@@ -733,6 +733,11 @@ partition(char * const *args,const char *arghelp){
 				return -1;
 			}
 			ull = strtoull(args[4],&e,0);
+			if(*e){
+				fprintf(stderr,"Invalid number: %s\n",args[4]);
+				usage(args,arghelp);
+				return -1;
+			}
 			if(add_partition(d,args[3],ull)){
 				return -1;
 			}
