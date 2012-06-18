@@ -48,6 +48,7 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	static char buf[MBR_SIZE];
 	char dbuf[PATH_MAX];
 	ssize_t w;
+	off_t ls;
 	int fd;
 
 	if(wipeend > sizeof(buf) || wipe >= wipeend){
@@ -68,7 +69,7 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 		errno = e;
 		return -1;
 	}
-	if(lseek(fd,wipe,SEEK_SET)){
+	if((ls = lseek(fd,wipe,SEEK_SET)) < 0 || ls != (off_t)wipe){
 		int e = errno;
 		fprintf(stderr,"Couldn't seek to byte %zu of %s (%s?)\n",wipe,dbuf,strerror(errno));
 		close(fd);
