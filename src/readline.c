@@ -569,8 +569,8 @@ blockdev_dump(int descend){
 			}
 		}
 	}
-	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational\n"
-			"\t\t(W)ritecache enabled, (B)IOS boot\n");
+	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational,\n"
+			"\t\t(W)ritecache enabled, (B)IOS bootable\n");
 	return 0;
 }
 
@@ -703,6 +703,29 @@ blockdev(char * const *args,const char *arghelp){
 	return -1;
 }
 
+static device *
+find_parent(const device *d){
+	device *p,*par = NULL;
+	const controller *c;
+
+	for(c = get_controllers() ; c ; c = c->next){
+		for(par = c->blockdevs ; par ; par = par->next){
+			for(p = par->parts ; p ; p = p->next){
+				if(p == d){
+					break;
+				}
+			}
+			if(p == d){
+				break;
+			}
+		}
+		if(p == d){
+			break;
+		}
+	}
+	return par;
+}
+
 static int
 partition(char * const *args,const char *arghelp){
 	const controller *c;
@@ -763,37 +786,32 @@ partition(char * const *args,const char *arghelp){
 			}
 			return 0;
 		}else if(strcmp(args[1],"del") == 0){
-			device *par = NULL,*p;
+			device *par;
 
 			if(args[3]){
 				usage(args,arghelp);
 				return -1;
 			}
-			for(c = get_controllers() ; c ; c = c->next){
-				for(par = c->blockdevs ; par ; par = par->next){
-					for(p = par->parts ; p ; p = p->next){
-						if(p == d){
-							break;
-						}
-					}
-					if(p == d){
-						break;
-					}
-				}
-				if(p == d){
-					break;
-				}
+			if((par = find_parent(d)) == NULL){
+				fprintf(stderr,"Couldn't find parent of %s\n",d->name);
+				return -1;
 			}
 			if(wipe_partition(par,d)){
 				return -1;
 			}
 			return 0;
 		}else if(strcmp(args[1],"name") == 0){
+			device *par;
+
 			if(!args[3] || args[4]){
 				usage(args,arghelp);
 				return -1;
 			}
-			if(name_partition(d,args[3])){
+			if((par = find_parent(d)) == NULL){
+				fprintf(stderr,"Couldn't find parent of %s\n",d->name);
+				return -1;
+			}
+			if(name_partition(par,d,args[3])){
 				return -1;
 			}
 			return 0;
@@ -1136,7 +1154,7 @@ static const struct fxn {
 			"                 | [ -q ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
 			"                 | [ \"add\" blockdev name size ]\n"
-			"                 | [ \"name\" blockdev name ]\n"
+			"                 | [ \"name\" partition name ]\n"
 			"                 | [ -q ] no arguments to list all partitions"),
 	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
 			"                 | [ \"fsck\" fs ]\n"

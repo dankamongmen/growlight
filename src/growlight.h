@@ -90,9 +90,8 @@ typedef struct device {
 			// filesystem's or disk's.
 			char *uuid,*label;
 			char *pname;		// Partition name, if it has
-						// one (GPT has a UTF-16 name).
-
-			//struct partition *next;	// Next on this disk
+						//  one (GPT has a UTF-16 name).
+			unsigned pnumber;	// Partition number
 			// The BIOS+MBR partition record (including the first
 			// byte, the 'boot flag') and GPT attributes.
 			unsigned long long flags;

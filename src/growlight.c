@@ -262,21 +262,26 @@ free_devtable(void){
 			} */
 
 static device *
-add_partition(device *d,const char *name,dev_t devno,uintmax_t sz){
+add_partition(device *d,const char *name,dev_t devno,unsigned partno,uintmax_t sz){
 	device *p;
 
+	if(strlen(name) >= sizeof(p->name)){
+		fprintf(stderr,"Bad name: %s\n",name);
+		return NULL;
+	}
 	if( (p = malloc(sizeof(*p))) ){
 		device **pre;
 
 		memset(p,0,sizeof(*p));
-		p->swapprio = SWAP_INVALID;
 		p->layout = LAYOUT_PARTITION;
+		p->swapprio = SWAP_INVALID;
 		strcpy(p->name,name);
 		for(pre = &d->parts ; *pre ; pre = &(*pre)->next){
 			if(strcmp((*pre)->name,name) > 0){ // FIXME 0's no good
 				break;
 			}
 		}
+		p->partdev.pnumber = partno;
 		p->devno = devno;
 		p->next = *pre;
 		p->size = sz;
@@ -349,19 +354,24 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 						return -1;
 					}
 				}else if(sysfs_exist_p(subfd,"partition")){
-					unsigned long sz;
+					unsigned long sz,pnum;
 
 					if(sysfs_devno(subfd,&devno)){
 						close(subfd);
 						return -1;
 					}
-					verbf("\tPartition at %s\n",dire->d_name);
+					if(get_sysfs_uint(subfd,"partition",&pnum)){
+						fprintf(stderr,"Couldn't determine pnum for %s (%s?)\n",
+								dire->d_name,strerror(errno));
+						pnum = 0;
+					}
+					verbf("\tPartition %lu at %s\n",pnum,dire->d_name);
 					if(get_sysfs_uint(subfd,"size",&sz)){
 						fprintf(stderr,"Couldn't determine size for %s (%s?)\n",
 								dire->d_name,strerror(errno));
 						sz = 0;
 					}
-					if(add_partition(d,dire->d_name,devno,sz) == NULL){
+					if(add_partition(d,dire->d_name,devno,pnum,sz) == NULL){
 						close(subfd);
 						return -1;
 					}
