@@ -734,9 +734,29 @@ partition(char * const *args,const char *arghelp){
 			}
 			ull = strtoull(args[4],&e,0);
 			if(*e){
-				fprintf(stderr,"Invalid number: %s\n",args[4]);
-				usage(args,arghelp);
-				return -1;
+				if(e[1]){
+					fprintf(stderr,"Invalid number: %s\n",args[4]);
+					usage(args,arghelp);
+					return -1;
+				}
+				switch(*e){
+					case 'E': case 'e':
+						ull *= 1000000000000000000; break;
+					case 'P': case 'p':
+						ull *= 1000000000000000; break;
+					case 'T': case 't':
+						ull *= 1000000000000; break;
+					case 'G': case 'g':
+						ull *= 1000000000; break;
+					case 'M': case 'm':
+						ull *= 1000000; break;
+					case 'K': case 'k':
+						ull *= 1000; break;
+					default:
+					fprintf(stderr,"Invalid number: %s\n",args[4]);
+					usage(args,arghelp);
+					return -1;
+				}
 			}
 			if(add_partition(d,args[3],ull)){
 				return -1;
