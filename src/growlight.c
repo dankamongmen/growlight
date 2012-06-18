@@ -28,6 +28,7 @@
 #include <sg.h>
 #include <mbr.h>
 #include <swap.h>
+#include <udev.h>
 #include <mdadm.h>
 #include <sysfs.h>
 #include <mounts.h>
@@ -973,6 +974,9 @@ int growlight_init(int argc,char * const *argv){
 		goto err;
 	}
 	if(parse_swaps()){
+		goto err;
+	}
+	if(monitor_udev()){
 		goto err;
 	}
 	return 0;

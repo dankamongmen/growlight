@@ -1219,6 +1219,8 @@ tty_ui(void){
 	return 0;
 }
 
+// FIXME it'd be nice to do secondary completion (ie command-sensitive) for
+// command arguments
 static char *
 completion_engine(const char *text,int state){
 	static const struct fxn *fxn;
