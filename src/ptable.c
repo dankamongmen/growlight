@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <mbr.h>
@@ -167,5 +168,36 @@ int wipe_partition(device *p,device *d){
 	if(reset_blockdev(p)){
 		return -1;
 	}
+	return 0;
+}
+
+int name_partition(device *d,const char *name){
+	char cmd[PATH_MAX];
+	char *dup;
+
+	if(d->layout != LAYOUT_PARTITION){
+		fprintf(stderr,"Will only name actual partitions\n");
+		return -1;
+	}
+	if(d->partdev.partrole != PARTROLE_GPT && d->partdev.partrole != PARTROLE_EPS
+			&& d->partdev.partrole != PARTROLE_PC98
+			&& d->partdev.partrole != PARTROLE_MAC){
+		fprintf(stderr,"Cannot name %s; bad partition table type\n",d->name);
+		return -1;
+	}
+	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s name %s",d->name,name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad names: %s / %s\n",d->name,name);
+		return -1;
+	}
+	if((dup = strdup(name)) == NULL){
+		fprintf(stderr,"Bad name: %s\n",name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		free(dup);
+		return -1;
+	}
+	free(d->partdev.pname);
+	d->partdev.pname = dup;
 	return 0;
 }

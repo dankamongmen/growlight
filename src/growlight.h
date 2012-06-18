@@ -103,6 +103,8 @@ typedef struct device {
 				PARTROLE_LOGICAL,
 				PARTROLE_EPS,		// UEFI
 				PARTROLE_GPT,
+				PARTROLE_MAC,
+				PARTROLE_PC98,
 			} partrole;
 		} partdev;
 	};

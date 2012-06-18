@@ -13,6 +13,7 @@ int wipe_ptable(struct device *);
 
 int add_partition(struct device *,const char *,size_t);
 int wipe_partition(struct device *,struct device *);
+int name_partition(struct device *,const char *);
 
 #ifdef __cplusplus
 }

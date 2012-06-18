@@ -788,6 +788,15 @@ partition(char * const *args,const char *arghelp){
 				return -1;
 			}
 			return 0;
+		}else if(strcmp(args[1],"name") == 0){
+			if(!args[3] || args[4]){
+				usage(args,arghelp);
+				return -1;
+			}
+			if(name_partition(d,args[3])){
+				return -1;
+			}
+			return 0;
 		}
 		usage(args,arghelp);
 		return -1;
@@ -1127,6 +1136,7 @@ static const struct fxn {
 			"                 | [ -q ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
 			"                 | [ \"add\" blockdev name size ]\n"
+			"                 | [ \"name\" blockdev name ]\n"
 			"                 | [ -q ] no arguments to list all partitions"),
 	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
 			"                 | [ \"fsck\" fs ]\n"
