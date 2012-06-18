@@ -6,11 +6,19 @@
 #include <libudev.h>
 
 #include <udev.h>
+#include <pthread.h>
 #include <growlight.h>
 
+static struct udev *udev;
+struct udev_monitor *udmon;
+
+int udev_event(void){
+	fprintf(stderr,"UDEV EVENT!\n");
+	return -1;
+}
+
 int monitor_udev(void){
-	struct udev_monitor *udmon;
-	struct udev *udev;
+	int r;
 
 	if((udev = udev_new()) == NULL){
 		fprintf(stderr,"Couldn't get udev instance (%s?)\n",strerror(errno));
@@ -21,5 +29,31 @@ int monitor_udev(void){
 		udev_unref(udev);
 		return -1;
 	}
+	if(udev_monitor_filter_add_match_subsystem_devtype(udmon,"block",NULL)){
+		fprintf(stderr,"Couldn't filter block events\n");
+		udev_monitor_unref(udmon);
+		udev_unref(udev);
+		return -1;
+	}
+	if(udev_monitor_enable_receiving(udmon)){
+		fprintf(stderr,"Couldn't receive events from udev\n");
+		udev_monitor_unref(udmon);
+		udev_unref(udev);
+		return -1;
+	}
+	if((r = udev_monitor_get_fd(udmon)) < 0){
+		fprintf(stderr,"Couldn't get udev fd\n");
+		udev_monitor_unref(udmon);
+		udev_unref(udev);
+		return -1;
+	}
+	return r;
+}
+
+int shutdown_udev(void){
+	udev_monitor_unref(udmon);
+	udev_unref(udev);
+	udmon = NULL;
+	udev = NULL;
 	return 0;
 }

@@ -914,7 +914,7 @@ int growlight_init(int argc,char * const *argv){
 			.val = 0,
 		},
 	};
-	int fd,opt,longidx;
+	int fd,opt,longidx,udevfd;
 	char buf[BUFSIZ];
 	const char *enc;
 	DIR *sdir;
@@ -986,7 +986,7 @@ int growlight_init(int argc,char * const *argv){
 	if(parse_swaps()){
 		goto err;
 	}
-	if(monitor_udev()){
+	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
 	return 0;
@@ -997,10 +997,13 @@ err:
 }
 
 int growlight_stop(void){
-	close_blkid();
+	int r = 0;
+
+	r |= shutdown_udev();
+	r |= close_blkid();
 	free_devtable();
 	pci_cleanup(pciacc);
-	return 0;
+	return r;
 }
 
 int reset_blockdev(device *d){
