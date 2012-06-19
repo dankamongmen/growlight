@@ -1143,7 +1143,10 @@ int rescan_device(const char *name){
 		for(lnk = &c->blockdevs ; *lnk ; lnk = &(*lnk)->next){
 			device **plnk;
 
+			// FIXME need to update mount/swap/target tables!
 			if(strcmp(name,(*lnk)->name) == 0){
+				// FIXME this method will leave us with broken
+				// partition links
 				device *d = *lnk;
 				*lnk = d->next;
 				free_device(d);
