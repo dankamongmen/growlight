@@ -30,6 +30,10 @@ AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
+PKG_CHECK_MODULES([libatasmart], [libatasmart], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
+	CFLAGS+=" $libatasmart_CFLAGS"
+	LIBS+=" $libatasmart_LIBS"
+
 PKG_CHECK_MODULES([libudev], [libudev], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])])
 	CFLAGS+=" $libudev_CFLAGS"
 	LIBS+=" $libudev_LIBS"
