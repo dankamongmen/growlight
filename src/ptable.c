@@ -4,7 +4,9 @@
 #include <string.h>
 
 #include <mbr.h>
+#include <wchar.h>
 #include <popen.h>
+#include <ptable.h>
 #include <growlight.h>
 
 static int
@@ -142,12 +144,12 @@ int wipe_ptable(device *d){
 	return -1;
 }
 
-int add_partition(device *d,const char *name,size_t size){
+int add_partition(device *d,const wchar_t *name,size_t size){
 	if(d->layout != LAYOUT_NONE){
 		fprintf(stderr,"Will only add partitions to real block devices\n");
 		return -1;
 	}
-	fprintf(stderr,"FIXME not yet implemented for %s / %zu\n",name,size);
+	fprintf(stderr,"FIXME not yet implemented for %ls / %zu\n",name,size);
 	return -1;
 }
 
@@ -171,9 +173,9 @@ int wipe_partition(device *p,device *d){
 	return 0;
 }
 
-int name_partition(device *par,device *d,const char *name){
+int name_partition(device *par,device *d,const wchar_t *name){
 	char cmd[PATH_MAX];
-	char *dup;
+	wchar_t *dup;
 
 	if(d->layout != LAYOUT_PARTITION){
 		fprintf(stderr,"Will only name actual partitions\n");
@@ -185,12 +187,12 @@ int name_partition(device *par,device *d,const char *name){
 		fprintf(stderr,"Cannot name %s; bad partition table type\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s name %u %s",par->name,d->partdev.pnumber,name) >= (int)sizeof(cmd)){
-		fprintf(stderr,"Bad names: %s / %u / %s\n",par->name,d->partdev.pnumber,name);
+	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s name %u %ls",par->name,d->partdev.pnumber,name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad names: %s / %u / %ls\n",par->name,d->partdev.pnumber,name);
 		return -1;
 	}
-	if((dup = strdup(name)) == NULL){
-		fprintf(stderr,"Bad name: %s\n",name);
+	if((dup = wcsdup(name)) == NULL){
+		fprintf(stderr,"Bad name: %ls\n",name);
 		return -1;
 	}
 	if(popen_drain(cmd)){

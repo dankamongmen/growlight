@@ -94,7 +94,7 @@ typedef struct device {
 			// These are the *partition* UUID and label, not the
 			// filesystem's or disk's.
 			char *uuid,*label;
-			char *pname;		// Partition name, if it has
+			wchar_t *pname;		// Partition name, if it has
 						//  one (GPT has a UTF-16 name).
 			unsigned pnumber;	// Partition number
 			// The BIOS+MBR partition record (including the first
@@ -173,7 +173,7 @@ const controller *get_controllers(void);
 // This is similarly no good FIXME
 device *lookup_device(const char *name);
 
-device *lookup_dentry(device *,const char *);
+//device *lookup_dentry(device *,const char *);
 
 // Supported partition table types
 const char **get_ptable_types(void);

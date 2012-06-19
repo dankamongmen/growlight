@@ -160,10 +160,10 @@ int parse_mounts(const char *fn){
 		if((d = lookup_device(rp)) == NULL){
 			goto err;
 		}
-		if((d = lookup_dentry(d,rp)) == NULL){
+		/*if((d = lookup_dentry(d,rp)) == NULL){
 			fprintf(stderr,"Couldn't find device %s\n",rp);
 			goto err;
-		}
+		}*/
 		if(d->mnt){
 			fprintf(stderr,"Already had mount for %s|%s: %s|%s\n",
 					dev,mnt,d->name,d->mnt);
