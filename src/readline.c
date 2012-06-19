@@ -336,9 +336,12 @@ print_swap(const device *p,int prefix){
 }
 
 static int
-print_fs(const device *p){
+print_fs(const device *p,int descend){
 	int r = 0,rr;
 
+	if(descend){
+		fprintf(stderr,"Can't descend for fs!\n");
+	}
 	if(p->mnttype == NULL){
 		return 0;
 	}
@@ -784,11 +787,6 @@ blockdev(wchar_t * const *args,const char *arghelp){
 				return -1;
 			}
 			return 0;
-		}else if(wcscmp(args[1],L"mkfs") == 0){
-			if(print_fstypes() < 0){
-				return -1;
-			}
-			return 0;
 		}
 		usage(args,arghelp);
 		return -1;
@@ -847,15 +845,6 @@ blockdev(wchar_t * const *args,const char *arghelp){
 			return -1;
 		}
 		make_partition_wtable(d,args[3]);
-		return 0;
-	}else if(wcscmp(args[1],L"mkfs") == 0){
-		if(args[3] == NULL || args[4]){
-			usage(args,arghelp);
-			return -1;
-		}
-		if(make_wfilesystem(d,args[3])){
-			return -1;
-		}
 		return 0;
 	}
 	usage(args,arghelp);
@@ -1045,7 +1034,7 @@ map(wchar_t * const *args,const char *arghelp){
 // accumulated in r, unless -1 is ever returned, in which case we abort
 // immediately and return -1.
 static int
-walk_devices(int (*fxn)(const device *)){
+walk_devices(int (*fxn)(const device *,int),int descend){
 	const controller *c;
 	int rr,r = 0;
 
@@ -1055,12 +1044,12 @@ walk_devices(int (*fxn)(const device *)){
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;
 
-			r += rr = fxn(d);
+			r += rr = fxn(d,descend);
 			if(rr < 0){
 				return -1;
 			}
 			for(p = d->parts ; p ; p = p->next){
-				r += rr = fxn(p);
+				r += rr = fxn(p,descend);
 				if(rr < 0){
 					return -1;
 				}
@@ -1071,10 +1060,13 @@ walk_devices(int (*fxn)(const device *)){
 }
 
 static int
-print_swaps(const device *d){
+print_swaps(const device *d,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	int rr,r = 0;
 
+	if(descend){
+		fprintf(stderr,"Can't descend for swap!\n");
+	}
 	if(d->swapprio == SWAP_INVALID){
 		return 0;
 	}
@@ -1097,16 +1089,48 @@ print_swaps(const device *d){
 	return r;
 }
 
-static int
-fs(wchar_t * const *args,const char *arghelp){
-	ZERO_ARG_CHECK(args,arghelp);
+static inline int
+fs_dump(int descend){
 	printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s\n",
 			FSLABELSIZ,FSLABELSIZ,"Label",
 			"Type","UUID","Bytes","Device");
-	if(walk_devices(print_fs)){
+	if(walk_devices(print_fs,descend)){
 		return -1;
 	}
+	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational,\n"
+			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
 	return 0;
+}
+
+static int
+fs(wchar_t * const *args,const char *arghelp){
+	device *d;
+
+	if(args[1] == NULL){
+		return fs_dump(0);
+	}
+	if(args[2] == NULL){
+		if(wcscmp(args[1],L"mkfs") == 0){
+			if(print_fstypes() < 0){
+				return -1;
+			}
+			return 0;
+		}
+		usage(args,arghelp);
+		return -1;
+	}
+// Everything else has a required device argument
+	if((d = lookup_wdevice(args[2])) == NULL){
+		return -1;
+	}
+	if(wcscmp(args[1],L"mkfs") == 0){
+		if(make_wfilesystem(d,args[3])){
+			return -1;
+		}
+		return 0;
+	}
+	usage(args,arghelp);
+	return -1;
 }
 
 static int
@@ -1117,7 +1141,7 @@ swap(wchar_t * const *args,const char *arghelp){
 					"Label","Prio","UUID","Bytes","Device") < 0){
 			return -1;
 		}
-		if(walk_devices(print_swaps)){
+		if(walk_devices(print_swaps,0)){
 			return -1;
 		}
 		return 0;
@@ -1326,8 +1350,7 @@ static const struct fxn {
 			"                 | [ \"rmtable\" blockdev ]\n"
 			"                 | [ \"mktable\" [ blockdev tabletype ] ]\n"
 			"                    | no arguments to list supported table types\n"
-			"                 | [ \"mkfs\" [ blockdev fstype ] ]\n"
-			"                    | no arguments to list supported fs types\n"
+			"                 | [ \"fsck\" blockdev ]\n"
 			"                 | [ \"detail\" blockdev ]\n"
 			"                 | [ -v ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
@@ -1337,6 +1360,7 @@ static const struct fxn {
 			"                 | [ \"setname\" partition name ]\n"
 			"                 | [ -v ] no arguments to list all partitions"),
 	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
+			"                 | no arguments to list supported fs types\n"
 			"                 | [ \"wipefs\" fs ]\n"
 			"                 | [ \"setuuid\" fs uuid ]\n"
 			"                 | [ \"setlabel\" fs label ]\n"

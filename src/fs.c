@@ -17,7 +17,9 @@ ext4_mkfs(const char *dev){
 	// pass -M with mount point FIXME
 	// take -L argument from user FIXME
 	// allow a UUID to be supplied FIXME
-	if(snprintf(cmd,sizeof(cmd),"/sbin/mkfs -t ext4 -b-2048 -c -Elazy_itable_init=0 -lazy_journal_init=0 -L SprezzaExt4 -o SprezzOS -O dir_index,extent,^uninit_bg %s",dev) >= (int)sizeof(cmd)){
+	// set creator OS FIXME
+	// allow -c (badblock check) FIXME
+	if(snprintf(cmd,sizeof(cmd),"/sbin/mkfs -t ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L SprezzaExt4 -O dir_index,extent,^uninit_bg %s",dev) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Error building command line for %s\n",dev);
 		return -1;
 	}
@@ -39,7 +41,7 @@ ext4_mkfs(const char *dev){
 		return -1;
 	}
 	if(fclose(fp)){
-		fprintf(stderr,"Error closing '%s' (%s?)\n",cmd,strerror(errno));
+		fprintf(stderr,"Error running '%s'\n",cmd);
 		return -1;
 	}
 	return 0;

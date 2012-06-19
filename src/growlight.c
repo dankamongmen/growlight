@@ -225,50 +225,7 @@ free_devtable(void){
 			free(c);
 		}
 	}
-	close(sysfd); sysfd = -1;
-	close(devfd); devfd = -1;
 }
-
-	/*if(fstatat(fd,"md",&sbuf,AT_NO_AUTOMOUNT) == 0){
-		if(S_ISDIR(sbuf.st_mode)){
-			raid = 1;
-		}
-	}*/
-
-	/* if(realdev){
-				struct sg_io_hdr sg;
-#define INQ_REPLY_LEN 96
-				unsigned char cmd[6] = {
-					INQUIRY,0,0,0,0x24,0
-				};
-				unsigned char sense[INQ_REPLY_LEN];
-#undef INQ_REPLY_LEN
-				unsigned char buf[512];
-				int r;
-				memset(&sg,0,sizeof(sg));
-				sg.interface_id = 'S'; // SCSI
-				sg.dxfer_direction = SG_DXFER_FROM_DEV;
-				sg.cmd_len = sizeof(cmd);
-				//sg.mx_sb_len = sizeof(sense);
-				sg.mx_sb_len = 32;
-				sg.iovec_count = 0;
-				//sg.dxfer_len = sizeof(sense);
-				sg.dxfer_len = 32;
-				sg.cmdp = cmd;
-				sg.sbp = sense;
-				sg.usr_ptr = buf;
-#define SCSI_TIMEOUT_MS 20000
-				sg.timeout = SCSI_TIMEOUT_MS;
-#undef SCSI_TIMEOUT_MS
-				//sg.flags = SG_FLAG_DIRECT_IO;
-				r = ioctl(fd,SG_IO,&sg,sizeof(sg),buf,sizeof(buf));
-				printf("IOCTL: %d\n",r);
-				close(fd);
-				if(r != 0){
-					fprintf(stderr,"Couldn't run SG_IO on %s (%s?)\n",name,strerror(errno));
-					return NULL;
-				}
-			} */
 
 static device *
 add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz){
@@ -788,22 +745,24 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 	int wfd,r;
 	int dfd;
 
-	wfd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
-	if(wfd < 0){
-		fprintf(stderr,"Coudln't inotify on %s (%s?)\n",dfp,strerror(errno));
-		return -1;
-	}else{
-		verbf("Watching %s on fd %d\n",dfp,wfd);
+	if(fd >= 0){
+		wfd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
+		if(wfd < 0){
+			fprintf(stderr,"Coudln't inotify on %s (%s?)\n",dfp,strerror(errno));
+			return -1;
+		}else{
+			verbf("Watching %s on fd %d\n",dfp,wfd);
+		}
 	}
 	r = 0;
 	if((dir = opendir(dfp)) == NULL){
 		fprintf(stderr,"Coudln't open %s (%s?)\n",dfp,strerror(errno));
-		inotify_rm_watch(fd,wfd);
+		if(fd >= 0){ inotify_rm_watch(fd,wfd); }
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
 		fprintf(stderr,"Coudln't get fd on %s (%s?)\n",dfp,strerror(errno));
-		inotify_rm_watch(fd,wfd);
+		if(fd >= 0){ inotify_rm_watch(fd,wfd); }
 		closedir(dir);
 		return -1;
 	}
@@ -1093,6 +1052,8 @@ int growlight_stop(void){
 	r |= close_blkid();
 	free_devtable();
 	pci_cleanup(pciacc);
+	close(sysfd); sysfd = -1;
+	close(devfd); devfd = -1;
 	return r;
 }
 
@@ -1152,6 +1113,13 @@ int rescan_device(const char *name){
 }
 
 int rescan_devices(void){
-	fprintf(stderr,"RESCAN FIXME!\n");
-	return -1;
+	int ret = 0;
+
+	// FIXME this is slightly overkill. also, it eliminates any mappings.
+	free_devtable();
+	ret |= watch_dir(-1,SYSROOT,scan_device);
+	ret |= watch_dir(-1,DEVBYID,lookup_id);
+	ret |= parse_mounts(MOUNTS);
+	ret |= parse_swaps();
+	return ret;
 }
