@@ -1137,6 +1137,16 @@ biosboot(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+rescan(wchar_t * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+
+	if(rescan_devices()){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 grubmap(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 
@@ -1294,6 +1304,7 @@ static const struct fxn {
 	FXN(uefiboot,"device"),
 	FXN(biosboot,"device"),
 	FXN(grubmap,""),
+	FXN(rescan,""),
 	FXN(benchmark,"fs"),
 	FXN(troubleshoot,""),
 	FXN(version,""),
@@ -1352,7 +1363,9 @@ tty_ui(void){
 			break;
 		}
 		if(fxn->fxn){
+			lock_growlight();
 			z = fxn->fxn(tokes,fxn->arghelp);
+			unlock_growlight();
 		}else{
 			fprintf(stderr,"Unknown command: %ls\n",tokes[0]);
 			z = -1;

@@ -16,7 +16,7 @@ int udev_event(void){
 	struct udev_device *dev;
 
 	while( (dev = udev_monitor_receive_device(udmon)) ){
-		printf("\nUDEV:\n\tdevpath: %s\n\tsubsys: %s\n\tdevtype: %s\n\t"
+		verbf("\nUDEV:\n\tdevpath: %s\n\tsubsys: %s\n\tdevtype: %s\n\t"
 				"syspath: %s\n\tsysname: %s\n\tsysnum: %s\n\t"
 				"devnode: %s\n",
 				udev_device_get_devpath(dev),
@@ -26,6 +26,9 @@ int udev_event(void){
 				udev_device_get_sysname(dev),
 				udev_device_get_sysnum(dev),
 				udev_device_get_devnode(dev));
+		lock_growlight();
+		rescan_device(udev_device_get_sysname(dev));
+		unlock_growlight();
 	}
 	return 0;
 }

@@ -185,6 +185,12 @@ int make_partition_table(device *,const char *);
 int reset_blockdev(device *);
 void free_device(device *);
 
+// Very coarse locking
+int lock_growlight(void);
+int unlock_growlight(void);
+int rescan_device(const char *);
+int rescan_devices(void);
+
 #ifdef __cplusplus
 }
 #endif

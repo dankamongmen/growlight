@@ -47,6 +47,7 @@ static unsigned verbose;
 static struct pci_access *pciacc;
 static int sysfd = -1; // Hold a reference to SYSROOT
 static int devfd = -1; // Hold a reference to DEVROOT
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 static controller unknown_bus = {
 	.name = "Unknown controller",
@@ -801,7 +802,7 @@ static inline int
 inotify_fd(void){
 	int fd;
 
-	if((fd = inotify_init1(IN_CLOEXEC)) < 0){
+	if((fd = inotify_init1(IN_NONBLOCK|IN_CLOEXEC)) < 0){
 		fprintf(stderr,"Coudln't get inotify fd (%s?)\n",strerror(errno));
 	}
 	return fd;
@@ -915,7 +916,27 @@ event_posix_thread(void *unsafe){
 		e = epoll_wait(em->efd,events,sizeof(events) / sizeof(*events),-1);
 		for(r = 0 ; r < e ; ++r){
 			if(events[r].data.fd == em->ifd){
-				// FIXME inotify read
+				char buf[BUFSIZ];
+				ssize_t s;
+
+				assert(events[r].events == EPOLLIN);
+				while((s = read(em->ifd,buf,sizeof(buf))) > 0){
+					const struct inotify_event *in;
+					unsigned idx = 0;
+
+					if(s - idx >= (ptrdiff_t)sizeof(*in)){
+						in = (struct inotify_event *)(buf + idx);
+						idx += sizeof(*in);
+						if(in->len){
+							verbf("Event on %s\n",in->name);
+						}
+						// FIXME do something with it
+					}
+				}
+				if(s && errno != EAGAIN && errno != EWOULDBLOCK){
+					fprintf(stderr,"Error reading inotify event on %d (%s?)\n",
+							em->ifd,strerror(errno));
+				}
 			}else if(events[r].data.fd == em->ufd){
 				udev_event();
 			}else{
@@ -1133,5 +1154,33 @@ int reset_blockdev(device *d){
 		sleep(5);
 	}
 	close(fd);
+	return -1;
+}
+
+int lock_growlight(void){
+	int r;
+
+	if( (r = pthread_mutex_lock(&lock)) ){
+		fprintf(stderr,"Error locking mutex (%s?)\n",strerror(errno));
+	}
+	return r;
+}
+
+int unlock_growlight(void){
+	int r;
+
+	if( (r = pthread_mutex_unlock(&lock)) ){
+		fprintf(stderr,"Error unlocking mutex (%s?)\n",strerror(errno));
+	}
+	return r;
+}
+
+int rescan_device(const char *name){
+	fprintf(stderr,"RESCAN FIXME for %s!\n",name);
+	return -1;
+}
+
+int rescan_devices(void){
+	fprintf(stderr,"RESCAN FIXME!\n");
 	return -1;
 }
