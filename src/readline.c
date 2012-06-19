@@ -255,6 +255,13 @@ pcie_gen(unsigned gen){
 	}
 }
 
+static const char *
+transport_str(transport_e t){
+	return t == SERIAL_ATAIII ? "III" : t == SERIAL_ATAII ? "II" :
+	 t == SERIAL_ATAI ? "I" : t == SERIAL_ATA8 ? "AST" :
+	 t == SERIAL_UNKNOWN ? "Srl" : t == PARALLEL_ATA ? "Par" : "Ukn";
+}
+
 static int
 print_drive(const device *d,int prefix,int descend){
 	char buf[PREFIXSTRLEN + 1];
@@ -277,33 +284,31 @@ print_drive(const device *d,int prefix,int descend){
 			d->blkdev.biosboot ? 'B' : '.',
 			d->blkdev.pttable ? d->blkdev.pttable : "none",
 			d->wwn ? d->wwn : "n/a",
-			d->blkdev.transport == SERIAL_ATAIII ? "III" :
-			 d->blkdev.transport == SERIAL_ATAII ? "II" :
-			 d->blkdev.transport == SERIAL_ATAI ? "I" :
-			 d->blkdev.transport == SERIAL_ATA8 ? "AST" :
-			 d->blkdev.transport == SERIAL_UNKNOWN ? "Srl" :
-			 d->blkdev.transport == PARALLEL_ATA ? "Par" : "Ukn");
+			transport_str(d->blkdev.transport)
+			);
 		break;
 	}case LAYOUT_MDADM:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-19.19s\n",
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec, '.', 'V', 'M', '.', '.', '.',
 			"n/a",
-			d->wwn ? d->wwn : "n/a"
+			d->wwn ? d->wwn : "n/a",
+			transport_str(d->mddev.transport)
 			);
 		break;
 	}case LAYOUT_ZPOOL:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-19.19s\n",
+		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
 			prefix,prefix,"",d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec, '.', 'V', '.', '.', '.', '.',
 			"n/a",
-			d->wwn ? d->wwn : "n/a"
+			d->wwn ? d->wwn : "n/a",
+			transport_str(d->zpool.transport)
 			);
 		break;
 	}case LAYOUT_PARTITION:{

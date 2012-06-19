@@ -30,6 +30,16 @@ typedef struct mdslave {
 	struct mdslave *next;		// Next in this md device
 } mdslave;
 
+typedef enum {
+	UNKNOWN_ATA,
+	PARALLEL_ATA,
+	SERIAL_UNKNOWN,
+	SERIAL_ATA8,
+	SERIAL_ATAI,
+	SERIAL_ATAII,
+	SERIAL_ATAIII,
+} transport_e;
+
 // An (non-link) entry in the device hierarchy, representing a block device.
 // A partition corresponds to one and only one block device (which of course
 // might represent multiple devices, or maybe just a file mounted loopback).
@@ -60,15 +70,7 @@ typedef struct device {
 	char *label;			// *Filesystem* label
 	union {
 		struct {
-			enum {
-				UNKNOWN_ATA,
-				PARALLEL_ATA,
-				SERIAL_UNKNOWN,
-				SERIAL_ATA8,
-				SERIAL_ATAI,
-				SERIAL_ATAII,
-				SERIAL_ATAIII,
-			} transport;
+			transport_e transport;
 			unsigned realdev: 1;	// Is itself a real block device
 			unsigned removable: 1;	// Removable media
 			unsigned rotate: 1;	// Rotational media / spinning platters
@@ -79,6 +81,7 @@ typedef struct device {
 			char *serial;		// Serial number (can be NULL)
 		} blkdev;
 		struct {
+			transport_e transport;
 			unsigned long disks;	// RAID disks in md
 			char *level;		// RAID level
 			mdslave *slaves;	// RAID components
@@ -106,6 +109,9 @@ typedef struct device {
 				PARTROLE_PC98,
 			} partrole;
 		} partdev;
+		struct {
+			transport_e transport;
+		} zpool;
 	};
 	enum {
 		LAYOUT_NONE,
