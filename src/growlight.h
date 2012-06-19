@@ -83,12 +83,12 @@ typedef struct device {
 			char *serial;		// Serial number (can be NULL)
 		} blkdev;
 		struct {
-			transport_e transport;
 			unsigned long disks;	// RAID disks in md
 			char *level;		// RAID level
 			mdslave *slaves;	// RAID components
 			char *uuid;
 			char *mdname;
+			transport_e transport;
 		} mddev;
 		struct {
 			// These are the *partition* UUID and label, not the
