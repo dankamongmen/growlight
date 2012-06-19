@@ -21,7 +21,8 @@ int popen_drain(const char *cmd){
 		return -1;
 	}
 	if(fclose(fd)){
-		fprintf(stderr,"Error closing %s (%s?)\n",cmd,strerror(errno));
+		fprintf(stderr,"'%s' return error\n",cmd);
+		return -1;
 	}
 	return 0;
 }

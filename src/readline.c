@@ -806,6 +806,15 @@ partition(char * const *args,const char *arghelp){
 				return -1;
 			}
 			return 0;
+		}else if(strcmp(args[1],"fsck") == 0){
+			if(args[3]){
+				usage(args,arghelp);
+				return -1;
+			}
+			if(check_partition(d)){
+				return -1;
+			}
+			return 0;
 		}else if(strcmp(args[1],"name") == 0){
 			device *par;
 
@@ -1159,11 +1168,11 @@ static const struct fxn {
 			"                 | [ \"detail\" blockdev ]\n"
 			"                 | [ -v ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
+			"                 | [ \"fsck\" partition ]\n"
 			"                 | [ \"add\" blockdev name size ]\n"
 			"                 | [ \"name\" partition name ]\n"
 			"                 | [ -v ] no arguments to list all partitions"),
 	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
-			"                 | [ \"fsck\" fs ]\n"
 			"                 | [ \"wipefs\" fs ]\n"
 			"                 | [ -v ] no arguments to list all filesystems"),
 	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"

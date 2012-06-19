@@ -201,3 +201,20 @@ int name_partition(device *par,device *d,const char *name){
 	d->partdev.pname = dup;
 	return 0;
 }
+
+int check_partition(device *d){
+	char cmd[PATH_MAX];
+
+	if(d->mnt){
+		fprintf(stderr,"Will not check mounted filesystem %s\n",d->name);
+		return -1;
+	}
+	if(snprintf(cmd,sizeof(cmd),"/sbin/fsck -C 0 /dev/%s",d->name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad name: %s\n",d->name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		return -1;
+	}
+	return 0;
+}
