@@ -9,6 +9,7 @@
 #include <mbr.h>
 #include <swap.h>
 #include <sysfs.h>
+#include <popen.h>
 #include <config.h>
 #include <target.h>
 #include <ptable.h>
@@ -92,6 +93,9 @@ bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
 
 #define ZERO_ARG_CHECK(args,arghelp) \
  if(args[1]){ usage(args,arghelp); return -1 ; }
+
+#define ONE_ARG_CHECK(args,arghelp) \
+ if(!args[1] || args[2]){ usage(args,arghelp); return -1 ; }
 
 #define TWO_ARG_CHECK(args,arghelp) \
  if(!args[1] || !args[2] || args[3]){ usage(args,arghelp); return -1 ; }
@@ -815,7 +819,7 @@ partition(char * const *args,const char *arghelp){
 				return -1;
 			}
 			return 0;
-		}else if(strcmp(args[1],"name") == 0){
+		}else if(strcmp(args[1],"setname") == 0){
 			device *par;
 
 			if(!args[3] || args[4]){
@@ -1072,7 +1076,7 @@ troubleshoot(char * const *args,const char *arghelp){
 
 static int
 uefiboot(char * const *args,const char *arghelp){
-	ZERO_ARG_CHECK(args,arghelp);
+	ONE_ARG_CHECK(args,arghelp);
 	// FIXME ensure the partition is a viable ESP
 	// FIXME ensure kernel is in ESP
 	// FIXME prepare protective MBR
@@ -1083,12 +1087,22 @@ uefiboot(char * const *args,const char *arghelp){
 
 static int
 biosboot(char * const *args,const char *arghelp){
-	ZERO_ARG_CHECK(args,arghelp);
+	ONE_ARG_CHECK(args,arghelp);
 	// FIXME ensure the partition has its boot flag set
 	// FIXME ensure it's a primary partition
 	// FIXME install grub to MBR
 	// FIXME point grub at kernel
 	return -1;
+}
+
+static int
+grubmap(char * const *args,const char *arghelp){
+	ZERO_ARG_CHECK(args,arghelp);
+
+	if(popen_drain("/usr/sbin/grub-mkdevicemap -m /dev/stdout")){
+		return -1;
+	}
+	return 0;
 }
 
 static void
@@ -1155,7 +1169,7 @@ static const struct fxn {
 } fxns[] = {
 #define FXN(x,args) { .cmd = #x, .fxn = x, .arghelp = args, }
 	FXN(adapter,"[ adapter \"reset\" ]\n"
-			"                 | [ -v ] no arguments to detail all host bus adapters"),
+			"                 | [ -v ] no arguments to list all host bus adapters"),
 	FXN(blockdev,"[ \"reset\" blockdev ]\n"
 			"                 | [ \"badblocks\" blockdev [ \"rw\" ] ]\n"
 			"                 | [ \"wipebiosboot\" blockdev ]\n"
@@ -1170,23 +1184,27 @@ static const struct fxn {
 	FXN(partition,"[ \"del\" partition ]\n"
 			"                 | [ \"fsck\" partition ]\n"
 			"                 | [ \"add\" blockdev name size ]\n"
-			"                 | [ \"name\" partition name ]\n"
+			"                 | [ \"setuuid\" partition uuid ]\n"
+			"                 | [ \"setname\" partition name ]\n"
 			"                 | [ -v ] no arguments to list all partitions"),
 	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
 			"                 | [ \"wipefs\" fs ]\n"
+			"                 | [ \"setuuid\" fs uuid ]\n"
+			"                 | [ \"setlabel\" fs label ]\n"
 			"                 | [ -v ] no arguments to list all filesystems"),
 	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
-			"                 | no arguments to detail all swaps"),
+			"                 | no arguments to list all swaps"),
 	FXN(mdadm,"[ mdname \"create\" devcount level devices ]\n"
-			"                 | [ -v ] no arguments to detail all mdadm devices"),
+			"                 | [ -v ] no arguments to list all mdadm devices"),
 	FXN(zpool,"[ zname \"create\" devcount level vdevs ]\n"
-			"                 | [ -v ] no arguments to detail all zpools"),
+			"                 | [ -v ] no arguments to list all zpools"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
 			"                 | no arguments generates target fstab"),
 	FXN(mounts,""),
 	FXN(uefiboot,"device"),
 	FXN(biosboot,"device"),
+	FXN(grubmap,""),
 	FXN(benchmark,"fs"),
 	FXN(troubleshoot,""),
 	FXN(help,"[ command ]"),
