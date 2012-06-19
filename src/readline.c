@@ -1,5 +1,7 @@
+#include <term.h>
 #include <wchar.h>
 #include <errno.h>
+#include <unistd.h>
 #include <wctype.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -18,6 +20,26 @@
 #include <health.h>
 #include <growlight.h>
 
+#ifdef HAVE_CURSES_H
+#include <curses.h>
+#else
+#ifdef HAVE_NCURSES_H
+#include <ncursesw.h>
+#else
+#ifdef HAVE_NCURSESW_H
+#include <ncurses.h>
+#else
+#ifdef HAVE_NCURSES_CURSES_H
+#include <ncurses/curses.h>
+#else
+#ifdef HAVE_NCURSESW_CURSES_H
+#include <ncursesw/curses.h>
+#endif
+#endif
+#endif
+#endif
+#endif
+
 #define U64STRLEN 20    // Does not include a '\0' (18,446,744,073,709,551,616)
 #define U64FMT "%-20ju"
 #define U32FMT "%-10ju"
@@ -27,6 +49,34 @@
 
 // Used by quit() to communicate back to the main readline loop
 static unsigned lights_off;
+static unsigned use_terminfo;
+
+static int
+use_terminfo_color(int ansicolor,int boldp){
+	if(use_terminfo){
+#ifdef HAVE_CURSES
+		const char *attrstr = boldp ? "bold" : "sgr0";
+		const char *color,*attr;
+		char *setaf;
+
+		if((attr = tigetstr(attrstr)) == NULL){
+			fprintf(stderr,"Couldn't get terminfo %s\n",attrstr);
+			return -1;
+		}
+		putp(attr);
+		if((setaf = tigetstr("setaf")) == NULL){
+			fprintf(stderr,"Couldn't get terminfo setaf\n");
+			return -1;
+		}
+		if((color = tparm(setaf,ansicolor)) == NULL){
+			fprintf(stderr,"Couldn't get terminfo color %d\n",ansicolor);
+			return -1;
+		}
+		putp(color);
+	}
+#endif
+	return 0;
+}
 
 static inline int
 usage(wchar_t * const *args,const char *arghelp){
@@ -1319,6 +1369,7 @@ help(wchar_t * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
 	if(args[1] == NULL){
+		use_terminfo_color(COLOR_GREEN,1);
 		printf("%-15.15s %s\n","Command","Arguments");
 		for(fxn = fxns ; fxn->cmd ; ++fxn){
 			printf("%-15.15ls %s\n",fxn->cmd,fxn->arghelp);
@@ -1326,11 +1377,12 @@ help(wchar_t * const *args,const char *arghelp){
 	}else if(args[2] == NULL){
 		for(fxn = fxns ; fxn->cmd ; ++fxn){
 			if(wcscmp(fxn->cmd,args[1]) == 0){
+				use_terminfo_color(COLOR_GREEN,1);
 				printf("%15.15ls %s\n",args[1],fxn->arghelp);
 				return 0;
 			}
 		}
-		printf("Unknown command: %ls\n",args[1]);
+		fprintf(stderr,"Unknown command: %ls\n",args[1]);
 		return -1;
 	}else{
 		usage(args,arghelp);
@@ -1344,6 +1396,7 @@ tty_ui(void){
 	char prompt[80] = "[" PACKAGE "](0)> ";
 	char *l;
 
+	use_terminfo_color(COLOR_WHITE,0);
 	while( (l = readline(prompt)) ){
 		const struct fxn *fxn;
 		wchar_t **tokes;
@@ -1363,9 +1416,11 @@ tty_ui(void){
 			break;
 		}
 		if(fxn->fxn){
+			use_terminfo_color(COLOR_WHITE,1);
 			lock_growlight();
 			z = fxn->fxn(tokes,fxn->arghelp);
 			unlock_growlight();
+			use_terminfo_color(COLOR_WHITE,0);
 		}else{
 			fprintf(stderr,"Unknown command: %ls\n",tokes[0]);
 			z = -1;
@@ -1424,10 +1479,24 @@ int main(int argc,char * const *argv){
 	rl_readline_name = PACKAGE;
 	rl_attempted_completion_function = growlight_completion;
 	rl_prep_terminal(1); // 1 == read 8-bit input
+	if(isatty(STDOUT_FILENO)){
+#ifdef HAVE_CURSES
+		int errret;
+
+		if(setupterm(NULL,STDOUT_FILENO,&errret) != OK){
+			fprintf(stderr,"Couldn't set up terminfo db (errret %d)\n",errret);
+		}else{
+			use_terminfo = 1;
+		}
+	}
+#endif
 	if(tty_ui()){
 		growlight_stop();
 		return EXIT_FAILURE;
 	}
+// "default foreground color" according to http://bash-hackers.org/wiki/doku.php/scripting/terminalcodes
+// but not defined in ncurses.h -- likely not fully portable :( FIXME
+	use_terminfo_color(9,0);
 	if(growlight_stop()){
 		return EXIT_FAILURE;
 	}

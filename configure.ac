@@ -24,6 +24,8 @@ AX_CHECK_DOCBOOK_XSLT
 
 AX_CHECK_OPENSSL
 
+AX_WITH_CURSES
+
 AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
