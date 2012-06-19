@@ -11,7 +11,7 @@
 
 static int
 gpt_make_table(device *d){
-	char cmd[PATH_MAX];
+	char cmd[BUFSIZ];
 
 	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s mklabel gpt",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
@@ -25,7 +25,7 @@ gpt_make_table(device *d){
 
 static int
 gpt_zap_table(device *d){
-	char cmd[PATH_MAX];
+	char cmd[BUFSIZ];
 
 	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --zap-all /dev/%s",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
@@ -39,7 +39,7 @@ gpt_zap_table(device *d){
 
 static int
 dos_make_table(device *d){
-	char cmd[PATH_MAX];
+	char cmd[BUFSIZ];
 
 	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s mklabel msdos",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
@@ -56,20 +56,58 @@ dos_zap_table(device *d){
 	return wipe_dos_ptable(d);
 }
 
+static int
+gpt_add_part(device *d,const wchar_t *name,uintmax_t size){
+	char cmd[BUFSIZ];
+
+	if(!name){
+		fprintf(stderr,"GPT partitions ought be named!\n");
+		return -1;
+	}
+	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --new=0:0:%ju /dev/%s",size,d->name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad name: %s\n",d->name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		return -1;
+	}
+	return 0;
+	fprintf(stderr,"FIXME: I don't like dos partitions! %s\n",d->name);
+	return -1;
+}
+
+static int
+dos_add_part(device *d,const wchar_t *name,uintmax_t size){
+	if(name){
+		fprintf(stderr,"Names are not supported for MBR partitions!\n");
+		return -1;
+	}
+	if(size > 2ull * 1000ull * 1000ull * 1000ull * 1000ull){
+		fprintf(stderr,"MBR partitions may not exceed 2TB\n");
+		return -1;
+	}
+	// FIXME
+	fprintf(stderr,"FIXME: I don't like dos partitions! %s\n",d->name);
+	return -1;
+}
+
 static const struct ptable {
 	const char *name;
 	int (*make)(device *);
 	int (*zap)(device *);
+	int (*add)(device *,const wchar_t *,uintmax_t);
 } ptables[] = {
 	{
 		.name = "gpt",
 		.make = gpt_make_table,
 		.zap = gpt_zap_table,
+		.add = gpt_add_part,
 	},
 	{
 		.name = "dos",
 		.make = dos_make_table,
 		.zap = dos_zap_table,
+		.add = dos_add_part,
 	},
 	{ .name = NULL, }
 };
@@ -145,11 +183,24 @@ int wipe_ptable(device *d){
 }
 
 int add_partition(device *d,const wchar_t *name,size_t size){
+	const struct ptable *pt;
+
 	if(d->layout != LAYOUT_NONE){
 		fprintf(stderr,"Will only add partitions to real block devices\n");
 		return -1;
 	}
-	fprintf(stderr,"FIXME not yet implemented for %ls / %zu\n",name,size);
+	for(pt = ptables ; pt->name ; ++pt){
+		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+			if(pt->add(d,name,size)){
+				return -1;
+			}
+			if(reset_blockdev(d)){
+				return -1;
+			}
+			return 0;
+		}
+	}
+	fprintf(stderr,"Unsupported partition table type: %s\n",d->blkdev.pttable);
 	return -1;
 }
 

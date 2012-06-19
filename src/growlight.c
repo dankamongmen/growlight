@@ -739,37 +739,6 @@ scan_device(const char *name){
 	return lookup_device(name) ? 0 : -1;
 }
 
-// Doesn't create devices. Returns the partition device rather than the
-// blockdev device if that's more appropriate.
-/* FIXME why does this exist?
-device *lookup_dentry(device *d,const char *name){
-	size_t s;
-
-	do{
-		if(strncmp(name,"/",1) == 0){
-			s = 1;
-		}else if(strncmp(name,"./",2) == 0){
-			s = 2;
-		}else if(strncmp(name,"../",3) == 0){
-			s = 3;
-		}else if(strncmp(name,"dev/",4) == 0){
-			s = 4;
-		}else{
-			s = 0;
-		}
-		name += s;
-	}while(s);
-	if(strcmp(d->name,name) == 0){
-		return d;
-	}
-	for(d = d->parts ; d ; d = d->next){
-		if(strcmp(d->name,name) == 0){
-			break;
-		}
-	}
-	return d;
-}*/
-
 // Must be an entry in /dev/disk/by-id/
 static int
 lookup_id(const char *name){

@@ -173,8 +173,6 @@ const controller *get_controllers(void);
 // This is similarly no good FIXME
 device *lookup_device(const char *name);
 
-//device *lookup_dentry(device *,const char *);
-
 // Supported partition table types
 const char **get_ptable_types(void);
 
