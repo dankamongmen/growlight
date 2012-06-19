@@ -16,7 +16,16 @@ int udev_event(void){
 	struct udev_device *dev;
 
 	while( (dev = udev_monitor_receive_device(udmon)) ){
-		fprintf(stderr,"got a udev event!\n");
+		printf("\nUDEV:\n\tdevpath: %s\n\tsubsys: %s\n\tdevtype: %s\n\t"
+				"syspath: %s\n\tsysname: %s\n\tsysnum: %s\n\t"
+				"devnode: %s\n",
+				udev_device_get_devpath(dev),
+				udev_device_get_subsystem(dev),
+				udev_device_get_devtype(dev),
+				udev_device_get_syspath(dev),
+				udev_device_get_sysname(dev),
+				udev_device_get_sysnum(dev),
+				udev_device_get_devnode(dev));
 	}
 	return 0;
 }
