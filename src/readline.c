@@ -317,7 +317,7 @@ print_partition(const device *p,int prefix,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %-4.4s %-17.17s\n",
+	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %-4.4s %ls\n",
 			prefix,prefix,"",p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
@@ -327,8 +327,7 @@ print_partition(const device *p,int prefix,int descend){
 				p->partdev.partrole == PARTROLE_LOGICAL ? "Log" :
 				p->partdev.partrole == PARTROLE_GPT ? "GPT" :
 				p->partdev.partrole == PARTROLE_EPS ? "ESP" : "Unk",
-				p->partdev.label ? p->partdev.label : "n/a");
-				//p->partdev.pname ? p->partdev.pname : L"n/a");
+				p->partdev.pname ? p->partdev.pname : L"n/a");
 	if(rr < 0){
 		return -1;
 	}

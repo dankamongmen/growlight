@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <wchar.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -171,7 +172,6 @@ void free_device(device *d){
 				break;
 			}case LAYOUT_PARTITION:{
 				free(d->partdev.pname);
-				free(d->partdev.label);
 				free(d->partdev.uuid);
 				break;
 			}case LAYOUT_ZPOOL:{
@@ -615,7 +615,6 @@ create_new_device(const char *name){
 					part = blkid_partlist_devno_to_partition(ppl,p->devno);
 					if(part){
 						unsigned long long flags;
-						const char *uuid,*pname;
 
 						flags = blkid_partition_get_flags(part);
 						// FIXME need find UEFI EPS partitions
@@ -644,14 +643,6 @@ create_new_device(const char *name){
 							}
 						}
 						p->partdev.flags = flags;
-						uuid = blkid_partition_get_uuid(part);
-						if(uuid){
-							p->partdev.uuid = strdup(uuid);
-						}
-						pname = blkid_partition_get_name(part);
-						if(pname){
-							p->partdev.label = strdup(pname);
-						}
 						if(probe_blkid_superblock(p->name,NULL,p)){
 							clobber_device(d);
 							blkid_free_probe(pr);

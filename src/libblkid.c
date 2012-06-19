@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <wchar.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -53,13 +54,15 @@ int close_blkid(void){
 // Takes a /dev/ path, and examines the superblock therein for a valid
 // filesystem or raid superblock.
 int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
-	char buf[PATH_MAX],*mnttype,*uuid,*label;
+	char buf[PATH_MAX],*mnttype,*uuid,*label,*partuuid;
 	const char *val,*name;
 	blkid_probe bp;
-	int n;
+	wchar_t *pname;
 	size_t len;
+	int n;
 
-	uuid = label = mnttype = NULL;
+	pname = NULL;
+	partuuid = uuid = label = mnttype = NULL;
 	if(strncmp(dev,"/dev/",5)){
 		if(snprintf(buf,sizeof(buf),"/dev/%s",dev) >= (int)sizeof(buf)){
 			fprintf(stderr,"Bad name: %s\n",dev);
@@ -124,35 +127,76 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 			if((label = strdup(val)) == NULL){
 				goto err;
 			}
+		}else if(strcmp(name,"PART_ENTRY_UUID") == 0){
+			if(d->layout == LAYOUT_PARTITION){
+				if((partuuid = strdup(val)) == NULL){
+					goto err;
+				}
+			}else{
+				fprintf(stderr,"PART_ENTRY_UUID on non-partition %s\n",d->name);
+			}
 		}else if(strcmp(name,"PART_ENTRY_NAME") == 0){
-			if((label = strdup(val)) == NULL){
-				goto err;
+			if(d->layout == LAYOUT_PARTITION){
+				mbstate_t ps;
+				pname = malloc(sizeof(*pname) * (strlen(val) + 1));
+				memset(&ps,0,sizeof(ps));
+				mbsnrtowcs(pname,&val,strlen(val) + 1,strlen(val) + 1,&ps);
+			}else{
+				fprintf(stderr,"PART_ENTRY_NAME on non-partition %s\n",d->name);
 			}
 		}else{
 			verbf("attr %s=%s for %s\n",name,val,dev);
 		}
 	}
+	if(d->layout == LAYOUT_PARTITION){
+		if(d->partdev.uuid == NULL){
+			d->partdev.uuid = partuuid;
+		}else if(!partuuid || strcmp(d->partdev.uuid,partuuid)){
+			if(d->partdev.uuid){
+				fprintf(stderr,"Partition UUID changed (%s->%s)\n",
+					d->partdev.uuid,partuuid ? partuuid : "none");
+			}
+			free(d->partdev.uuid);
+			d->partdev.uuid = partuuid;
+		}
+		if(d->partdev.pname == NULL){
+			d->partdev.pname = pname;
+		}else if(!pname || wcscmp(d->partdev.pname,pname)){
+			if(d->partdev.pname){
+				fprintf(stderr,"Partition name changed (%ls->%ls)\n",
+					d->partdev.pname,pname ? pname : L"none");
+			}
+			free(d->partdev.pname);
+			d->partdev.pname = pname;
+		}
+	}
 	if(d->mnttype == NULL){
 		d->mnttype = mnttype;
-	}else if(strcmp(val,d->mnttype)){
-		fprintf(stderr,"FS type changed (%s->%s)\n",d->mnttype,
-				mnttype ? mnttype : "none");
+	}else if(!mnttype || strcmp(mnttype,d->mnttype)){
+		if(d->mnttype){
+			fprintf(stderr,"FS type changed (%s->%s)\n",
+				d->mnttype,mnttype ? mnttype : "none");
+		}
 		free(d->mnttype);
 		d->mnttype = mnttype;
 	}
 	if(d->uuid == NULL){
 		d->uuid = uuid;
-	}else if(strcmp(val,d->uuid)){
-		fprintf(stderr,"FS UUID changed (%s->%s)\n",d->uuid,
-				uuid ? uuid : "none");
+	}else if(!uuid || strcmp(uuid,d->uuid)){
+		if(d->uuid){
+			fprintf(stderr,"FS UUID changed (%s->%s)\n",d->uuid,
+					uuid ? uuid : "none");
+		}
 		free(d->uuid);
 		d->uuid = uuid;
 	}
 	if(d->label == NULL){
 		d->label = label;
-	}else if(strcmp(val,d->label)){
-		fprintf(stderr,"FS label changed (%s->%s)\n",d->label,
-				label ? label : "none");
+	}else if(!label || strcmp(label,d->label)){
+		if(d->label){
+			fprintf(stderr,"FS label changed (%s->%s)\n",d->label,
+					label ? label : "none");
+		}
 		free(d->label);
 		d->label = label;
 	}

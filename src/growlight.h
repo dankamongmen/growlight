@@ -91,9 +91,8 @@ typedef struct device {
 			transport_e transport;
 		} mddev;
 		struct {
-			// These are the *partition* UUID and label, not the
-			// filesystem's or disk's.
-			char *uuid,*label;
+			// The *partition* UUID, not the filesystem/disk's.
+			char *uuid;
 			wchar_t *pname;		// Partition name, if it has
 						//  one (GPT has a UTF-16 name).
 			unsigned pnumber;	// Partition number
