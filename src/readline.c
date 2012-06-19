@@ -1238,6 +1238,9 @@ version(wchar_t * const *args,const char *arghelp){
 	printf("\n");
 	ret |= popen_drain("/usr/sbin/grub-mkdevicemap --version");
 	printf("\n");
+	ret |= popen_drain("/sbin/sgdisk --version");
+	printf("\n");
+	printf("%s %s\n",PACKAGE,VERSION);
 	return ret;
 }
 

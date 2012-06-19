@@ -162,7 +162,7 @@ int wipe_partition(device *d){
 		return -1;
 	}
 	p = d->partdev.parent;
-	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s rm /dev/%s",p->name,d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"/sbin/gdisk /dev/%s --delete=%u",p->name,d->partdev.pnumber) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad names: %s / %s\n",p->name,d->name);
 		return -1;
 	}
@@ -176,7 +176,7 @@ int wipe_partition(device *d){
 }
 
 int name_partition(device *d,const wchar_t *name){
-	char cmd[PATH_MAX];
+	char cmd[BUFSIZ];
 	wchar_t *dup;
 	device *par;
 
@@ -191,7 +191,7 @@ int name_partition(device *d,const wchar_t *name){
 		fprintf(stderr,"Cannot name %s; bad partition table type\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s name %u %ls",par->name,d->partdev.pnumber,name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk /dev/%s --change-name=%u:%ls",par->name,d->partdev.pnumber,name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad names: %s / %u / %ls\n",par->name,d->partdev.pnumber,name);
 		return -1;
 	}
