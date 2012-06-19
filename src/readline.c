@@ -282,14 +282,14 @@ print_drive(const device *d,int prefix,int descend){
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec,
 			d->blkdev.removable ? 'R' : '.',
-			'.',
+			d->blkdev.realdev ? '.' : 'V',
 			'.',
 			d->blkdev.rotate ? 'O' : '.',
 			d->blkdev.wcache ? 'W' : '.',
 			d->blkdev.biosboot ? 'B' : '.',
 			d->blkdev.pttable ? d->blkdev.pttable : "none",
 			d->wwn ? d->wwn : "n/a",
-			transport_str(d->blkdev.transport)
+			d->blkdev.realdev ? transport_str(d->blkdev.transport) : "n/a"
 			);
 		break;
 	}case LAYOUT_MDADM:{

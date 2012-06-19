@@ -31,7 +31,7 @@ typedef struct mdslave {
 } mdslave;
 
 typedef enum {
-	UNKNOWN_ATA,
+	TRANSPORT_UNKNOWN,
 	PARALLEL_ATA,
 	SERIAL_UNKNOWN,
 	SERIAL_ATA8,
