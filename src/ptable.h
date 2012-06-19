@@ -12,8 +12,8 @@ int make_partition_table(struct device *,const char *);
 int wipe_ptable(struct device *);
 
 int add_partition(struct device *,const wchar_t *,size_t);
-int wipe_partition(struct device *,struct device *);
-int name_partition(struct device *,struct device *,const wchar_t *);
+int wipe_partition(struct device *);
+int name_partition(struct device *,const wchar_t *);
 int check_partition(struct device *);
 
 #ifdef __cplusplus

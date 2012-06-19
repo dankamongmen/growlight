@@ -153,13 +153,15 @@ int add_partition(device *d,const wchar_t *name,size_t size){
 	return -1;
 }
 
-int wipe_partition(device *p,device *d){
+int wipe_partition(device *d){
 	char cmd[PATH_MAX];
+	device *p;
 
 	if(d->layout != LAYOUT_PARTITION){
 		fprintf(stderr,"Will only remove actual partitions\n");
 		return -1;
 	}
+	p = d->partdev.parent;
 	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s rm /dev/%s",p->name,d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad names: %s / %s\n",p->name,d->name);
 		return -1;
@@ -173,14 +175,16 @@ int wipe_partition(device *p,device *d){
 	return 0;
 }
 
-int name_partition(device *par,device *d,const wchar_t *name){
+int name_partition(device *d,const wchar_t *name){
 	char cmd[PATH_MAX];
 	wchar_t *dup;
+	device *par;
 
 	if(d->layout != LAYOUT_PARTITION){
 		fprintf(stderr,"Will only name actual partitions\n");
 		return -1;
 	}
+	par = d->partdev.parent;
 	if(d->partdev.partrole != PARTROLE_GPT && d->partdev.partrole != PARTROLE_EPS
 			&& d->partdev.partrole != PARTROLE_PC98
 			&& d->partdev.partrole != PARTROLE_MAC){

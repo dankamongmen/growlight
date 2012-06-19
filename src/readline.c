@@ -812,29 +812,6 @@ blockdev(wchar_t * const *args,const char *arghelp){
 	return -1;
 }
 
-static device *
-find_parent(const device *d){
-	device *p,*par = NULL;
-	const controller *c;
-
-	for(c = get_controllers() ; c ; c = c->next){
-		for(par = c->blockdevs ; par ; par = par->next){
-			for(p = par->parts ; p ; p = p->next){
-				if(p == d){
-					break;
-				}
-			}
-			if(p == d){
-				break;
-			}
-		}
-		if(p == d){
-			break;
-		}
-	}
-	return par;
-}
-
 static int
 partition(wchar_t * const *args,const char *arghelp){
 	const controller *c;
@@ -872,17 +849,11 @@ partition(wchar_t * const *args,const char *arghelp){
 			}
 			return 0;
 		}else if(wcscmp(args[1],L"del") == 0){
-			device *par;
-
 			if(args[3]){
 				usage(args,arghelp);
 				return -1;
 			}
-			if((par = find_parent(d)) == NULL){
-				fprintf(stderr,"Couldn't find parent of %s\n",d->name);
-				return -1;
-			}
-			if(wipe_partition(par,d)){
+			if(wipe_partition(d)){
 				return -1;
 			}
 			return 0;
@@ -896,18 +867,11 @@ partition(wchar_t * const *args,const char *arghelp){
 			}
 			return 0;
 		}else if(wcscmp(args[1],L"setname") == 0){
-			device *par;
-
-			printf("argh?\n");
 			if(!args[3] || args[4]){
 				usage(args,arghelp);
 				return -1;
 			}
-			if((par = find_parent(d)) == NULL){
-				fprintf(stderr,"Couldn't find parent of %s\n",d->name);
-				return -1;
-			}
-			if(name_partition(par,d,args[3])){
+			if(name_partition(d,args[3])){
 				return -1;
 			}
 			return 0;
