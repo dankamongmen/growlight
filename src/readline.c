@@ -257,9 +257,10 @@ pcie_gen(unsigned gen){
 
 static const char *
 transport_str(transport_e t){
-	return t == SERIAL_ATAIII ? "III" : t == SERIAL_ATAII ? "II" :
+	return t == SERIAL_ATAIII ? "S3" : t == SERIAL_ATAII ? "S2" :
 	 t == SERIAL_ATAI ? "I" : t == SERIAL_ATA8 ? "AST" :
-	 t == SERIAL_UNKNOWN ? "Srl" : t == PARALLEL_ATA ? "Par" : "Ukn";
+	 t == SERIAL_UNKNOWN ? "Srl" : t == PARALLEL_ATA ? "Par" :
+	 t == AGGREGATE_MIXED ? "Mix" : "Ukn";
 }
 
 static int
@@ -608,6 +609,7 @@ blockdev_details(const device *d){
 			 d->blkdev.transport == SERIAL_ATA8 ? "ATA8-AST" :
 			 d->blkdev.transport == SERIAL_UNKNOWN ? "Serial ATA" :
 			 d->blkdev.transport == PARALLEL_ATA ? "Parallel ATA" :
+			 d->blkdev.transport == AGGREGATE_MIXED ? "Mixed" :
 			 "Unknown");
 	return 0;
 }

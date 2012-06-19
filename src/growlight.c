@@ -276,6 +276,10 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz)
 		fprintf(stderr,"Bad name: %s\n",name);
 		return NULL;
 	}
+	if(!pnum){
+		fprintf(stderr,"Can't work with partition number %u\n",pnum);
+		return NULL;
+	}
 	if( (p = malloc(sizeof(*p))) ){
 		device **pre;
 
@@ -283,16 +287,17 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz)
 		p->layout = LAYOUT_PARTITION;
 		p->swapprio = SWAP_INVALID;
 		strcpy(p->name,name);
+		// FIXME ought sort by disk order not partition number
 		for(pre = &d->parts ; *pre ; pre = &(*pre)->next){
-			if(strcmp((*pre)->name,name) > 0){ // FIXME 0's no good
+			if((*pre)->partdev.pnumber >= pnum){
 				break;
 			}
 		}
 		p->partdev.pnumber = pnum;
 		p->partdev.parent = d;
 		p->devno = devno;
-		p->next = *pre;
 		p->size = sz;
+		p->next = *pre;
 		*pre = p;
 	}
 	return p;
@@ -499,7 +504,7 @@ static device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
 	controller *c;
-	device *d,dd;
+	device *d;
 	int fd;
 
 	if((d = malloc(sizeof(*d))) == NULL){
@@ -688,19 +693,13 @@ create_new_device(const char *name){
 			verbf("\tDevice is unloaded/inaccessible\n");
 		}
 	}
-	if( (d = malloc(sizeof(*d))) ){
-		*d = dd;
-		strcpy(d->name,name);
-		d->next = c->blockdevs;
-		c->blockdevs = d;
-	}else{
-		fprintf(stderr,"Couldn't look up %s (%s?)\n",name,strerror(errno));
-		free_device(&dd);
-	}
+	strcpy(d->name,name);
+	d->next = c->blockdevs;
+	c->blockdevs = d;
 	return d;
 }
 
-// name must be an entry in /sys/device/block, and also one in /dev
+// name must be an entry in /sys/class/block, and also one in /dev
 device *lookup_device(const char *name){
 	controller *c;
 	device *d;
