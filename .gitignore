@@ -1,11 +1,13 @@
 *.o
 aclocal.m4
 autom4te.cache/
+autoscan.log
 config.guess
 config.log
 config.status
 config.sub
 configure
+configure.scan
 depcomp
 .deps/
 doc/growlight.ent
@@ -22,3 +24,4 @@ src/config.h.in
 src/config.h.in~
 src/stamp-h1
 tags
+.tags
