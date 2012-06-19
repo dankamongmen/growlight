@@ -14,11 +14,13 @@
 #include <string.h>
 #include <scsi/sg.h>
 #include <pci/pci.h>
+#include <pthread.h>
 #include <langinfo.h>
 #include <linux/fs.h>
 #include <sys/stat.h>
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
+#include <sys/epoll.h>
 #include <src/config.h>
 #include <pci/header.h>
 #include <sys/inotify.h>
@@ -890,6 +892,66 @@ pci_system_init(void){
 	return 0;
 }
 
+static pthread_t eventtid;
+
+struct event_marshal {
+	int efd;		// epoll fd
+	int ifd;		// inotify fd
+	int ufd;		// udev_monitor fd
+};
+
+static void *
+event_posix_thread(void *unsafe){
+	const struct event_marshal *em = unsafe;
+	struct epoll_event events[128];
+
+	while(epoll_wait(em->efd,events,sizeof(events) / sizeof(*events),-1)){
+		// FIXME
+	}
+	return NULL;
+}
+
+static int
+event_thread(int fd,int ufd){
+	struct event_marshal *em;
+	int r;
+
+	if((em = malloc(sizeof(*em))) == NULL){
+		fprintf(stderr,"Couldn't create event marshal (%s?)\n",strerror(errno));
+		return -1;
+	}
+	if((em->efd = epoll_create1(EPOLL_CLOEXEC)) < 0){
+		fprintf(stderr,"Couldn't create epoll (%s?)\n",strerror(errno));
+		free(em);
+		return -1;
+	}
+	em->ifd = fd;
+	em->ufd = ufd;
+	if( (r = pthread_create(&eventtid,NULL,event_posix_thread,em)) ){
+		fprintf(stderr,"Couldn't create event thread (%s?)\n",strerror(r));
+		close(em->efd);
+		free(em);
+		return -1;
+	}
+	return 0;
+}
+
+static int
+kill_event_thread(void){
+	int r = 0,rr;
+
+	if( (rr = pthread_cancel(eventtid)) ){
+		fprintf(stderr,"Couldn't cancel event thread (%s?)\n",strerror(rr));
+		r |= -1;
+	}
+	if( (rr = pthread_join(eventtid,NULL)) ){
+		fprintf(stderr,"Couldn't join event thread (%s?)\n",strerror(rr));
+		r |= -1;
+	}
+	r |= shutdown_udev();
+	return r;
+}
+
 int growlight_init(int argc,char * const *argv){
 	static const struct option ops[] = {
 		{
@@ -989,6 +1051,9 @@ int growlight_init(int argc,char * const *argv){
 	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
+	if(event_thread(fd,udevfd)){
+		goto err;
+	}
 	return 0;
 
 err:
@@ -999,7 +1064,7 @@ err:
 int growlight_stop(void){
 	int r = 0;
 
-	r |= shutdown_udev();
+	r |= kill_event_thread();
 	r |= close_blkid();
 	free_devtable();
 	pci_cleanup(pciacc);

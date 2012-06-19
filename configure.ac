@@ -18,6 +18,8 @@ if test "$XSLTPROC" = no ; then
 	AC_MSG_ERROR([Cannot find xsltproc.])
 fi
 
+AC_CHECK_FUNC(epoll_create1,[],[AC_MSG_ERROR([Cannot use epoll_create1()])])
+
 AX_CHECK_DOCBOOK_XSLT
 
 AX_CHECK_OPENSSL
