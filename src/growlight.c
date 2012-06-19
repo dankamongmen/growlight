@@ -507,11 +507,16 @@ create_new_device(const char *name){
 	device *d;
 	int fd;
 
+	if(strlen(name) >= sizeof(d->name)){
+		fprintf(stderr,"Bad name: %s\n",name);
+		return NULL;
+	}
 	if((d = malloc(sizeof(*d))) == NULL){
 		fprintf(stderr,"Couldn't allocate space for %s\n",name);
 		return NULL;
 	}
 	memset(d,0,sizeof(*d));
+	strcpy(d->name,name);
 	d->swapprio = SWAP_INVALID;
 	if(strlen(name) >= sizeof(d->name)){
 		fprintf(stderr,"Name too long: %s\n",name);
@@ -693,7 +698,6 @@ create_new_device(const char *name){
 			verbf("\tDevice is unloaded/inaccessible\n");
 		}
 	}
-	strcpy(d->name,name);
 	d->next = c->blockdevs;
 	c->blockdevs = d;
 	return d;

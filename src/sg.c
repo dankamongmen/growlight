@@ -288,7 +288,7 @@ int sg_interrogate(device *d,int fd){
 			}
 		break;
 		default:
-			fprintf(stderr,"Warning: unknown transport type %hu\n",maj);
+			fprintf(stderr,"Warning: unknown transport type %hu on %s\n",maj,d->name);
 			break;
 	}
 	return 0;
