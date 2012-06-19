@@ -1107,9 +1107,64 @@ int unlock_growlight(void){
 	return r;
 }
 
+static int
+rescan(device *d){
+	device *tmp;
+
+	if((tmp = create_new_device(d->name)) == NULL){
+		return -1;
+	}
+	free_device(d);
+	*d = *tmp;
+	free(tmp);
+	return 0;
+}
+
 int rescan_device(const char *name){
-	fprintf(stderr,"RESCAN FIXME for %s!\n",name);
-	return -1;
+	device **lnk;
+	controller *c;
+	size_t s;
+
+	do{
+		if(strncmp(name,"/",1) == 0){
+			s = 1;
+		}else if(strncmp(name,"./",2) == 0){
+			s = 2;
+		}else if(strncmp(name,"../",3) == 0){
+			s = 3;
+		}else if(strncmp(name,"dev/",4) == 0){
+			s = 4;
+		}else{
+			s = 0;
+		}
+		name += s;
+	}while(s);
+	for(c = controllers ; c ; c = c->next){
+		for(lnk = &c->blockdevs ; *lnk ; lnk = &(*lnk)->next){
+			device **plnk;
+
+			if(strcmp(name,(*lnk)->name) == 0){
+				device *d = *lnk;
+				*lnk = d->next;
+				free_device(d);
+				return 0;
+			}
+			for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
+				if(strcmp(name,(*plnk)->name) == 0){
+					if(rescan(*plnk)){
+						device *p = *plnk;
+						*plnk = p->next;
+						free_device(p);
+						return 0;
+					}
+				}
+			}
+		}
+	}
+	if(create_new_device(name) == NULL){
+		return -1;
+	}
+	return 0;
 }
 
 int rescan_devices(void){
