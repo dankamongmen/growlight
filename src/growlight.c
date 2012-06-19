@@ -904,24 +904,52 @@ static void *
 event_posix_thread(void *unsafe){
 	const struct event_marshal *em = unsafe;
 	struct epoll_event events[128];
+	int e,r;
 
-	while(epoll_wait(em->efd,events,sizeof(events) / sizeof(*events),-1)){
-		// FIXME
-	}
+	do{
+		e = epoll_wait(em->efd,events,sizeof(events) / sizeof(*events),-1);
+		for(r = 0 ; r < e ; ++r){
+			if(events[r].data.fd == em->ifd){
+				// FIXME inotify read
+			}else if(events[r].data.fd == em->ufd){
+				udev_event();
+			}else{
+				fprintf(stderr,"Unknown fd %d saw event\n",events[r].data.fd);
+			}
+		}
+	}while(e >= 0);
+	fprintf(stderr,"Error processing event queue (%s?)\n",strerror(errno));
 	return NULL;
 }
 
 static int
 event_thread(int fd,int ufd){
 	struct event_marshal *em;
+	struct epoll_event ev;
 	int r;
 
+	memset(&ev,0,sizeof(ev));
+	ev.events = EPOLLIN | EPOLLRDHUP;
 	if((em = malloc(sizeof(*em))) == NULL){
 		fprintf(stderr,"Couldn't create event marshal (%s?)\n",strerror(errno));
 		return -1;
 	}
 	if((em->efd = epoll_create1(EPOLL_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't create epoll (%s?)\n",strerror(errno));
+		free(em);
+		return -1;
+	}
+	ev.data.fd = fd;
+	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,fd,&ev)){
+		fprintf(stderr,"Couldn't add %d to epoll (%s?)\n",fd,strerror(errno));
+		close(em->efd);
+		free(em);
+		return -1;
+	}
+	ev.data.fd = ufd;
+	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,ufd,&ev)){
+		fprintf(stderr,"Couldn't add %d to epoll (%s?)\n",ufd,strerror(errno));
+		close(em->efd);
 		free(em);
 		return -1;
 	}

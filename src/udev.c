@@ -13,8 +13,12 @@ static struct udev *udev;
 struct udev_monitor *udmon;
 
 int udev_event(void){
-	fprintf(stderr,"UDEV EVENT!\n");
-	return -1;
+	struct udev_device *dev;
+
+	while( (dev = udev_monitor_receive_device(udmon)) ){
+		fprintf(stderr,"got a udev event!\n");
+	}
+	return 0;
 }
 
 int monitor_udev(void){
