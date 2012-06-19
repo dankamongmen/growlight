@@ -432,7 +432,7 @@ print_drive(const device *d,int prefix,int descend){
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec,
-			d->blkdev.removable ? 'R' : '.',
+			d->blkdev.removable ? 'R' : d->blkdev.smart ? 'S' : '.',
 			d->blkdev.realdev ? '.' : 'V',
 			'.',
 			d->blkdev.rotate ? 'O' : '.',
@@ -731,7 +731,7 @@ blockdev_dump(int descend){
 		}
 	}
 	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational,\n"
-			"\t\t(W)ritecache enabled, (B)IOS bootable\n");
+			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
 	return 0;
 }
 

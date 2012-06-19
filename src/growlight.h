@@ -78,6 +78,7 @@ typedef struct device {
 			unsigned rotate: 1;	// Rotational media / spinning platters
 			unsigned wcache: 1;	// Write cache enabled
 			unsigned biosboot: 1;	// Non-zero bytes in MBR code area
+			unsigned smart: 1;	// SMART support
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)

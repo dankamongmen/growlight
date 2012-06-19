@@ -33,6 +33,7 @@
 #include <swap.h>
 #include <udev.h>
 #include <mdadm.h>
+#include <smart.h>
 #include <sysfs.h>
 #include <mounts.h>
 #include <libblkid.h>
@@ -573,6 +574,7 @@ create_new_device(const char *name){
 				clobber_device(d);
 				return NULL;
 			}
+			probe_smart(d);
 			if((d->blkdev.biossha1 = malloc(20)) == NULL){
 				fprintf(stderr,"Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
 				clobber_device(d);
