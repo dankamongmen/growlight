@@ -31,6 +31,7 @@ int explore_md_sysfs(device *d,int dirfd){
 		return -1;
 	}
 	enqm = &d->mddev.slaves;
+	d->mddev.transport = AGGREGATE_UNKNOWN;
 	for(rd = 0 ; rd < d->mddev.disks ; ++rd){
 		char buf[NAME_MAX],lbuf[NAME_MAX],*c;
 		device *subd;
@@ -71,6 +72,39 @@ int explore_md_sysfs(device *d,int dirfd){
 		*enqm = m;
 		enqm = &m->next;
 		m->component = subd;
+		switch(subd->layout){
+			case LAYOUT_NONE:
+				if(d->mddev.transport == AGGREGATE_UNKNOWN){
+					d->mddev.transport = subd->blkdev.transport;
+				}else if(d->mddev.transport != subd->blkdev.transport){
+					d->mddev.transport = AGGREGATE_MIXED;
+				}
+				break;
+			case LAYOUT_MDADM:
+				if(d->mddev.transport == AGGREGATE_UNKNOWN){
+					d->mddev.transport = subd->mddev.transport;
+				}else if(d->mddev.transport != subd->mddev.transport){
+					d->mddev.transport = AGGREGATE_MIXED;
+				}
+				break;
+			case LAYOUT_PARTITION:
+				if(d->mddev.transport == AGGREGATE_UNKNOWN){
+					d->mddev.transport = subd->partdev.parent->blkdev.transport;
+				}else if(d->mddev.transport != subd->partdev.parent->blkdev.transport){
+					d->mddev.transport = AGGREGATE_MIXED;
+				}
+				break;
+			case LAYOUT_ZPOOL:
+				if(d->mddev.transport == AGGREGATE_UNKNOWN){
+					d->mddev.transport = subd->zpool.transport;
+				}else if(d->mddev.transport != subd->zpool.transport){
+					d->mddev.transport = AGGREGATE_MIXED;
+				}
+				break;
+			default:
+				fprintf(stderr,"Unknown layout %d on %s\n",subd->layout,subd->name);
+				break;
+		}
 	}
 	return 0;
 }

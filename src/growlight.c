@@ -193,6 +193,12 @@ void free_device(device *d){
 }
 
 static void
+clobber_device(device *d){
+	free_device(d);
+	free(d);
+}
+
+static void
 free_controller(controller *c){
 	if(c){
 		free(c->name);
@@ -208,8 +214,7 @@ free_devtable(void){
 
 		while( (d = c->blockdevs) ){
 			c->blockdevs = d->next;
-			free_device(d);
-			free(d);
+			clobber_device(d);
 		}
 		controllers = c->next;
 		// FIXME ugh! horrible!
@@ -264,7 +269,7 @@ free_devtable(void){
 			} */
 
 static device *
-add_partition(device *d,const char *name,dev_t devno,unsigned partno,uintmax_t sz){
+add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz){
 	device *p;
 
 	if(strlen(name) >= sizeof(p->name)){
@@ -283,7 +288,8 @@ add_partition(device *d,const char *name,dev_t devno,unsigned partno,uintmax_t s
 				break;
 			}
 		}
-		p->partdev.pnumber = partno;
+		p->partdev.pnumber = pnum;
+		p->partdev.parent = d;
 		p->devno = devno;
 		p->next = *pre;
 		p->size = sz;
@@ -489,15 +495,19 @@ parse_bus_topology(const char *fn){
 	return find_pcie_controller(domain,bus,dev,func);
 }
 
-static inline device *
+static device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
 	controller *c;
 	device *d,dd;
 	int fd;
 
-	memset(&dd,0,sizeof(dd));
-	dd.swapprio = SWAP_INVALID;
+	if((d = malloc(sizeof(*d))) == NULL){
+		fprintf(stderr,"Couldn't allocate space for %s\n",name);
+		return NULL;
+	}
+	memset(d,0,sizeof(*d));
+	d->swapprio = SWAP_INVALID;
 	if(strlen(name) >= sizeof(d->name)){
 		fprintf(stderr,"Name too long: %s\n",name);
 		return NULL;
@@ -518,21 +528,21 @@ create_new_device(const char *name){
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		fprintf(stderr,"Couldn't open link at %s%s (%s?)\n",
 			SYSROOT,buf,strerror(errno));
-		free_device(&dd);
+		clobber_device(d);
 		return NULL;
 	}
-	if(explore_sysfs_node(fd,name,&dd)){
+	if(explore_sysfs_node(fd,name,d)){
 		close(fd);
-		free_device(&dd);
+		clobber_device(d);
 		return NULL;
 	}
 	if(close(fd)){
 		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
-		free_device(&dd);
+		clobber_device(d);
 		return NULL;
 	}
-	if((dd.layout == LAYOUT_NONE && dd.blkdev.realdev) ||
-			(dd.layout == LAYOUT_MDADM)){
+	if((d->layout == LAYOUT_NONE && d->blkdev.realdev) ||
+			(d->layout == LAYOUT_MDADM)){
 		char devbuf[PATH_MAX];
 		blkid_parttable ptbl;
 		blkid_topology tpr;
@@ -541,41 +551,41 @@ create_new_device(const char *name){
 		int pars;
 		int dfd;
 
-		if(dd.layout == LAYOUT_NONE && dd.blkdev.realdev){
+		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
 			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 				fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
-				free_device(&dd);
+				clobber_device(d);
 				return NULL;
 			}
-			if(sg_interrogate(&dd,dfd)){
+			if(sg_interrogate(d,dfd)){
 				close(dfd);
-				free_device(&dd);
+				clobber_device(d);
 				return NULL;
 			}
-			if((dd.blkdev.biossha1 = malloc(20)) == NULL){
+			if((d->blkdev.biossha1 = malloc(20)) == NULL){
 				fprintf(stderr,"Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
-				free_device(&dd);
+				clobber_device(d);
 				return NULL;
 			}
-			if(mbrsha1(dfd,dd.blkdev.biossha1)){
-				if(!dd.blkdev.removable){
+			if(mbrsha1(dfd,d->blkdev.biossha1)){
+				if(!d->blkdev.removable){
 					fprintf(stderr,"Warning: Couldn't read MBR for %s\n",name);
 				}
-				free(dd.blkdev.biossha1);
-				dd.blkdev.biossha1 = NULL;
+				free(d->blkdev.biossha1);
+				d->blkdev.biossha1 = NULL;
 			}
 			close(dfd);
 		}
 		snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
 		// FIXME move all this to its own function
-		if(probe_blkid_superblock(devbuf,&pr,&dd) == 0){
+		if(probe_blkid_superblock(devbuf,&pr,d) == 0){
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				const char *pttable;
 				device *p;
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					fprintf(stderr,"Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
-					free_device(&dd);
+					clobber_device(d);
 					blkid_free_probe(pr);
 					return NULL;
 				}
@@ -584,12 +594,12 @@ create_new_device(const char *name){
 				verbf("\t%d partition%s, table type %s\n",
 						pars,pars == 1 ? "" : "s",
 						pttable);
-				if((dd.blkdev.pttable = strdup(pttable)) == NULL){
-					free_device(&dd);
+				if((d->blkdev.pttable = strdup(pttable)) == NULL){
+					clobber_device(d);
 					blkid_free_probe(pr);
 					return NULL;
 				}
-				for(p = dd.parts ; p ; p = p->next){
+				for(p = d->parts ; p ; p = p->next){
 					blkid_partition part;
 
 					part = blkid_partlist_devno_to_partition(ppl,p->devno);
@@ -601,7 +611,7 @@ create_new_device(const char *name){
 						// FIXME need find UEFI EPS partitions
 						if(strcmp(pttable,"gpt") == 0){
 							p->partdev.partrole = PARTROLE_GPT;
-							dd.blkdev.biosboot = !zerombrp(dd.blkdev.biossha1);
+							d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
 							// FIXME verify bootable flag?
 						}else if(blkid_partition_is_extended(part)){
 							p->partdev.partrole = PARTROLE_EXTENDED;
@@ -609,7 +619,7 @@ create_new_device(const char *name){
 							p->partdev.partrole = PARTROLE_LOGICAL;
 						}else if(blkid_partition_is_primary(part)){
 							p->partdev.partrole = PARTROLE_PRIMARY;
-							dd.blkdev.biosboot = !zerombrp(dd.blkdev.biossha1);
+							d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
 							// FIXME verify bootable flag?
 						}
 // BIOS boot flag byte ought not be set to anything but 0 unless we're on a
@@ -618,7 +628,7 @@ create_new_device(const char *name){
 							if(p->partdev.partrole != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)){
 								fprintf(stderr,"Warning: BIOS+MBR boot byte was %02llx on %s\n",
 										flags & 0xffu,p->name);
-								free_device(&dd);
+								clobber_device(d);
 								blkid_free_probe(pr);
 								return NULL;
 							}
@@ -633,7 +643,7 @@ create_new_device(const char *name){
 							p->partdev.label = strdup(pname);
 						}
 						if(probe_blkid_superblock(p->name,NULL,p)){
-							free_device(&dd);
+							clobber_device(d);
 							blkid_free_probe(pr);
 							return NULL;
 						}
@@ -643,36 +653,36 @@ create_new_device(const char *name){
 				device *p;
 
 				verbf("\tNo partition table\n");
-				while( (p = dd.parts) ){
+				while( (p = d->parts) ){
 					fprintf(stderr,"Eliminating malingering partition %s\n",p->name);
-					dd.parts = p->next;
-					free_device(p);
+					d->parts = p->next;
+					clobber_device(p);
 				}
 			}
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
 				fprintf(stderr,"Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
-				free_device(&dd);
+				clobber_device(d);
 				blkid_free_probe(pr);
 				return NULL;
 			}
-			dd.logsec = dd.physsec = 0;
+			d->logsec = d->physsec = 0;
 			// FIXME errorchecking!
-			dd.logsec = blkid_topology_get_logical_sector_size(tpr);
-			dd.physsec = blkid_topology_get_physical_sector_size(tpr);
-			if(dd.logsec || dd.physsec){
+			d->logsec = blkid_topology_get_logical_sector_size(tpr);
+			d->physsec = blkid_topology_get_physical_sector_size(tpr);
+			if(d->logsec || d->physsec){
 				device *p;
 
 				verbf("\tLogical sector size: %uB Physical sector size: %uB\n",
-						dd.logsec,dd.physsec);
-				for(p = dd.parts ; p ; p = p->next){
-					p->logsec = dd.logsec;
-					p->physsec = dd.physsec;
+						d->logsec,d->physsec);
+				for(p = d->parts ; p ; p = p->next){
+					p->logsec = d->logsec;
+					p->physsec = d->physsec;
 				}
 			}
 			blkid_free_probe(pr);
-		}else if(!dd.blkdev.removable || errno != ENOMEDIUM){
+		}else if(!d->blkdev.removable || errno != ENOMEDIUM){
 			fprintf(stderr,"Couldn't probe %s (%s?)\n",name,strerror(errno));
-			free_device(&dd);
+			clobber_device(d);
 			return NULL;
 		}else{
 			verbf("\tDevice is unloaded/inaccessible\n");

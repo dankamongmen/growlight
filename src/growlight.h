@@ -38,6 +38,8 @@ typedef enum {
 	SERIAL_ATAI,
 	SERIAL_ATAII,
 	SERIAL_ATAIII,
+	AGGREGATE_UNKNOWN,
+	AGGREGATE_MIXED,
 } transport_e;
 
 // An (non-link) entry in the device hierarchy, representing a block device.
@@ -108,6 +110,7 @@ typedef struct device {
 				PARTROLE_MAC,
 				PARTROLE_PC98,
 			} partrole;
+			struct device *parent;
 		} partdev;
 		struct {
 			transport_e transport;
