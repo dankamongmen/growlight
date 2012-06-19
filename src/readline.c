@@ -1156,6 +1156,22 @@ tokenize(const char *line,char ***tokes){
 }
 
 static int
+version(char * const *args,const char *arghelp){
+	int ret = 0;
+
+	ZERO_ARG_CHECK(args,arghelp);
+	ret |= popen_drain("/usr/sbin/smartctl --version");
+	printf("\n");
+	ret |= popen_drain("/sbin/parted --version");
+	printf("\n");
+	ret |= popen_drain("/sbin/mkswap --version");
+	printf("\n");
+	ret |= popen_drain("/usr/sbin/grub-mkdevicemap --version");
+	printf("\n");
+	return ret;
+}
+
+static int
 quit(char * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	lights_off = 1;
@@ -1207,6 +1223,7 @@ static const struct fxn {
 	FXN(grubmap,""),
 	FXN(benchmark,"fs"),
 	FXN(troubleshoot,""),
+	FXN(version,""),
 	FXN(help,"[ command ]"),
 	FXN(quit,""),
 	{ .cmd = NULL, .fxn = NULL, .arghelp = NULL, },
