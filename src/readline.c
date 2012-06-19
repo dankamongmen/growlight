@@ -1314,7 +1314,7 @@ static const struct fxn {
 			"                 | [ \"wipefs\" fs ]\n"
 			"                 | [ \"setuuid\" fs uuid ]\n"
 			"                 | [ \"setlabel\" fs label ]\n"
-			"                 | [ -v ] no arguments to list all filesystems"),
+			"                 | no arguments to list all filesystems"),
 	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
 			"                 | no arguments to list all swaps"),
 	FXN(mdadm,"[ mdname \"create\" devcount level devices ]\n"
