@@ -267,6 +267,9 @@ int sg_interrogate(device *d,int fd){
 			memcpy(d->blkdev.serial,buf + START_SERIAL,LENGTH_SERIAL * sizeof(*buf));
 			d->blkdev.serial[LENGTH_SERIAL * sizeof(*buf)] = '\0';
 		}
+	}else{
+		verbf("Got bad data on SG_IO for %s\n",d->name);
+		return 0;
 	}
 	maj = buf[TRANSPORT_MAJOR] >> 12u;
 	min = buf[TRANSPORT_MAJOR] & 0xfffu;
@@ -288,7 +291,7 @@ int sg_interrogate(device *d,int fd){
 			}
 		break;
 		default:
-			fprintf(stderr,"Warning: unknown transport type %hu on %s\n",maj,d->name);
+			fprintf(stderr,"Unknown transport type %hu on %s\n",maj,d->name);
 			break;
 	}
 	return 0;
