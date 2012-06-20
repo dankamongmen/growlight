@@ -5,8 +5,11 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 int init_zfs_support(void);
 int stop_zfs_support(void);
+int print_zfs_version(FILE *);
 
 #ifdef __cplusplus
 }

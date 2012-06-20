@@ -11,6 +11,7 @@
 
 #include "fs.h"
 #include "mbr.h"
+#include "zfs.h"
 #include "swap.h"
 #include "sysfs.h"
 #include "popen.h"
@@ -1345,6 +1346,9 @@ version(wchar_t * const *args,const char *arghelp){
 	ret |= popen_drain("/usr/sbin/grub-mkdevicemap --version");
 	printf("\n");
 	ret |= popen_drain("/sbin/sgdisk --version");
+	if(print_zfs_version(stdout) < 0){
+		ret |= -1;
+	}
 	printf("\n");
 	printf("%s %s\n",PACKAGE,VERSION);
 	return ret;

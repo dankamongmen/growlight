@@ -32,6 +32,10 @@ int stop_zfs_support(void){
 	zht = NULL;
 	return 0;
 }
+
+int print_zfs_version(FILE *fp){
+	return fprintf(fp,"SPA version %s\n",SPA_VERSION_STRING);
+}
 #else
 int init_zfs_support(void){
 	verbf("No ZFS support in this build.\n");
@@ -40,5 +44,9 @@ int init_zfs_support(void){
 
 int stop_zfs_support(void){
 	return 0;
+}
+
+int print_zfs_version(FILE *fp){
+	return fprintf(fp,"No ZFS support in this build.\n");
 }
 #endif
