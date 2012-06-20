@@ -34,7 +34,8 @@ int stop_zfs_support(void){
 }
 
 int print_zfs_version(FILE *fp){
-	return fprintf(fp,"LLNL ZoL, SPA version %s\n",SPA_VERSION_STRING);
+	return fprintf(fp,"LLNL ZoL: ZPL version %s, SPA version %s\n",
+			ZPL_VERSION_STRING,SPA_VERSION_STRING);
 }
 #else
 int init_zfs_support(void){
