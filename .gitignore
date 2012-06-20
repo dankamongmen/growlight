@@ -22,6 +22,7 @@ missing
 src/config.h
 src/config.h.in
 src/config.h.in~
+src/.dirstamp
 src/stamp-h1
 tags
 .tags
