@@ -22,15 +22,34 @@ static char history[HIS_MAX_RECORD_LEN];
 // FIXME taken from zpool.c source
 static char props[] = "name,size,allocated,free,capacity,dedupratio,health,altroot";
 
+struct zpoolcb_t {
+	unsigned pools;
+};
+
+static int
+zpoolcb(zpool_handle_t *zhp,void *arg){
+	assert(zhp && !arg);
+	// FIXME
+	return 0;
+}
+
 static int
 scan_zpools(libzfs_handle_t *zfs){
 	zprop_list_t *pools = NULL;
+	struct zpoolcb_t cb;
 
 	if(zprop_get_list(zfs,props,&pools,ZFS_TYPE_POOL)){
 		fprintf(stderr,"Coudln't list ZFS pools\n");
 		return -1;
 	}
+	// FIXME do what with it?
 	zprop_free_list(pools);
+	memset(&cb,0,sizeof(cb));
+	if(zpool_iter(zht,zpoolcb,&cb)){
+		fprintf(stderr,"Couldn't iterate over zpools\n");
+		return -1;
+	}
+	verbf("Found %u ZFS zpool%s\n",cb.pools,cb.pools == 1 ? "" : "s");
 	return 0;
 }
 
