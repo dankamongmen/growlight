@@ -282,11 +282,6 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 		fprintf(stderr,"We were passed a partition (%s)!\n",name);
 		return -1;
 	}
-	if(get_sysfs_bool(fd,"queue/rotational",&b)){
-		fprintf(stderr,"Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
-	}else{
-		d->blkdev.rotate = !!b;
-	}
 	if(get_sysfs_bool(fd,"removable",&b)){
 		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
 	}else{
@@ -311,6 +306,11 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 				d->revision ? d->revision : "n/a",
 				d->blkdev.serial ? d->blkdev.serial : "n/a");
 		close(sdevfd);
+		if(get_sysfs_bool(fd,"queue/rotational",&b)){
+			fprintf(stderr,"Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
+		}else{
+			d->blkdev.rotate = !!b;
+		}
 	}
 	while(errno = 0, (dire = readdir(dir)) ){
 		int subfd;
