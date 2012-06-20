@@ -28,8 +28,29 @@ struct zpoolcb_t {
 
 static int
 zpoolcb(zpool_handle_t *zhp,void *arg){
-	assert(zhp && !arg);
-	// FIXME
+	struct zpoolcb_t *cb = arg;
+	uint64_t version;
+	const char *name;
+	nvlist_t *conf;
+
+	name = zpool_get_name(zhp);
+	conf = zpool_get_config(zhp,NULL);
+	if(!name || !conf){
+		fprintf(stderr,"name/config failed for zpool\n");
+		return -1;
+	}
+	++cb->pools;
+	if(nvlist_lookup_uint64(conf,ZPOOL_CONFIG_VERSION,&version)){
+		fprintf(stderr,"Couldn't get %s zpool version\n",name);
+		return -1;
+	}
+	if(version > SPA_VERSION){
+		fprintf(stderr,"%s zpool version too new (%lu > %llu)\n",
+				name,version,SPA_VERSION);
+		return -1;
+	}
+	printf("%s zpool version: %lu\n",name,version);
+	zpool_close(zhp);
 	return 0;
 }
 

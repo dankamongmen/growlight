@@ -114,6 +114,7 @@ typedef struct device {
 		} partdev;
 		struct {
 			transport_e transport;
+			uint64_t zpoolver;	// zpool version
 		} zpool;
 	};
 	enum {

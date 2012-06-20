@@ -33,7 +33,7 @@ AX_WITH_CURSES
 AC_CHECK_LIB(zfs,libzfs_init, [have_libzfs=yes],
 	     [AC_MSG_WARN([Cannot find libzfs.])])
 if test "x$have_libzfs" = xyes; then
-	LIBS+=" -lzfs"
+	LIBS+=" -lzfs -lnvpair"
 	AC_CHECK_HEADER([libzfs.h],[],[AC_MSG_WARN([Found ZFS library but not headers.])])
 	AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs])
 fi
