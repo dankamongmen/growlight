@@ -338,6 +338,7 @@ print_fs(const device *p,int descend){
 	if(descend){
 		fprintf(stderr,"Can't descend for fs!\n");
 	}
+	use_terminfo_color(COLOR_GREEN,1);
 	if(p->mnttype == NULL){
 		return 0;
 	}
@@ -366,6 +367,7 @@ print_partition(const device *p,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
+	use_terminfo_color(COLOR_GREEN,1);
 	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %-4.4s %ls\n",
 			p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
@@ -423,6 +425,7 @@ print_drive(const device *d,int descend){
 	const device *p;
 	int r = 0,rr;
 
+	use_terminfo_color(COLOR_CYAN,1);
 	switch(d->layout){
 	case LAYOUT_NONE:{
 		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
@@ -802,6 +805,7 @@ blockdev_dump(int descend){
 			}
 		}
 	}
+	use_terminfo_color(COLOR_WHITE,1);
 	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational,\n"
 			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
 	return 0;
@@ -1136,8 +1140,6 @@ fs_dump(int descend){
 	if(walk_devices(print_fs,descend)){
 		return -1;
 	}
-	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational,\n"
-			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
 	return 0;
 }
 
