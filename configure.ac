@@ -1,7 +1,7 @@
 AC_PREREQ([2.61])
 AC_INIT([growlight], [0.0.99-pre], [sprezzos-dev@sprezzatech.com], [growlight], [http://http://dank.qemfd.net/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-bzip2])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-bzip2 std-options subdir-objects])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/])
 
@@ -26,9 +26,17 @@ AX_CHECK_OPENSSL
 
 AX_WITH_CURSES
 
+AC_CHECK_LIB(zfs,libzfs_init, [AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs]),[have_libzfs=yes]],
+	[AC_MSG_WARN([Cannot find libzfs.])])
+if test "x$have_libzfs" = xyes; then
+	LIBS+=" -lzfs"
+fi
+
 AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
+
+PKG_PROG_PKG_CONFIG
 
 PKG_CHECK_MODULES([libatasmart], [libatasmart], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"
