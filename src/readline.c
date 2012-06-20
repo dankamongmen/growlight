@@ -1018,7 +1018,6 @@ map(wchar_t * const *args,const char *arghelp){
 		return -1;
 	}
 	if((d = lookup_wdevice(args[1])) == NULL/* || (d = lookup_dentry(d,args[1])) == NULL*/){
-		fprintf(stderr,"Couldn't find device %ls\n",args[1]);
 		return -1;
 	}
 	if(args[2][0] != L'/'){
@@ -1148,20 +1147,19 @@ swap(wchar_t * const *args,const char *arghelp){
 		return 0;
 	}
 	TWO_ARG_CHECK(args,arghelp);
-	if((d = lookup_wdevice(args[1])) == NULL){
-		fprintf(stderr,"Couldn't find device %ls\n",args[2]);
+	if((d = lookup_wdevice(args[2])) == NULL){
 		return -1;
 	}
-	if(wcscmp(args[2],L"on") == 0){
+	if(wcscmp(args[1],L"on") == 0){
 		if(swapondev(d)){
 			return -1;
 		}
-	}else if(wcscmp(args[2],L"off") == 0){
+	}else if(wcscmp(args[1],L"off") == 0){
 		if(swapoffdev(d)){
 			return -1;
 		}
 	}else{
-		fprintf(stderr,"Invalid command to %ls: %ls\n",args[0],args[1]);
+		usage(args,arghelp);
 		return -1;
 	}
 	return 0;
@@ -1391,11 +1389,11 @@ static const struct fxn {
 			"                 | [ \"setuuid\" fs uuid ]\n"
 			"                 | [ \"setlabel\" fs label ]\n"
 			"                 | no arguments to list all filesystems"),
-	FXN(swap,"[ swapdevice \"on\"|\"off\" ]\n"
+	FXN(swap,"[ \"on\"|\"off\" swapdevice ]\n"
 			"                 | no arguments to list all swaps"),
-	FXN(mdadm,"[ mdname \"create\" devcount level devices ]\n"
+	FXN(mdadm,"[ \"create\" mdname devcount level devices ]\n"
 			"                 | [ -v ] no arguments to list all mdadm devices"),
-	FXN(zpool,"[ zname \"create\" devcount level vdevs ]\n"
+	FXN(zpool,"[ \"create\" zname devcount level vdevs ]\n"
 			"                 | [ -v ] no arguments to list all zpools"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
