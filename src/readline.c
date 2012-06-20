@@ -508,6 +508,52 @@ print_drive(const device *d,int prefix,int descend){
 }
 
 static int
+print_zpool(const device *d,int descend){
+	char buf[PREFIXSTRLEN + 1];
+	int r = 0,rr;
+
+	if(d->layout != LAYOUT_ZPOOL){
+		return 0;
+	}
+	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
+			d->name,
+			d->uuid ? d->uuid : "n/a",
+			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+			d->physsec, "n/a",
+			d->zpool.disks,d->zpool.level ? d->zpool.level : "n/a"
+			);
+	if(rr < 0){
+		return -1;
+	}
+	if(!descend){
+		return r;
+	}
+	/*
+	for(md = d->mddev.slaves ; md ; md = md->next){
+		r += rr = print_dev_mplex(md->component,1,descend);
+		if(rr < 0){
+			return -1;
+		}
+		if(strcmp(md->name,md->component->name)){
+			const device *p;
+
+			for(p = md->component->parts ; p ; p = p->next){
+				if(strcmp(md->name,p->name)){
+					continue;
+				}
+				r += rr = print_partition(p,1,descend);
+				if(rr < 0){
+					return -1;
+				}
+			}
+		}
+
+	}
+	*/
+	return r;
+}
+
+static int
 print_dev_mplex(const device *d,int prefix,int descend){
 	switch(d->layout){
 		case LAYOUT_NONE:
@@ -517,7 +563,7 @@ print_dev_mplex(const device *d,int prefix,int descend){
 		case LAYOUT_MDADM:
 			return print_mdadm(d,prefix,descend);
 		case LAYOUT_ZPOOL:
-			// FIXME return print_zpool(d,prefix,descend);
+			return print_zpool(d,descend);
 		default:
 			return -1;
 	}
@@ -529,6 +575,9 @@ print_mdadm(const device *d,int prefix,int descend){
 	const mdslave *md;
 	int r = 0,rr;
 
+	if(d->layout != LAYOUT_MDADM){
+		return 0;
+	}
 	r += rr = printf("%-*.*s%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
 			prefix,prefix,"",
 			d->name,
@@ -631,24 +680,51 @@ adapter(wchar_t * const *args,const char *arghelp){
 	return 0;
 }
 
+// Walk the block devices, evaluating *fxn on each. The return value will be
+// accumulated in r, unless -1 is ever returned, in which case we abort
+// immediately and return -1.
 static int
-zpool(wchar_t * const *args,const char *arghelp){
+walk_devices(int (*fxn)(const device *,int),int descend){
 	const controller *c;
+	int rr,r = 0;
 
-	ZERO_ARG_CHECK(args,arghelp);
-	printf("%-10.10s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-7.7s\n",
-			"Device","Bytes","PSect","Table","Disks","Level");
 	for(c = get_controllers() ; c ; c = c->next){
-		device *d;
+		const device *d;
 
-		if(c->bus != BUS_VIRTUAL){
-			continue;
-		}
 		for(d = c->blockdevs ; d ; d = d->next){
-			if(d->layout == LAYOUT_ZPOOL){
-				// FIXME
+			const device *p;
+
+			r += rr = fxn(d,descend);
+			if(rr < 0){
+				return -1;
+			}
+			for(p = d->parts ; p ; p = p->next){
+				r += rr = fxn(p,descend);
+				if(rr < 0){
+					return -1;
+				}
 			}
 		}
+	}
+	return 0;
+}
+
+static int
+zpool(wchar_t * const *args,const char *arghelp){
+	int descend;
+
+	if(args[1] == NULL){
+		descend = 0;
+	}else if(wcscmp(args[1],L"-v") == 0 && args[2] == NULL){
+		descend = 1;
+	}else{
+		usage(args,arghelp);
+		return -1;
+	}
+	printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
+			"Device","UUID","Bytes","PSect","Table","Disks","Level");
+	if(walk_devices(print_zpool,descend)){
+		return -1;
 	}
 	return 0;
 }
@@ -1026,35 +1102,6 @@ map(wchar_t * const *args,const char *arghelp){
 	}
 	if(prepare_wmount(d,args[2],args[3],args[4])){
 		return -1;
-	}
-	return 0;
-}
-
-// Walk the block devices, evaluating *fxn on each. The return value will be
-// accumulated in r, unless -1 is ever returned, in which case we abort
-// immediately and return -1.
-static int
-walk_devices(int (*fxn)(const device *,int),int descend){
-	const controller *c;
-	int rr,r = 0;
-
-	for(c = get_controllers() ; c ; c = c->next){
-		const device *d;
-
-		for(d = c->blockdevs ; d ; d = d->next){
-			const device *p;
-
-			r += rr = fxn(d,descend);
-			if(rr < 0){
-				return -1;
-			}
-			for(p = d->parts ; p ; p = p->next){
-				r += rr = fxn(p,descend);
-				if(rr < 0){
-					return -1;
-				}
-			}
-		}
 	}
 	return 0;
 }

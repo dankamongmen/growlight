@@ -461,6 +461,12 @@ parse_bus_topology(const char *fn){
 	return find_pcie_controller(domain,bus,dev,func);
 }
 
+// Used by systems which don't properly populate sysfs (*cough* zfs *cough*)
+void add_new_virtual_blockdev(device *d){
+	d->next = virtual_bus.blockdevs;
+	virtual_bus.blockdevs = d;
+}
+
 static device *
 create_new_device(const char *name){
 	char buf[PATH_MAX] = "";
@@ -1068,7 +1074,7 @@ int reset_blockdev(device *d){
 	unsigned t;
 	int fd;
 
-	if(snprintf(buf,sizeof(buf),"/sys/block/%s/device/rescan",d->name) >= (int)sizeof(buf)){
+	if(snprintf(buf,sizeof(buf),SYSROOT"/%s/device/rescan",d->name) >= (int)sizeof(buf)){
 		fprintf(stderr,"Name too long: %s\n",d->name);
 		return -1;
 	}

@@ -32,11 +32,16 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	uint64_t version;
 	const char *name;
 	nvlist_t *conf;
+	device *d;
 
 	name = zpool_get_name(zhp);
 	conf = zpool_get_config(zhp,NULL);
 	if(!name || !conf){
 		fprintf(stderr,"name/config failed for zpool\n");
+		return -1;
+	}
+	if(strlen(name) >= sizeof(d->name)){
+		fprintf(stderr,"zpool name too long: %s\n",name);
 		return -1;
 	}
 	++cb->pools;
@@ -51,6 +56,17 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	}
 	printf("%s zpool version: %lu\n",name,version);
 	zpool_close(zhp);
+	if((d = malloc(sizeof(*d))) == NULL){
+		fprintf(stderr,"Couldn't allocate device (%s?)\n",strerror(errno));
+		return -1;
+	}
+	memset(d,0,sizeof(*d));
+	strcpy(d->name,name);
+	d->model = strdup("LLNL ZoL");
+	d->layout = LAYOUT_ZPOOL;
+	d->zpool.transport = AGGREGATE_UNKNOWN;
+	d->zpool.zpoolver = version;
+	add_new_virtual_blockdev(d);
 	return 0;
 }
 

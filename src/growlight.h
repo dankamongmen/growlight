@@ -115,6 +115,8 @@ typedef struct device {
 		struct {
 			transport_e transport;
 			uint64_t zpoolver;	// zpool version
+			unsigned long disks;	// vdevs in zpool
+			char *level;		// zraid level
 		} zpool;
 	};
 	enum {
@@ -190,6 +192,8 @@ int lock_growlight(void);
 int unlock_growlight(void);
 int rescan_device(const char *);
 int rescan_devices(void);
+
+void add_new_virtual_blockdev(device *);
 
 #ifdef __cplusplus
 }
