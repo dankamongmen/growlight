@@ -64,6 +64,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	strcpy(d->name,name);
 	d->model = strdup("LLNL ZoL");
 	d->layout = LAYOUT_ZPOOL;
+	d->swapprio = SWAP_INVALID;
 	d->zpool.transport = AGGREGATE_UNKNOWN;
 	d->zpool.zpoolver = version;
 	add_new_virtual_blockdev(d);
