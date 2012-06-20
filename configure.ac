@@ -1,15 +1,19 @@
 AC_PREREQ([2.61])
 AC_INIT([growlight], [0.0.99-pre], [sprezzos-dev@sprezzatech.com], [growlight], [http://http://dank.qemfd.net/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-bzip2 std-options subdir-objects])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-bzip2 std-options subdir-objects nostdinc])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/])
 
 ## compiler check
 CXXFLAGS="-O2 -Wall -W"
 AC_PROG_CXX
+AC_PROG_CC
 AC_PROG_CC_C_O
 AC_PROG_CC_C99
+AC_C_INLINE
+AC_C_RESTRICT
+AC_CHECK_HEADERS([wchar.h])
 
 AX_PTHREAD
 
@@ -26,10 +30,12 @@ AX_CHECK_OPENSSL
 
 AX_WITH_CURSES
 
-AC_CHECK_LIB(zfs,libzfs_init, [AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs]),[have_libzfs=yes]],
-	[AC_MSG_WARN([Cannot find libzfs.])])
+AC_CHECK_LIB(zfs,libzfs_init, [have_libzfs=yes],
+	     [AC_MSG_WARN([Cannot find libzfs.])])
 if test "x$have_libzfs" = xyes; then
 	LIBS+=" -lzfs"
+	AC_CHECK_HEADER([libzfs.h],[],[AC_MSG_WARN([Found ZFS library but not headers.])])
+	AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs])
 fi
 
 AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],

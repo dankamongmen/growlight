@@ -3,7 +3,6 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <mdadm.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -11,9 +10,9 @@
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
 
-#include <sg.h>
-#include <sysfs.h>
-#include <growlight.h>
+#include "sg.h"
+#include "sysfs.h"
+#include "growlight.h"
 
 // Taken from hdparm-9.39's sgio.h
 enum {

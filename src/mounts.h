@@ -5,14 +5,14 @@
 extern "C" {
 #endif
 
-typedef struct mount {
+typedef struct mntentry {
 	char *path;
 	char *dev;
 	char *fs;
 	char *ops;
 	char *label;
 	char *uuid;
-} mount;
+} mntentry;
 
 // (Re)parse the specified file having /proc/mounts format. Remember that
 // /proc/mounts must be poll()ed with POLLPRI, not POLLIN!

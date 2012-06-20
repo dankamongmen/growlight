@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <stdio.h>
-#include <sysfs.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -8,7 +7,7 @@
 #include <string.h>
 #include <linux/kdev_t.h>
 
-#include <sysfs.h>
+#include "sysfs.h"
 
 // FIXME use libudev or at least mmap.c for this crap
 // FIXME sysfs is UTF-8 not ASCII!

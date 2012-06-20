@@ -8,9 +8,9 @@
 #include <stdint.h>
 #include <sys/stat.h>
 
-#include <mmap.h>
-#include <mounts.h>
-#include <growlight.h>
+#include "mmap.h"
+#include "mounts.h"
+#include "growlight.h"
 
 static int
 parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops){

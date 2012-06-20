@@ -1,8 +1,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
-#include <popen.h>
 #include <string.h>
+
+#include "popen.h"
 
 int popen_drain(const char *cmd){
 	char buf[BUFSIZ];

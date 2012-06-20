@@ -10,8 +10,8 @@
 #include <openssl/sha.h>
 #include <openssl/err.h>
 
-#include <mbr.h>
-#include <growlight.h>
+#include "mbr.h"
+#include "growlight.h"
 
 #define MBR_SIZE 512
 #define MBR_CODE_SIZE 440

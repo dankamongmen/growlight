@@ -7,9 +7,9 @@
 #include <pthread.h>
 #include <blkid/blkid.h>
 
-#include <fs.h>
-#include <libblkid.h>
-#include <growlight.h>
+#include "fs.h"
+#include "libblkid.h"
+#include "growlight.h"
 
 static blkid_cache cache;
 static unsigned cache_once_success;

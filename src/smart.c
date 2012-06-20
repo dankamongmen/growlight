@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <stdio.h>
-#include <sysfs.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -8,8 +7,8 @@
 #include <string.h>
 #include <atasmart.h>
 
-#include <smart.h>
-#include <growlight.h>
+#include "smart.h"
+#include "growlight.h"
 
 int probe_smart(device *d){
 	char path[PATH_MAX];

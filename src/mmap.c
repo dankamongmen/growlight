@@ -7,7 +7,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-#include <mmap.h>
+#include "mmap.h"
 
 // Handle files which aren't easily supported by mmap(), such as /proc entries
 // which don't return their true lengths to fstat() and friends. fd should be

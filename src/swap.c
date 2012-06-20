@@ -6,8 +6,8 @@
 #include <string.h>
 #include <sys/swap.h>
 
-#include <swap.h>
-#include <growlight.h>
+#include "swap.h"
+#include "growlight.h"
 
 int mkswap(device *d){
 	char cmd[PATH_MAX],buf[BUFSIZ];

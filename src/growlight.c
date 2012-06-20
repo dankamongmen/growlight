@@ -1,3 +1,4 @@
+#define HAVE_IOCTL_IN_SYS_IOCTL_H
 #include <assert.h>
 #include <wchar.h>
 #include <ctype.h>
@@ -22,22 +23,23 @@
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
 #include <sys/epoll.h>
-#include <src/config.h>
 #include <pci/header.h>
 #include <sys/inotify.h>
 #include <libdevmapper.h>
 #include <openssl/ssl.h>
 
-#include <sg.h>
-#include <mbr.h>
-#include <swap.h>
-#include <udev.h>
-#include <mdadm.h>
-#include <smart.h>
-#include <sysfs.h>
-#include <mounts.h>
-#include <libblkid.h>
-#include <growlight.h>
+#include "sg.h"
+#include "mbr.h"
+#include "zfs.h"
+#include "swap.h"
+#include "udev.h"
+#include "mdadm.h"
+#include "smart.h"
+#include "sysfs.h"
+#include "config.h"
+#include "mounts.h"
+#include "libblkid.h"
+#include "growlight.h"
 
 #define SYSROOT "/sys/block/"
 #define MOUNTS	"/proc/mounts"
@@ -1018,6 +1020,9 @@ int growlight_init(int argc,char * const *argv){
 		goto err;
 	}
 	if((fd = inotify_fd()) < 0){
+		goto err;
+	}
+	if(init_zfs_support()){
 		goto err;
 	}
 	if(watch_dir(fd,SYSROOT,scan_device)){

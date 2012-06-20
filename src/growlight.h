@@ -11,7 +11,7 @@ int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 #include <stdint.h>
 #include <sys/types.h>
 
-#include <mounts.h>
+#include "mounts.h"
 
 #define FSLABELSIZ 17
 
@@ -56,7 +56,7 @@ typedef struct device {
 	// If the filesystem is not mounted, but is found, only mnttype will be
 	// set from among mnt, mntops and mnttype
 	char *mnttype;			// Type of mount
-	mount *target;			// Future mount point
+	mntentry *target;		// Future mount point
 	uintmax_t size;			// Size in bytes
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size

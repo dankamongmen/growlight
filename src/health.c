@@ -1,15 +1,14 @@
 #include <assert.h>
 #include <stdio.h>
-#include <sysfs.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
-#include <popen.h>
-#include <health.h>
-#include <growlight.h>
+#include "popen.h"
+#include "health.h"
+#include "growlight.h"
 
 int badblock_scan(device *d,unsigned rw){
 	char cmd[PATH_MAX];

@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <mbr.h>
-#include <wchar.h>
-#include <popen.h>
-#include <ptable.h>
-#include <growlight.h>
+#include "mbr.h"
+#include "wchar.h"
+#include "popen.h"
+#include "ptable.h"
+#include "growlight.h"
 
 static int
 gpt_make_table(device *d){

@@ -1,13 +1,14 @@
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <mdadm.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <sysfs.h>
-#include <growlight.h>
+#include "sysfs.h"
+#include "mdadm.h"
+#include "growlight.h"
 
 int explore_md_sysfs(device *d,int dirfd){
 	unsigned long rd;

@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <growlight.h>
+
+#include "growlight.h"
 
 static int
 ext4_mkfs(const char *dev){

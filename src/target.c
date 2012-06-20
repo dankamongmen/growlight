@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <target.h>
-#include <growlight.h>
+#include "target.h"
+#include "growlight.h"
 
 // Topologically sorted
 static struct target {
-	mount m;
+	mntentry m;
 	struct target *next;
 } *targets;
 

@@ -31,3 +31,14 @@ Building from a git checkout:
 Building from a tarball:
 
  - ./configure && make && sudo make install
+
+
+===ZFS Support===
+
+This is tricky, and not recommended unless you want to experiment. You'll need
+installed SPL/ZFS libraries. You'll be using the include files from the
+checkout, since by default using the SPL headers hides the real system headers.
+Unfortunately, the headers I've copied into libzfs/ in the checkout quite
+likely don't match yours. Have fun!
+
+	env CFLAGS="-I`pwd`/libzfs" LDFLAGS="-L/usr/local/lib" ./configure

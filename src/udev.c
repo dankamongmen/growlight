@@ -5,9 +5,9 @@
 #include <string.h>
 #include <libudev.h>
 
-#include <udev.h>
-#include <pthread.h>
-#include <growlight.h>
+#include "udev.h"
+#include "pthread.h"
+#include "growlight.h"
 
 static struct udev *udev;
 struct udev_monitor *udmon;

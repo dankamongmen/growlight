@@ -9,16 +9,16 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
-#include <fs.h>
-#include <mbr.h>
-#include <swap.h>
-#include <sysfs.h>
-#include <popen.h>
-#include <config.h>
-#include <target.h>
-#include <ptable.h>
-#include <health.h>
-#include <growlight.h>
+#include "fs.h"
+#include "mbr.h"
+#include "swap.h"
+#include "sysfs.h"
+#include "popen.h"
+#include "config.h"
+#include "target.h"
+#include "ptable.h"
+#include "health.h"
+#include "growlight.h"
 
 #ifdef HAVE_CURSES_H
 #include <curses.h>
@@ -256,7 +256,7 @@ static int help(wchar_t * const *,const char *);
 static int print_mdadm(const device *,int,int);
 
 static int
-print_target(const mount *m,int prefix){
+print_target(const mntentry *m,int prefix){
 	int r = 0,rr;
 
 	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n%*.*s %s %s\n",
