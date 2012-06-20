@@ -257,17 +257,15 @@ static int help(wchar_t * const *,const char *);
 static int print_mdadm(const device *,int,int);
 
 static int
-print_target(const mntentry *m,int prefix){
+print_target(const mntentry *m){
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n%*.*s %s %s\n",
-			prefix,prefix,"",
+	r += rr = printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n %s %s\n",
 			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
 			m->fs,
 			m->uuid ? m->uuid : "n/a",
 			"-1", // FIXME
 			m->dev,
-			prefix,prefix,"",
 			m->path,m->ops);
 	if(rr < 0){
 		return -1;
@@ -276,18 +274,16 @@ print_target(const mntentry *m,int prefix){
 }
 
 static int
-print_mount(const device *d,int prefix){
+print_mount(const device *d){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n%*.*s %s %s\n",
-			prefix,prefix,"",
+	r += rr = printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n %s %s\n",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
 			d->uuid ? d->uuid : "n/a",
 			qprefix(d->size * d->logsec,1,buf,sizeof(buf),0),
 			d->name,
-			prefix,prefix,"",
 			d->mnt,d->mntops);
 	if(rr < 0){
 		return -1;
@@ -296,12 +292,11 @@ print_mount(const device *d,int prefix){
 }
 
 static int
-print_unmount(const device *d,int prefix){
+print_unmount(const device *d){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n",
-			prefix,prefix,"",
+	r += rr = printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
 			d->uuid ? d->uuid : "n/a",
@@ -314,11 +309,11 @@ print_unmount(const device *d,int prefix){
 }
 
 static int
-print_swap(const device *p,int prefix){
+print_swap(const device *p){
 	int r = 0,rr;
 
 	assert(p->mnttype);
-	r += rr = printf("%*.*s%-*.*s %-5.5s %-36.36s %-6.6s",prefix,prefix,"",
+	r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s",
 			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
 			p->mnttype,
 			p->uuid ? p->uuid : "n/a",p->name);
@@ -350,15 +345,15 @@ print_fs(const device *p,int descend){
 		return 0;
 	}
 	if(p->target){
-		r += rr = print_target(p->target,0);
+		r += rr = print_target(p->target);
 		if(rr < 0){
 			return -1;
 		}
 	}
 	if(p->mnt){
-		r += rr = print_mount(p,0);
+		r += rr = print_mount(p);
 	}else{
-		r += rr = print_unmount(p,0);
+		r += rr = print_unmount(p);
 	}
 	if(rr < 0){
 		return -1;
@@ -367,12 +362,12 @@ print_fs(const device *p,int descend){
 }
 
 static int
-print_partition(const device *p,int prefix,int descend){
+print_partition(const device *p,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	r += rr = printf("%*.*s%-10.10s %-36.36s " PREFIXFMT " %-4.4s %ls\n",
-			prefix,prefix,"",p->name,
+	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %-4.4s %ls\n",
+			p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
 			((p->partdev.partrole == PARTROLE_PRIMARY || p->partdev.partrole == PARTROLE_GPT) && (p->partdev.flags & 0xffu) == 0x80) ? "Boot" :
@@ -389,14 +384,14 @@ print_partition(const device *p,int prefix,int descend){
 		return r;
 	}
 	if(p->mnt){
-		r += rr = print_mount(p,prefix + 1);
+		r += rr = print_mount(p);
 	}else if(p->swapprio >= SWAP_INACTIVE){
-		r += rr = print_swap(p,prefix + 1);
+		r += rr = print_swap(p);
 	}else if(p->mnttype){
-		r += rr = print_unmount(p,prefix + 1);
+		r += rr = print_unmount(p);
 	}
 	if(p->target){
-		r += rr = print_target(p->target,prefix + 1);
+		r += rr = print_target(p->target);
 	}
 	if(rr < 0){
 		return -1;
@@ -423,15 +418,15 @@ transport_str(transport_e t){
 }
 
 static int
-print_drive(const device *d,int prefix,int descend){
+print_drive(const device *d,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	const device *p;
 	int r = 0,rr;
 
 	switch(d->layout){
 	case LAYOUT_NONE:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
-			prefix,prefix,"",d->name,
+		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
+			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
@@ -448,8 +443,8 @@ print_drive(const device *d,int prefix,int descend){
 			);
 		break;
 	}case LAYOUT_MDADM:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
-			prefix,prefix,"",d->name,
+		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
+			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
@@ -460,8 +455,8 @@ print_drive(const device *d,int prefix,int descend){
 			);
 		break;
 	}case LAYOUT_ZPOOL:{
-		r += rr = printf("%*.*s%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
-			prefix,prefix,"",d->name,
+		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
+			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
@@ -483,26 +478,23 @@ print_drive(const device *d,int prefix,int descend){
 		return r;
 	}
 	if(d->mnt){
-		r += rr = print_mount(d,prefix + 1);
+		r += rr = print_mount(d);
 	}else if(d->mnttype){
-		r += rr = print_unmount(d,prefix + 1);
+		r += rr = print_unmount(d);
 	}else if(d->swapprio >= SWAP_INACTIVE){
-		r += rr = print_swap(d,prefix + 1);
+		r += rr = print_swap(d);
 	}
 	if(d->target){
-		r += rr = print_target(d->target,prefix + 1);
+		r += rr = print_target(d->target);
 	}
 	if(rr < 0){
 		return -1;
 	}
-	if(!prefix){
-		for(p = d->parts ; p ; p = p->next){
-			r += rr = print_partition(p,prefix + 1,descend);
-			if(rr < 0){
-				return -1;
-			}
+	for(p = d->parts ; p ; p = p->next){
+		r += rr = print_partition(p,descend);
+		if(rr < 0){
+			return -1;
 		}
-		
 	}
 	return r;
 }
@@ -541,7 +533,7 @@ print_zpool(const device *d,int descend){
 				if(strcmp(md->name,p->name)){
 					continue;
 				}
-				r += rr = print_partition(p,1,descend);
+				r += rr = print_partition(p,descend);
 				if(rr < 0){
 					return -1;
 				}
@@ -557,9 +549,9 @@ static int
 print_dev_mplex(const device *d,int prefix,int descend){
 	switch(d->layout){
 		case LAYOUT_NONE:
-			return print_drive(d,prefix,descend);
+			return print_drive(d,descend);
 		case LAYOUT_PARTITION:
-			return print_partition(d,prefix,descend);
+			return print_partition(d,descend);
 		case LAYOUT_MDADM:
 			return print_mdadm(d,prefix,descend);
 		case LAYOUT_ZPOOL:
@@ -604,7 +596,7 @@ print_mdadm(const device *d,int prefix,int descend){
 				if(strcmp(md->name,p->name)){
 					continue;
 				}
-				r += rr = print_partition(p,1,descend);
+				r += rr = print_partition(p,descend);
 				if(rr < 0){
 					return -1;
 				}
@@ -651,7 +643,7 @@ print_controller(const controller *c,int descend){
 		return r;
 	}
 	for(d = c->blockdevs ; d ; d = d->next){
-		r += rr = print_drive(d,1,descend);
+		r += rr = print_drive(d,descend);
 		if(rr < 0){
 			return -1;
 		}
@@ -805,7 +797,7 @@ blockdev_dump(int descend){
 		const device *d;
 
 		for(d = c->blockdevs ; d ; d = d->next){
-			if(print_drive(d,0,descend) < 0){
+			if(print_drive(d,descend) < 0){
 				return -1;
 			}
 		}
@@ -819,7 +811,7 @@ static inline int
 blockdev_details(const device *d){
 	unsigned z;
 
-	if(print_drive(d,0,1) < 0){
+	if(print_drive(d,1) < 0){
 		return -1;
 	}
 	printf("\n");
@@ -1004,7 +996,7 @@ partition(wchar_t * const *args,const char *arghelp){
 			const device *p;
 
 			for(p = d->parts ; p ; p = p->next){
-				if(print_partition(p,0,descend) < 0){
+				if(print_partition(p,descend) < 0){
 					return -1;
 				}
 			}
@@ -1025,21 +1017,21 @@ mounts(wchar_t * const *args,const char *arghelp){
 			const device *p;
 
 			if(d->mnt){
-				if(print_mount(d,0) < 0){
+				if(print_mount(d) < 0){
 					return -1;
 				}
 			}else if(d->target){
-				if(print_target(p->target,0) < 0){
+				if(print_target(p->target) < 0){
 					return -1;
 				}
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if(p->mnt){
-					if(print_mount(p,0) < 0){
+					if(print_mount(p) < 0){
 						return -1;
 					}
 				}else if(p->target){
-					if(print_target(p->target,0) < 0){
+					if(print_target(p->target) < 0){
 						return -1;
 					}
 				}
@@ -1061,14 +1053,14 @@ print_map(void){
 			const device *p;
 
 			if(d->target){
-				r += rr = print_target(d->target,0);
+				r += rr = print_target(d->target);
 				if(rr < 0){
 					return -1;
 				}
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if(p->target){
-					r += rr = print_target(p->target,0);
+					r += rr = print_target(p->target);
 					if(rr < 0){
 						return -1;
 					}
