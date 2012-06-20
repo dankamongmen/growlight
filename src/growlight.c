@@ -1057,6 +1057,7 @@ int growlight_stop(void){
 	r |= close_blkid();
 	free_devtable();
 	pci_cleanup(pciacc);
+	r |= stop_zfs_support();
 	close(sysfd); sysfd = -1;
 	close(devfd); devfd = -1;
 	return r;

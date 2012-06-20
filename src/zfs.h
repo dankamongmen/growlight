@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 int init_zfs_support(void);
+int stop_zfs_support(void);
 
 #ifdef __cplusplus
 }
