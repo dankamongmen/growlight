@@ -1310,9 +1310,7 @@ tokenize(const char *line,wchar_t ***tokes){
 				++wchars;
 				continue;
 			}
-			if(wchars == 0){
-				break;
-			}
+			assert(wchars);
 			if((n = malloc(sizeof(*n) * (wchars + 1))) == NULL){
 				free_tokes(*tokes);
 				return -1;
