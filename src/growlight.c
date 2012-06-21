@@ -154,6 +154,9 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 		}
 		c->next = controllers;
 		controllers = c;
+	}else{
+		free(module);
+		free(sysfs);
 	}
 	return c;
 }
@@ -502,7 +505,7 @@ parse_bus_topology(const char *fn){
 		fprintf(stderr,"Couldn't extract PCI address from %s\n",buf);
 		return NULL;
 	}
-	if((c = find_pcie_controller(domain,bus,dev,func,sysfs,module)) == NULL){
+	if((c = find_pcie_controller(domain,bus,dev,func,module,sysfs)) == NULL){
 		free(module);
 		free(sysfs);
 		return NULL;
