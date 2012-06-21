@@ -502,8 +502,8 @@ parse_bus_topology(const char *fn){
 		return NULL;
 	}
 	if((sysfs = parse_pci_busid(buf,&domain,&bus,&dev,&func,&module)) == NULL){
-		fprintf(stderr,"Couldn't extract PCI address from %s\n",buf);
-		return NULL;
+		verbf("Couldn't extract PCI address from %s\n",buf);
+		return &unknown_bus;
 	}
 	if((c = find_pcie_controller(domain,bus,dev,func,module,sysfs)) == NULL){
 		free(module);
@@ -564,6 +564,9 @@ create_new_device(const char *name){
 		close(fd);
 		clobber_device(d);
 		return NULL;
+	}
+	if(c == &unknown_bus){
+		d->blkdev.realdev = 0;
 	}
 	if(close(fd)){
 		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
@@ -1107,7 +1110,7 @@ int growlight_init(int argc,char * const *argv){
 		goto err;
 	}
 	if(watch_dir(fd,DEVBYID,lookup_id)){
-		goto err;
+		fprintf(stderr,"Couldn't monitor %s; won't have WWNs\n",DEVBYID);
 	}
 	if(parse_mounts(MOUNTS)){
 		goto err;
