@@ -23,10 +23,14 @@ bin_PROGRAMS=
 bin_PROGRAMS+=growlight-tty
 
 growlight_tty_SOURCES=
-growlight_tty_SOURCES+=src/growlight.c src/libblkid.c src/readline.c src/mbr.c \
-		       src/mdadm.c src/sysfs.c src/mounts.c src/mmap.c \
-		       src/target.c src/sg.c src/ptable.c src/swap.c src/fs.c \
-		       src/popen.c src/health.c src/udev.c src/smart.c src/zfs.c
+growlight_tty_SOURCES+=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
+	src/libblkid.c src/libblkid.h src/readline.c src/readline.h \
+	src/mdadm.c src/mdadm.h src/sysfs.c src/sysfs.h \
+	src/mounts.c src/mounts.h src/mmap.c src/mmap.h \
+	src/target.c src/target.h src/sg.c src/sg.h src/ptable.c src/ptable.h \
+	src/swap.c src/swap.h src/fs.c src/fs.h src/popen.c src/popen.h \
+	src/health.c src/health.h src/udev.c src/udev.h \
+	src/smart.c src/smart.h src/zfs.c src/zfs.h
 
 %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl $<
