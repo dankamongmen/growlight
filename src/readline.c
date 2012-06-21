@@ -835,7 +835,7 @@ blockdev_dump(int descend){
 	}
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, (Z)pool, r(O)tational,\n"
-			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART,\n");
+			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
 	return 0;
 }
 

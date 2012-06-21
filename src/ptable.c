@@ -312,7 +312,7 @@ int partition_set_flag(device *d,uint64_t flag,unsigned state){
 	par = d->partdev.parent;
 	if(d->partdev.partrole == PARTROLE_PRIMARY){
 		if(flag != 0x80){
-			fprintf(stderr,"Invalid flag for BIOS/MBR: %016lu\n",flag);
+			fprintf(stderr,"Invalid flag for BIOS/MBR: 0x%016jx\n",(uintmax_t)flag);
 			return -1;
 		}
 		// FIXME set it!
@@ -320,9 +320,9 @@ int partition_set_flag(device *d,uint64_t flag,unsigned state){
 		fprintf(stderr,"Cannot set flags on %s; bad partition type\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk -A %u:%s:%lx /dev/%s",
+	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk -A %u:%s:%jx /dev/%s",
 				d->partdev.pnumber,state ? "set" : "clear",
-				flag,par->name) >= (int)sizeof(cmd)){
+				(uintmax_t)flag,par->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",par->name);
 		return -1;
 	}
