@@ -953,6 +953,20 @@ blockdev(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+print_partition_attributes(void){
+	printf("GPT flags:\n");
+	printf("\t%016llx %s\n",0x0000000000000001llu,"Required partition");
+	printf("\t%016llx %s\n",0x0000000000000002llu,"Legacy BIOS bootable");
+	printf("\t%016llx %s\n",0x1000000000000000llu,"Read-only");
+	printf("\t%016llx %s\n",0x2000000000000000llu,"Shadow copy");
+	printf("\t%016llx %s\n",0x4000000000000000llu,"Hidden");
+	printf("\t%016llx %s\n",0x8000000000000000llu,"No automount");
+	printf("MBR flags:\n");
+	printf("\t%02x %s\n",0x80u,"Bootable");
+	return 0;
+}
+
+static int
 partition(wchar_t * const *args,const char *arghelp){
 	const controller *c;
 	int descend;
@@ -964,7 +978,33 @@ partition(wchar_t * const *args,const char *arghelp){
 	}else{
 		device *d;
 
-		if(args[2] == NULL){ // add and del both have at least one arg
+		if(wcscmp(args[1],L"setflag") == 0){
+			uint64_t val;
+
+			if(!args[2]){
+				print_partition_attributes();
+				return 0;
+			}
+			if((d = lookup_wdevice(args[2])) == NULL){
+				usage(args,arghelp);
+				return -1;
+			}
+			if(!args[3] || !args[4] || args[5]){
+				usage(args,arghelp);
+				return -1;
+			}else if(wcscasecmp(args[3],L"on") == 0){
+				val = 1;
+			}else if(wcscasecmp(args[3],L"off") == 0){
+				val = 0;
+			}else{
+				usage(args,arghelp);
+				return -1;
+			}
+			// FIXME
+			fprintf(stderr,"FIXME not yet implemented (%ls = %lu)\n",args[5],val);
+			return 0;
+		}
+		if(args[2] == NULL){ // the remainder always have an arg
 			usage(args,arghelp);
 			return -1;
 		}
@@ -1472,6 +1512,8 @@ static const struct fxn {
 			"                 | [ \"add\" blockdev name size ]\n"
 			"                 | [ \"setuuid\" partition uuid ]\n"
 			"                 | [ \"setname\" partition name ]\n"
+			"                 | [ \"setflag\" [ partition \"on\"|\"off\" flag ] ]\n"
+			"                    | no arguments to list supported flags\n"
 			"                 | [ -v ] no arguments to list all partitions"),
 	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
 			"                 | no arguments to list supported fs types\n"
