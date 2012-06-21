@@ -47,6 +47,7 @@
 #define DEVROOT "/dev"
 #define DEVBYID DEVROOT "/disk/by-id/"
 
+static unsigned usepci;
 static unsigned verbose;
 static struct pci_access *pciacc;
 static int sysfd = -1; // Hold a reference to SYSROOT
@@ -82,53 +83,61 @@ int verbf(const char *fmt,...){
 
 static controller *
 find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
-	controller *cur;
+	controller *c;
 
-	for(cur = controllers ; cur ; cur = cur->next){
-		if(cur->bus != BUS_PCIe){
+	for(c = controllers ; c ; c = c->next){
+		if(c->bus != BUS_PCIe){
 			continue;
 		}
-		if(cur->pcie.domain != domain || cur->pcie.bus != bus){
+		if(c->pcie.domain != domain || c->pcie.bus != bus){
 			continue;
 		}
-		if(cur->pcie.dev != dev || cur->pcie.func != func){
+		if(c->pcie.dev != dev || c->pcie.func != func){
 			continue;
 		}
 		break;
 	}
-	if(cur == NULL){
-		const char *vend,*model;
-		struct pci_device *pci;
-		struct pci_dev *pcidev;
-		char buf[BUFSIZ];
+	if(c == NULL){
 		controller *c;
 
-		if((pci = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
-			fprintf(stderr,"Couldn't look up PCIe device\n");
+		if((c = malloc(sizeof(*c))) == NULL){
 			return NULL;
 		}
-		if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
-			fprintf(stderr,"Couldn't look up PCIe device\n");
-			return NULL;
-		}
-		assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
-						PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
-						PCI_FILL_SIZES|PCI_FILL_RESCAN));
-		vend = pci_device_get_vendor_name(pci);
-		model = pci_device_get_device_name(pci);
-		snprintf(buf,sizeof(buf),"%s %s",
-				vend ? vend : "Unknown vendor",
-				model ? model : "unknown model");
-		if( (c = malloc(sizeof(*c))) ){
+		memset(c,0,sizeof(*c));
+		c->bus = BUS_PCIe;
+		c->pcie.domain = domain;
+		c->pcie.bus = bus;
+		c->pcie.dev = dev;
+		c->pcie.func = func;
+		if(usepci){
 			struct pci_cap *pcicap;
+			const char *vend,*model;
+			struct pci_device *pci;
+			struct pci_dev *pcidev;
+			char buf[BUFSIZ];
 			uint32_t data;
 
-			memset(c,0,sizeof(*c));
-			c->bus = BUS_PCIe;
-			c->pcie.domain = domain;
-			c->pcie.bus = bus;
-			c->pcie.dev = dev;
-			c->pcie.func = func;
+			if((pci = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
+				fprintf(stderr,"Couldn't look up PCIe device\n");
+				return NULL;
+			}
+			if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
+				fprintf(stderr,"Couldn't look up PCIe device\n");
+				return NULL;
+			}
+			assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
+							PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
+							PCI_FILL_SIZES|PCI_FILL_RESCAN));
+			vend = pci_device_get_vendor_name(pci);
+			model = pci_device_get_device_name(pci);
+			snprintf(buf,sizeof(buf),"%s %s",
+					vend ? vend : "Unknown vendor",
+					model ? model : "unknown model");
+			if((c->name = strdup(buf)) == NULL){
+				pci_free_dev(pcidev);
+				free(c);
+				return NULL;
+			}
 			//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
 			/* Get the relevant address pointer */
 			data = 0;
@@ -141,16 +150,12 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 				c->pcie.gen = data & PCI_EXP_LNKSTA_SPEED;
 				c->pcie.lanes_neg = (data & PCI_EXP_LNKSTA_WIDTH) >> 4u;
 			}
-			if((c->name = strdup(buf)) == NULL){
-				pci_free_dev(pcidev);
-				return NULL;
-			}
+			pci_free_dev(pcidev);
 		}
-		pci_free_dev(pcidev);
 		c->next = controllers;
-		cur = controllers = c;
+		controllers = c;
 	}
-	return cur;
+	return c;
 }
 
 const controller *get_controllers(void){
@@ -836,12 +841,14 @@ get_dir_fd(DIR **dir,const char *root){
 
 static int
 glight_pci_init(void){
+	if(pci_system_init()){
+		return -1;
+	}
 	if((pciacc = pci_alloc()) == NULL){
 		return -1;
 	}
 	pci_init(pciacc);
 	pci_scan_bus(pciacc);
-	pci_system_init();
 	return 0;
 }
 
@@ -1021,8 +1028,9 @@ int growlight_init(int argc,char * const *argv){
 	printf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s\n",PACKAGE,
 			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf);
 	if(glight_pci_init()){
-		fprintf(stderr,"Couldn't init libpci (%s?)\n",strerror(errno));
-		goto err;
+		fprintf(stderr,"Couldn't init libpciaccess (%s?)\n",strerror(errno));
+	}else{
+		usepci = 1;
 	}
 	if(chdir(SYSROOT)){
 		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
@@ -1071,7 +1079,10 @@ int growlight_stop(void){
 	r |= kill_event_thread();
 	r |= close_blkid();
 	free_devtable();
-	pci_cleanup(pciacc);
+	if(usepci){
+		pci_cleanup(pciacc);
+	}
+	usepci = 0;
 	r |= stop_zfs_support();
 	close(sysfd); sysfd = -1;
 	close(devfd); devfd = -1;
