@@ -674,14 +674,19 @@ adapter(wchar_t * const *args,const char *arghelp){
 	}else if(wcscmp(args[1],L"-v") == 0 && args[2] == NULL){
 		descend = 1;
 	}else{
-		if(wcscmp(args[1],L"reset") == 0){
-			if(args[2] && !args[3]){
-				controller *c;
+		if(args[2] && !args[3]){
+			controller *c;
 
-				if((c = lookup_wcontroller(args[2])) == NULL){
+			if((c = lookup_wcontroller(args[2])) == NULL){
+				return -1;
+			}
+			if(wcscmp(args[1],L"reset") == 0){
+				if(reset_controller(c)){
 					return -1;
 				}
-				if(reset_controller(c)){
+				return 0;
+			}else if(wcscmp(args[1],L"rescan") == 0){
+				if(rescan_controller(c)){
 					return -1;
 				}
 				return 0;
@@ -891,12 +896,12 @@ blockdev(wchar_t * const *args,const char *arghelp){
 	if((d = lookup_wdevice(args[2])) == NULL){
 		return -1;
 	}
-	if(wcscmp(args[1],L"reset") == 0){
+	if(wcscmp(args[1],L"rescan") == 0){
 		if(args[3]){
 			usage(args,arghelp);
 			return -1;
 		}
-		if(reset_blockdev(d)){
+		if(rescan_blockdev(d)){
 			return -1;
 		}
 		return 0;
@@ -1450,8 +1455,9 @@ static const struct fxn {
 } fxns[] = {
 #define FXN(x,args) { .cmd = L###x, .fxn = x, .arghelp = args, }
 	FXN(adapter,"[ \"reset\" adapter ]\n"
+			"		  | [ \"rescan\" adapter ]\n"
 			"                 | [ -v ] no arguments to list all host bus adapters"),
-	FXN(blockdev,"[ \"reset\" blockdev ]\n"
+	FXN(blockdev,"[ \"rescan\" blockdev ]\n"
 			"                 | [ \"badblocks\" blockdev [ \"rw\" ] ]\n"
 			"                 | [ \"wipebiosboot\" blockdev ]\n"
 			"                 | [ \"wipedosmbr\" blockdev ]\n"

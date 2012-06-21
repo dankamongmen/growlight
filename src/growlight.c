@@ -1144,13 +1144,13 @@ int growlight_stop(void){
 	return r;
 }
 
-int reset_controller(controller *c){
+int rescan_controller(controller *c){
 	char buf[PATH_MAX];
 
-	// FIXME need to stash sysfs node in controller object
-	assert(c);
-	fprintf(stderr,"FIXME not yet implemented!\n");
-	return -1; // FIXME
+	if(snprintf(buf,sizeof(buf),"%s/device/rescan",c->sysfs) >= (int)sizeof(buf)){
+		fprintf(stderr,"Name too long: %s\n",c->sysfs);
+		return -1;
+	}
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
@@ -1159,7 +1159,22 @@ int reset_controller(controller *c){
 	return 0;
 }
 
-int reset_blockdev(device *d){
+int reset_controller(controller *c){
+	char buf[PATH_MAX];
+
+	if(snprintf(buf,sizeof(buf),"%s/device/reset",c->sysfs) >= (int)sizeof(buf)){
+		fprintf(stderr,"Name too long: %s\n",c->sysfs);
+		return -1;
+	}
+	if(write_sysfs(buf,"1\n")){
+		return -1;
+	}
+	printf("Wrote '1' to %s\n",buf);
+	sync();
+	return 0;
+}
+
+int rescan_blockdev(device *d){
 	char buf[PATH_MAX];
 	unsigned t;
 	int fd;

@@ -101,7 +101,7 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	// FIXME we still have valid filesystems, but no longer have valid
 	//   partition table entries for them (iff we were using MBR). add
 	//   "recovery"? gparted can supposedly find lost filesystems....
-	if(reset_blockdev(d)){
+	if(rescan_blockdev(d)){
 		return -1;
 	}
 	return 0;

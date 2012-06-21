@@ -171,7 +171,7 @@ int make_partition_table(device *d,const char *ptype){
 			if(pt->make(d)){
 				return -1;
 			}
-			if(reset_blockdev(d)){
+			if(rescan_blockdev(d)){
 				return -1;
 			}
 			return 0;
@@ -197,7 +197,7 @@ int wipe_ptable(device *d){
 			if(pt->zap(d)){
 				return -1;
 			}
-			if(reset_blockdev(d)){
+			if(rescan_blockdev(d)){
 				return -1;
 			}
 			return 0;
@@ -219,7 +219,7 @@ int add_partition(device *d,const wchar_t *name,size_t size){
 			if(pt->add(d,name,size)){
 				return -1;
 			}
-			if(reset_blockdev(d)){
+			if(rescan_blockdev(d)){
 				return -1;
 			}
 			return 0;
@@ -245,7 +245,7 @@ int wipe_partition(device *d){
 	if(popen_drain(cmd)){
 		return -1;
 	}
-	if(reset_blockdev(p)){
+	if(rescan_blockdev(p)){
 		return -1;
 	}
 	return 0;

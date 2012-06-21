@@ -188,7 +188,9 @@ const char **get_fs_types(void);
 int make_partition_table(device *,const char *);
 
 int reset_controller(controller *);
-int reset_blockdev(device *);
+int rescan_controller(controller *);
+
+int rescan_blockdev(device *);
 void free_device(device *);
 
 // Very coarse locking
