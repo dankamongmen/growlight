@@ -7,7 +7,6 @@ AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-
 	$(PTHREAD_LIBS) $(OPENSSL_LIBS) $(CURSES_LIB)
 AM_CC=$(PTHREAD_CC)
 
-man8_MANS = growlight.8
 dist_man_MANS = growlight.8
 
 doc_DIR=doc
