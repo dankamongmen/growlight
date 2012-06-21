@@ -419,15 +419,14 @@ print_drive(const device *d,int descend){
 	switch(d->layout){
 	case LAYOUT_NONE:{
 		use_terminfo_color(COLOR_CYAN,1);
-		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec,
-			d->blkdev.removable ? 'R' : d->blkdev.smart ? 'S' : '.',
-			d->blkdev.realdev ? '.' : 'V',
-			'.',
+			d->blkdev.removable ? 'R' : d->blkdev.smart ? 'S' :
+				d->blkdev.realdev ? '.' : 'V',
 			d->blkdev.rotate ? 'O' : '.',
 			d->blkdev.wcache ? 'W' : '.',
 			d->blkdev.biosboot ? 'B' : '.',
@@ -438,12 +437,12 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_MDADM:{
 		use_terminfo_color(COLOR_YELLOW,1);
-		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
-			d->physsec, '.', 'V', 'M', '.', '.', '.',
+			d->physsec, 'M', '.', '.', '.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->mddev.transport)
@@ -451,12 +450,12 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_ZPOOL:{
 		use_terminfo_color(COLOR_RED,1);
-		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
-			d->physsec, '.', 'V', '.', '.', '.', '.',
+			d->physsec, 'Z', '.', '.', '.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->zpool.transport)
@@ -780,7 +779,7 @@ static inline int
 blockdev_dump(int descend){
 	const controller *c;
 
-	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags  %-6.6s%-16.16s %-3.3s\n",
+	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags %-6.6s%-16.16s %-3.3s\n",
 			"Device","Model","Rev","Bytes","PSect","Table","WWN","PHY");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
@@ -792,8 +791,8 @@ blockdev_dump(int descend){
 		}
 	}
 	use_terminfo_color(COLOR_WHITE,1);
-	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, r(O)tational,\n"
-			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
+	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, (Z)pool, r(O)tational,\n"
+			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART,\n");
 	return 0;
 }
 

@@ -58,22 +58,47 @@ dos_zap_table(device *d){
 
 static int
 gpt_add_part(device *d,const wchar_t *name,uintmax_t size){
+	uintmax_t sectors;
 	char cmd[BUFSIZ];
+	unsigned partno;
+	const device *p;
 
 	if(!name){
 		fprintf(stderr,"GPT partitions ought be named!\n");
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --new=0:0:%ju /dev/%s",size,d->name) >= (int)sizeof(cmd)){
+	// FIXME sgdisk uses the old 512 value, not the appropriate-for-device size
+	sectors = size / 512;
+	partno = 1;
+	for(p = d->parts ; p ; p = p->next){
+		if(partno == p->partdev.pnumber){
+			const device *pcheck;
+
+			do{
+				++partno;
+				for(pcheck = d->parts ; pcheck != p ; pcheck = pcheck->next){
+					if(partno == pcheck->partdev.pnumber){
+						break;
+					}
+				}
+			}while(p != pcheck);
+		}
+	}
+	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --new=%u:0:%ju /dev/%s",partno,sectors,d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
 		return -1;
 	}
 	if(popen_drain(cmd)){
 		return -1;
 	}
+	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --change-name=%u:%ls /dev/%s",partno,name,d->name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad names: %d / %ls\n",d->partdev.pnumber,name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		return -1;
+	}
 	return 0;
-	fprintf(stderr,"FIXME: I don't like dos partitions! %s\n",d->name);
-	return -1;
 }
 
 static int
@@ -237,8 +262,8 @@ int name_partition(device *d,const wchar_t *name){
 	}
 	par = d->partdev.parent;
 	if(d->partdev.partrole != PARTROLE_GPT && d->partdev.partrole != PARTROLE_EPS
-			&& d->partdev.partrole != PARTROLE_PC98
-			&& d->partdev.partrole != PARTROLE_MAC){
+			/*&& d->partdev.partrole != PARTROLE_PC98
+			&& d->partdev.partrole != PARTROLE_MAC*/){
 		fprintf(stderr,"Cannot name %s; bad partition table type\n",d->name);
 		return -1;
 	}
