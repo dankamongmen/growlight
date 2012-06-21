@@ -335,15 +335,15 @@ static int
 print_fs(const device *p,int descend){
 	int r = 0,rr;
 
-	if(descend){
-		fprintf(stderr,"Can't descend for fs!\n");
-	}
 	use_terminfo_color(COLOR_GREEN,1);
 	if(p->mnttype == NULL){
 		return 0;
 	}
 	if(p->swapprio != SWAP_INVALID){
-		return 0;
+		if(!descend){
+			return 0;
+		}
+		r += rr = print_swap(p);
 	}
 	if(p->target){
 		r += rr = print_target(p->target);
@@ -367,7 +367,7 @@ print_partition(const device *p,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
-	use_terminfo_color(COLOR_GREEN,1);
+	use_terminfo_color(COLOR_BLUE,1);
 	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %-4.4s %ls\n",
 			p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
@@ -385,16 +385,7 @@ print_partition(const device *p,int descend){
 	if(!descend){
 		return r;
 	}
-	if(p->mnt){
-		r += rr = print_mount(p);
-	}else if(p->swapprio >= SWAP_INACTIVE){
-		r += rr = print_swap(p);
-	}else if(p->mnttype){
-		r += rr = print_unmount(p);
-	}
-	if(p->target){
-		r += rr = print_target(p->target);
-	}
+	r += rr = print_fs(p,0);
 	if(rr < 0){
 		return -1;
 	}
@@ -425,9 +416,9 @@ print_drive(const device *d,int descend){
 	const device *p;
 	int r = 0,rr;
 
-	use_terminfo_color(COLOR_CYAN,1);
 	switch(d->layout){
 	case LAYOUT_NONE:{
+		use_terminfo_color(COLOR_CYAN,1);
 		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
@@ -446,6 +437,7 @@ print_drive(const device *d,int descend){
 			);
 		break;
 	}case LAYOUT_MDADM:{
+		use_terminfo_color(COLOR_YELLOW,1);
 		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
@@ -458,6 +450,7 @@ print_drive(const device *d,int descend){
 			);
 		break;
 	}case LAYOUT_ZPOOL:{
+		use_terminfo_color(COLOR_RED,1);
 		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c%c%c %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
@@ -480,16 +473,7 @@ print_drive(const device *d,int descend){
 	if(!descend){
 		return r;
 	}
-	if(d->mnt){
-		r += rr = print_mount(d);
-	}else if(d->mnttype){
-		r += rr = print_unmount(d);
-	}else if(d->swapprio >= SWAP_INACTIVE){
-		r += rr = print_swap(d);
-	}
-	if(d->target){
-		r += rr = print_target(d->target);
-	}
+	r += rr = print_fs(d,descend);
 	if(rr < 0){
 		return -1;
 	}
@@ -573,6 +557,7 @@ print_mdadm(const device *d,int prefix,int descend){
 	if(d->layout != LAYOUT_MDADM){
 		return 0;
 	}
+	use_terminfo_color(COLOR_YELLOW,1);
 	r += rr = printf("%-*.*s%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
 			prefix,prefix,"",
 			d->name,
@@ -615,6 +600,7 @@ print_controller(const controller *c,int descend){
 	int r = 0,rr;
 	device *d;
 
+	use_terminfo_color(COLOR_WHITE,1);
 	switch(c->bus){
 		case BUS_PCIe:
 			if(c->pcie.lanes_neg == 0){
