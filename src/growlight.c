@@ -81,7 +81,8 @@ int verbf(const char *fmt,...){
 }
 
 static controller *
-find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
+find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
+			char *module){
 	controller *c;
 
 	for(c = controllers ; c ; c = c->next){
@@ -101,6 +102,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 			return NULL;
 		}
 		memset(c,0,sizeof(*c));
+		c->driver = module;
 		c->bus = BUS_PCIe;
 		c->pcie.domain = domain;
 		c->pcie.bus = bus;
@@ -215,6 +217,7 @@ clobber_device(device *d){
 static void
 free_controller(controller *c){
 	if(c){
+		free(c->driver);
 		free(c->name);
 	}
 }
@@ -377,12 +380,15 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 
 static int
 parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
-                                unsigned long *dev,unsigned long *func){
+                                unsigned long *dev,unsigned long *func,
+				char **module){
+	char buf[PATH_MAX];
         const char *cur;
-        char *e;
+        char *e,*dup;
+	int dir,r;
 
+        cur = busid + strlen("/sys/devices/pci");
         // FIXME clean this cut-and-paste crap up
-        cur = busid;
         if(*cur == '-'){ // strtoul() admits leading negations
                 return -1;
         }
@@ -447,6 +453,28 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 			return -1;
 		}
 	}
+	if((dup = strndup(busid,cur - busid)) == NULL){
+		return -1;
+	}
+	if((dir = open(dup,O_RDONLY|O_CLOEXEC)) < 0){
+		fprintf(stderr,"Couldn't open %s (%s?)\n",dup,strerror(errno));
+		free(dup);
+		return -1;
+	}
+	free(dup);
+	if((r = readlinkat(dir,"driver/module",buf,sizeof(buf))) < 0){
+		fprintf(stderr,"Couldn't read link at %.*s/driver/module (%s?)\n",(int)(cur - busid),busid,strerror(errno));
+		return -1;
+	}
+	buf[r] = '\0';
+	close(dir);
+	if((dup = strrchr(buf,'/')) == NULL || !*++dup){
+		fprintf(stderr,"Bad module name: %s\n",buf);
+		return -1;
+	}
+	if((*module = strdup(dup)) == NULL){
+		return -1;
+	}
         return 0;
 }
 
@@ -455,20 +483,25 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 static controller *
 parse_bus_topology(const char *fn){
 	unsigned long domain,bus,dev,func;
-	const char *pci;
+	char buf[PATH_MAX],*module;
+	controller *c;
 
 	if(strstr(fn,"/devices/virtual/")){
 		return &virtual_bus;
 	}
-	if((pci = strstr(fn,"/devices/pci")) == NULL){
-		return &unknown_bus;
-	}
-	pci += strlen("/devices/pci");
-	if(parse_pci_busid(pci,&domain,&bus,&dev,&func)){
-		fprintf(stderr,"Couldn't extract PCI address from %s\n",pci);
+	if(realpath(fn,buf) == NULL){
+		fprintf(stderr,"Couldn't canonicalize %s\n",fn);
 		return NULL;
 	}
-	return find_pcie_controller(domain,bus,dev,func);
+	if(parse_pci_busid(buf,&domain,&bus,&dev,&func,&module)){
+		fprintf(stderr,"Couldn't extract PCI address from %s\n",buf);
+		return NULL;
+	}
+	if((c = find_pcie_controller(domain,bus,dev,func,module)) == NULL){
+		free(module);
+		return NULL;
+	}
+	return c;
 }
 
 // Used by systems which don't properly populate sysfs (*cough* zfs *cough*)
