@@ -1,4 +1,3 @@
-#define HAVE_IOCTL_IN_SYS_IOCTL_H
 #include <assert.h>
 #include <wchar.h>
 #include <ctype.h>
