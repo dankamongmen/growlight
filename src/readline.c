@@ -1061,10 +1061,13 @@ partition(wchar_t * const *args,const char *arghelp){
 				usage(args,arghelp);
 				return -1;
 			}
-			// FIXME
-			fprintf(stderr,"FIXME not yet implemented (%ls = %u)\n",args[4],val);
-			return -1;
+			if(partition_set_flag(d,ull,val)){
+				return -1;
+			}
+			return 0;
 		}else if(wcscmp(args[1],L"settype") == 0){
+			unsigned long long ull;
+
 			if(!args[2]){
 				print_partition_types();
 				return 0;
@@ -1076,12 +1079,17 @@ partition(wchar_t * const *args,const char *arghelp){
 			if(!args[3] || args[4]){
 				usage(args,arghelp);
 				return -1;
-			}else{
-				// FIXME extract type
+			}else if(wstrtoull(args[3],&ull)){
+				usage(args,arghelp);
+				return -1;
+			}else if(ull > 0xffff || ull == 0){
+				usage(args,arghelp);
+				return -1;
 			}
-			// FIXME
-			fprintf(stderr,"FIXME not yet implemented (%ls = %ls)\n",args[2],args[3]);
-			return -1;
+			if(partition_set_code(d,ull)){
+				return -1;
+			}
+			return 0;
 		}
 		if(args[2] == NULL){ // the remainder always have an arg
 			usage(args,arghelp);
