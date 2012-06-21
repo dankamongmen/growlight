@@ -331,3 +331,33 @@ int partition_set_flag(device *d,uint64_t flag,unsigned state){
 	}
 	return 0;
 }
+
+int partition_set_code(device *d,unsigned code){
+	char cmd[BUFSIZ];
+	device *par;
+
+	if(d->layout != LAYOUT_PARTITION){
+		fprintf(stderr,"Will only set code on actual partitions\n");
+		return -1;
+	}
+	par = d->partdev.parent;
+	if(d->partdev.partrole == PARTROLE_PRIMARY){
+		if(code > 0xff){
+			fprintf(stderr,"Invalid type for BIOS/MBR: %08u\n",code);
+			return -1;
+		}
+		// FIXME set it!
+	}else if(d->partdev.partrole != PARTROLE_GPT){
+		fprintf(stderr,"Cannot set code on %s; bad partition type\n",d->name);
+		return -1;
+	}
+	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk -t %u:%04x /dev/%s",
+			d->partdev.pnumber,code,par->name) >= (int)sizeof(cmd)){
+		fprintf(stderr,"Bad name: %s\n",par->name);
+		return -1;
+	}
+	if(popen_drain(cmd)){
+		return -1;
+	}
+	return 0;
+}
