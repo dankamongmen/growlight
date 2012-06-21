@@ -79,6 +79,10 @@ use_terminfo_color(int ansicolor,int boldp){
 	return 0;
 }
 
+#ifndef HAVE_CURSES
+#define use_terminfo_color(color,bold) use_terminfo_color(0,bold)
+#endif
+
 static inline int
 usage(wchar_t * const *args,const char *arghelp){
 	fprintf(stderr,"Usage: %ls %s\n",*args,arghelp);
