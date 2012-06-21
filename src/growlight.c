@@ -1092,6 +1092,7 @@ int reset_blockdev(device *d){
 		if(ioctl(fd,BLKRRPART,NULL) == 0){
 			close(fd);
 			printf("Updated kernel partition table\n");
+			sync();
 			return 0;
 		}
 		fprintf(stderr,"Error calling BLKRRPART on %s (%s?), retrying in 5s...\n",buf,strerror(errno));
