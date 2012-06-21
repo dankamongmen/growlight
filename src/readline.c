@@ -418,7 +418,15 @@ print_drive(const device *d,int descend){
 
 	switch(d->layout){
 	case LAYOUT_NONE:{
-		use_terminfo_color(COLOR_CYAN,1);
+		if(d->blkdev.realdev){
+			if(d->blkdev.rotate){
+				use_terminfo_color(COLOR_YELLOW,0);
+			}else{
+				use_terminfo_color(COLOR_CYAN,1);
+			}
+		}else{
+			use_terminfo_color(COLOR_MAGENTA,1);
+		}
 		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
