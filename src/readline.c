@@ -1030,7 +1030,8 @@ partition(wchar_t * const *args,const char *arghelp){
 		device *d;
 
 		if(wcscmp(args[1],L"setflag") == 0){
-			uint64_t val;
+			uint64_t ull;
+			unsigned val;
 
 			if(!args[2]){
 				print_partition_attributes();
@@ -1043,6 +1044,15 @@ partition(wchar_t * const *args,const char *arghelp){
 			if(!args[3] || !args[4] || args[5]){
 				usage(args,arghelp);
 				return -1;
+			}else if(wstrtoull(args[4],&ull)){
+				usage(args,arghelp);
+				return -1;
+			}else if(ull > (1ull << 62) || ull == 0){
+				usage(args,arghelp);
+				return -1;
+			}else if( (ull & (ull - 1u)) ){ // ought be power of 2
+				usage(args,arghelp);
+				return -1;
 			}else if(wcscasecmp(args[3],L"on") == 0){
 				val = 1;
 			}else if(wcscasecmp(args[3],L"off") == 0){
@@ -1052,7 +1062,7 @@ partition(wchar_t * const *args,const char *arghelp){
 				return -1;
 			}
 			// FIXME
-			fprintf(stderr,"FIXME not yet implemented (%ls = %lu)\n",args[4],val);
+			fprintf(stderr,"FIXME not yet implemented (%ls = %u)\n",args[4],val);
 			return -1;
 		}else if(wcscmp(args[1],L"settype") == 0){
 			if(!args[2]){
