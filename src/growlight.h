@@ -134,6 +134,7 @@ typedef struct controller {
 	// FIXME if libpci doesn't know about the device, we still ought use
 	// a name determined via inspection of sysfs, just as we do for disks
 	char *name;		// From libpci database
+	char *sysfs;		// Sysfs node
 	char *driver;		// From sysfs, 'device/module'
 	enum {
 		BUS_UNKNOWN,

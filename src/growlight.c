@@ -82,7 +82,7 @@ int verbf(const char *fmt,...){
 
 static controller *
 find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
-			char *module){
+			char *module,char *sysfs){
 	controller *c;
 
 	for(c = controllers ; c ; c = c->next){
@@ -102,6 +102,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			return NULL;
 		}
 		memset(c,0,sizeof(*c));
+		c->sysfs = sysfs;
 		c->driver = module;
 		c->bus = BUS_PCIe;
 		c->pcie.domain = domain;
@@ -218,6 +219,7 @@ static void
 free_controller(controller *c){
 	if(c){
 		free(c->driver);
+		free(c->sysfs);
 		free(c->name);
 	}
 }
@@ -378,35 +380,36 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 	return 0;
 }
 
-static int
+// Returns the sysfs node for the device
+static char *
 parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
                                 unsigned long *dev,unsigned long *func,
 				char **module){
 	char buf[PATH_MAX];
         const char *cur;
-        char *e,*dup;
+        char *e,*sysfs;
 	int dir,r;
 
         cur = busid + strlen("/sys/devices/pci");
         // FIXME clean this cut-and-paste crap up
         if(*cur == '-'){ // strtoul() admits leading negations
-                return -1;
+                return NULL;
         }
         if(strtoul(cur,&e,16) == ULONG_MAX){
-                return -1;
+                return NULL;
         }
         if(*e != ':'){
-                return -1;
+                return NULL;
         }
         cur = e + 1;
         if(*cur == '-'){ // strtoul() admits leading negations
-                return -1;
+                return NULL;
         }
         if(strtoul(cur,&e,16) == ULONG_MAX){
-                return -1;
+                return NULL;
         }
         if(*e != '/'){
-                return -1;
+                return NULL;
         }
 	*domain = *bus = *dev = *func = 0; // FIXME purge
 	// FIXME hack! we ought check to see if the PCI device we just
@@ -414,68 +417,70 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 	// whatever comes next. no bueno!
 	while(cur = e + 1, !isalpha(*cur)){
 		if(*cur == '-'){ // strtoul() admits leading negations
-			return -1;
+			return NULL;
 		}
 		if((*domain = strtoul(cur,&e,16)) == ULONG_MAX){
-			return -1;
+			return NULL;
 		}
 		if(*e != ':'){
-			return -1;
+			return NULL;
 		}
 		cur = e + 1;
 		if(*cur == '-'){ // strtoul() admits leading negations
-			return -1;
+			return NULL;
 		}
 		if((*bus = strtoul(cur,&e,16)) == ULONG_MAX){
-			return -1;
+			return NULL;
 		}
 		if(*e != ':'){
-			return -1;
+			return NULL;
 		}
 		cur = e + 1;
 		if(*cur == '-'){ // strtoul() admits leading negations
-			return -1;
+			return NULL;
 		}
 		if((*dev = strtoul(cur,&e,16)) == ULONG_MAX){
-			return -1;
+			return NULL;
 		}
 		if(*e != '.'){
-			return -1;
+			return NULL;
 		}
 		cur = e + 1;
 		if(*cur == '-'){ // strtoul() admits leading negations
-			return -1;
+			return NULL;
 		}
 		if((*func = strtoul(cur,&e,16)) == ULONG_MAX){
-			return -1;
+			return NULL;
 		}
 		if(*e != '/'){
-			return -1;
+			return NULL;
 		}
 	}
-	if((dup = strndup(busid,cur - busid)) == NULL){
-		return -1;
+	if((sysfs = strndup(busid,cur - busid)) == NULL){
+		return NULL;
 	}
-	if((dir = open(dup,O_RDONLY|O_CLOEXEC)) < 0){
-		fprintf(stderr,"Couldn't open %s (%s?)\n",dup,strerror(errno));
-		free(dup);
-		return -1;
+	if((dir = open(sysfs,O_RDONLY|O_CLOEXEC)) < 0){
+		fprintf(stderr,"Couldn't open %s (%s?)\n",sysfs,strerror(errno));
+		free(sysfs);
+		return NULL;
 	}
-	free(dup);
 	if((r = readlinkat(dir,"driver/module",buf,sizeof(buf))) < 0){
 		fprintf(stderr,"Couldn't read link at %.*s/driver/module (%s?)\n",(int)(cur - busid),busid,strerror(errno));
-		return -1;
+		free(sysfs);
+		return NULL;
 	}
 	buf[r] = '\0';
 	close(dir);
-	if((dup = strrchr(buf,'/')) == NULL || !*++dup){
+	if((e = strrchr(buf,'/')) == NULL || !*++e){
 		fprintf(stderr,"Bad module name: %s\n",buf);
-		return -1;
+		free(sysfs);
+		return NULL;
 	}
-	if((*module = strdup(dup)) == NULL){
-		return -1;
+	if((*module = strdup(e)) == NULL){
+		free(sysfs);
+		return NULL;
 	}
-        return 0;
+        return sysfs;
 }
 
 // Takes the sysfs link as read when dereferencing /sys/block/*. Only works
@@ -483,7 +488,7 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 static controller *
 parse_bus_topology(const char *fn){
 	unsigned long domain,bus,dev,func;
-	char buf[PATH_MAX],*module;
+	char buf[PATH_MAX],*module,*sysfs;
 	controller *c;
 
 	if(strstr(fn,"/devices/virtual/")){
@@ -493,12 +498,13 @@ parse_bus_topology(const char *fn){
 		fprintf(stderr,"Couldn't canonicalize %s\n",fn);
 		return NULL;
 	}
-	if(parse_pci_busid(buf,&domain,&bus,&dev,&func,&module)){
+	if((sysfs = parse_pci_busid(buf,&domain,&bus,&dev,&func,&module)) == NULL){
 		fprintf(stderr,"Couldn't extract PCI address from %s\n",buf);
 		return NULL;
 	}
-	if((c = find_pcie_controller(domain,bus,dev,func,module)) == NULL){
+	if((c = find_pcie_controller(domain,bus,dev,func,sysfs,module)) == NULL){
 		free(module);
+		free(sysfs);
 		return NULL;
 	}
 	return c;
