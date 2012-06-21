@@ -1307,6 +1307,7 @@ free_tokes(wchar_t **tokes){
 
 static int
 tokenize(const char *line,wchar_t ***tokes){
+	unsigned inquotes = 0;
 	const char *s = NULL;
 	unsigned wchars = 0;
 	mbstate_t ps,sps;
@@ -1327,8 +1328,14 @@ tokenize(const char *line,wchar_t ***tokes){
 		line += conv;
 		len -= conv;
 		if(s == NULL){
+			/*if(conv == 0){
+				break;
+			}*/
 			if(iswspace(w)){
 				continue;
+			}
+			if(w == L'"'){
+				inquotes = 1;
 			}
 			s = line - conv;
 			sps = ps;
@@ -1336,9 +1343,24 @@ tokenize(const char *line,wchar_t ***tokes){
 		}else{
 			const char *olds;
 
-			if(conv && iswgraph(w)){
-				++wchars;
-				continue;
+			if(!conv){
+				if(inquotes){
+					fprintf(stderr,"Unterminated quotes in %s\n",line);
+					return -1;
+				}
+			}else{
+				if(iswgraph(w)){
+					if(w == L'"'){
+						inquotes = !inquotes;
+					}
+					++wchars;
+					continue;
+				}else if(iswspace(w)){
+					if(inquotes){
+						++wchars;
+						continue;
+					}
+				}
 			}
 			assert(wchars);
 			if((n = malloc(sizeof(*n) * (wchars + 1))) == NULL){
