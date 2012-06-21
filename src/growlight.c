@@ -98,8 +98,6 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 		break;
 	}
 	if(c == NULL){
-		controller *c;
-
 		if((c = malloc(sizeof(*c))) == NULL){
 			return NULL;
 		}
@@ -675,6 +673,22 @@ create_new_device(const char *name){
 	return d;
 }
 
+controller *lookup_controller(const char *name){
+	controller *c;
+
+	for(c = controllers ; c ; c = c->next){
+		// FIXME terrible. these names are entirely freeform. have them
+		// pass a PCI address or something
+		if(strcmp(name,c->name) == 0){
+			break;
+		}
+	}
+	if(!c){
+		fprintf(stderr,"Couldn't find device \"%s\"\n",name);
+	}
+	return c;
+}
+
 // name must be an entry in /sys/class/block, and also one in /dev
 device *lookup_device(const char *name){
 	controller *c;
@@ -1087,6 +1101,21 @@ int growlight_stop(void){
 	close(sysfd); sysfd = -1;
 	close(devfd); devfd = -1;
 	return r;
+}
+
+int reset_controller(controller *c){
+	char buf[PATH_MAX];
+
+	// FIXME need to stash sysfs node in controller object
+	assert(c);
+	fprintf(stderr,"FIXME not yet implemented!\n");
+	return -1; // FIXME
+	if(write_sysfs(buf,"1\n")){
+		return -1;
+	}
+	printf("Wrote '1' to %s\n",buf);
+	sync();
+	return 0;
 }
 
 int reset_blockdev(device *d){

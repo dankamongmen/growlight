@@ -144,6 +144,17 @@ make_wfilesystem(device *d,const wchar_t *fs){
 	return make_filesystem(d,sfs);
 }
 
+static controller *
+lookup_wcontroller(const wchar_t *dev){
+	char sdev[NAME_MAX];
+
+	if(snprintf(sdev,sizeof(sdev),"%ls",dev) >= (int)sizeof(dev)){
+		fprintf(stderr,"Bad controller name: %ls\n",dev);
+		return NULL;
+	}
+	return lookup_controller(sdev);
+}
+
 static device *
 lookup_wdevice(const wchar_t *dev){
 	char sdev[NAME_MAX];
@@ -657,6 +668,19 @@ adapter(wchar_t * const *args,const char *arghelp){
 	}else if(wcscmp(args[1],L"-v") == 0 && args[2] == NULL){
 		descend = 1;
 	}else{
+		if(wcscmp(args[1],L"reset") == 0){
+			if(args[2] && !args[3]){
+				controller *c;
+
+				if((c = lookup_wcontroller(args[2])) == NULL){
+					return -1;
+				}
+				if(reset_controller(c)){
+					return -1;
+				}
+				return 0;
+			}
+		}
 		usage(args,arghelp);
 		return -1;
 	}

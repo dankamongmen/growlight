@@ -173,8 +173,9 @@ typedef struct controller {
 // simply will not fly in the long run -- FIXME
 const controller *get_controllers(void);
 
-// This is similarly no good FIXME
+// These are similarly no good FIXME
 device *lookup_device(const char *name);
+controller *lookup_controller(const char *name);
 
 // Supported partition table types
 const char **get_ptable_types(void);
@@ -184,6 +185,7 @@ const char **get_fs_types(void);
 
 int make_partition_table(device *,const char *);
 
+int reset_controller(controller *);
 int reset_blockdev(device *);
 void free_device(device *);
 
