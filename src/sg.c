@@ -9,6 +9,7 @@
 #include <scsi/sg.h>
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
+#include <linux/hdreg.h>
 
 #include "sg.h"
 #include "sysfs.h"
@@ -32,6 +33,11 @@ enum {
 #define SG_ATA_PROTO_DMA        ( 6 << 1)
 #define SG_ATA_PROTO_UDMA_IN    (11 << 1) /* not yet supported in libata */
 #define SG_ATA_PROTO_UDMA_OUT   (12 << 1) /* not yet supported in libata */
+#define SG_CHECK_CONDITION	0x02
+#define SG_DRIVER_SENSE		0x08
+
+#define CONFIG_ATAPI		0x4000
+#define CONFIG_ATA		0x8000
 
 #define GEN_CONFIG              0   /* general configuration */
 #define LCYLS                   1   /* number of logical cylinders */
@@ -217,8 +223,8 @@ struct scsi_sg_io_hdr {
 
 int sg_interrogate(device *d,int fd){
 #define IDSECTORS 1
-	uint16_t buf[512 * IDSECTORS / 2],maj,min; // FIXME
 	unsigned char cdb[SG_ATA_16_LEN];
+	uint16_t buf[512 / 2],maj,min; // FIXME
 	struct scsi_sg_io_hdr io;
 	char sb[32];
 	unsigned n;
@@ -235,17 +241,42 @@ int sg_interrogate(device *d,int fd){
 	memset(&io,0,sizeof(io));
 	io.interface_id = 'S';
 	io.mx_sb_len = sizeof(sb);
-	io.sbp = sb;
-	io.cmd_len = sizeof(cdb);
-	io.cmdp = cdb;
 	io.dxfer_direction = SG_DXFER_FROM_DEV;
 	io.dxfer_len = sizeof(buf);
 	io.dxferp = buf;
+	io.cmdp = cdb;
+	io.sbp = sb;
+	io.cmd_len = sizeof(cdb);
 	if(ioctl(fd,SG_IO,&io)){
 		fprintf(stderr,"Couldn't perform SG_IO ioctl on %d (%s?)\n",fd,strerror(errno));
 		return -1;
 	}
-	// FIXME need to check various validity flags
+	if(io.status && io.status != SG_CHECK_CONDITION){
+		verbf("Bad check condition 0x%x\n",io.status);
+		return 0; // FIXME
+	}
+	if(io.host_status){
+		verbf("Bad host status 0x%x\n",io.host_status);
+		return 0; // FIXME
+	}
+	if(io.driver_status && io.driver_status != SG_DRIVER_SENSE){
+		verbf("Bad driver status 0x%x\n",io.driver_status);
+		/*uint16_t args[4] = { ATA_OP_IDENTIFY, 0, 0, 1 };
+		if(ioctl(fd,HDIO_DRIVE_CMD,args)){
+			verbf("HDIO_DRIVE_CMD also failed (%s?)\n",strerror(errno));
+			return 0;
+		}*/
+		return 0;
+	}
+	/*conf = ntohs(buf[GEN_CONFIG]);
+	if(conf == 0x848a || conf == 0x844a
+			|| ntohs(buf[83] & 0xc004) == 0x4004){
+		// CFA, not ATA-4...? see hdparm. FIXME
+	}
+	if(!(conf & CONFIG_ATA)){
+	}else if(!(conf & CONFIG_ATAPI)){
+	}
+	*/
 	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
 		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
 		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
