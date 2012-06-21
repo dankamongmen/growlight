@@ -38,6 +38,10 @@ if test "x$have_libzfs" = xyes; then
 	AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs])
 fi
 
+AC_CHECK_LIB(pciaccess,pci_system_init, [have_pciaccess=yes],
+             [AC_MSG_ERROR([Cannot find libpciaccess.])])
+        LIBS+=" -lpciaccess"
+
 AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"

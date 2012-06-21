@@ -23,6 +23,7 @@
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
 #include <sys/epoll.h>
+#include <pciaccess.h>
 #include <pci/header.h>
 #include <sys/inotify.h>
 #include <libdevmapper.h>
@@ -96,10 +97,16 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 		break;
 	}
 	if(cur == NULL){
+		const char *vend,*model;
+		struct pci_device *pci;
 		struct pci_dev *pcidev;
-		char buf[BUFSIZ],*rbuf;
+		char buf[BUFSIZ];
 		controller *c;
 
+		if((pci = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
+			fprintf(stderr,"Couldn't look up PCIe device\n");
+			return NULL;
+		}
 		if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
 			fprintf(stderr,"Couldn't look up PCIe device\n");
 			return NULL;
@@ -107,11 +114,11 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 		assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
 						PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
 						PCI_FILL_SIZES|PCI_FILL_RESCAN));
-		rbuf = pci_lookup_name(pciacc,buf,sizeof(buf),PCI_LOOKUP_VENDOR|PCI_LOOKUP_DEVICE,
-						pcidev->vendor_id,pcidev->device_id);
-		if(rbuf == NULL){
-			rbuf = "Unknown PCIe device\n"; // FIXME terrible
-		}
+		vend = pci_device_get_vendor_name(pci);
+		model = pci_device_get_device_name(pci);
+		snprintf(buf,sizeof(buf),"%s %s",
+				vend ? vend : "Unknown vendor",
+				model ? model : "unknown model");
 		if( (c = malloc(sizeof(*c))) ){
 			struct pci_cap *pcicap;
 			uint32_t data;
@@ -134,8 +141,9 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func){
 				c->pcie.gen = data & PCI_EXP_LNKSTA_SPEED;
 				c->pcie.lanes_neg = (data & PCI_EXP_LNKSTA_WIDTH) >> 4u;
 			}
-			if((c->name = strdup(rbuf)) == NULL){
-				// FIXME?
+			if((c->name = strdup(buf)) == NULL){
+				pci_free_dev(pcidev);
+				return NULL;
 			}
 		}
 		pci_free_dev(pcidev);
@@ -827,12 +835,13 @@ get_dir_fd(DIR **dir,const char *root){
 }
 
 static int
-pci_system_init(void){
+glight_pci_init(void){
 	if((pciacc = pci_alloc()) == NULL){
 		return -1;
 	}
 	pci_init(pciacc);
 	pci_scan_bus(pciacc);
+	pci_system_init();
 	return 0;
 }
 
@@ -1011,7 +1020,7 @@ int growlight_init(int argc,char * const *argv){
 	dm_get_library_version(buf,sizeof(buf));
 	printf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s\n",PACKAGE,
 			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf);
-	if(pci_system_init()){
+	if(glight_pci_init()){
 		fprintf(stderr,"Couldn't init libpci (%s?)\n",strerror(errno));
 		goto err;
 	}
