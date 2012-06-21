@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 struct device;
 
 // Create the given type of partition table on this device
@@ -15,6 +17,7 @@ int add_partition(struct device *,const wchar_t *,size_t);
 int wipe_partition(struct device *);
 int name_partition(struct device *,const wchar_t *);
 int check_partition(struct device *);
+int partition_set_flag(struct device *,uint64_t,unsigned);
 
 #ifdef __cplusplus
 }

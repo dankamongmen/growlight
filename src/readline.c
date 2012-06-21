@@ -1030,7 +1030,7 @@ partition(wchar_t * const *args,const char *arghelp){
 		device *d;
 
 		if(wcscmp(args[1],L"setflag") == 0){
-			uint64_t ull;
+			unsigned long long ull;
 			unsigned val;
 
 			if(!args[2]){
