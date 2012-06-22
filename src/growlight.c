@@ -877,7 +877,8 @@ static void
 usage(const char *name,int status){
 	FILE *fp = status == EXIT_SUCCESS ? stdout : stderr;
 
-	fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n",name);
+	fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
+			"\t\t[ -t|--target path ]\n",name);
 	exit(status);
 }
 
@@ -1026,6 +1027,11 @@ int growlight_init(int argc,char * const *argv){
 			.flag = NULL,
 			.val = 'h',
 		},{
+			.name = "target",
+			.has_arg = 2,
+			.flag = NULL,
+			.val = 't',
+		},{
 			.name = "verbose",
 			.has_arg = 0,
 			.flag = NULL,
@@ -1043,8 +1049,8 @@ int growlight_init(int argc,char * const *argv){
 		},
 	};
 	int fd,opt,longidx,udevfd;
+	const char *enc,*target;
 	char buf[BUFSIZ];
-	const char *enc;
 	DIR *sdir;
 
 	if(setlocale(LC_ALL,"") == NULL){
@@ -1057,10 +1063,23 @@ int growlight_init(int argc,char * const *argv){
 	}
 	SSL_library_init();
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
-	while((opt = getopt_long(argc,argv,"hvV",ops,&longidx)) >= 0){
+	target = NULL;
+	while((opt = getopt_long(argc,argv,":ht:vV",ops,&longidx)) >= 0){
 		switch(opt){
 		case 'h':{
 			usage(argv[0],EXIT_SUCCESS);
+			break;
+		}case 't':{
+			if(target){
+				fprintf(stderr,"Error: defined --target twice (%s, %s)\n",target,optarg);
+				usage(argv[0],EXIT_FAILURE);
+			}else if(optarg == NULL){
+				fprintf(stderr,"-t|--target requires an argument\n");
+				usage(argv[0],EXIT_FAILURE);
+			}else{
+				target = optarg;
+				fprintf(stderr,"TARGET: %s\n",target);
+			}
 			break;
 		}case 'v':{
 			verbose = 1;
@@ -1077,7 +1096,7 @@ int growlight_init(int argc,char * const *argv){
 			usage(argv[0],EXIT_FAILURE);
 			break;
 		}default:{
-			fprintf(stderr,"Unknown option: '%c'\n",optopt);
+			fprintf(stderr,"Misuse of option: '%c'\n",optopt);
 			usage(argv[0],EXIT_FAILURE);
 			break;
 		} }
