@@ -61,6 +61,7 @@
 		<cmdsynopsis>
 			<command>&dhpackage;</command>
 			<arg>-h|--help</arg>
+			<arg>-t|--target path</arg>
 			<arg>-v|--verbose</arg>
 			<arg>-V|--version</arg>
 		</cmdsynopsis>
