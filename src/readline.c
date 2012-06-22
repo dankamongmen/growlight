@@ -1,4 +1,3 @@
-#include <term.h>
 #include <wchar.h>
 #include <errno.h>
 #include <unistd.h>
@@ -22,18 +21,23 @@
 #include "growlight.h"
 
 #ifdef HAVE_CURSES_H
+#include <term.h>
 #include <curses.h>
 #else
 #ifdef HAVE_NCURSES_H
+#include <term.h>
 #include <ncursesw.h>
 #else
 #ifdef HAVE_NCURSESW_H
+#include <term.h>
 #include <ncurses.h>
 #else
 #ifdef HAVE_NCURSES_CURSES_H
+#include <ncurses/term.h>
 #include <ncurses/curses.h>
 #else
 #ifdef HAVE_NCURSESW_CURSES_H
+#include <ncursesw/term.h>
 #include <ncursesw/curses.h>
 #endif
 #endif
