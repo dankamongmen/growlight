@@ -33,6 +33,10 @@ Building from a tarball:
 
  - ./configure && make && sudo make install
 
+===Using it===
+
+See the man page.
+
 
 ===ZFS Support===
 

@@ -94,6 +94,20 @@
 			<para>Print version information and exit.</para>
 			</listitem>
 		</varlistentry>
+		<varlistentry>
+			<term><option>-t|--target path</option></term>
+			<listitem>
+<para>Run in system installation mode, using path as the temporary mountpoint
+for the target's root filesystem. "map" commands will populate the hierarchy
+rooted at this mountpoint. System installation mode can also be entered at run
+time with the "target" command. The "map" command will not result in active
+mounts unless growlight is operating in system installation mode (they will
+merely be used to construct target fstab output). Once system installation mode
+is entered, growlight will return 0 only as a result of a successful invocation
+of the "finalize" command. The target path needn't exist at specification time,
+but it must exist before any maps can be defined.</para>
+			</listitem>
+		</varlistentry>
 	</refsect1>
 	<refsect1 id="bugs">
 		<title>BUGS</title>
@@ -106,11 +120,20 @@
 		<para>Project wiki: <ulink url="http://dank.qemfd.net/dankwiki/index.php/growlight"/></para>
 		<para>
 		<citerefentry>
+			<refentrytitle>blkid</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
 			<refentrytitle>dmraid</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>fstab</refentrytitle>
 			<manvolnum>5</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>grub-install</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>hdparm</refentrytitle>
+			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>libblkid</refentrytitle>
 			<manvolnum>3</manvolnum>
@@ -119,6 +142,15 @@
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>mdadm</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>parted</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>sfdisk</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>sgdisk</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>zfs</refentrytitle>
