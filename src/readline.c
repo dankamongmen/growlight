@@ -745,8 +745,11 @@ zpool(wchar_t * const *args,const char *arghelp){
 	}else if(wcscmp(args[1],L"-v") == 0 && args[2] == NULL){
 		descend = 1;
 	}else{
-		usage(args,arghelp);
-		return -1;
+		if(vpopen_drain("zpool",args + 1)){
+			usage(args,arghelp);
+			return -1;
+		}
+		return 0;
 	}
 	printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
 			"Device","UUID","Bytes","PSect","Table","Disks","Level");
