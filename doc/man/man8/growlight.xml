@@ -110,6 +110,43 @@ but it must exist before any maps can be defined.</para>
 			</listitem>
 		</varlistentry>
 	</refsect1>
+	<refsect1 id="commands">
+		<title>COMMANDS</title>
+		<varlistentry>
+			<term><option>uefiboot</option></term>
+			<listitem>
+<para>Prepare the target for UEFI-based booting. A target root filesystem map
+must be defined, and this filesystem must be mounted at the chroot's toplevel.
+The filesystem must reside within a GPT partition having type ef00 and type
+GUID C12A7328-F81F-11D2-BA4B-00A0C93EC93B (EFI System Partition). This GPT
+table must not reside on an mdadm, device-mapper, or zfs device. Preferably, no
+other devices in the system are bootable, but this is not enforced.
+
+If all these conditions are met, rEFInd will be installed into this filesystem,
+configured to boot a Linux kernel residing at FIXME. This kernel must be
+compiled with EFI stub loader support. The bootloader portion of the device's
+MBR will be overwritten with zeroes, if possible, to deter attempting to
+perform a BIOS/MBR boot from the device.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>biosboot</option></term>
+			<listitem>
+<para>Prepare the target for BIOS-based booting. A target root filesystem map
+must be defined, and this filesystem must be mounted at the chroot's toplevel.
+The filesystem must reside either within a GPT partition having type ef02 and
+type GUID 21686148-6449-6E6F-744E-656564454649 (BIOS Boot Partition), or within
+a MBR partition having type 0x83 (Linux). The partition table must not reside
+on an mdadm, device-mapper, or zfs device. Preferably, no other devices in the
+system are bootable, but this is not enforced.
+
+If all these conditions are met, GRUB2 will be installed into this filesystem
+at /boot/grub, configured to boot a Linux kernel residing at FIXME. GRUB2's
+first stage will be loaded into the bootloader portion of the device's MBR. The
+partition containing GRUB2 will be marked as "active" (flag 0x80).</para>
+			</listitem>
+		</varlistentry>
+	</refsect1>
 	<refsect1 id="bugs">
 		<title>BUGS</title>
 		<para>Search <ulink url="http://www.sprezzatech.com/bugs/buglist.cgi?component=Growlight"/>.

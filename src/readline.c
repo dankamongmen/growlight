@@ -1616,10 +1616,10 @@ static const struct fxn {
 			"                 | [ -v ] no arguments to list all zpools"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
-			"                 | no arguments generates target fstab"),
+			"                 | no arguments prints target fstab"),
 	FXN(mounts,""),
-	FXN(uefiboot,"device"),
-	FXN(biosboot,"device"),
+	FXN(uefiboot,"root fs map must be defined in GPT partition"),
+	FXN(biosboot,"root fs map must be defined in GPT/MBR partition"),
 	FXN(grubmap,""),
 	FXN(rescan,""),
 	FXN(benchmark,"fs"),
