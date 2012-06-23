@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -100,5 +101,17 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 	d->target = &m->m;
 	m->next = *pre;
 	*pre = m;
+	return 0;
+}
+
+int set_target(const char *path){
+	if(growlight_target){
+		fprintf(stderr,"A target is already defined: %s\n",growlight_target);
+		return -1;
+	}
+	if((growlight_target = strdup(path)) == NULL){
+		fprintf(stderr,"Couldn't set target (%s?)\n",strerror(errno));
+		return -1;
+	}
 	return 0;
 }

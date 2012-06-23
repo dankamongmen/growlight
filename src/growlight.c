@@ -1196,7 +1196,6 @@ int growlight_init(int argc,char * const *argv){
 	}
 	SSL_library_init();
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
-	growlight_target = NULL;
 	while((opt = getopt_long(argc,argv,":ht:vV",ops,&longidx)) >= 0){
 		switch(opt){
 		case 'h':{
@@ -1211,7 +1210,9 @@ int growlight_init(int argc,char * const *argv){
 				fprintf(stderr,"-t|--target requires an argument\n");
 				usage(argv[0],EXIT_FAILURE);
 			}else{
-				growlight_target = optarg;
+				if(set_target(optarg)){
+					return EXIT_FAILURE;
+				}
 			}
 			break;
 		}case 'v':{
