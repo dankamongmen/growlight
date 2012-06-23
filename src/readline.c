@@ -1586,13 +1586,28 @@ target(wchar_t * const *args,const char *arghelp){
 		fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
 		return -1;
 	}
-	if(args[3] == NULL){
+	if(args[2] == NULL){
 		usage(args,arghelp);
 		return -1;
+	}else if(wcscmp(args[2],L"set") == 0){
+	       	if(args[3] == NULL || args[4]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME set the target
+		fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
+		return 0;
+	}else if(wcscmp(args[2],L"unset") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME unset the target
+		fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
+		return 0;
 	}
-	// FIXME set the target
-	fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
-	return 0;
+	usage(args,arghelp);
+	return -1;
 }
 
 static int
@@ -1641,7 +1656,8 @@ static const struct fxn {
 			"                 | [ -v ] no arguments to list all mdadm devices"),
 	FXN(zpool,"[ \"create\" zname devcount level vdevs ]\n"
 			"                 | [ -v ] no arguments to list all zpools"),
-	FXN(target,"[ path ]\n"
+	FXN(target,"[ \"set\" path ]\n"
+			"                 | [ \"unset\" ]\n"
 			"                 | no arguments prints target"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
