@@ -1530,3 +1530,22 @@ int rescan_devices(void){
 	free_devtable(&dt);
 	return ret;
 }
+
+int prepare_bios_boot(device *d){
+	// FIXME ensure the partition has its boot flag set
+	// FIXME ensure it's a primary partition
+	// FIXME install grub to MBR
+	// FIXME point grub at kernel
+	fprintf(stderr,"FIXME %s not yet implemented\n",d->name);
+	return -1;
+}
+
+int prepare_uefi_boot(device *d){
+	// FIXME ensure the partition is a viable ESP
+	// FIXME ensure kernel is in ESP
+	// FIXME prepare protective MBR
+	// FIXME install rEFInd to ESP
+	// FIXME point rEFInd at kernel
+	fprintf(stderr,"FIXME %s not yet implemented\n",d->name);
+	return -1;
+}

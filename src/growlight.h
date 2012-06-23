@@ -204,6 +204,9 @@ int rescan_devices(void);
 
 void add_new_virtual_blockdev(device *);
 
+int prepare_bios_boot(device *);
+int prepare_uefi_boot(device *);
+
 #ifdef __cplusplus
 }
 #endif

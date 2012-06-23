@@ -146,7 +146,7 @@ static int
 make_wfilesystem(device *d,const wchar_t *fs){
 	char sfs[NAME_MAX];
 
-	if(snprintf(sfs,sizeof(sfs),"%ls",fs) >= (int)sizeof(fs)){
+	if(snprintf(sfs,sizeof(sfs),"%ls",fs) >= (int)sizeof(sfs)){
 		fprintf(stderr,"Bad partition table type: %ls\n",fs);
 		return -1;
 	}
@@ -157,7 +157,7 @@ static controller *
 lookup_wcontroller(const wchar_t *dev){
 	char sdev[NAME_MAX];
 
-	if(snprintf(sdev,sizeof(sdev),"%ls",dev) >= (int)sizeof(dev)){
+	if(snprintf(sdev,sizeof(sdev),"%ls",dev) >= (int)sizeof(sdev)){
 		fprintf(stderr,"Bad controller name: %ls\n",dev);
 		return NULL;
 	}
@@ -168,7 +168,7 @@ static device *
 lookup_wdevice(const wchar_t *dev){
 	char sdev[NAME_MAX];
 
-	if(snprintf(sdev,sizeof(sdev),"%ls",dev) >= (int)sizeof(dev)){
+	if(snprintf(sdev,sizeof(sdev),"%ls",dev) >= (int)sizeof(sdev)){
 		fprintf(stderr,"Bad device name: %ls\n",dev);
 		return NULL;
 	}
@@ -179,7 +179,7 @@ static int
 make_partition_wtable(device *d,const wchar_t *tbl){
 	char stbl[NAME_MAX];
 
-	if(snprintf(stbl,sizeof(stbl),"%ls",tbl) >= (int)sizeof(tbl)){
+	if(snprintf(stbl,sizeof(stbl),"%ls",tbl) >= (int)sizeof(stbl)){
 		fprintf(stderr,"Bad partition table type: %ls\n",tbl);
 		return -1;
 	}
@@ -190,15 +190,15 @@ static int
 prepare_wmount(device *d,const wchar_t *path,const wchar_t *fs,const wchar_t *ops){
 	char spath[PATH_MAX],sfs[NAME_MAX],sops[PATH_MAX];
 
-	if(snprintf(spath,sizeof(spath),"%ls",path) >= (int)sizeof(path)){
+	if(snprintf(spath,sizeof(spath),"%ls",path) >= (int)sizeof(spath)){
 		fprintf(stderr,"Bad path: %ls\n",path);
 		return -1;
 	}
-	if(snprintf(sfs,sizeof(sfs),"%ls",fs) >= (int)sizeof(fs)){
+	if(snprintf(sfs,sizeof(sfs),"%ls",fs) >= (int)sizeof(sfs)){
 		fprintf(stderr,"Bad filesystem type: %ls\n",fs);
 		return -1;
 	}
-	if(snprintf(sops,sizeof(sops),"%ls",ops) >= (int)sizeof(ops)){
+	if(snprintf(sops,sizeof(sops),"%ls",ops) >= (int)sizeof(sops)){
 		fprintf(stderr,"Bad filesystem options: %ls\n",ops);
 		return -1;
 	}
@@ -1435,23 +1435,30 @@ troubleshoot(wchar_t * const *args,const char *arghelp){
 
 static int
 uefiboot(wchar_t * const *args,const char *arghelp){
+	device *dev;
+
 	ONE_ARG_CHECK(args,arghelp);
-	// FIXME ensure the partition is a viable ESP
-	// FIXME ensure kernel is in ESP
-	// FIXME prepare protective MBR
-	// FIXME install rEFIt to ESP
-	// FIXME point rEFIt at kernel
+	if((dev = lookup_wdevice(args[1])) == NULL){
+		return -1;
+	}
+	if(prepare_uefi_boot(dev)){
+		return -1;
+	}
 	return -1;
 }
 
 static int
 biosboot(wchar_t * const *args,const char *arghelp){
+	device *dev;
+
 	ONE_ARG_CHECK(args,arghelp);
-	// FIXME ensure the partition has its boot flag set
-	// FIXME ensure it's a primary partition
-	// FIXME install grub to MBR
-	// FIXME point grub at kernel
-	return -1;
+	if((dev = lookup_wdevice(args[1])) == NULL){
+		return -1;
+	}
+	if(prepare_bios_boot(dev)){
+		return -1;
+	}
+	return 0;
 }
 
 static int
