@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 
 #include "popen.h"
 
@@ -82,26 +81,23 @@ int popen_drain(const char *cmd){
 	return 0;
 }
 
-int vpopen_drain(const char *cmd,...){
+int vpopen_drain(const char *cmd,wchar_t * const *args){
 	char buf[BUFSIZ],*safecmd;
-	wchar_t *token;
-	va_list va;
 	FILE *fd;
 	int r;
 
 	if((r = snprintf(buf,sizeof(buf),"%s ",cmd)) >= (int)sizeof(buf)){
 		return -1;
 	}
-	va_start(va,cmd);
-	while( (token = va_arg(va,wchar_t *)) ){
+	while(*args){
 		int rr;
 
-		if((rr = snprintf(buf + r,sizeof(buf) - r,"%s ",cmd)) >= (int)(sizeof(buf) - r)){
+		if((rr = snprintf(buf + r,sizeof(buf) - r,"%ls ",*args)) >= (int)(sizeof(buf) - r)){
 			return -1;
 		}
+		r += rr;
+		++args;
 	}
-	va_end(va);
-	printf("CMD: %s\n",buf);
 	if((safecmd = sanitize_cmd(buf)) == NULL){
 		return -1;
 	}
