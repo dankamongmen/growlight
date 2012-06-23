@@ -164,23 +164,41 @@ partition containing GRUB2 will be marked as <emphasis role="bold">active</empha
 			<term><option>swap</option></term>
 		</varlistentry>
 		<varlistentry>
-			<term><option>mdadm [ -v ]</option></term>
+			<term><option>mdadm [ -v | arguments ]</option></term>
 			<listitem>
-			<para>Passed no arguments, <emphasis role="bold">mdadm</emphasis> concisely lists
+<para>Passed no arguments, <emphasis role="bold">mdadm</emphasis> concisely lists
 each MD (Multiple Device, aka the Linux kernel's mdraid driver) device
 currently available to the system. Passed "-v", each MD device's components
 will also be listed. Otherwise, arguments will be sanitized and passed to the
-external <emphasis role="bold">mdadm(8)</emphasis> tool.</para>
+external <emphasis role="bold">mdadm(8)</emphasis> tool. Note that this
+behavior is subject to change as MD is more fully integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>zpool [ -v ]</option></term>
+			<term><option>dmsetup [ arguments ]</option></term>
 			<listitem>
-				<para>Passed no arguments, <emphasis role="bold">zpool</emphasis> concisely lists
+<para>Arguments are sanitized and passed to the external
+<emphasis role="bold">dmsetup(8)</emphasis> tool. Note that this behavior is
+subject to change as DM is more fully integrated.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>zpool [ -v | arguments ]</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">zpool</emphasis> concisely lists
 each zpool (ZFS storage pool) device currently available to the system. Passed
 "-v", each zpool's components will also be listed. Otherwise, arguments will be
 sanitized and passed to the external <emphasis role="bold">zpool(8)</emphasis>
-tool.</para>
+tool. Note that this behavior is subject to change as ZFS is more fully
+integrated.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>zfs [ arguments ]</option></term>
+			<listitem>
+<para>Arguments are sanitized and passed to the external
+<emphasis role="bold">zfs(8)</emphasis> tool. This command is not expected to
+be retained once ZFS is fully integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
@@ -203,6 +221,11 @@ one exists).</para>
 		</varlistentry>
 		<varlistentry>
 			<term><option>grubmap</option></term>
+			<listitem>
+<para>Invokes <emphasis role="bold">grub-mkdevicemap</emphasis> to display
+GRUB's calculated device map. This will not overwrite any existing device
+map, but is included merely for diagnostic purposes. Accepts no arguments.</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>rescan</option></term>
@@ -228,7 +251,8 @@ one exists).</para>
 			<listitem>
 <para>Exits the program. See the <emphasis role="bold">--target</emphasis>
 command line option and <emphasis role="bold">target</emphasis> command to
-understand the conditions for a successful return during installation mode.</para>
+understand the conditions for a successful return during installation mode.
+<emphasis role="bold">quit</emphasis> accepts no arguments.</para>
 			</listitem>
 		</varlistentry>
 		</variablelist>
@@ -248,6 +272,9 @@ understand the conditions for a successful return during installation mode.</par
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>dmraid</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>dmsetup</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>fstab</refentrytitle>

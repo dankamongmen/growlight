@@ -760,6 +760,32 @@ zpool(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+dm(wchar_t * const *args,const char *arghelp){
+	int descend;
+
+	if(args[1] == NULL){
+		descend = 0;
+	}else if(wcscmp(args[1],L"-v") == 0 && args[2] == NULL){
+		descend = 1;
+	}else{
+		if(vpopen_drain("dmsetup",args + 1)){
+			usage(args,arghelp);
+			return -1;
+		}
+		return 0;
+	}
+	/*
+	printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
+			"Device","UUID","Bytes","PSect","Table","Disks","Level");
+	if(walk_devices(print_zpool,descend)){
+		return -1;
+	}
+	*/
+	fprintf(stderr,"Sorry, not yet implemented %d\n",descend); // FIXME
+	return -1;
+}
+
+static int
 mdadm(wchar_t * const *args,const char *arghelp){
 	const controller *c;
 	int descend;
@@ -1655,6 +1681,8 @@ static const struct fxn {
 	FXN(mdadm,"[ \"create\" mdname devcount level devices ]\n"
 			"                 | [ -v ] no arguments to list all mdadm devices"),
 	FXN(zpool,"[ \"create\" zname devcount level vdevs ]\n"
+			"                 | [ -v ] no arguments to list all zpools"),
+	FXN(dm,"[ arguments passed directly through to dmsetup ]\n"
 			"                 | [ -v ] no arguments to list all zpools"),
 	FXN(target,"[ \"set\" path ]\n"
 			"                 | [ \"unset\" ]\n"
