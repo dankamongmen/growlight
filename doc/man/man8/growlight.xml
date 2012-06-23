@@ -184,6 +184,9 @@ tool.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
+			<term><option>target path</option></term>
+		</varlistentry>
+		<varlistentry>
 			<term><option>map</option></term>
 		</varlistentry>
 		<varlistentry>
@@ -203,12 +206,21 @@ tool.</para>
 		</varlistentry>
 		<varlistentry>
 			<term><option>version</option></term>
+			<listitem>
+<para>Displays the growlight banner and version, and the version of various
+	tools/libraries. <emphasis role="bold">version</emphasis> accepts no arguments.</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>help</option></term>
 		</varlistentry>
 		<varlistentry>
 			<term><option>quit</option></term>
+			<listitem>
+<para>Exits the program. See the <emphasis role="bold">--target</emphasis>
+command line option and <emphasis role="bold">target</emphasis> command to
+understand the conditions for a successful return during installation mode.</para>
+			</listitem>
 		</varlistentry>
 		</variablelist>
 	</refsect1>
