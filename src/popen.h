@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 int popen_drain(const char *);
+int vpopen_drain(const char *,...);
 
 #ifdef __cplusplus
 }
