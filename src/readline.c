@@ -1580,6 +1580,22 @@ version(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+target(wchar_t * const *args,const char *arghelp){
+	if(args[1] == NULL){
+		// FIXME print the target
+		fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
+		return -1;
+	}
+	if(args[3] == NULL){
+		usage(args,arghelp);
+		return -1;
+	}
+	// FIXME set the target
+	fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
+	return 0;
+}
+
+static int
 quit(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	lights_off = 1;
@@ -1625,6 +1641,8 @@ static const struct fxn {
 			"                 | [ -v ] no arguments to list all mdadm devices"),
 	FXN(zpool,"[ \"create\" zname devcount level vdevs ]\n"
 			"                 | [ -v ] no arguments to list all zpools"),
+	FXN(target,"[ path ]\n"
+			"                 | no arguments prints target"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
 			"                 | no arguments prints target fstab"),
