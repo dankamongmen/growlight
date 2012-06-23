@@ -1655,28 +1655,46 @@ version(wchar_t * const *args,const char *arghelp){
 static int
 target(wchar_t * const *args,const char *arghelp){
 	if(args[1] == NULL){
-		// FIXME print the target
-		fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
-		return -1;
+		const char *t = get_target();
+
+		if(t == NULL){
+			if(printf("No target is defined\n") < 0){
+				return -1;
+			}
+		}else{
+			if(printf("%s\n",t) < 0){
+				return -1;
+			}
+		}
+		return 0;
 	}
 	if(args[2] == NULL){
 		usage(args,arghelp);
 		return -1;
 	}else if(wcscmp(args[2],L"set") == 0){
-	       	if(args[3] == NULL || args[4]){
+		char targ[PATH_MAX];
+
+		if(args[3] == NULL || args[4]){
 			usage(args,arghelp);
 			return -1;
 		}
-		// FIXME set the target
-		fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
+		if(snprintf(targ,sizeof(targ),"%ls",args[3]) >= (int)sizeof(targ)){
+			fprintf(stderr,"Bad target specification: %ls\n",args[3]);
+			usage(args,arghelp);
+			return -1;
+		}
+		if(set_target(targ)){
+			return -1;
+		}
 		return 0;
 	}else if(wcscmp(args[2],L"unset") == 0){
 		if(args[3]){
 			usage(args,arghelp);
 			return -1;
 		}
-		// FIXME unset the target
-		fprintf(stderr,"Not yet implemented FIXME\n"); // FIXME
+		if(set_target(NULL)){
+			return -1;
+		}
 		return 0;
 	}
 	usage(args,arghelp);

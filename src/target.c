@@ -7,6 +7,7 @@
 #include "target.h"
 #include "growlight.h"
 
+char *real_target; // Only used when we set or unset the target
 const char *growlight_target = NULL;
 
 // Topologically sorted
@@ -105,13 +106,21 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 }
 
 int set_target(const char *path){
-	if(growlight_target){
-		fprintf(stderr,"A target is already defined: %s\n",growlight_target);
-		return -1;
+	if(path){
+		if(growlight_target){
+			fprintf(stderr,"A target is already defined: %s\n",growlight_target);
+			return -1;
+		}
+		if((growlight_target = real_target = strdup(path)) == NULL){
+			fprintf(stderr,"Couldn't set target (%s?)\n",strerror(errno));
+			return -1;
+		}
+		return 0;
 	}
-	if((growlight_target = strdup(path)) == NULL){
-		fprintf(stderr,"Couldn't set target (%s?)\n",strerror(errno));
-		return -1;
+	if(growlight_target){
+		// FIXME need to unmount maps
+		free(real_target);
+		growlight_target = real_target = NULL;
 	}
 	return 0;
 }

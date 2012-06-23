@@ -14,6 +14,11 @@ int set_target(const char *);
 // don't go mucking around with me externally. use set_target().
 extern const char *growlight_target;
 
+static inline const char *
+get_target(void){
+	return growlight_target;
+}
+
 #ifdef __cplusplus
 }
 #endif
