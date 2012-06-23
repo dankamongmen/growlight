@@ -57,6 +57,10 @@ void free_targets(void){
 int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 	struct target **pre,*m;
 
+	if(get_target() == NULL){
+		fprintf(stderr,"No target is defined\n");
+		return -1;
+	}
 	if(d->mnt){
 		fprintf(stderr,"%s is already actively mounted at %s\n",d->name,d->mnt);
 		return -1;
@@ -99,6 +103,7 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 	if((m = create_target(path,d->name,fs,ops)) == NULL){
 		return -1;
 	}
+	// FIXME need to actually mount it, no?
 	d->target = &m->m;
 	m->next = *pre;
 	*pre = m;
