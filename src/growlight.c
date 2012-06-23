@@ -626,7 +626,7 @@ create_new_device(const char *name){
 		int dfd;
 
 		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
-			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECT)) < 0){
 				fprintf(stderr,"Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
 				clobber_device(d);
 				return NULL;
@@ -1251,7 +1251,7 @@ int rescan_blockdev(device *d){
 		return -1;
 	}
 	printf("Wrote '1' to %s\n",buf);
-	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC)) < 0){
+	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC|O_DIRECT)) < 0){
 		return -1;
 	}
 	sync();

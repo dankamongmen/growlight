@@ -63,7 +63,7 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 		fprintf(stderr,"Bad device name: %s\n",d->name);
 		return -1;
 	}
-	if((fd = open(dbuf,O_RDWR|O_CLOEXEC)) < 0){
+	if((fd = open(dbuf,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
 		int e = errno;
 		fprintf(stderr,"Couldn't open %s (%s?)\n",dbuf,strerror(errno));
 		errno = e;
@@ -98,6 +98,7 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	if(zerombrp(d->blkdev.biossha1)){
 		d->blkdev.biosboot = 0;
 	}
+	sync();
 	// FIXME we still have valid filesystems, but no longer have valid
 	//   partition table entries for them (iff we were using MBR). add
 	//   "recovery"? gparted can supposedly find lost filesystems....
