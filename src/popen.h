@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <wchar.h>
+
 int popen_drain(const char *);
 int vpopen_drain(const char *,wchar_t * const *);
 
