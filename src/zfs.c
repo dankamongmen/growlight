@@ -61,10 +61,10 @@ dehumanize(const char *num){
 static int
 zpoolcb(zpool_handle_t *zhp,void *arg){
 	struct zpoolcb_t *cb = arg;
+	char size[10],guid[21];
 	uint64_t version;
 	const char *name;
 	nvlist_t *conf;
-	char size[10];
 	device *d;
 	int state;
 
@@ -98,6 +98,11 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		zpool_close(zhp);
 		return -1;
 	}
+	if(zpool_get_prop(zhp,ZPOOL_PROP_GUID,guid,sizeof(guid),NULL)){
+		fprintf(stderr,"Couldn't get GUID for %s\n",name);
+		zpool_close(zhp);
+		return -1;
+	}
 	zpool_close(zhp);
 	if((d = malloc(sizeof(*d))) == NULL){
 		fprintf(stderr,"Couldn't allocate device (%s?)\n",strerror(errno));
@@ -107,6 +112,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	memset(d,0,sizeof(*d));
 	strcpy(d->name,name);
 	d->model = strdup("LLNL ZoL");
+	d->uuid = strdup(guid);
 	d->layout = LAYOUT_ZPOOL;
 	d->swapprio = SWAP_INVALID;
 	d->size = dehumanize(size);
