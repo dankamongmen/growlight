@@ -1567,8 +1567,7 @@ int prepare_bios_boot(device *d){
 		fprintf(stderr,"BIOS boots from GPT or MSDOS 'Primary' partitions only\n");
 		return -1;
 	}
-	// FIXME install grub to MBR
-	// FIXME point grub at kernel
+	// FIXME point grub at kernel?
 	fprintf(stderr,"FIXME %s not yet implemented\n",d->name);
 	return -1;
 }
