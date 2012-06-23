@@ -440,14 +440,14 @@ print_drive(const device *d,int descend){
 	case LAYOUT_NONE:{
 		if(d->blkdev.realdev){
 			if(d->blkdev.rotate){
-				use_terminfo_color(COLOR_YELLOW,0);
+				use_terminfo_color(COLOR_YELLOW,0); // disk
 			}else{
-				use_terminfo_color(COLOR_CYAN,1);
+				use_terminfo_color(COLOR_CYAN,1); // ssd
 			}
 		}else{
-			use_terminfo_color(COLOR_MAGENTA,1);
+			use_terminfo_color(COLOR_MAGENTA,1); // virtual
 		}
-		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
@@ -465,7 +465,7 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_MDADM:{
 		use_terminfo_color(COLOR_YELLOW,1);
-		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
@@ -478,10 +478,10 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_ZPOOL:{
 		use_terminfo_color(COLOR_RED,1);
-		r += rr = printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4lu " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
 			d->name,
 			d->model ? d->model : "n/a",
-			d->revision ? d->revision : "n/a",
+			d->zpool.zpoolver,
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec, 'Z', '.', '.', '.',
 			"spa",
@@ -858,7 +858,7 @@ static inline int
 blockdev_dump(int descend){
 	const controller *c;
 
-	printf("%-10.10s %-16.16s %-4.4s " PREFIXFMT " %5.5s Flags %-6.6s%-16.16s %-3.3s\n",
+	printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %5.5s Flags %-6.6s%-16.16s %-3.3s\n",
 			"Device","Model","Rev","Bytes","PSect","Table","WWN","PHY");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
