@@ -53,6 +53,11 @@ static int sysfd = -1; // Hold a reference to SYSROOT
 static int devfd = -1; // Hold a reference to DEVROOT
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
+// Global state for a growlight instance
+typedef struct devtable {
+	controller *controllers;
+} devtable;
+
 static controller unknown_bus = {
 	.name = "Unknown controller",
 	.bus = BUS_UNKNOWN,
@@ -65,6 +70,12 @@ static controller virtual_bus = {
 };
 
 static controller *controllers = &virtual_bus;
+
+static void
+push_devtable(devtable *dt){
+	dt->controllers = controllers;
+	controllers = NULL;
+}
 
 int verbf(const char *fmt,...){
 	va_list ap;
@@ -228,17 +239,17 @@ free_controller(controller *c){
 }
 
 static void
-free_devtable(void){
+free_devtable(devtable *dt){
 	controller *c;
 
-	while( (c = controllers) ){
+	while( (c = dt->controllers) ){
 		device *d;
 
 		while( (d = c->blockdevs) ){
 			c->blockdevs = d->next;
 			clobber_device(d);
 		}
-		controllers = c->next;
+		dt->controllers = c->next;
 		// FIXME ugh! horrible!
 		if(c->bus != BUS_VIRTUAL && c->bus != BUS_UNKNOWN){
 			free_controller(c);
@@ -1151,11 +1162,13 @@ err:
 }
 
 int growlight_stop(void){
+	devtable dt;
 	int r = 0;
 
 	r |= kill_event_thread();
 	r |= close_blkid();
-	free_devtable();
+	push_devtable(&dt);
+	free_devtable(&dt);
 	if(usepci){
 		pci_cleanup(pciacc);
 	}
@@ -1310,14 +1323,88 @@ int rescan_device(const char *name){
 	return 0;
 }
 
-int rescan_devices(void){
-	int ret = 0;
+static int
+devices_match_p(const device *d,const device *dd){
+	unsigned mismatch = 0,match = 0;
 
-	// FIXME this is slightly overkill. also, it eliminates any mappings.
-	free_devtable();
+	strcmp(d->name,dd->name) ? ++mismatch : ++match;
+	(!d->uuid && !dd->uuid) ? ++match :
+		((d->uuid && !dd->uuid) || (!d->uuid && dd->uuid) ||
+			strcmp(d->uuid,dd->uuid)) ? ++mismatch : ++match;
+	(!d->label && !dd->label) ? ++match :
+		((d->label && !dd->label) || (!d->label && dd->label) ||
+			strcmp(d->label,dd->label)) ? ++mismatch : ++match;
+	return (mismatch && !match) ? 0 : (mismatch && match) ? -1 : 1;
+}
+
+// Must match in all four ways: UUID, label, device name, and bus path. Any
+// partial match is cause to fail the search, since it represents ambiguity.
+static device *
+match_device(const device *d){
+	controller *c;
+
+	for(c = controllers ; c ; c = c->next){
+		device *cd;
+
+		for(cd = c->blockdevs ; cd ; cd = cd->next){
+			int r;
+
+			if(d->layout == LAYOUT_PARTITION){
+				device *dp;
+
+				for(dp = cd->parts ; dp ; dp = dp->next){
+					if((r = devices_match_p(d,dp)) > 0){
+						return dp;
+					}
+				}
+			}else{
+				if((r = devices_match_p(d,cd)) > 0){
+					return cd;
+				}
+			}
+			if(r < 0){
+				return NULL;
+			}
+		}
+	}
+	return NULL;
+}
+
+int rescan_devices(void){
+	const controller *c;
+	int ret = 0;
+	devtable dt;
+
+	push_devtable(&dt);
 	ret |= watch_dir(-1,SYSROOT,scan_device);
 	ret |= watch_dir(-1,DEVBYID,lookup_id);
 	ret |= parse_mounts(MOUNTS);
 	ret |= parse_swaps();
+	// Preserve any defined mappings, if possible. For a mapping to be
+	// preserved, the device must still exist, with the same parameters,
+	// and all containing mappings must also be preserved.
+	for(c = dt.controllers ; c ; c = c->next){
+		device *d,*t;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			device *p;
+
+			if(d->target){
+				if( (t = match_device(d)) ){
+					t->target = d->target;
+					d->target = NULL;
+				}
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(p->target){
+					if( (t = match_device(p)) ){
+						t->target = p->target;
+						p->target = NULL;
+					}
+				}
+			}
+		}
+	}
+	free_devtable(&dt);
 	return ret;
 }
