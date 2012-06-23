@@ -34,6 +34,7 @@
 #include "swap.h"
 #include "udev.h"
 #include "mdadm.h"
+#include "popen.h"
 #include "smart.h"
 #include "sysfs.h"
 #include "config.h"
@@ -1532,8 +1533,38 @@ int rescan_devices(void){
 }
 
 int prepare_bios_boot(device *d){
-	// FIXME ensure the partition has its boot flag set
-	// FIXME ensure it's a primary partition
+	if(d->layout != LAYOUT_PARTITION){
+		fprintf(stderr,"Must boot from a partition\n");
+		return -1;
+	}
+	if(d->target == NULL){
+		fprintf(stderr,"%s is not mapped as a target filesystem\n",d->name);
+		return -1;
+	}
+	if(strcmp(d->target->path,"/")){
+		fprintf(stderr,"%s is not mapped as the target root (%s)\n",d->name,d->target->path);
+		return -1;
+	}
+	if(d->partdev.partrole == PARTROLE_GPT){
+	}else if(d->partdev.partrole == PARTROLE_PRIMARY){
+		char cmd[BUFSIZ];
+
+		if(!(d->partdev.flags & 0x80u)){
+			fprintf(stderr,"%s is not marked as Active (bootable, 0x80)\n",d->name);
+			return -1;
+		}
+		if(snprintf(cmd,sizeof(cmd),"/sbin/grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
+					d->mnt,d->name) >= (int)sizeof(cmd)){
+			fprintf(stderr,"Bad name: %s\n",d->name);
+			return -1;
+		}
+		if(popen_drain(cmd)){
+			return -1;
+		}
+	}else{
+		fprintf(stderr,"BIOS boots from GPT or MSDOS 'Primary' partitions only\n");
+		return -1;
+	}
 	// FIXME install grub to MBR
 	// FIXME point grub at kernel
 	fprintf(stderr,"FIXME %s not yet implemented\n",d->name);
@@ -1541,6 +1572,14 @@ int prepare_bios_boot(device *d){
 }
 
 int prepare_uefi_boot(device *d){
+	if(d->layout != LAYOUT_PARTITION){
+		fprintf(stderr,"Must boot from a partition\n");
+		return -1;
+	}
+	if(d->partdev.partrole != PARTROLE_GPT){
+		fprintf(stderr,"UEFI boots from GPT partitions only\n");
+		return -1;
+	}
 	// FIXME ensure the partition is a viable ESP
 	// FIXME ensure kernel is in ESP
 	// FIXME prepare protective MBR
