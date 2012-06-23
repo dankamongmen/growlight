@@ -164,10 +164,24 @@ partition containing GRUB2 will be marked as <emphasis role="bold">active</empha
 			<term><option>swap</option></term>
 		</varlistentry>
 		<varlistentry>
-			<term><option>mdadm</option></term>
+			<term><option>mdadm [ -v ]</option></term>
+			<listitem>
+			<para>Passed no arguments, <emphasis role="bold">mdadm</emphasis> concisely lists
+each MD (Multiple Device, aka the Linux kernel's mdraid driver) device
+currently available to the system. Passed "-v", each MD device's components
+will also be listed. Otherwise, arguments will be sanitized and passed to the
+external <emphasis role="bold">mdadm(8)</emphasis> tool.</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>zpool</option></term>
+			<term><option>zpool [ -v ]</option></term>
+			<listitem>
+				<para>Passed no arguments, <emphasis role="bold">zpool</emphasis> concisely lists
+each zpool (ZFS storage pool) device currently available to the system. Passed
+"-v", each zpool's components will also be listed. Otherwise, arguments will be
+sanitized and passed to the external <emphasis role="bold">zpool(8)</emphasis>
+tool.</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>map</option></term>
