@@ -121,6 +121,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 	if(c == NULL){
 		const controller *idc;
 		unsigned devno = 0;
+		controller **pre;
 
 		for(idc = controllers ; idc ; idc = idc->next){
 			if(idc->driver && strcmp(idc->driver,module) == 0){
@@ -195,8 +196,15 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			}
 			pci_free_dev(pcidev);
 		}
-		c->next = controllers;
-		controllers = c;
+		for(pre = &controllers ; *pre ; pre = &(*pre)->next){
+			int r = (*pre)->ident ? strcmp(c->ident,(*pre)->ident) : -1;
+
+			if(r < 0){
+				break;
+			}
+		}
+		c->next = *pre;
+		*pre = c;
 	}else{
 		free(module);
 		free(sysfs);
@@ -755,9 +763,7 @@ controller *lookup_controller(const char *name){
 	controller *c;
 
 	for(c = controllers ; c ; c = c->next){
-		// FIXME terrible. these names are entirely freeform. have them
-		// pass a PCI address or something
-		if(strcmp(name,c->name) == 0){
+		if(strcmp(name,c->ident) == 0){
 			break;
 		}
 	}
