@@ -769,6 +769,10 @@ mdadm(wchar_t * const *args,const char *arghelp){
 	}else if(wcscmp(args[1],L"-v") == 0 && args[2] == NULL){
 		descend = 1;
 	}else{
+		if(vpopen_drain("mdadm",args + 1)){
+			usage(args,arghelp);
+			return -1;
+		}
 		usage(args,arghelp);
 		return -1;
 	}
