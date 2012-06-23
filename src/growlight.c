@@ -41,7 +41,7 @@
 #include "libblkid.h"
 #include "growlight.h"
 
-#define SYSROOT "/sys/block/"
+#define SYSROOT "/sys/class/block/"
 #define MOUNTS	"/proc/mounts"
 #define DEVROOT "/dev"
 #define DEVBYID DEVROOT "/disk/by-id/"
@@ -52,6 +52,10 @@ static struct pci_access *pciacc;
 static int sysfd = -1; // Hold a reference to SYSROOT
 static int devfd = -1; // Hold a reference to DEVROOT
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+static unsigned thrcount;
+static pthread_mutex_t barrier = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t barrier_cond = PTHREAD_COND_INITIALIZER;
 
 // Global state for a growlight instance
 typedef struct devtable {
@@ -70,6 +74,8 @@ static controller virtual_bus = {
 };
 
 static controller *controllers = &virtual_bus;
+
+static device *create_new_device(const char *,int);
 
 static void
 push_devtable(devtable *dt){
@@ -325,7 +331,11 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz)
 }
 
 // Pass a directory handle fd, and the bare name of the device
-int explore_sysfs_node(int fd,const char *name,device *d){
+// Return -1 on error, 0 on success, 1 if the device is a partition, and we
+// successfully look up the containing disk (in which case lookup_device()
+// ought be rerun to acquire a reference).
+static int
+explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 	struct dirent *dire;
 	unsigned long ul;
 	unsigned b;
@@ -339,8 +349,37 @@ int explore_sysfs_node(int fd,const char *name,device *d){
 		return -1;
 	}
 	if(sysfs_exist_p(fd,"partition")){
-		fprintf(stderr,"We were passed a partition (%s)!\n",name);
-		return -1;
+		char buf[PATH_MAX],*dev;
+		int r;
+
+		if(recurse == 0){
+			fprintf(stderr,"Not recursing on partition %s\n",name);
+			return -1;
+		}
+		if((r = readlinkat(sysfd,name,buf,sizeof(buf))) < 0){
+			fprintf(stderr,"Couldn't read link at %s%s (%s?)\n",
+				SYSROOT,name,strerror(errno));
+			return -1;
+		}
+		buf[r] = '\0';
+		if((dev = strrchr(buf,'/')) == NULL){
+			fprintf(stderr,"Bad link: "SYSROOT"%s->%s\n",name,buf);
+			return -1;
+		}
+		*dev++ = '\0';
+		if(strcmp(dev,name)){
+			fprintf(stderr,"Invalid link: "SYSROOT"%s->%s/%s\n",name,buf,dev);
+			return -1;
+		}
+		if((dev = strrchr(buf,'/')) == NULL){
+			fprintf(stderr,"Bad toplink: "SYSROOT"%s->%s\n",name,buf);
+			return -1;
+		}
+		if(create_new_device(dev,0)){
+			fprintf(stderr,"Couldn't get disk: "SYSROOT"%s->%s/%s\n",name,buf,dev);
+			return -1;
+		}
+		return 1;
 	}
 	if(get_sysfs_bool(fd,"removable",&b)){
 		fprintf(stderr,"Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
@@ -562,11 +601,11 @@ void add_new_virtual_blockdev(device *d){
 }
 
 static device *
-create_new_device(const char *name){
+create_new_device(const char *name,int recurse){
 	char buf[PATH_MAX] = "";
 	controller *c;
 	device *d;
-	int fd;
+	int fd,r;
 
 	if(strlen(name) >= sizeof(d->name)){
 		fprintf(stderr,"Bad name: %s\n",name);
@@ -602,10 +641,16 @@ create_new_device(const char *name){
 		clobber_device(d);
 		return NULL;
 	}
-	if(explore_sysfs_node(fd,name,d)){
+	if((r = explore_sysfs_node(fd,name,d,recurse)) < 0){
 		close(fd);
 		clobber_device(d);
 		return NULL;
+	}else if(r){
+		// The device ought exist now. Don't continue trying to create
+		// a new one, but instead look up the one that now exists.
+		close(fd);
+		clobber_device(d);
+		return lookup_device(name);
 	}
 	if(c == &unknown_bus){
 		d->blkdev.realdev = 0;
@@ -807,26 +852,37 @@ device *lookup_device(const char *name){
 			}
 		}
 	}
-	return create_new_device(name);
+	return create_new_device(name,1);
 }
 
-static int
-scan_device(const char *name){
-	return lookup_device(name) ? 0 : -1;
+static void *
+scan_device(void *name){
+	device *d;
+	int sig;
+
+	pthread_mutex_lock(&barrier);
+	d = name ? lookup_device(name) : NULL;
+	sig = --thrcount == 0;
+	if(sig){
+		pthread_cond_signal(&barrier_cond);
+	}
+	pthread_mutex_unlock(&barrier);
+	free(name);
+	return d;
 }
 
 // Must be an entry in /dev/disk/by-id/
-static int
-lookup_id(const char *name){
+static device *
+lookup_id_inner(const char *name){
 	char path[PATH_MAX],buf[PATH_MAX];
 	device *d;
 	int rl;
 
 	if(snprintf(path,sizeof(path),"/dev/disk/by-id/%s",name) >= (int)sizeof(path)){
-		return -1;
+		return NULL;
 	}
 	if((rl = readlink(path,buf,sizeof(buf))) < 0 || (unsigned)rl >= sizeof(buf)){
-		return -1;
+		return NULL;
 	}
 	buf[rl] = '\0';
 	if( (d = lookup_device(buf)) ){
@@ -834,7 +890,7 @@ lookup_id(const char *name){
 			char *wwn;
 
 			if((wwn = strdup(name + 6)) == NULL){
-				return -1;
+				return NULL;
 			}
 			free(d->wwn);
 			d->wwn = wwn;
@@ -842,7 +898,22 @@ lookup_id(const char *name){
 	}else{
 		fprintf(stderr,"Warning: couldn't trace down %s\n",path);
 	}
-	return 0;
+	return d;
+}
+
+static void *
+lookup_id(void *uname){
+	const char *name = uname;
+	device *d;
+
+	pthread_mutex_lock(&barrier);
+	d = name ? lookup_id_inner(name) : NULL;
+	if(--thrcount == 0){
+		pthread_cond_signal(&barrier_cond);
+	}
+	pthread_mutex_unlock(&barrier);
+	free(uname);
+	return d;
 }
 
 static inline int
@@ -855,15 +926,21 @@ inotify_fd(void){
 	return fd;
 }
 
-typedef int (*eventfxn)(const char *);
+//typedef int (*eventfxn)(const char *);
+typedef void *(*eventfxn)(void *);
 
 static inline int
 watch_dir(int fd,const char *dfp,eventfxn fxn){
+	pthread_attr_t attr;
 	struct dirent *d;
 	DIR *dir;
 	int wfd,r;
 	int dfd;
 
+	if( (r = pthread_attr_init(&attr)) ||
+		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
+		fprintf(stderr,"Couldn't set threads detachable (%s?)\n",strerror(errno));
+	}
 	if(fd >= 0){
 		wfd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 		if(wfd < 0){
@@ -886,9 +963,17 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 		return -1;
 	}
 	while( errno = 0, (d = readdir(dir)) ){
+		pthread_t tid;
 		r = -1;
 		if(d->d_type == DT_LNK){
-			if(fxn(d->d_name)){
+			pthread_mutex_lock(&barrier);
+			++thrcount;
+			pthread_mutex_unlock(&barrier);
+			if( (r = pthread_create(&tid,NULL,fxn,strdup(d->d_name))) ){
+				fprintf(stderr,"Couldn't create thread (%s?)\n",strerror(errno));
+				pthread_mutex_lock(&barrier);
+				--thrcount;
+				pthread_mutex_unlock(&barrier);
 				break;
 			}
 		}
@@ -902,6 +987,12 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 		r = -1;
 	}
 	closedir(dir);
+	pthread_mutex_lock(&barrier);
+	while(thrcount){
+		verbf("Waiting on %u devices...\n",thrcount);
+		pthread_cond_wait(&barrier_cond,&barrier);
+	}
+	pthread_mutex_unlock(&barrier);
 	return r;
 }
 
@@ -1293,9 +1384,11 @@ static int
 rescan(device *d){
 	device *tmp;
 
-	if((tmp = create_new_device(d->name)) == NULL){
+	if((tmp = create_new_device(d->name,0)) == NULL){
 		return -1;
 	}
+	tmp->target = d->target;
+	d->target = NULL;
 	free_device(d);
 	*d = *tmp;
 	free(tmp);
@@ -1346,7 +1439,7 @@ int rescan_device(const char *name){
 			}
 		}
 	}
-	if(create_new_device(name) == NULL){
+	if(create_new_device(name,0) == NULL){
 		return -1;
 	}
 	return 0;
