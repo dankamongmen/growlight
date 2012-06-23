@@ -70,8 +70,8 @@
 		<title>DESCRIPTION</title>
 		<para><command>&dhpackage;</command> detects and describes
                 disk pools, block devices, partition tables, and partitions.
-		It can partition devices, manipulate ZFS, MDADM, DMRAID, LVM
-		and hardware RAID virtual devices, and prepare an fstab file
+		It can partition devices, manipulate ZFS, MD, DM, LVM and
+		hardware RAID virtual devices, and prepare an fstab file
 		for using the devices to boot or in a chroot, and is fully
 		aware of variable sector sizes, GPT, and UEFI.</para>
 	</refsect1>
@@ -98,20 +98,27 @@
 		<varlistentry>
 			<term><option>-t|--target path</option></term>
 			<listitem>
-<para>Run in system installation mode, using path as the temporary mountpoint
+<para>Run in system installation mode, using <emphasis role="bold">path</emphasis> as the temporary mountpoint
 for the target's root filesystem. "map" commands will populate the hierarchy
 rooted at this mountpoint. System installation mode can also be entered at run
 time with the "target" command. The "map" command will not result in active
 mounts unless growlight is operating in system installation mode (they will
 merely be used to construct target fstab output). Once system installation mode
 is entered, growlight will return 0 only as a result of a successful invocation
-of the "finalize" command. The target path needn't exist at specification time,
-but it must exist before any maps can be defined.</para>
+of the "finalize" command. <emphasis role="bold">path</emphasis> needn't exist at
+specification time, but it must exist before any maps can be defined.</para>
 			</listitem>
 		</varlistentry>
 	</refsect1>
 	<refsect1 id="commands">
-		<title>COMMANDS</title>
+		<title>USAGE</title>
+<para>Growlight is primarily intended for interactive use at the command line via GNU
+Readline. Commands are entered; a newline causes input to be interpreted, and 
+output resulting from this interpretation is displayed to the user. Unlike
+programs such as <emphasis role="full">fdisk</emphasis> and <emphasis role="full">gdisk</emphasis>,
+growlight acts on commands immediately, rather than requiring an explicit
+commit step.</para>
+
 		<variablelist>
 		<varlistentry>
 			<term><option>uefiboot</option></term>
@@ -149,7 +156,21 @@ partition containing GRUB2 will be marked as <emphasis role="bold">active</empha
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>adapter</option></term>
+			<term><option>adapter reset adapter</option></term>
+			<term><option>adapter rescan adapter</option></term>
+			<term><option>adapter [ -v ]</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">adapter</emphasis> lists each
+HBA (Host Bus Adapter) device known to the system, including those not
+actively used. Passed "-v", attached devices of each HBA will also be listed.
+For each adapter listed, the first token is an identifier suitable for use with
+other <emphasis role="bold">adapter</emphasis> subcommands (it is typically the
+device driver's module name suffixed by a small integer, but the exact form
+is intentionally left implementation-defined). The "reset" subcommand resets
+the HBA, if it supports this functionality. The "rescan" subcommand causes the
+kernel to scan the HBA for newly connected devices. Both operations are
+performed via the Linux kernel's sysfs filesystem.</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>blockdev</option></term>
@@ -161,10 +182,25 @@ partition containing GRUB2 will be marked as <emphasis role="bold">active</empha
 			<term><option>fs</option></term>
 		</varlistentry>
 		<varlistentry>
+			<term><option>swap on swapdev label [ uuid ]</option></term>
+			<term><option>swap off swapdev</option></term>
 			<term><option>swap</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">swap</emphasis> concisely lists
+each swap device known to the system, including those not actively used. The
+"on" subcommand attempts to create and use a swap device on <emphasis role="bold">swapdev</emphasis>. This
+command will fail if <emphasis role="bold">swapdev</emphasis> is referenced by any map, mount, md device, dm
+device, or zpool, if <emphasis role="bold">swapdev</emphasis> is not writable, or on any
+<emphasis role="bold">mkswap(8)</emphasis> or <emphasis role="bold">swapon(8)</emphasis>
+error. The "off" subcommand attempts to halt an active swap device (it does not
+write to the swap device itself, and thus the swap device remains usable). It
+will fail if the device is not an active swap, or on any <emphasis role="bold">swapoff(8)</emphasis>
+failure.</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>mdadm [ -v | arguments ]</option></term>
+			<term><option>mdadm arguments</option></term>
+			<term><option>mdadm [ -v ]</option></term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">mdadm</emphasis> concisely lists
 each MD (Multiple Device, aka the Linux kernel's mdraid driver) device
@@ -175,7 +211,7 @@ behavior is subject to change as MD is more fully integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>dmsetup [ arguments ]</option></term>
+			<term><option>dmsetup arguments</option></term>
 			<listitem>
 <para>Arguments are sanitized and passed to the external
 <emphasis role="bold">dmsetup(8)</emphasis> tool. Note that this behavior is
@@ -183,7 +219,8 @@ subject to change as DM is more fully integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>zpool [ -v | arguments ]</option></term>
+			<term><option>zpool arguments</option></term>
+			<term><option>zpool [ -v ]</option></term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">zpool</emphasis> concisely lists
 each zpool (ZFS storage pool) device currently available to the system. Passed
@@ -194,7 +231,7 @@ integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>zfs [ arguments ]</option></term>
+			<term><option>zfs arguments</option></term>
 			<listitem>
 <para>Arguments are sanitized and passed to the external
 <emphasis role="bold">zfs(8)</emphasis> tool. This command is not expected to
@@ -202,12 +239,14 @@ be retained once ZFS is fully integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>target [ "set" path | "unset" ]</option></term>
+			<term><option>target set path</option></term>
+			<term><option>target unset</option></term>
+			<term><option>target</option></term>
 			<listitem>
-<para>Called with "set", sets the target (see the <emphasis role="bold">--target</emphasis>
-option). If a target has already been set, the command will fail. If the path
-does not exist in the current filesystem, the command will fail. If the path
-exists, but is not a directory, the command will fail. Called with "unset",
+<para>The <emphasis role="bold">set</emphasis> subcommand, sets the target (see the <emphasis role="bold">--target</emphasis>
+option). If a target has already been set, the command will fail. If <emphasis role="bold">path</emphasis>
+does not exist in the current filesystem, the command will fail. If <emphasis role="bold">path</emphasis>
+exists, but is not a directory, the command will fail. Called with <emphasis role="bold">unset</emphasis>,
 undefines the target and all mappings therein. If there is no target defined,
 the command will fail. Called with no arguments, lists the current target (if
 one exists).</para>
@@ -240,11 +279,16 @@ map, but is included merely for diagnostic purposes. Accepts no arguments.</para
 			<term><option>version</option></term>
 			<listitem>
 <para>Displays the growlight banner and version, and the version of various
-	tools/libraries. <emphasis role="bold">version</emphasis> accepts no arguments.</para>
+tools/libraries. <emphasis role="bold">version</emphasis> accepts no arguments.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
+			<term><option>help command</option></term>
 			<term><option>help</option></term>
+			<listitem><para>
+Invoked upon a <emphasis role="bold">command</emphasis>, <emphasis role="bold">help</emphasis>
+displays that command's synopsis. Otherwise, <emphasis role="bold">help</emphasis> lists a
+synopsis of each command.</para></listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>quit</option></term>
@@ -298,10 +342,19 @@ understand the conditions for a successful return during installation mode.
 			<refentrytitle>parted</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
+			<refentrytitle>readline</refentrytitle>
+			<manvolnum>3</manvolnum>
+		</citerefentry>, <citerefentry>
 			<refentrytitle>sfdisk</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>sgdisk</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>swapoff</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>swapon</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>zfs</refentrytitle>

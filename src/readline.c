@@ -1650,7 +1650,7 @@ static const struct fxn {
 } fxns[] = {
 #define FXN(x,args) { .cmd = L###x, .fxn = x, .arghelp = args, }
 	FXN(adapter,"[ \"reset\" adapter ]\n"
-			"		  | [ \"rescan\" adapter ]\n"
+			"                 | [ \"rescan\" adapter ]\n"
 			"                 | [ -v ] no arguments to list all host bus adapters"),
 	FXN(blockdev,"[ \"rescan\" blockdev ]\n"
 			"                 | [ \"badblocks\" blockdev [ \"rw\" ] ]\n"
@@ -1678,12 +1678,12 @@ static const struct fxn {
 			"                 | no arguments to list all filesystems"),
 	FXN(swap,"[ \"on\"|\"off\" swapdevice ]\n"
 			"                 | no arguments to list all swaps"),
-	FXN(mdadm,"[ \"create\" mdname devcount level devices ]\n"
-			"                 | [ -v ] no arguments to list all mdadm devices"),
-	FXN(zpool,"[ \"create\" zname devcount level vdevs ]\n"
+	FXN(mdadm,"[ arguments passed directly through to mdadm ]\n"
+			"                 | [ -v ] no arguments to list all md devices"),
+	FXN(zpool,"[ arguments passed directly through to apool ]\n"
 			"                 | [ -v ] no arguments to list all zpools"),
 	FXN(dm,"[ arguments passed directly through to dmsetup ]\n"
-			"                 | [ -v ] no arguments to list all zpools"),
+			"                 | [ -v ] no arguments to list all devicemaps"),
 	FXN(target,"[ \"set\" path ]\n"
 			"                 | [ \"unset\" ]\n"
 			"                 | no arguments prints target"),
