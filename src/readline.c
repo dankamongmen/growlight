@@ -1649,6 +1649,7 @@ static const struct fxn {
 	const char *arghelp;
 } fxns[] = {
 #define FXN(x,args) { .cmd = L###x, .fxn = x, .arghelp = args, }
+	FXN(rescan,""),
 	FXN(adapter,"[ \"reset\" adapter ]\n"
 			"                 | [ \"rescan\" adapter ]\n"
 			"                 | [ -v ] no arguments to list all host bus adapters"),
@@ -1694,7 +1695,6 @@ static const struct fxn {
 	FXN(uefiboot,"root fs map must be defined in GPT partition"),
 	FXN(biosboot,"root fs map must be defined in GPT/MBR partition"),
 	FXN(grubmap,""),
-	FXN(rescan,""),
 	FXN(benchmark,"fs"),
 	FXN(troubleshoot,""),
 	FXN(version,""),

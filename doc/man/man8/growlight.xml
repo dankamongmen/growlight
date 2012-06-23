@@ -267,9 +267,6 @@ map, but is included merely for diagnostic purposes. Accepts no arguments.</para
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>rescan</option></term>
-		</varlistentry>
-		<varlistentry>
 			<term><option>benchmark</option></term>
 		</varlistentry>
 		<varlistentry>
@@ -281,6 +278,24 @@ map, but is included merely for diagnostic purposes. Accepts no arguments.</para
 <para>Displays the growlight banner and version, and the version of various
 tools/libraries. <emphasis role="bold">version</emphasis> accepts no arguments.</para>
 			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>rescan</option></term>
+			<listitem><para>
+Completely reinitializes growlight's idea of the storage system. Files like
+/proc/mounts and /proc/filesystems will be reparsed, superblocks will be reread,
+etc. Note that this only affects growlight; the devices themselves are not
+rescanned by the kernel as a result of <emphasis role="bold">rescan</emphasis>
+(see <emphasis role="bold">adapter rescan</emphasis> and
+<emphasis role="bold">blockdev rescan</emphasis> for this functionality).
+Furthermore, though growlight itself makes use of
+<emphasis role="bold">O_DIRECT</emphasis> to read boot sectors etc, other tools
+might not, and the kernel is not guaranteed in any case to honor it.
+
+Growlight is designed to support on-the-fly external storage reconfiguration
+through use of <emphasis role="bold">libudev(3)</emphasis> and
+<emphasis role="bold">inotify(7)</emphasis>. This command should not be needed
+outside of debugging.</para></listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>help command</option></term>
@@ -327,8 +342,14 @@ understand the conditions for a successful return during installation mode.
 			<refentrytitle>grub-install</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
+			<refentrytitle>grub-mkdevicemap</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
 			<refentrytitle>hdparm</refentrytitle>
 			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>inotify</refentrytitle>
+			<manvolnum>7</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>libblkid</refentrytitle>
 			<manvolnum>3</manvolnum>
@@ -341,6 +362,9 @@ understand the conditions for a successful return during installation mode.
 		</citerefentry>, <citerefentry>
 			<refentrytitle>parted</refentrytitle>
 			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>proc</refentrytitle>
+			<manvolnum>5</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>readline</refentrytitle>
 			<manvolnum>3</manvolnum>
@@ -356,6 +380,9 @@ understand the conditions for a successful return during installation mode.
 		</citerefentry>, <citerefentry>
 			<refentrytitle>swapon</refentrytitle>
 			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>udev</refentrytitle>
+			<manvolnum>7</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>zfs</refentrytitle>
 			<manvolnum>8</manvolnum>
