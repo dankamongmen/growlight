@@ -16,6 +16,7 @@
 #include "popen.h"
 #include "config.h"
 #include "target.h"
+#include "secure.h"
 #include "ptable.h"
 #include "health.h"
 #include "growlight.h"
@@ -976,6 +977,12 @@ blockdev(wchar_t * const *args,const char *arghelp){
 			return -1;
 		}
 		return wipe_dosmbr(d);
+	}else if(wcscmp(args[1],L"ataerase") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		return ata_secure_erase(d);
 	}else if(wcscmp(args[1],L"detail") == 0){
 		if(args[3]){
 			usage(args,arghelp);
@@ -1665,6 +1672,7 @@ static const struct fxn {
 			"                 | [ \"badblocks\" blockdev [ \"rw\" ] ]\n"
 			"                 | [ \"wipebiosboot\" blockdev ]\n"
 			"                 | [ \"wipedosmbr\" blockdev ]\n"
+			"                 | [ \"ataerase\" blockdev ]\n"
 			"                 | [ \"rmtable\" blockdev ]\n"
 			"                 | [ \"mktable\" [ blockdev tabletype ] ]\n"
 			"                    | no arguments to list supported table types\n"

@@ -7,6 +7,7 @@ extern "C" {
 
 int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
+#include <wchar.h>
 #include <limits.h>
 #include <stdint.h>
 #include <sys/types.h>
