@@ -1573,6 +1573,7 @@ version(wchar_t * const *args,const char *arghelp){
 	int ret = 0;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	use_terminfo_color(COLOR_RED,1);
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++############+++++++++++++++++++"
 "++++++++++++++++++++++++++++++++++++++++++++++++++###########+++++++++++++++++++"
 "++++++++++++++++++++++++++++++++++++++++++++++++++###########+++++++++++++++++++"
@@ -1595,6 +1596,7 @@ version(wchar_t * const *args,const char *arghelp){
 "+''++''++++++++++++++++++++++++++++++++''++'''+++++++++##########++++'''''''''''"
 "++'''''#++++++++++++++++++++++++++++++++'''''++++++++++##########++++''++++++'''"
 "++#++++++++++++++++++++++++++++++++++++++++#++++++++++++#########++++'+''''''+++\n");
+	use_terminfo_color(COLOR_WHITE,1);
 	ret |= popen_drain("/usr/sbin/smartctl --version");
 	printf("\n");
 	ret |= popen_drain("/sbin/parted --version");
@@ -1608,6 +1610,7 @@ version(wchar_t * const *args,const char *arghelp){
 		ret |= -1;
 	}
 	printf("\n");
+	use_terminfo_color(COLOR_RED,1);
 	printf("%s %s\n",PACKAGE,VERSION);
 	return ret;
 }
