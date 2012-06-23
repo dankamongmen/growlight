@@ -93,7 +93,8 @@ scan_zpools(libzfs_handle_t *zfs){
 
 int init_zfs_support(void){
 	if((zht = libzfs_init()) == NULL){
-		return -1;
+		fprintf(stderr,"Warning: couldn't initialize ZFS\n");
+		return 0;
 	}
 	libzfs_print_on_error(zht,true);
 	zpool_set_history_str(PACKAGE, 0, NULL, history);
