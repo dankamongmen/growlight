@@ -1433,26 +1433,51 @@ troubleshoot(wchar_t * const *args,const char *arghelp){
 	return -1;
 }
 
+static device *
+get_target_root(void){
+	const controller *c;
+
+	for(c = get_controllers() ; c ; c = c->next){
+		device *d,*p;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(d->target){
+				if(strcmp(d->target->path,"/") == 0){
+					return d;
+				}
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(p->target){
+					if(strcmp(p->target->path,"/") == 0){
+						return p;
+					}
+				}
+			}
+		}
+	}
+	return NULL;
+}
+
 static int
 uefiboot(wchar_t * const *args,const char *arghelp){
 	device *dev;
 
-	ONE_ARG_CHECK(args,arghelp);
-	if((dev = lookup_wdevice(args[1])) == NULL){
+	ZERO_ARG_CHECK(args,arghelp);
+	if((dev = get_target_root()) == NULL){
 		return -1;
 	}
 	if(prepare_uefi_boot(dev)){
 		return -1;
 	}
-	return -1;
+	return 0;
 }
 
 static int
 biosboot(wchar_t * const *args,const char *arghelp){
 	device *dev;
 
-	ONE_ARG_CHECK(args,arghelp);
-	if((dev = lookup_wdevice(args[1])) == NULL){
+	ZERO_ARG_CHECK(args,arghelp);
+	if((dev = get_target_root()) == NULL){
 		return -1;
 	}
 	if(prepare_bios_boot(dev)){

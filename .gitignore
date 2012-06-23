@@ -19,6 +19,7 @@ install-sh
 Makefile
 Makefile.in
 missing
+.pc
 src/config.h
 src/config.h.in
 src/config.h.in~
