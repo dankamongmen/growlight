@@ -751,7 +751,7 @@ zpool(wchar_t * const *args,const char *arghelp){
 		return 0;
 	}
 	printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
-			"Device","UUID","Bytes","PSect","Fmt","Disks","Level");
+			"Device","UUID","Bytes","AShft","Fmt","Disks","Level");
 	if(walk_devices(print_zpool,descend)){
 		return -1;
 	}

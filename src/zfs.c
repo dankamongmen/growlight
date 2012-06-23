@@ -60,8 +60,8 @@ dehumanize(const char *num){
 
 static int
 zpoolcb(zpool_handle_t *zhp,void *arg){
+	char size[10],guid[21],ashift[5];
 	struct zpoolcb_t *cb = arg;
-	char size[10],guid[21];
 	uint64_t version;
 	const char *name;
 	nvlist_t *conf;
@@ -98,6 +98,11 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		zpool_close(zhp);
 		return -1;
 	}
+	if(zpool_get_prop(zhp,ZPOOL_PROP_ASHIFT,ashift,sizeof(ashift),NULL)){
+		fprintf(stderr,"Couldn't get GUID for %s\n",name);
+		zpool_close(zhp);
+		return -1;
+	}
 	if(zpool_get_prop(zhp,ZPOOL_PROP_GUID,guid,sizeof(guid),NULL)){
 		fprintf(stderr,"Couldn't get GUID for %s\n",name);
 		zpool_close(zhp);
@@ -116,6 +121,9 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	d->layout = LAYOUT_ZPOOL;
 	d->swapprio = SWAP_INVALID;
 	d->size = dehumanize(size);
+	if((d->physsec = (1u << dehumanize(ashift))) == 0){
+		d->physsec = 512u;
+	}
 	d->zpool.state = state;
 	d->zpool.transport = AGGREGATE_UNKNOWN;
 	d->zpool.zpoolver = version;
