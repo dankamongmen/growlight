@@ -120,6 +120,14 @@ programs such as <emphasis role="bold">fdisk(8)</emphasis> and <emphasis role="b
 <emphasis>&dhpackage;</emphasis> acts on commands immediately, rather than requiring an explicit
 commit step.</para>
 
+<para>An argument specified as <emphasis>blockdev</emphasis> can be either a
+real block device, a virtual block device, or a partition. An argument
+specified as <emphasis>partition</emphasis> must be a partition within some
+kernel-recognized partition table. An argument specified as <emphasis>fs</emphasis>
+must be a kernel-recognizable filesystem. An argument specified as <emphasis>uuid</emphasis>
+must be 36 ASCII characters forming a valid DCE 1.1 UUID.
+Devices can be specified via any appropriate identifier (label, UUID, etc.).
+</para>
 		<variablelist>
 		<varlistentry>
 			<term><option>uefiboot</option></term>
@@ -322,6 +330,10 @@ understand the conditions for a successful return during installation mode.
 		<title>BUGS</title>
 		<para>Search <ulink url="http://www.sprezzatech.com/bugs/buglist.cgi?component=Growlight"/>.
 		Mail bug reports and/or patches to the authors.</para>
+
+<para>Pedantic collections of ambiguous identifiers (for instance, if a label
+equals another device's /dev/ name) will lead to questionable results. This
+ought be fixed.</para>
 	</refsect1>
 	<refsect1 id="see_also">
 		<title>SEE ALSO</title>
