@@ -9,6 +9,8 @@ struct device;
 
 int prepare_mount(struct device *,const char *,const char *,const char *);
 
+extern const char *growlight_target;
+
 #ifdef __cplusplus
 }
 #endif

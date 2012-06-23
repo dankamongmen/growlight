@@ -39,6 +39,7 @@
 #include "sysfs.h"
 #include "config.h"
 #include "mounts.h"
+#include "target.h"
 #include "libblkid.h"
 #include "growlight.h"
 
@@ -1181,8 +1182,8 @@ int growlight_init(int argc,char * const *argv){
 		},
 	};
 	int fd,opt,longidx,udevfd;
-	const char *enc,*target;
 	char buf[BUFSIZ];
+	const char *enc;
 	DIR *sdir;
 
 	if(setlocale(LC_ALL,"") == NULL){
@@ -1195,22 +1196,22 @@ int growlight_init(int argc,char * const *argv){
 	}
 	SSL_library_init();
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
-	target = NULL;
+	growlight_target = NULL;
 	while((opt = getopt_long(argc,argv,":ht:vV",ops,&longidx)) >= 0){
 		switch(opt){
 		case 'h':{
 			usage(argv[0],EXIT_SUCCESS);
 			break;
 		}case 't':{
-			if(target){
-				fprintf(stderr,"Error: defined --target twice (%s, %s)\n",target,optarg);
+			if(growlight_target){
+				fprintf(stderr,"Error: defined --target twice (%s, %s)\n",
+						growlight_target,optarg);
 				usage(argv[0],EXIT_FAILURE);
 			}else if(optarg == NULL){
 				fprintf(stderr,"-t|--target requires an argument\n");
 				usage(argv[0],EXIT_FAILURE);
 			}else{
-				target = optarg;
-				fprintf(stderr,"TARGET: %s\n",target);
+				growlight_target = optarg;
 			}
 			break;
 		}case 'v':{

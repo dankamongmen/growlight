@@ -6,6 +6,8 @@
 #include "target.h"
 #include "growlight.h"
 
+const char *growlight_target = NULL;
+
 // Topologically sorted
 static struct target {
 	mntentry m;
