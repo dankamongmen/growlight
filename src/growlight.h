@@ -136,6 +136,7 @@ typedef struct controller {
 	char *name;		// From libpci database
 	char *sysfs;		// Sysfs node
 	char *driver;		// From sysfs, 'device/module'
+	char *ident;		// Manufactured identifier to reference adapter
 	enum {
 		BUS_UNKNOWN,
 		BUS_VIRTUAL,

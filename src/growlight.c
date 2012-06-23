@@ -91,6 +91,16 @@ int verbf(const char *fmt,...){
 	return v;
 }
 
+static void
+free_controller(controller *c){
+	if(c){
+		free(c->driver);
+		free(c->ident);
+		free(c->sysfs);
+		free(c->name);
+	}
+}
+
 static controller *
 find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			char *module,char *sysfs){
@@ -109,10 +119,30 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 		break;
 	}
 	if(c == NULL){
+		const controller *idc;
+		unsigned devno = 0;
+
+		for(idc = controllers ; idc ; idc = idc->next){
+			if(idc->driver && strcmp(idc->driver,module) == 0){
+				++devno;
+			}
+		}
 		if((c = malloc(sizeof(*c))) == NULL){
 			return NULL;
+		}else{
+			size_t len = strlen(module) + 7; // FIXME sketchy
+
+			memset(c,0,sizeof(*c));
+			if( (c->ident = malloc(len)) ){
+				if(snprintf(c->ident,len,"%s-%u",module,devno) >= (int)len){
+					free(c);
+					return NULL;
+				}
+			}else{
+				free(c);
+				return NULL;
+			}
 		}
-		memset(c,0,sizeof(*c));
 		c->sysfs = sysfs;
 		c->driver = module;
 		c->bus = BUS_PCIe;
@@ -130,10 +160,12 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 
 			if((pci = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
 				fprintf(stderr,"Couldn't look up PCIe device\n");
+				free_controller(c);
 				return NULL;
 			}
 			if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
 				fprintf(stderr,"Couldn't look up PCIe device\n");
+				free_controller(c);
 				return NULL;
 			}
 			assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
@@ -146,7 +178,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 					model ? model : "unknown model");
 			if((c->name = strdup(buf)) == NULL){
 				pci_free_dev(pcidev);
-				free(c);
+				free_controller(c);
 				return NULL;
 			}
 			//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
@@ -227,15 +259,6 @@ static void
 clobber_device(device *d){
 	free_device(d);
 	free(d);
-}
-
-static void
-free_controller(controller *c){
-	if(c){
-		free(c->driver);
-		free(c->sysfs);
-		free(c->name);
-	}
 }
 
 static void
