@@ -118,6 +118,7 @@ typedef struct device {
 			uint64_t zpoolver;	// zpool version
 			unsigned long disks;	// vdevs in zpool
 			char *level;		// zraid level
+			unsigned state;		// POOL_STATE_[UN]AVAILABLE
 		} zpool;
 	};
 	enum {

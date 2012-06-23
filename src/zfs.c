@@ -26,38 +26,82 @@ struct zpoolcb_t {
 	unsigned pools;
 };
 
+static uintmax_t
+dehumanize(const char *num){
+	unsigned long long ull,dec;
+	char *e;
+
+	ull = strtoul(num,&e,0);
+	if(*e == '.'){
+		dec = strtoul(++e,&e,0);
+	}else{
+		dec = 0;
+	}
+	switch(*e){
+		case 'E': case 'e': ull = ull * 1000 + dec * 10; dec = 0;
+		case 'P': case 'p': ull = ull * 1000 + dec * 10; dec = 0;
+		case 'T': case 't': ull = ull * 1000 + dec * 10; dec = 0;
+		case 'G': case 'g': ull = ull * 1000 + dec * 10; dec = 0;
+		case 'M': case 'm': ull = ull * 1000 + dec * 10; dec = 0;
+		case 'K': case 'k': ull = ull * 1000 + dec * 10; dec = 0;
+			break;
+		case '\0':
+			if(dec){
+				fprintf(stderr,"Couldn't convert dec: %s\n",num);
+				ull = 0;
+			}
+			break;
+		default:
+			fprintf(stderr,"Couldn't convert number: %s\n",num);
+			ull = 0;
+	}
+	return ull;
+}
+
 static int
 zpoolcb(zpool_handle_t *zhp,void *arg){
 	struct zpoolcb_t *cb = arg;
 	uint64_t version;
 	const char *name;
 	nvlist_t *conf;
+	char size[10];
 	device *d;
+	int state;
 
 	name = zpool_get_name(zhp);
 	conf = zpool_get_config(zhp,NULL);
 	if(!name || !conf){
 		fprintf(stderr,"name/config failed for zpool\n");
+		zpool_close(zhp);
 		return -1;
 	}
 	if(strlen(name) >= sizeof(d->name)){
 		fprintf(stderr,"zpool name too long: %s\n",name);
+		zpool_close(zhp);
 		return -1;
 	}
 	++cb->pools;
 	if(nvlist_lookup_uint64(conf,ZPOOL_CONFIG_VERSION,&version)){
 		fprintf(stderr,"Couldn't get %s zpool version\n",name);
+		zpool_close(zhp);
 		return -1;
 	}
 	if(version > SPA_VERSION){
 		fprintf(stderr,"%s zpool version too new (%lu > %llu)\n",
 				name,version,SPA_VERSION);
+		zpool_close(zhp);
 		return -1;
 	}
-	printf("%s zpool version: %lu\n",name,version);
+	state = zpool_get_state(zhp);
+	if(zpool_get_prop(zhp,ZPOOL_PROP_SIZE,size,sizeof(size),NULL)){
+		fprintf(stderr,"Couldn't get size for %s\n",name);
+		zpool_close(zhp);
+		return -1;
+	}
 	zpool_close(zhp);
 	if((d = malloc(sizeof(*d))) == NULL){
 		fprintf(stderr,"Couldn't allocate device (%s?)\n",strerror(errno));
+		zpool_close(zhp);
 		return -1;
 	}
 	memset(d,0,sizeof(*d));
@@ -65,6 +109,8 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	d->model = strdup("LLNL ZoL");
 	d->layout = LAYOUT_ZPOOL;
 	d->swapprio = SWAP_INVALID;
+	d->size = dehumanize(size);
+	d->zpool.state = state;
 	d->zpool.transport = AGGREGATE_UNKNOWN;
 	d->zpool.zpoolver = version;
 	add_new_virtual_blockdev(d);

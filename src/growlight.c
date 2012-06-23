@@ -353,7 +353,7 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 		int r;
 
 		if(recurse == 0){
-			fprintf(stderr,"Not recursing on partition %s\n",name);
+			verbf("Not recursing on partition %s\n",name);
 			return -1;
 		}
 		if((r = readlinkat(sysfd,name,buf,sizeof(buf))) < 0){
@@ -652,7 +652,7 @@ create_new_device(const char *name,int recurse){
 		clobber_device(d);
 		return lookup_device(name);
 	}
-	if(c == &unknown_bus){
+	if(c == &unknown_bus && d->layout == LAYOUT_NONE){
 		d->blkdev.realdev = 0;
 	}
 	if(close(fd)){

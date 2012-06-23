@@ -484,7 +484,7 @@ print_drive(const device *d,int descend){
 			d->revision ? d->revision : "n/a",
 			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
 			d->physsec, 'Z', '.', '.', '.',
-			"n/a",
+			"spa",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->zpool.transport)
 			);
@@ -521,11 +521,11 @@ print_zpool(const device *d,int descend){
 	if(d->layout != LAYOUT_ZPOOL){
 		return 0;
 	}
-	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
+	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %4uB ZFS%2ju %5lu %-6.6s\n",
 			d->name,
 			d->uuid ? d->uuid : "n/a",
-			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
-			d->physsec, "n/a",
+			qprefix(d->size,1,buf,sizeof(buf),0),
+			d->physsec, d->zpool.zpoolver,
 			d->zpool.disks,d->zpool.level ? d->zpool.level : "n/a"
 			);
 	if(rr < 0){
@@ -751,7 +751,7 @@ zpool(wchar_t * const *args,const char *arghelp){
 		return 0;
 	}
 	printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
-			"Device","UUID","Bytes","PSect","Table","Disks","Level");
+			"Device","UUID","Bytes","PSect","Fmt","Disks","Level");
 	if(walk_devices(print_zpool,descend)){
 		return -1;
 	}
