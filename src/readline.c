@@ -878,6 +878,7 @@ blockdev_dump(int descend){
 
 static inline int
 blockdev_details(const device *d){
+	char buf[BUFSIZ];
 	unsigned z;
 
 	if(print_drive(d,1) < 0){
@@ -907,6 +908,12 @@ blockdev_details(const device *d){
 			 d->blkdev.transport == PARALLEL_ATA ? "Parallel ATA" :
 			 d->blkdev.transport == AGGREGATE_MIXED ? "Mixed" :
 			 "Unknown");
+	if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s\n",d->name) >= (int)sizeof(buf)){
+		return -1;
+	}
+	if(popen_drain(buf)){
+		return -1;
+	}
 	return 0;
 }
 

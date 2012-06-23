@@ -68,12 +68,13 @@
 	</refsynopsisdiv>
 	<refsect1 id="description">
 		<title>DESCRIPTION</title>
-		<para><command>&dhpackage;</command> detects and describes
+		<para><emphasis>&dhpackage;</emphasis> detects and describes
                 disk pools, block devices, partition tables, and partitions.
 		It can partition devices, manipulate ZFS, MD, DM, LVM and
 		hardware RAID virtual devices, and prepare an fstab file
 		for using the devices to boot or in a chroot, and is fully
-		aware of variable sector sizes, GPT, and UEFI.</para>
+		aware of variable sector sizes, GPT, and UEFI. <emphasis>&dhpackage;</emphasis>
+		facilitates use of UUID/WWN- and HBA-based identification of block devices.</para>
 	</refsect1>
 	<refsect1 id="options">
 		<title>OPTIONS</title>
@@ -102,9 +103,9 @@
 for the target's root filesystem. "map" commands will populate the hierarchy
 rooted at this mountpoint. System installation mode can also be entered at run
 time with the "target" command. The "map" command will not result in active
-mounts unless growlight is operating in system installation mode (they will
+mounts unless <emphasis>&dhpackage;</emphasis> is operating in system installation mode (they will
 merely be used to construct target fstab output). Once system installation mode
-is entered, growlight will return 0 only as a result of a successful invocation
+is entered, <emphasis>&dhpackage;</emphasis> will return 0 only as a result of a successful invocation
 of the "finalize" command. <emphasis role="bold">path</emphasis> needn't exist at
 specification time, but it must exist before any maps can be defined.</para>
 			</listitem>
@@ -112,11 +113,11 @@ specification time, but it must exist before any maps can be defined.</para>
 	</refsect1>
 	<refsect1 id="commands">
 		<title>USAGE</title>
-<para>Growlight is primarily intended for interactive use at the command line via GNU
+<para><emphasis>Growlight</emphasis> is primarily intended for interactive use at the command line via GNU
 Readline. Commands are entered; a newline causes input to be interpreted, and 
 output resulting from this interpretation is displayed to the user. Unlike
-programs such as <emphasis role="full">fdisk</emphasis> and <emphasis role="full">gdisk</emphasis>,
-growlight acts on commands immediately, rather than requiring an explicit
+programs such as <emphasis role="bold">fdisk(8)</emphasis> and <emphasis role="bold">gdisk(8)</emphasis>,
+<emphasis>&dhpackage;</emphasis> acts on commands immediately, rather than requiring an explicit
 commit step.</para>
 
 		<variablelist>
@@ -130,7 +131,7 @@ C12A7328-F81F-11D2-BA4B-00A0C93EC93B (EFI System Partition). This GPT
 table must not reside on an mdadm, device-mapper, or zfs device. Preferably, no
 other devices in the system are bootable, but this is not enforced.
 
-If all these conditions are met, rEFInd will be installed into this filesystem,
+If all these conditions are met, <emphasis>rEFInd</emphasis> will be installed into this filesystem,
 configured to boot a Linux kernel residing at FIXME. This kernel must be
 compiled with EFI stub loader support. The bootloader portion of the device's
 MBR will be overwritten with zeroes, if possible, to deter attempting to
@@ -148,10 +149,10 @@ MBR partition having type 0x83 (Linux). The partition table must not reside
 on an mdadm, device-mapper, or zfs device. Preferably, no other devices in the
 system are bootable, but this is not enforced.
 
-If all these conditions are met, GRUB2 will be installed into this filesystem
-at /boot/grub, configured to boot a Linux kernel residing at FIXME. GRUB2's
+If all these conditions are met, <emphasis>GRUB2</emphasis> will be installed into this filesystem
+at /boot/grub, configured to boot a Linux kernel residing at FIXME. <emphasis>GRUB2's</emphasis>
 first stage will be loaded into the bootloader portion of the device's MBR. The
-partition containing GRUB2 will be marked as <emphasis role="bold">active</emphasis>
+partition containing <emphasis>GRUB2</emphasis> will be marked as <emphasis>active</emphasis>
 (flag 0x80).</para>
 			</listitem>
 		</varlistentry>
@@ -262,7 +263,7 @@ one exists).</para>
 			<term><option>grubmap</option></term>
 			<listitem>
 <para>Invokes <emphasis role="bold">grub-mkdevicemap</emphasis> to display
-GRUB's calculated device map. This will not overwrite any existing device
+<emphasis>GRUB2's</emphasis> calculated device map. This will not overwrite any existing device
 map, but is included merely for diagnostic purposes. Accepts no arguments.</para>
 			</listitem>
 		</varlistentry>
@@ -275,7 +276,7 @@ map, but is included merely for diagnostic purposes. Accepts no arguments.</para
 		<varlistentry>
 			<term><option>version</option></term>
 			<listitem>
-<para>Displays the growlight banner and version, and the version of various
+<para>Displays the <emphasis>&dhpackage;</emphasis> banner and version, and the version of various
 tools/libraries. <emphasis role="bold">version</emphasis> accepts no arguments.</para>
 			</listitem>
 		</varlistentry>
@@ -288,14 +289,15 @@ etc. Note that this only affects growlight; the devices themselves are not
 rescanned by the kernel as a result of <emphasis role="bold">rescan</emphasis>
 (see <emphasis role="bold">adapter rescan</emphasis> and
 <emphasis role="bold">blockdev rescan</emphasis> for this functionality).
-Furthermore, though growlight itself makes use of
+Furthermore, though <emphasis>&dhpackage;</emphasis> itself makes use of
 <emphasis role="bold">O_DIRECT</emphasis> to read boot sectors etc, other tools
-might not, and the kernel is not guaranteed in any case to honor it.
-
-Growlight is designed to support on-the-fly external storage reconfiguration
+might not, and the kernel is not guaranteed in any case to honor it. If any
+detail of a block device underlying a mapping changes, that mapping will be
+dropped. If the target root mapping is dropped, all mappings will be dropped.</para>
+<para><emphasis>Growlight</emphasis> is designed to support on-the-fly external storage reconfiguration
 through use of <emphasis role="bold">libudev(3)</emphasis> and
 <emphasis role="bold">inotify(7)</emphasis>. This command should not be needed
-outside of debugging.</para></listitem>
+or used outside of debugging.</para></listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>help command</option></term>
