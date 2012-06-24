@@ -835,6 +835,7 @@ controller *lookup_controller(const char *name){
 
 // name must be an entry in /sys/class/block, and also one in /dev
 device *lookup_device(const char *name){
+	char cwd[PATH_MAX + 1];
 	controller *c;
 	device *d;
 	size_t s;
@@ -867,19 +868,45 @@ device *lookup_device(const char *name){
 			}
 		}
 	}
-	return create_new_device(name,1);
+	if(getcwd(cwd,sizeof(cwd)) == NULL){
+		fprintf(stderr,"Couldn't get working directory (%s?)\n",strerror(errno));
+		return NULL;
+	}
+	if(chdir(SYSROOT)){
+		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		return NULL;
+	}
+	d = create_new_device(name,1);
+	if(chdir(cwd)){
+		fprintf(stderr,"Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
+	}
+	return d;
 }
 
 static void *
 scan_device(void *name){
+	char cwd[PATH_MAX + 1];
 	device *d;
 	int sig;
 
 	pthread_mutex_lock(&barrier);
+	if(getcwd(cwd,sizeof(cwd)) == NULL){
+		fprintf(stderr,"Couldn't get working directory (%s?)\n",strerror(errno));
+		pthread_mutex_unlock(&barrier);
+		return NULL;
+	}
+	if(chdir(SYSROOT)){
+		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		pthread_mutex_unlock(&barrier);
+		return NULL;
+	}
 	d = name ? lookup_device(name) : NULL;
 	sig = --thrcount == 0;
 	if(sig){
 		pthread_cond_signal(&barrier_cond);
+	}
+	if(chdir(cwd)){
+		fprintf(stderr,"Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
 	}
 	pthread_mutex_unlock(&barrier);
 	free(name);
@@ -919,12 +946,26 @@ lookup_id_inner(const char *name){
 static void *
 lookup_id(void *uname){
 	const char *name = uname;
+	char cwd[PATH_MAX + 1];
 	device *d;
 
 	pthread_mutex_lock(&barrier);
+	if(getcwd(cwd,sizeof(cwd)) == NULL){
+		fprintf(stderr,"Couldn't get working directory (%s?)\n",strerror(errno));
+		pthread_mutex_unlock(&barrier);
+		return NULL;
+	}
+	if(chdir(SYSROOT)){
+		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		pthread_mutex_unlock(&barrier);
+		return NULL;
+	}
 	d = name ? lookup_id_inner(name) : NULL;
 	if(--thrcount == 0){
 		pthread_cond_signal(&barrier_cond);
+	}
+	if(chdir(cwd)){
+		fprintf(stderr,"Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
 	}
 	pthread_mutex_unlock(&barrier);
 	free(uname);
@@ -1255,10 +1296,6 @@ int growlight_init(int argc,char * const *argv){
 		fprintf(stderr,"Couldn't init libpciaccess (%s?)\n",strerror(errno));
 	}else{
 		usepci = 1;
-	}
-	if(chdir(SYSROOT)){
-		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
-		goto err;
 	}
 	if((sysfd = get_dir_fd(&sdir,SYSROOT)) < 0){
 		goto err;
