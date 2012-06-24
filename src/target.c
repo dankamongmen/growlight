@@ -174,3 +174,16 @@ int finalize_target(void){
 	}
 	return 0;
 }
+
+int dump_targets(FILE *fp){
+	const struct target *target;
+
+	fprintf(fp,"# Filesystem\tMountpoint\tType\tOptions\t\tDump\tPass\n");
+	fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n");
+	for(target = targets ; target ; target = target->next){
+		// FIXME allow various naming schemes
+		fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t0\n",
+				target->m.dev,target->m.path,target->m.fs,target->m.ops);
+	}
+	return 0;
+}

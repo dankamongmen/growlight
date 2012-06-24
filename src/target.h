@@ -5,12 +5,15 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 struct device;
 
 int prepare_mount(struct device *,const char *,const char *,const char *);
 
 int set_target(const char *);
 int finalize_target(void);
+int dump_targets(FILE *);
 
 // don't go mucking around with me externally. use set_target().
 extern const char *growlight_target;

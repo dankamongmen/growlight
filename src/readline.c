@@ -1267,41 +1267,11 @@ mounts(wchar_t * const *args,const char *arghelp){
 }
 
 static int
-print_map(void){
-	const controller *c;
-	int rr,r = 0;
-
-	for(c = get_controllers() ; c ; c = c->next){
-		const device *d;
-
-		for(d = c->blockdevs ; d ; d = d->next){
-			const device *p;
-
-			if(d->target){
-				r += rr = print_target(d->target);
-				if(rr < 0){
-					return -1;
-				}
-			}
-			for(p = d->parts ; p ; p = p->next){
-				if(p->target){
-					r += rr = print_target(p->target);
-					if(rr < 0){
-						return -1;
-					}
-				}
-			}
-		}
-	}
-	return r;
-}
-
-static int
 map(wchar_t * const *args,const char *arghelp){
 	device *d;
 
 	if(!args[1]){
-		if(print_map() < 0){
+		if(dump_targets(stdout) < 0){
 			return -1;
 		}
 		return 0;
@@ -1310,7 +1280,7 @@ map(wchar_t * const *args,const char *arghelp){
 		usage(args,arghelp);
 		return -1;
 	}
-	if((d = lookup_wdevice(args[1])) == NULL/* || (d = lookup_dentry(d,args[1])) == NULL*/){
+	if((d = lookup_wdevice(args[1])) == NULL){
 		return -1;
 	}
 	if(args[2][0] != L'/'){
