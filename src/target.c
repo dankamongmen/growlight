@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mount.h>
 
 #include "target.h"
 #include "growlight.h"
@@ -116,6 +117,26 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 	return 0;
 }
 
+static int
+recursive_unmount(struct target **t,char *buf,int n){
+	if(*t){
+		if(recursive_unmount(&(*t)->next,buf,n)){
+			return -1;
+		}
+		if(snprintf(buf,n,"%s/%s",growlight_target,(*t)->m.path) >= n){
+			fprintf(stderr,"Path too long: %s/%s\n",growlight_target,(*t)->m.path);
+			return -1;
+		}
+		if(umount2(buf,UMOUNT_NOFOLLOW)){
+			fprintf(stderr,"Couldn't unmount %s (%s?)\n",buf,strerror(errno));
+			return -1;
+		}
+		printf("Unmounted %s at %s\n",(*t)->m.dev,buf);
+		*t = NULL;
+	}
+	return 0;
+}
+
 int set_target(const char *path){
 	if(path){
 		if(growlight_target){
@@ -133,7 +154,11 @@ int set_target(const char *path){
 			return -1;
 		}
 	}else if(growlight_target){
-		// FIXME need to unmount maps
+		char buf[PATH_MAX + 1];
+
+		if(recursive_unmount(&targets,buf,sizeof(buf))){
+			return -1;
+		}
 		free(real_target);
 		growlight_target = real_target = NULL;
 		close(targfd);
