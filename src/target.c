@@ -166,7 +166,11 @@ int finalize_target(void){
 		close(fd);
 		return -1;
 	}
-	// FIXME write it out!
+	if(dump_targets(fp)){
+		fprintf(stderr,"Couldn't write targets to %s/etc/fstab (%s?)\n",growlight_target,strerror(errno));
+		close(fd);
+		return -1;
+	}
 	if(fclose(fp)){
 		fprintf(stderr,"Couldn't close FILE * from %d (%s?)\n",fd,strerror(errno));
 		close(fd);
