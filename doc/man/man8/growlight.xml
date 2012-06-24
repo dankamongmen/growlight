@@ -186,19 +186,36 @@ performed via the Linux kernel's sysfs filesystem.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>blockdev</option></term>
+			<term><option>blockdev rescan blockdev</option></term>
+			<term><option>blockdev badblocks blockdev [ rw ]</option></term>
+			<term><option>blockdev wipebiosboot blockdev</option></term>
+			<term><option>blockdev ataerase blockdev</option></term>
+			<term><option>blockdev rmtable blockdev</option></term>
+			<term><option>blockdev mktable [ blockdev tabletype ]</option></term>
+			<term><option>blockdev [ -v ]</option></term>
 			<listitem>
 				<para>FIXME</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>partition</option></term>
+			<term><option>partition del partition</option></term>
+			<term><option>partition fsck partition</option></term>
+			<term><option>partition add blockdev name size</option></term>
+			<term><option>partition setuuid partition uuid</option></term>
+			<term><option>partition setname partition name</option></term>
+			<term><option>partition setflag [ partition on|off flag ]</option></term>
+			<term><option>partition [ -v ]</option></term>
 			<listitem>
 				<para>FIXME</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>fs</option></term>
+			<term><option>fs mkfs [ partition fstype ]</option></term>
+			<term><option>fs wipefs fs</option></term>
+			<term><option>fs setuuid fs uuid</option></term>
+			<term><option>fs setlabel fs label</option></term>
+			<term><option>fs [ -v ]</option></term>
 			<listitem>
 				<para>FIXME</para>
 			</listitem>
