@@ -180,12 +180,16 @@ int finalize_target(void){
 }
 
 int dump_targets(FILE *fp){
-	const struct target *target;
+	const struct target *target = targets;
 
-	fprintf(fp,"# Filesystem\tMountpoint\tType\tOptions\t\tDump\tPass\n");
+	if(!target){
+		return 0;
+	}
+	// FIXME allow various naming schemes
+	fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t1\n",target->m.dev,
+			target->m.path,target->m.fs,target->m.ops);
 	fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n");
-	for(target = targets ; target ; target = target->next){
-		// FIXME allow various naming schemes
+	while( (target = target->next) ){
 		fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t0\n",
 				target->m.dev,target->m.path,target->m.fs,target->m.ops);
 	}
