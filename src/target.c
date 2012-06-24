@@ -132,14 +132,15 @@ int set_target(const char *path){
 			targfd = -1;
 			return -1;
 		}
-		return 0;
-	}
-	if(growlight_target){
+	}else if(growlight_target){
 		// FIXME need to unmount maps
 		free(real_target);
 		growlight_target = real_target = NULL;
 		close(targfd);
 		targfd = -1;
+	}else{
+		fprintf(stderr,"No target is defined\n");
+		return -1;
 	}
 	return 0;
 }

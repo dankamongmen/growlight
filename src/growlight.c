@@ -111,8 +111,16 @@ free_controller(controller *c){
 
 static inline int
 usbmodulep(const char *driver){
-	return !strcmp(driver,"xhci_hcd") || !strcmp(driver,"ehci_hcd") ||
-		!strcmp(driver,"uhci_hcd") || !strcmp(driver,"ohci_hcd");
+	if(strcmp(driver,"xhci_hcd") == 0){
+		return TRANSPORT_USB3;
+	}else if(strcmp(driver,"ehci_hcd") == 0){
+		return TRANSPORT_USB2;
+	}else if(strcmp(driver,"uhci_hcd") == 0){
+		return TRANSPORT_USB;
+	}else if(strcmp(driver,"ohci_hcd") == 0){
+		return TRANSPORT_USB;
+	}
+	return 0;
 }
 
 static controller *
@@ -158,9 +166,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 				return NULL;
 			}
 		}
-		if(usbmodulep(module)){
-			c->transport = TRANSPORT_USB;
-		}
+		c->transport = usbmodulep(module);
 		c->sysfs = sysfs;
 		c->driver = module;
 		c->bus = BUS_PCIe;
@@ -696,6 +702,10 @@ create_new_device(const char *name,int recurse){
 				probe_smart(d);
 			}else if(c->transport == TRANSPORT_USB){
 				d->blkdev.transport = SERIAL_USB;
+			}else if(c->transport == TRANSPORT_USB2){
+				d->blkdev.transport = SERIAL_USB2;
+			}else if(c->transport == TRANSPORT_USB3){
+				d->blkdev.transport = SERIAL_USB3;
 			}
 			if((d->blkdev.biossha1 = malloc(20)) == NULL){
 				fprintf(stderr,"Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));

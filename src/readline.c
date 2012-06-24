@@ -424,11 +424,12 @@ pcie_gen(unsigned gen){
 
 static const char *
 transport_str(transport_e t){
-	return t == SERIAL_USB ? "USB" : t == SERIAL_ATAIII ? "S3" :\
-	t == SERIAL_ATAII ? "S2" :
-	 t == SERIAL_ATAI ? "I" : t == SERIAL_ATA8 ? "AST" :
-	 t == SERIAL_UNKNOWN ? "Srl" : t == PARALLEL_ATA ? "Par" :
-	 t == AGGREGATE_MIXED ? "Mix" : "Ukn";
+	return t == SERIAL_USB3 ? "USB3" : t == SERIAL_USB2 ? "USB2" :
+		t == SERIAL_USB ? "USB1" : t == SERIAL_ATAIII ? "SAT3" :\
+		t == SERIAL_ATAII ? "SAT2" :
+	 	t == SERIAL_ATAI ? "SAT1" : t == SERIAL_ATA8 ? "ATA8" :
+	 	t == SERIAL_UNKNOWN ? "SATA" : t == PARALLEL_ATA ? "PATA" :
+	 	t == AGGREGATE_MIXED ? "Mix" : "Ukn";
 }
 
 static int
@@ -448,7 +449,7 @@ print_drive(const device *d,int descend){
 		}else{
 			use_terminfo_color(COLOR_MAGENTA,1); // virtual
 		}
-		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
@@ -466,7 +467,7 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_MDADM:{
 		use_terminfo_color(COLOR_YELLOW,1);
-		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
@@ -479,7 +480,7 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_ZPOOL:{
 		use_terminfo_color(COLOR_RED,1);
-		r += rr = printf("%-10.10s %-16.16s %4.4ju " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-3.3s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4ju " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			(uintmax_t)d->zpool.zpoolver,
@@ -859,7 +860,7 @@ static inline int
 blockdev_dump(int descend){
 	const controller *c;
 
-	printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %5.5s Flags %-6.6s%-16.16s %-3.3s\n",
+	printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %5.5s Flags %-6.6s%-16.16s %-4.4s\n",
 			"Device","Model","Rev","Bytes","PSect","Table","WWN","PHY");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
@@ -901,6 +902,8 @@ blockdev_details(const device *d){
 		}
 		printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
 		printf("Transport: %s\n",
+				d->blkdev.transport == SERIAL_USB3 ? "USB3" :
+				d->blkdev.transport == SERIAL_USB2 ? "USB2" :
 				d->blkdev.transport == SERIAL_USB ? "USB" :
 				d->blkdev.transport == SERIAL_ATAIII ? "SATA 3.0" :
 				d->blkdev.transport == SERIAL_ATAII ? "SATA 2.0" :
@@ -1687,10 +1690,7 @@ target(wchar_t * const *args,const char *arghelp){
 		}
 		return 0;
 	}
-	if(args[2] == NULL){
-		usage(args,arghelp);
-		return -1;
-	}else if(wcscmp(args[1],L"set") == 0){
+	if(wcscmp(args[1],L"set") == 0){
 		char targ[PATH_MAX];
 
 		if(args[2] == NULL || args[3]){

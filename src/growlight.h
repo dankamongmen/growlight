@@ -40,6 +40,8 @@ typedef enum {
 	SERIAL_ATAII,
 	SERIAL_ATAIII,
 	SERIAL_USB,
+	SERIAL_USB2,
+	SERIAL_USB3,
 	AGGREGATE_UNKNOWN,
 	AGGREGATE_MIXED,
 } transport_e;
@@ -147,6 +149,8 @@ typedef struct controller {
 	enum {
 		TRANSPORT_ATA,
 		TRANSPORT_USB,
+		TRANSPORT_USB2,
+		TRANSPORT_USB3,
 	} transport;
 	// Union parameterized on bus type
 	union {
