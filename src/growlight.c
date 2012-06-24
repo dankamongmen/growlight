@@ -109,6 +109,12 @@ free_controller(controller *c){
 	}
 }
 
+static inline int
+usbmodulep(const char *driver){
+	return !strcmp(driver,"xhci_hcd") || !strcmp(driver,"ehci_hcd") ||
+		!strcmp(driver,"uhci_hcd") || !strcmp(driver,"ohci_hcd");
+}
+
 static controller *
 find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			char *module,char *sysfs){
@@ -131,6 +137,9 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 		unsigned devno = 0;
 		controller **pre;
 
+		if(usbmodulep(module)){
+			c->transport = TRANSPORT_USB;
+		}
 		for(idc = controllers ; idc ; idc = idc->next){
 			if(idc->driver && strcmp(idc->driver,module) == 0){
 				++devno;

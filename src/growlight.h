@@ -47,8 +47,7 @@ typedef enum {
 // A partition corresponds to one and only one block device (which of course
 // might represent multiple devices, or maybe just a file mounted loopback).
 typedef struct device {
-	// next block device on this controller
-	struct device *next;
+	struct device *next;		// next block device on this controller
 	char name[NAME_MAX];		// Entry in /dev or /sys/block
 	char *model,*revision,*sn;	// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
@@ -144,6 +143,10 @@ typedef struct controller {
 		BUS_VIRTUAL,
 		BUS_PCIe,
 	} bus;
+	enum {
+		TRANSPORT_ATA,
+		TRANSPORT_USB,
+	} transport;
 	// Union parameterized on bus type
 	union {
 		struct {

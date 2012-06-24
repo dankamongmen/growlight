@@ -282,7 +282,7 @@ one exists).</para>
 		<varlistentry>
 			<term><option>mounts</option></term>
 			<listitem>
-				<para>FIXME</para>
+<para>Displays all currently-mounted filesystems. Accepts no arguments.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
