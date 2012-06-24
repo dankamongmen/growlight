@@ -130,20 +130,23 @@ Devices can be specified via any appropriate identifier (label, UUID, etc.).
 </para>
 		<variablelist>
 		<varlistentry>
-			<term><option>uefiboot</option></term>
+			<term><option>uefiboot [ -protectmbr ]</option></term>
 			<listitem>
 <para>Prepare the target for UEFI-based booting. A target root filesystem map
 must be defined, and this filesystem must be mounted at the chroot's toplevel.
 The filesystem must reside within a GPT partition having type ef00 and TUID
 C12A7328-F81F-11D2-BA4B-00A0C93EC93B (EFI System Partition). This GPT
 table must not reside on an mdadm, device-mapper, or zfs device. Preferably, no
-other devices in the system are bootable, but this is not enforced.
+other devices in the system are bootable, but this is not enforced.</para>
 
-If all these conditions are met, <emphasis>rEFInd</emphasis> will be installed into this filesystem,
+<para>If all these conditions are met, <emphasis>rEFInd</emphasis> will be installed into this filesystem,
 configured to boot a Linux kernel residing at FIXME. This kernel must be
 compiled with EFI stub loader support. The bootloader portion of the device's
 MBR will be overwritten with zeroes, if possible, to deter attempting to
-perform a BIOS/MBR boot from the device.</para>
+perform a BIOS/MBR boot from the device. Alternatively, the
+<emphasis role="bold">-protectmbr</emphasis> option will install a
+"protective MBR" consisting of one type 0xEE (EFI GPT) partition spanning the
+disk. This might be preferable if interoperating with GPT-unaware tools.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
@@ -183,12 +186,21 @@ performed via the Linux kernel's sysfs filesystem.</para>
 		</varlistentry>
 		<varlistentry>
 			<term><option>blockdev</option></term>
+			<listitem>
+				<para>FIXME</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>partition</option></term>
+			<listitem>
+				<para>FIXME</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>fs</option></term>
+			<listitem>
+				<para>FIXME</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>swap on swapdev label [ uuid ]</option></term>
@@ -252,7 +264,7 @@ be retained once ZFS is fully integrated.</para>
 			<term><option>target unset</option></term>
 			<term><option>target</option></term>
 			<listitem>
-<para>The <emphasis role="bold">set</emphasis> subcommand, sets the target (see the <emphasis role="bold">--target</emphasis>
+<para>The <emphasis role="bold">set</emphasis> subcommand sets the target (see the <emphasis role="bold">--target</emphasis>
 option). If a target has already been set, the command will fail. If <emphasis role="bold">path</emphasis>
 does not exist in the current filesystem, the command will fail. If <emphasis role="bold">path</emphasis>
 exists, but is not a directory, the command will fail. Called with <emphasis role="bold">unset</emphasis>,
@@ -263,9 +275,15 @@ one exists).</para>
 		</varlistentry>
 		<varlistentry>
 			<term><option>map</option></term>
+			<listitem>
+				<para>FIXME</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>mounts</option></term>
+			<listitem>
+				<para>FIXME</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>grubmap</option></term>
@@ -276,10 +294,17 @@ map, but is included merely for diagnostic purposes. Accepts no arguments.</para
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>benchmark</option></term>
+			<term><option>benchmark blockdev</option></term>
+			<listitem>
+<para>Run a simple, non-destructive benchmark on the block device. Currently,
+	this is implemented via <emphasis>hdparm -t</emphasis>.</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>troubleshoot</option></term>
+			<listitem>
+				<para>FIXME</para>
+			</listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>version</option></term>

@@ -35,6 +35,9 @@ growlight_tty_SOURCES+=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl $<
 
+%.xhtml: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
+	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/xhtml-1_1/docbook.xsl $<
+
 $(doc_DIR)/@PACKAGE_NAME@.ent:
 	@mkdir -p $(@D)
 	echo -e '<!ENTITY dhfirstname "Nick">\n<!ENTITY dhsurname "Black">\n<!ENTITY dhemail "nick.black@sprezzatech.com">\n<!ENTITY dhusername "&dhfirstname; &dhsurname;">\n<!ENTITY dhrelease "$(VERSION)">' > "$@"

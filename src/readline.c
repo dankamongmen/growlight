@@ -1424,11 +1424,16 @@ swap(wchar_t * const *args,const char *arghelp){
 
 static int
 benchmark(wchar_t * const *args,const char *arghelp){
-	ZERO_ARG_CHECK(args,arghelp);
-	fprintf(stderr,"Sorry, not yet implemented\n");
-	// FIXME things to do:
-	// FIXME run bonnie++?
-	return -1;
+	device *d;
+
+	ONE_ARG_CHECK(args,arghelp);
+	if((d = lookup_wdevice(args[1])) == NULL){
+		return -1;
+	}
+	if(benchmark_blockdev(d)){
+		return -1;
+	}
+	return 0;
 }
 
 static int
@@ -1773,7 +1778,7 @@ static const struct fxn {
 	FXN(uefiboot,"root fs map must be defined in GPT partition"),
 	FXN(biosboot,"root fs map must be defined in GPT/MBR partition"),
 	FXN(grubmap,""),
-	FXN(benchmark,"fs"),
+	FXN(benchmark,"blockdev"),
 	FXN(troubleshoot,""),
 	FXN(version,""),
 	FXN(help,"[ command ]"),

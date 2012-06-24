@@ -1332,6 +1332,19 @@ int reset_controller(controller *c){
 	return 0;
 }
 
+int benchmark_blockdev(const device *d){
+	char buf[PATH_MAX];
+
+	if(snprintf(buf,sizeof(buf),"/sbin/hdparm -t /dev/%s",d->name) >= (int)sizeof(buf)){
+		fprintf(stderr,"Name too long: %s\n",d->name);
+		return -1;
+	}
+	if(popen_drain(buf)){
+		return -1;
+	}
+	return 0;
+}
+
 int rescan_blockdev(device *d){
 	char buf[PATH_MAX];
 	unsigned t;

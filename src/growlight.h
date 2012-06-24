@@ -194,6 +194,7 @@ int reset_controller(controller *);
 int rescan_controller(controller *);
 
 int rescan_blockdev(device *);
+int benchmark_blockdev(const device *);
 void free_device(device *);
 
 // Very coarse locking
