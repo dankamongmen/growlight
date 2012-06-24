@@ -1690,15 +1690,15 @@ target(wchar_t * const *args,const char *arghelp){
 	if(args[2] == NULL){
 		usage(args,arghelp);
 		return -1;
-	}else if(wcscmp(args[2],L"set") == 0){
+	}else if(wcscmp(args[1],L"set") == 0){
 		char targ[PATH_MAX];
 
-		if(args[3] == NULL || args[4]){
+		if(args[2] == NULL || args[3]){
 			usage(args,arghelp);
 			return -1;
 		}
-		if(snprintf(targ,sizeof(targ),"%ls",args[3]) >= (int)sizeof(targ)){
-			fprintf(stderr,"Bad target specification: %ls\n",args[3]);
+		if(snprintf(targ,sizeof(targ),"%ls",args[2]) >= (int)sizeof(targ)){
+			fprintf(stderr,"Bad target specification: %ls\n",args[2]);
 			usage(args,arghelp);
 			return -1;
 		}
@@ -1706,12 +1706,21 @@ target(wchar_t * const *args,const char *arghelp){
 			return -1;
 		}
 		return 0;
-	}else if(wcscmp(args[2],L"unset") == 0){
-		if(args[3]){
+	}else if(wcscmp(args[1],L"unset") == 0){
+		if(args[2]){
 			usage(args,arghelp);
 			return -1;
 		}
 		if(set_target(NULL)){
+			return -1;
+		}
+		return 0;
+	}else if(wcscmp(args[1],L"finalize") == 0){
+		if(args[2]){
+			usage(args,arghelp);
+			return -1;
+		}
+		if(finalize_target()){
 			return -1;
 		}
 		return 0;
@@ -1772,6 +1781,7 @@ static const struct fxn {
 			"                 | [ -v ] no arguments to list all devicemaps"),
 	FXN(target,"[ \"set\" path ]\n"
 			"                 | [ \"unset\" ]\n"
+			"                 | [ \"finalize\" ]\n"
 			"                 | no arguments prints target"),
 	FXN(map,"[ device mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"

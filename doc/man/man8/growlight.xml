@@ -106,8 +106,9 @@ time with the "target" command. The "map" command will not result in active
 mounts unless <emphasis>&dhpackage;</emphasis> is operating in system installation mode (they will
 merely be used to construct target fstab output). Once system installation mode
 is entered, <emphasis>&dhpackage;</emphasis> will return 0 only as a result of a successful invocation
-of the "finalize" command. <emphasis role="bold">path</emphasis> needn't exist at
-specification time, but it must exist before any maps can be defined.</para>
+of the <emphasis role="bold">"target finalize"</emphasis> command.
+<emphasis role="bold">path</emphasis> must exist at the time of its
+specification.</para>
 			</listitem>
 		</varlistentry>
 	</refsect1>

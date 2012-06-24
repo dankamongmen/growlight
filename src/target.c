@@ -1,18 +1,24 @@
 #include <assert.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "target.h"
 #include "growlight.h"
 
+// Path on the guest filesystem which will hold the target's root filesystem.
 char *real_target; // Only used when we set or unset the target
 const char *growlight_target = NULL;
+
+static int targfd = -1; // reference to target root, once defined
 
 // Topologically sorted
 static struct target {
 	mntentry m;
+	int fd;			// Reference to mounted directory
 	struct target *next;
 } *targets;
 
@@ -116,8 +122,14 @@ int set_target(const char *path){
 			fprintf(stderr,"A target is already defined: %s\n",growlight_target);
 			return -1;
 		}
+		if((targfd = open(path,O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0){
+			fprintf(stderr,"Couldn't open %s (%s?)\n",path,strerror(errno));
+			return -1;
+		}
 		if((growlight_target = real_target = strdup(path)) == NULL){
 			fprintf(stderr,"Couldn't set target (%s?)\n",strerror(errno));
+			close(targfd);
+			targfd = -1;
 			return -1;
 		}
 		return 0;
@@ -126,6 +138,38 @@ int set_target(const char *path){
 		// FIXME need to unmount maps
 		free(real_target);
 		growlight_target = real_target = NULL;
+		close(targfd);
+		targfd = -1;
+	}
+	return 0;
+}
+
+int finalize_target(void){
+	FILE *fp;
+	int fd;
+
+	if(!growlight_target){
+		fprintf(stderr,"No target is defined\n");
+		return -1;
+	}
+	if(!targets){
+		fprintf(stderr,"No target mappings are defined\n");
+		return -1;
+	}
+	if((fd = openat(targfd,"etc/fstab",O_WRONLY|O_CLOEXEC)) < 0){
+		fprintf(stderr,"Couldn't open etc/fstab in target root (%s?)\n",strerror(errno));
+		return -1;
+	}
+	if((fp = fdopen(fd,"w")) == NULL){
+		fprintf(stderr,"Couldn't get FILE * from %d (%s?)\n",fd,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	// FIXME write it out!
+	if(fclose(fp)){
+		fprintf(stderr,"Couldn't close FILE * from %d (%s?)\n",fd,strerror(errno));
+		close(fd);
+		return -1;
 	}
 	return 0;
 }
