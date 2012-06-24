@@ -137,9 +137,6 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 		unsigned devno = 0;
 		controller **pre;
 
-		if(usbmodulep(module)){
-			c->transport = TRANSPORT_USB;
-		}
 		for(idc = controllers ; idc ; idc = idc->next){
 			if(idc->driver && strcmp(idc->driver,module) == 0){
 				++devno;
@@ -160,6 +157,9 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 				free(c);
 				return NULL;
 			}
+		}
+		if(usbmodulep(module)){
+			c->transport = TRANSPORT_USB;
 		}
 		c->sysfs = sysfs;
 		c->driver = module;
@@ -687,12 +687,16 @@ create_new_device(const char *name,int recurse){
 				clobber_device(d);
 				return NULL;
 			}
-			if(sg_interrogate(d,dfd)){
-				close(dfd);
-				clobber_device(d);
-				return NULL;
+			if(c->transport == TRANSPORT_ATA){
+				if(sg_interrogate(d,dfd)){
+					close(dfd);
+					clobber_device(d);
+					return NULL;
+				}
+				probe_smart(d);
+			}else if(c->transport == TRANSPORT_USB){
+				d->blkdev.transport = SERIAL_USB;
 			}
-			probe_smart(d);
 			if((d->blkdev.biossha1 = malloc(20)) == NULL){
 				fprintf(stderr,"Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
 				clobber_device(d);

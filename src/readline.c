@@ -424,7 +424,8 @@ pcie_gen(unsigned gen){
 
 static const char *
 transport_str(transport_e t){
-	return t == SERIAL_ATAIII ? "S3" : t == SERIAL_ATAII ? "S2" :
+	return t == SERIAL_USB ? "USB" : t == SERIAL_ATAIII ? "S3" :\
+	t == SERIAL_ATAII ? "S2" :
 	 t == SERIAL_ATAI ? "I" : t == SERIAL_ATA8 ? "AST" :
 	 t == SERIAL_UNKNOWN ? "Srl" : t == PARALLEL_ATA ? "Par" :
 	 t == AGGREGATE_MIXED ? "Mix" : "Ukn";
@@ -900,6 +901,7 @@ blockdev_details(const device *d){
 		}
 		printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
 		printf("Transport: %s\n",
+				d->blkdev.transport == SERIAL_USB ? "USB" :
 				d->blkdev.transport == SERIAL_ATAIII ? "SATA 3.0" :
 				d->blkdev.transport == SERIAL_ATAII ? "SATA 2.0" :
 				d->blkdev.transport == SERIAL_ATAI ? "SATA 1.0" :
