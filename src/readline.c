@@ -884,31 +884,43 @@ blockdev_details(const device *d){
 		return -1;
 	}
 	printf("\n");
-	if(d->blkdev.biossha1){
-		if(printf("\nBIOS boot SHA-1: ") < 0){
-			return -1;
-		}
-		for(z = 0 ; z < 19 ; ++z){
-			if(printf("%02x:",((const unsigned char *)d->blkdev.biossha1)[z]) < 0){
+	if(d->layout == LAYOUT_NONE){
+		if(d->blkdev.biossha1){
+			if(printf("\nBIOS boot SHA-1: ") < 0){
+				return -1;
+			}
+			for(z = 0 ; z < 19 ; ++z){
+				if(printf("%02x:",((const unsigned char *)d->blkdev.biossha1)[z]) < 0){
+					return -1;
+				}
+			}
+			if(printf("%02x\n",((const unsigned char *)d->blkdev.biossha1)[z]) < 0){
 				return -1;
 			}
 		}
-		if(printf("%02x\n",((const unsigned char *)d->blkdev.biossha1)[z]) < 0){
+		printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
+		printf("Transport: %s\n",
+				d->blkdev.transport == SERIAL_ATAIII ? "SATA 3.0" :
+				d->blkdev.transport == SERIAL_ATAII ? "SATA 2.0" :
+				d->blkdev.transport == SERIAL_ATAI ? "SATA 1.0" :
+				d->blkdev.transport == SERIAL_ATA8 ? "ATA8-AST" :
+				d->blkdev.transport == SERIAL_UNKNOWN ? "Serial ATA" :
+				d->blkdev.transport == PARALLEL_ATA ? "Parallel ATA" :
+				d->blkdev.transport == AGGREGATE_MIXED ? "Mixed" :
+				"Unknown");
+		if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s\n",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
-	}
-	printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
-	printf("Transport: %s\n",
-			d->blkdev.transport == SERIAL_ATAIII ? "SATA 3.0" :
-			 d->blkdev.transport == SERIAL_ATAII ? "SATA 2.0" :
-			 d->blkdev.transport == SERIAL_ATAI ? "SATA 1.0" :
-			 d->blkdev.transport == SERIAL_ATA8 ? "ATA8-AST" :
-			 d->blkdev.transport == SERIAL_UNKNOWN ? "Serial ATA" :
-			 d->blkdev.transport == PARALLEL_ATA ? "Parallel ATA" :
-			 d->blkdev.transport == AGGREGATE_MIXED ? "Mixed" :
-			 "Unknown");
-	if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s\n",d->name) >= (int)sizeof(buf)){
-		return -1;
+	}else if(d->layout == LAYOUT_MDADM){
+		if(snprintf(buf,sizeof(buf),"mdadm --detail /dev/%s\n",d->name) >= (int)sizeof(buf)){
+			return -1;
+		}
+	}else if(d->layout == LAYOUT_ZPOOL){
+		if(snprintf(buf,sizeof(buf),"zpool status %s\n",d->name) >= (int)sizeof(buf)){
+			return -1;
+		}
+	}else{
+		return 0;
 	}
 	if(popen_drain(buf)){
 		return -1;
