@@ -1755,7 +1755,7 @@ static const struct fxn {
 			"                 | [ \"unset\" ]\n"
 			"                 | [ \"finalize\" ]\n"
 			"                 | no arguments prints target"),
-	FXN(map,"[ device mountpoint type options ]\n"
+	FXN(map,"[ mountdev mountpoint type options ]\n"
 			"                 | [ mountdev \"swap\" ]\n"
 			"                 | no arguments prints target fstab"),
 	FXN(mounts,""),

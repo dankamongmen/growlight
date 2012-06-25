@@ -194,7 +194,22 @@ performed via the Linux kernel's sysfs filesystem.</para>
 			<term><option>blockdev mktable [ blockdev tabletype ]</option></term>
 			<term><option>blockdev [ -v ]</option></term>
 			<listitem>
-				<para>FIXME</para>
+<para>Passed no arguments, <emphasis role="bold">blockdev</emphasis> concisely lists
+all block devices recognized by the system. Passed "-v", partitions and
+filesystems present on a given block device will also be listed. The "rescan"
+command causes the kernel to reanalyze the device's geometry and partition tables.
+Any changes will be propagated to <emphasis>growlight</emphasis>. "badblocks"
+runs a non-destructive bad block check on the device. If provided "rw", "badblocks"
+will perform a destructive, lenghtier, more strenuous read-write check. "wipebiosboot"
+writes zeroes to the BIOS bootcode section of a disk (the first 446 bytes of
+the first sector), hopefully ensuring that no attempt will be made to perform
+a BIOS-type boot from the device. "ataerase" uses the ATA Secure Erase functionality
+of the disk, if supported, to restore the device to factory settings. This can
+lead to noticeably improved performance from used Solid State Devices (SSDs).
+"rmtable" will attempt to write zeros over all partition table structures such
+that <emphasis>libblkid(3)</emphasis> does not recognize the disk as being
+partitioned. "mktable" will create a partition table of the provided type; with
+no arguments, supported partition table types are listed.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
@@ -206,7 +221,15 @@ performed via the Linux kernel's sysfs filesystem.</para>
 			<term><option>partition setflag [ partition on|off flag ]</option></term>
 			<term><option>partition [ -v ]</option></term>
 			<listitem>
-				<para>FIXME</para>
+<para>Passed no arguments, <emphasis role="bold">partition</emphasis> concisely lists all
+detected partitions. Passed "-v", data present on a given partition will also
+be listed. "del" attempts to convert a partition to unallocated space. "add"
+attempts to carve a partition of size bytes and having name as its label from
+the specified block device's free space. "setuuid" attempts to set the partition
+GUID (<emphasis>not</emphasis> the Type UUID) to uuid. "setname" attempts to
+set the partition label to name. With no arguments, "setflag" lists the
+partition flags supported by this system. Otherwise, it attempts to set or unset
+the specified flag on the specified partition.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
@@ -305,9 +328,17 @@ one exists).</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
+			<term><option>map [ mountdev mountpoint mnttype options ]</option></term>
 			<term><option>map</option></term>
 			<listitem>
-				<para>FIXME</para>
+<para>Provided no arguments, <emphasis role="bold">map</emphasis> dumps the
+target's /etc/fstab as currently envisioned. Otherwise, attempt to mount
+mountdev at mountpoint (relative to the target root) as a filesystem of type
+mnttype, using the specified mount options (see <emphasis role="bold">mount(8)</emphasis>).
+If the mount is successful, the mapping will be added to the target /etc/fstab
+(though this will not be written out until <emphasis role="bold">target finalize</emphasis>
+is run). The <emphasis role="bold">map</emphasis> command is unavailable unless in
+system preparation mode (see <emphasis role="bold">target</emphasis>).</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
@@ -334,7 +365,8 @@ map, but is included merely for diagnostic purposes. Accepts no arguments.</para
 		<varlistentry>
 			<term><option>troubleshoot</option></term>
 			<listitem>
-				<para>FIXME</para>
+<para>Look for problems, both physical and logical, in the storage setup. This
+command's behavior is not yet well-defined FIXME.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
@@ -430,6 +462,15 @@ ought be fixed.</para>
 			<refentrytitle>mdadm</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
+			<refentrytitle>mkfs</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>mount</refentrytitle>
+			<manvolnum>2</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>mount</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
 			<refentrytitle>parted</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
@@ -453,6 +494,12 @@ ought be fixed.</para>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>udev</refentrytitle>
 			<manvolnum>7</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>umount</refentrytitle>
+			<manvolnum>2</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>umount</refentrytitle>
+			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>zfs</refentrytitle>
 			<manvolnum>8</manvolnum>
