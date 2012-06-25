@@ -180,7 +180,8 @@ use_new_target(const char *path){
 	if(!match){
 		return 0;
 	}
-	// FIXME import matching device as map
+	fprintf(stderr,"Not using already-mounted target %s\n",path);
+	// FIXME import matching device as map see bug 110
 	if(!submatch){
 		return 0;
 	}
