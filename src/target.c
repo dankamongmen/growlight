@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/mount.h>
 
 #include "target.h"
@@ -85,7 +86,7 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 		fprintf(stderr,"Bad device name: %s\n",d->name);
 		return -1;
 	}
-	if(snprintf(pathext,sizeof(pathext),"%s/%s",get_target(),path) >= (int)sizeof(devname)){
+	if(snprintf(pathext,sizeof(pathext),"%s/%s",get_target(),path) >= (int)(sizeof(devname) - strlen("/etc/fstab"))){
 		fprintf(stderr,"Bad mount point: %s\n",path);
 		return -1;
 	}
@@ -96,6 +97,13 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 		}
 		if(mount(devname,pathext,fs,MS_NOATIME,NULL)){
 			fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,pathext,fs);
+			return -1;
+		}
+		// we know we have enough space from the check of snprintf()...
+		strcat(pathext,"/etc");
+		if(mkdir(pathext,0777) && errno != EEXIST){
+			fprintf(stderr,"Couldn't mkdir %s (%s?)\n",pathext,strerror(errno));
+			umount2(devname,UMOUNT_NOFOLLOW);
 			return -1;
 		}
 		d->swapprio = SWAP_INVALID;
