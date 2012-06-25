@@ -139,19 +139,14 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 
 static int
 use_new_target(const char *path){
+	const device *match,*submatch;
 	const controller *c;
 
+	match = submatch = 0;
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d,*p;
 
 		for(d = c->blockdevs ; d ; d = d->next){
-			if(d->mnt == NULL){
-				continue;
-			}
-			if(strncmp(path,d->mnt,strlen(path))){
-				break;
-			}
-			printf("MATCH: %s / %s\n",path,d->mnt);
 			for(p = d->parts ; p ; p = p->next){
 				if(p->mnt == NULL){
 					continue;
@@ -159,10 +154,37 @@ use_new_target(const char *path){
 				if(strncmp(path,p->mnt,strlen(path))){
 					break;
 				}
-				printf("MATCH: %s / %s\n",path,p->mnt);
+				if(strcmp(path,p->mnt) == 0){
+					match = p;
+				}else{
+					submatch = p;
+				}
+			}
+			if(d->mnt == NULL){
+				continue;
+			}
+			if(strncmp(path,d->mnt,strlen(path))){
+				break;
+			}
+			if(strcmp(path,d->mnt) == 0){
+				match = d;
+			}else{
+				submatch = d;
 			}
 		}
 	}
+	if(!match && submatch){
+		fprintf(stderr,"Not using target %s with submount %s\n",path,submatch->mnt);
+		return -1;
+	}
+	if(!match){
+		return 0;
+	}
+	// FIXME import matching device as map
+	if(!submatch){
+		return 0;
+	}
+	// FIXME walk tree again, adding submaps
 	return 0;
 }
 
