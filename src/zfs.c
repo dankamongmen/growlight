@@ -131,8 +131,8 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	return 0;
 }
 
-static int
-scan_zpools(libzfs_handle_t *zfs){
+int scan_zpools(void){
+	libzfs_handle_t *zfs = zht;
 	zprop_list_t *pools = NULL;
 	struct zpoolcb_t cb;
 
@@ -162,7 +162,7 @@ int init_zfs_support(void){
 		fprintf(stderr,"ZFS history didn't match!\n");
 		return -1;
 	}
-	if(scan_zpools(zht)){
+	if(scan_zpools()){
 		stop_zfs_support();
 		return -1;
 	}

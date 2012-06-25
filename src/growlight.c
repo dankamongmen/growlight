@@ -1595,6 +1595,7 @@ int rescan_devices(void){
 	devtable dt;
 
 	push_devtable(&dt);
+	ret |= scan_zpools();
 	ret |= watch_dir(-1,SYSROOT,scan_device);
 	ret |= watch_dir(-1,DEVBYID,lookup_id);
 	ret |= parse_mounts(MOUNTS);

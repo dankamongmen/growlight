@@ -9,6 +9,7 @@ extern "C" {
 
 int init_zfs_support(void);
 int stop_zfs_support(void);
+int scan_zpools(void);
 int print_zfs_version(FILE *);
 
 #ifdef __cplusplus
