@@ -1171,9 +1171,11 @@ event_posix_thread(void *unsafe){
 			}else if(events[r].data.fd == em->ufd){
 				udev_event();
 			}else if(events[r].data.fd == em->mfd){
+				lock_growlight();
 				printf("Reparsing /proc/mount...\n");
 				clear_mounts(controllers);
 				parse_mounts("/proc/mounts");
+				unlock_growlight();
 			}else{
 				fprintf(stderr,"Unknown fd %d saw event\n",events[r].data.fd);
 			}

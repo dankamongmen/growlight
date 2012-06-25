@@ -100,9 +100,15 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 			return -1;
 		}
 		// we know we have enough space from the check of snprintf()...
+		if((targfd = open(pathext,O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0){
+			fprintf(stderr,"Couldn't open %s (%s?)\n",path,strerror(errno));
+			return -1;
+		}
 		strcat(pathext,"/etc");
 		if(mkdir(pathext,0777) && errno != EEXIST){
 			fprintf(stderr,"Couldn't mkdir %s (%s?)\n",pathext,strerror(errno));
+			close(targfd);
+			targfd = -1;
 			umount2(devname,UMOUNT_NOFOLLOW);
 			return -1;
 		}
@@ -110,6 +116,8 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 		free(d->mnttype);
 		d->mnttype = NULL;
 		if((targets = create_target(path,d->name,fs,ops)) == NULL){
+			close(targfd);
+			targfd = -1;
 			return -1;
 		}
 		d->target = &targets->m;
@@ -168,14 +176,8 @@ int set_target(const char *path){
 			fprintf(stderr,"A target is already defined: %s\n",growlight_target);
 			return -1;
 		}
-		if((targfd = open(path,O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0){
-			fprintf(stderr,"Couldn't open %s (%s?)\n",path,strerror(errno));
-			return -1;
-		}
 		if((growlight_target = real_target = strdup(path)) == NULL){
 			fprintf(stderr,"Couldn't set target (%s?)\n",strerror(errno));
-			close(targfd);
-			targfd = -1;
 			return -1;
 		}
 	}else if(growlight_target){
