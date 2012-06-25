@@ -199,7 +199,8 @@ int finalize_target(void){
 		fprintf(stderr,"No target mappings are defined\n");
 		return -1;
 	}
-	if((fd = openat(targfd,"etc/fstab",O_WRONLY|O_CLOEXEC)) < 0){
+	if((fd = openat(targfd,"etc/fstab",O_WRONLY|O_CLOEXEC|O_CREAT,
+					S_IROTH | S_IRGRP | S_IWGRP | S_IRUSR | S_IWUSR)) < 0){
 		fprintf(stderr,"Couldn't open etc/fstab in target root (%s?)\n",strerror(errno));
 		return -1;
 	}
