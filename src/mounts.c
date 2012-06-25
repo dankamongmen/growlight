@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
+#include <sys/statvfs.h>
 
 #include "mmap.h"
 #include "mounts.h"
@@ -125,9 +126,11 @@ int parse_mounts(const char *fn){
 	idx = 0;
 	dev = mnt = fs = ops = NULL;
 	while(idx < len){
-		char buf[PATH_MAX + 1],*rp;
+		char buf[PATH_MAX + 1];
+		struct statvfs vfs;
 		struct stat st;
 		device *d;
+		char *rp;
 		int r;
 
 		free(dev); free(mnt); free(fs); free(ops);
@@ -138,27 +141,27 @@ int parse_mounts(const char *fn){
 		if(dev[0] != '/'){
 			continue;
 		}
+		if(statvfs(mnt,&vfs)){
+			fprintf(stderr,"Couldn't stat fs %s (%s?)\n",dev,strerror(errno));
+			goto err;
+		}
 		rp = dev;
-		do{
-			if(lstat(rp,&st)){
-				fprintf(stderr,"Couldn't stat %s (%s?)\n",rp,strerror(errno));
+		if(lstat(rp,&st)){
+			fprintf(stderr,"Couldn't stat %s (%s?)\n",rp,strerror(errno));
+			goto err;
+		}
+		if(S_ISLNK(st.st_mode)){
+			if((r = readlink(dev,buf,sizeof(buf))) < 0){
+				fprintf(stderr,"Couldn't deref %s (%s?)\n",dev,strerror(errno));
 				goto err;
 			}
-			if(S_ISLNK(st.st_mode)){
-				int r;
-
-				if((r = readlink(dev,buf,sizeof(buf))) < 0){
-					fprintf(stderr,"Couldn't deref %s (%s?)\n",dev,strerror(errno));
-					goto err;
-				}
-				if((size_t)r >= sizeof(buf)){
-					fprintf(stderr,"Name too long for %s (%d?)\n",dev,r);
-					goto err;
-				}
-				buf[r] = '\0';
-				rp = buf;
+			if((size_t)r >= sizeof(buf)){
+				fprintf(stderr,"Name too long for %s (%d?)\n",dev,r);
+				goto err;
 			}
-		}while(S_ISLNK(st.st_mode));
+			buf[r] = '\0';
+			rp = buf;
+		}
 		if((d = lookup_device(rp)) == NULL){
 			goto err;
 		}
@@ -170,6 +173,7 @@ int parse_mounts(const char *fn){
 		d->mnt = mnt;
 		d->mnttype = fs;
 		d->mntops = ops;
+		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
 		mnt = fs = ops = NULL;
 	}
 	free(dev); free(mnt); free(fs); free(ops);
