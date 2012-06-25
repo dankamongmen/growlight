@@ -1756,7 +1756,6 @@ static const struct fxn {
 			"                 | [ \"finalize\" ]\n"
 			"                 | no arguments prints target"),
 	FXN(map,"[ mountdev mountpoint type options ]\n"
-			"                 | [ mountdev \"swap\" ]\n"
 			"                 | no arguments prints target fstab"),
 	FXN(mounts,""),
 	FXN(uefiboot,"root fs map must be defined in GPT partition"),
