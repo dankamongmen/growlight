@@ -266,7 +266,7 @@ each swap device known to the system, including those not actively used. The
 "on" subcommand attempts to create and use a swap device on <emphasis role="bold">swapdev</emphasis>. This
 command will fail if <emphasis role="bold">swapdev</emphasis> is referenced by any map, mount, md device, dm
 device, or zpool, if <emphasis role="bold">swapdev</emphasis> is not writable, or on any
-<emphasis role="bold">mkswap(8)</emphasis> or <emphasis role="bold">swapon(8)</emphasis>
+<emphasis role="bold">mkswap(8)</emphasis> or <emphasis role="bold">swapon(2)</emphasis>
 error. The "off" subcommand attempts to halt an active swap device (it does not
 write to the swap device itself, and thus the swap device remains usable). It
 will fail if the device is not an active swap, or on any <emphasis role="bold">swapoff(8)</emphasis>
@@ -492,7 +492,7 @@ ought be fixed.</para>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>swapon</refentrytitle>
-			<manvolnum>8</manvolnum>
+			<manvolnum>2</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>udev</refentrytitle>
 			<manvolnum>7</manvolnum>
