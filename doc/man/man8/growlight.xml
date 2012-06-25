@@ -269,7 +269,7 @@ device, or zpool, if <emphasis role="bold">swapdev</emphasis> is not writable, o
 <emphasis role="bold">mkswap(8)</emphasis> or <emphasis role="bold">swapon(2)</emphasis>
 error. The "off" subcommand attempts to halt an active swap device (it does not
 write to the swap device itself, and thus the swap device remains usable). It
-will fail if the device is not an active swap, or on any <emphasis role="bold">swapoff(8)</emphasis>
+will fail if the device is not an active swap, or on any <emphasis role="bold">swapoff(2)</emphasis>
 failure.</para>
 			</listitem>
 		</varlistentry>
@@ -489,7 +489,7 @@ ought be fixed.</para>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>swapoff</refentrytitle>
-			<manvolnum>8</manvolnum>
+			<manvolnum>2</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>swapon</refentrytitle>
 			<manvolnum>2</manvolnum>
