@@ -197,6 +197,7 @@ int print_zfs_version(FILE *fp){
 }
 
 int scan_zpools(void){
-	return verbf("No ZFS support in this build.\n");
+	verbf("No ZFS support in this build.\n");
+	return 0;
 }
 #endif

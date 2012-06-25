@@ -1498,11 +1498,7 @@ biosboot(wchar_t * const *args,const char *arghelp){
 static int
 rescan(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
-
-	if(rescan_devices()){
-		return -1;
-	}
-	return 0;
+	return rescan_devices();
 }
 
 static int
