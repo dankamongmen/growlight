@@ -80,6 +80,7 @@ static controller virtual_bus = {
 static controller *controllers = &virtual_bus;
 
 static device *create_new_device(const char *,int);
+static device *create_new_device_inner(const char *,int);
 
 static void
 push_devtable(devtable *dt){
@@ -405,7 +406,8 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 			fprintf(stderr,"Bad toplink: "SYSROOT"%s->%s\n",name,buf);
 			return -1;
 		}
-		if(create_new_device(dev,0)){
+		++dev;
+		if(create_new_device_inner(dev,0)){
 			fprintf(stderr,"Couldn't get disk: "SYSROOT"%s->%s/%s\n",name,buf,dev);
 			return -1;
 		}
