@@ -138,26 +138,27 @@ int parse_mounts(const char *fn){
 		if(dev[0] != '/'){
 			continue;
 		}
-		if(lstat(dev,&st)){
-			fprintf(stderr,"Couldn't stat %s (%s?)\n",dev,strerror(errno));
-			goto err;
-		}
-		if(S_ISLNK(st.st_mode)){
-			int r;
+		rp = dev;
+		do{
+			if(lstat(rp,&st)){
+				fprintf(stderr,"Couldn't stat %s (%s?)\n",rp,strerror(errno));
+				goto err;
+			}
+			if(S_ISLNK(st.st_mode)){
+				int r;
 
-			if((r = readlink(dev,buf,sizeof(buf))) < 0){
-				fprintf(stderr,"Couldn't deref %s (%s?)\n",dev,strerror(errno));
-				goto err;
+				if((r = readlink(dev,buf,sizeof(buf))) < 0){
+					fprintf(stderr,"Couldn't deref %s (%s?)\n",dev,strerror(errno));
+					goto err;
+				}
+				if((size_t)r >= sizeof(buf)){
+					fprintf(stderr,"Name too long for %s (%d?)\n",dev,r);
+					goto err;
+				}
+				buf[r] = '\0';
+				rp = buf;
 			}
-			if((size_t)r >= sizeof(buf)){
-				fprintf(stderr,"Name too long for %s (%d?)\n",dev,r);
-				goto err;
-			}
-			buf[r] = '\0';
-			rp = buf;
-		}else{
-			rp = dev;
-		}
+		}while(S_ISLNK(st.st_mode));
 		if((d = lookup_device(rp)) == NULL){
 			goto err;
 		}
