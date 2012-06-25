@@ -13,6 +13,7 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <scsi/sg.h>
 #include <pci/pci.h>
 #include <pthread.h>
@@ -1182,6 +1183,7 @@ event_posix_thread(void *unsafe){
 				fprintf(stderr,"Unknown fd %d saw event\n",events[r].data.fd);
 			}
 		}
+		raise(SIGWINCH);
 	}while(e >= 0);
 	fprintf(stderr,"Error processing event queue (%s?)\n",strerror(errno));
 	return NULL;
