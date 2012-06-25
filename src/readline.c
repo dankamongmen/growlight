@@ -1236,6 +1236,9 @@ mounts(wchar_t * const *args,const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args,arghelp);
+	printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s\n",
+			FSLABELSIZ,FSLABELSIZ,"Label",
+			"Type","UUID","Bytes","Device");
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
