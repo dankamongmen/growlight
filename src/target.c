@@ -12,8 +12,8 @@
 #include "growlight.h"
 
 // Path on the guest filesystem which will hold the target's root filesystem.
-char *real_target; // Only used when we set or unset the target
 const char *growlight_target = NULL;
+char real_target[PATH_MAX + 1]; // Only used when we set or unset the target
 
 static int targfd = -1; // reference to target root, once defined
 
@@ -137,6 +137,35 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 	return 0;
 }
 
+static int
+use_new_target(const char *path){
+	const controller *c;
+
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d,*p;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(d->mnt == NULL){
+				continue;
+			}
+			if(strncmp(path,d->mnt,strlen(path))){
+				break;
+			}
+			printf("MATCH: %s / %s\n",path,d->mnt);
+			for(p = d->parts ; p ; p = p->next){
+				if(p->mnt == NULL){
+					continue;
+				}
+				if(strncmp(path,p->mnt,strlen(path))){
+					break;
+				}
+				printf("MATCH: %s / %s\n",path,p->mnt);
+			}
+		}
+	}
+	return 0;
+}
+
 int set_target(const char *path){
 	const controller *c;
 
@@ -145,11 +174,17 @@ int set_target(const char *path){
 			fprintf(stderr,"A target is already defined: %s\n",growlight_target);
 			return -1;
 		}
-		if((growlight_target = real_target = strdup(path)) == NULL){
-			fprintf(stderr,"Couldn't set target (%s?)\n",strerror(errno));
+		if(realpath(path,real_target) == NULL){
+			fprintf(stderr,"Couldn't resolve %s (%s?)\n",path,strerror(errno));
 			return -1;
 		}
-	}else if(!growlight_target){
+		if(use_new_target(real_target)){
+			return -1;
+		}
+		growlight_target = real_target;
+		return 0;
+	}
+	if(!growlight_target){
 		fprintf(stderr,"No target is defined\n");
 		return -1;
 	}
@@ -180,8 +215,7 @@ int set_target(const char *path){
 			}
 		}
 	}
-	free(real_target);
-	growlight_target = real_target = NULL;
+	growlight_target = NULL;
 	close(targfd);
 	targfd = -1;
 	return 0;

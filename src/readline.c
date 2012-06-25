@@ -1845,9 +1845,9 @@ tty_ui(void){
 		}
 		free_tokes(tokes);
 		if(z){
-			snprintf(prompt,sizeof(prompt),"\033[0;35m[\033[0;36m" PACKAGE "\033[0;35m]\033[1;31m(%d)> \033[1;37m",z);
+			snprintf(prompt,sizeof(prompt),"\033[0;35m[\033[0;36m" PACKAGE "\033[0;35m]\033[1;31m(%d)\033[1;32m> \033[1;37m",z);
 		}else{
-			snprintf(prompt,sizeof(prompt),"\033[0;35m[\033[0;36m" PACKAGE "\033[0;35m]\033[1;32m(0)> \033[1;37m");
+			snprintf(prompt,sizeof(prompt),"\033[0;35m[\033[0;36m" PACKAGE "\033[0;35m]\033[1;32m(0)\033[1;32m> \033[1;37m");
 		}
 		rl_set_prompt(prompt);
 		if(lights_off){
