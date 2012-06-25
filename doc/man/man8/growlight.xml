@@ -210,14 +210,27 @@ performed via the Linux kernel's sysfs filesystem.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
+			<term><option>fs mkfs [ blockdev fstype ]</option></term>
+			<term><option>fs wipefs blockdev</option></term>
+			<term><option>fs setuuid blockdev uuid</option></term>
+			<term><option>fs setlabel blockdev label</option></term>
+			<term><option>fs mount blockdev mountpoint mnttype options</option></term>
+			<term><option>fs umount mountpoint</option></term>
 			<term><option>fs</option></term>
-			<term><option>fs mkfs [ partition fstype ]</option></term>
-			<term><option>fs wipefs fs</option></term>
-			<term><option>fs setuuid fs uuid</option></term>
-			<term><option>fs setlabel fs label</option></term>
-			<term><option>fs [ -v ]</option></term>
 			<listitem>
-				<para>FIXME</para>
+<para>Passed no arguments, <emphasis role="bold">fs</emphasis> concisely lists all
+detected possible filesystems, irrespective of mount status or viability. The
+"mkfs" subcommand will create a filesystem on the specified block device of the
+specified type. "mkfs" with no arguments lists supported filesystem types.
+"wipefs" will attempt to destroy the specified filesystem's superblocks, to the
+degree that <emphasis>libblkid(3)</emphasis> does not detect them. "setuuid"
+will set the UUID of the filesystem on blockdev, assuming that filesystem
+supports UUIDs. "setlabel" will set the volume label of the filesystem on
+blockdev, assuming that filesystem supports volume labels. "mount" will attempt
+to mount the block device as a mnttype-type filesystem at mountpoint. This mount
+will not be added to either the host or target's /etc/fstab, and will thus not
+persist across reboots. "umount" will attempt to unmount the filesystem mounted
+at mountpoint.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>

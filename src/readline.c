@@ -1740,6 +1740,8 @@ static const struct fxn {
 			"                 | [ \"wipefs\" fs ]\n"
 			"                 | [ \"setuuid\" fs uuid ]\n"
 			"                 | [ \"setlabel\" fs label ]\n"
+			"                 | [ \"mount\" blockdev mountpoint type options ]\n"
+			"                 | [ \"umount\" mountpoint ]\n"
 			"                 | no arguments to list all filesystems"),
 	FXN(swap,"[ \"on\"|\"off\" swapdevice ]\n"
 			"                 | no arguments to list all swaps"),
