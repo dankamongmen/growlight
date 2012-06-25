@@ -138,6 +138,8 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 }
 
 int set_target(const char *path){
+	const controller *c;
+
 	if(path){
 		if(growlight_target){
 			fprintf(stderr,"A target is already defined: %s\n",growlight_target);
@@ -147,15 +149,26 @@ int set_target(const char *path){
 			fprintf(stderr,"Couldn't set target (%s?)\n",strerror(errno));
 			return -1;
 		}
-	}else if(growlight_target){
-		const controller *c;
+	}else if(!growlight_target){
+		fprintf(stderr,"No target is defined\n");
+		return -1;
+	}
+	for(c = get_controllers() ; c ; c = c->next){
+		char buf[PATH_MAX + 1];
+		device *d,*p;
 
-		for(c = get_controllers() ; c ; c = c->next){
-			char buf[PATH_MAX + 1];
-			device *d,*p;
-
-			for(d = c->blockdevs ; d ; d = d->next){
-				if(d->target){
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(d->target){
+				if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
+					fprintf(stderr,"Path too long: %s/%s\n",growlight_target,d->target->path);
+				}else if(umount2(buf,UMOUNT_NOFOLLOW)){
+					fprintf(stderr,"Couldn't unmount %s (%s?)\n",buf,strerror(errno));
+				}
+				free_mntentry(d->target);
+				d->target = NULL;
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(p->target){
 					if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
 						fprintf(stderr,"Path too long: %s/%s\n",growlight_target,d->target->path);
 					}else if(umount2(buf,UMOUNT_NOFOLLOW)){
@@ -164,27 +177,13 @@ int set_target(const char *path){
 					free_mntentry(d->target);
 					d->target = NULL;
 				}
-				for(p = d->parts ; p ; p = p->next){
-					if(p->target){
-						if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
-							fprintf(stderr,"Path too long: %s/%s\n",growlight_target,d->target->path);
-						}else if(umount2(buf,UMOUNT_NOFOLLOW)){
-							fprintf(stderr,"Couldn't unmount %s (%s?)\n",buf,strerror(errno));
-						}
-						free_mntentry(d->target);
-						d->target = NULL;
-					}
-				}	
 			}
 		}
-		free(real_target);
-		growlight_target = real_target = NULL;
-		close(targfd);
-		targfd = -1;
-	}else{
-		fprintf(stderr,"No target is defined\n");
-		return -1;
 	}
+	free(real_target);
+	growlight_target = real_target = NULL;
+	close(targfd);
+	targfd = -1;
 	return 0;
 }
 
