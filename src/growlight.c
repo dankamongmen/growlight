@@ -62,6 +62,8 @@ static pthread_cond_t barrier_cond = PTHREAD_COND_INITIALIZER;
 // Global state for a growlight instance
 typedef struct devtable {
 	controller *controllers;
+	device *unknown_blockdevs;
+	device *virtual_blockdevs;
 } devtable;
 
 static controller unknown_bus = {
@@ -82,7 +84,11 @@ static device *create_new_device(const char *,int);
 static void
 push_devtable(devtable *dt){
 	dt->controllers = controllers;
-	controllers = NULL;
+	dt->unknown_blockdevs = unknown_bus.blockdevs;
+	unknown_bus.blockdevs = NULL;
+	dt->virtual_blockdevs = virtual_bus.blockdevs;
+	virtual_bus.blockdevs = NULL;
+	controllers = &virtual_bus;
 }
 
 int verbf(const char *fmt,...){
@@ -295,20 +301,27 @@ clobber_device(device *d){
 static void
 free_devtable(devtable *dt){
 	controller *c;
+	device *d;
 
 	while( (c = dt->controllers) ){
 		device *d;
 
+		if(c->bus == BUS_VIRTUAL){
+			break;
+		}
 		while( (d = c->blockdevs) ){
 			c->blockdevs = d->next;
 			clobber_device(d);
 		}
 		dt->controllers = c->next;
-		// FIXME ugh! horrible!
-		if(c->bus != BUS_VIRTUAL && c->bus != BUS_UNKNOWN){
-			free_controller(c);
-			free(c);
-		}
+	}
+	while( (d = dt->unknown_blockdevs) ){
+		dt->unknown_blockdevs = d->next;
+		clobber_device(d);
+	}
+	while( (d = dt->virtual_blockdevs) ){
+		dt->virtual_blockdevs = d->next;
+		clobber_device(d);
 	}
 }
 
@@ -1577,6 +1590,7 @@ match_device(const device *d){
 
 int rescan_devices(void){
 	const controller *c;
+	device *d,*t,*p;
 	int ret = 0;
 	devtable dt;
 
@@ -1589,11 +1603,7 @@ int rescan_devices(void){
 	// preserved, the device must still exist, with the same parameters,
 	// and all containing mappings must also be preserved.
 	for(c = dt.controllers ; c ; c = c->next){
-		device *d,*t;
-
 		for(d = c->blockdevs ; d ; d = d->next){
-			device *p;
-
 			if(d->target){
 				if( (t = match_device(d)) ){
 					t->target = d->target;
@@ -1606,6 +1616,38 @@ int rescan_devices(void){
 						t->target = p->target;
 						p->target = NULL;
 					}
+				}
+			}
+		}
+	}
+	for(d = dt.unknown_blockdevs ; d ; d = d->next){
+		if(d->target){
+			if( (t = match_device(d)) ){
+				t->target = d->target;
+				d->target = NULL;
+			}
+		}
+		for(p = d->parts ; p ; p = p->next){
+			if(p->target){
+				if( (t = match_device(p)) ){
+					t->target = p->target;
+					p->target = NULL;
+				}
+			}
+		}
+	}
+	for(d = dt.virtual_blockdevs ; d ; d = d->next){
+		if(d->target){
+			if( (t = match_device(d)) ){
+				t->target = d->target;
+				d->target = NULL;
+			}
+		}
+		for(p = d->parts ; p ; p = p->next){
+			if(p->target){
+				if( (t = match_device(p)) ){
+					t->target = p->target;
+					p->target = NULL;
 				}
 			}
 		}
