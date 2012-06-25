@@ -62,6 +62,7 @@ void free_targets(void){
 }
 
 int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
+	char devname[PATH_MAX + 1];
 	struct target **pre,*m;
 
 	if(get_target() == NULL){
@@ -80,9 +81,17 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 		fprintf(stderr,"%s is used as swap\n",d->name);
 		return -1;
 	}
+	if(snprintf(devname,sizeof(devname),"/dev/%s",d->name) >= (int)sizeof(devname)){
+		fprintf(stderr,"Bad device name: %s\n",d->name);
+		return -1;
+	}
 	if(targets == NULL){
 		if(strcmp(path,"/")){
 			fprintf(stderr,"Need a root ('/') before mapping %s\n",path);
+			return -1;
+		}
+		if(mount(devname,path,fs,MS_NOATIME,NULL)){
+			fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,path,fs);
 			return -1;
 		}
 		d->swapprio = SWAP_INVALID;
@@ -104,13 +113,17 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 			break;
 		}
 	}
+	if(mount(devname,path,fs,MS_NOATIME,NULL)){
+		fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,path,fs);
+		return -1;
+	}
 	d->swapprio = SWAP_INVALID;
 	free(d->mnttype);
 	d->mnttype = NULL;
 	if((m = create_target(path,d->name,fs,ops)) == NULL){
+		umount2(devname,UMOUNT_NOFOLLOW);
 		return -1;
 	}
-	// FIXME need to actually mount it, no?
 	d->target = &m->m;
 	m->next = *pre;
 	*pre = m;
