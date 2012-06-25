@@ -54,15 +54,21 @@ typedef struct device {
 	char name[NAME_MAX];		// Entry in /dev or /sys/block
 	char *model,*revision,*sn;	// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
+
+	// Filesystem information. Block devices can have a (single) filesystem
+	// if they don't have a partition table. The filesystem need not match
+	// the container size, though it is generally unsafe to actually mount
+	// a filesystem which is larger than its container.
 	char *mnt;			// Active mount point
 	char *mntops;			// Mount options
+	uintmax_t mntsize;		// Filesystem size in bytes
 	// If the filesystem is not mounted, but is found, only mnttype will be
 	// set from among mnt, mntops and mnttype
 	char *mnttype;			// Type of mount
 	mntentry *target;		// Future mount point
 	uintmax_t size;			// Size in bytes of device
-	unsigned logsec;		// Logical sector size
-	unsigned physsec;		// Physical sector size
+	unsigned logsec;		// Logical sector size in bytes
+	unsigned physsec;		// Physical sector size in bytes
 	// Ranges from 0 to 32565, 0 highest priority. For our purposes, we
 	// also use -1, indicating "unused", and -2, indicating "not swap".
 	enum {

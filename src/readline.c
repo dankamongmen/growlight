@@ -303,7 +303,7 @@ print_mount(const device *d){
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
 			d->uuid ? d->uuid : "n/a",
-			qprefix(d->size * d->logsec,1,buf,sizeof(buf),0),
+			qprefix(d->mntsize,1,buf,sizeof(buf),0),
 			d->name,
 			d->mnt,d->mntops);
 	if(rr < 0){
@@ -321,7 +321,7 @@ print_unmount(const device *d){
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
 			d->uuid ? d->uuid : "n/a",
-			qprefix(d->size * d->logsec,1,buf,sizeof(buf),0),
+			qprefix(d->mntsize,1,buf,sizeof(buf),0),
 			d->name);
 	if(rr < 0){
 		return -1;
@@ -1312,13 +1312,13 @@ print_swaps(const device *d,int descend){
 		r += rr = printf("%-*.*s %-5d %-36.36s " PREFIXFMT " %s\n",
 				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 				d->swapprio,d->uuid ? d->uuid : "n/a",
-				qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+				qprefix(d->mntsize,1,buf,sizeof(buf),0),
 				d->name);
 	}else{
 		r += rr = printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s\n",
 				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 				"off",d->uuid ? d->uuid : "n/a",
-				qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+				qprefix(d->mntsize,1,buf,sizeof(buf),0),
 				d->name);
 	}
 	if(rr < 0){
