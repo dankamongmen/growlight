@@ -1134,6 +1134,7 @@ struct event_marshal {
 	int efd;		// epoll fd
 	int ifd;		// inotify fd
 	int ufd;		// udev_monitor fd
+	int mfd;		// /proc/mounts fd
 };
 
 static void *
@@ -1169,6 +1170,10 @@ event_posix_thread(void *unsafe){
 				}
 			}else if(events[r].data.fd == em->ufd){
 				udev_event();
+			}else if(events[r].data.fd == em->mfd){
+				printf("Reparsing /proc/mount...\n");
+				clear_mounts(controllers);
+				parse_mounts("/proc/mounts");
 			}else{
 				fprintf(stderr,"Unknown fd %d saw event\n",events[r].data.fd);
 			}
@@ -1211,8 +1216,24 @@ event_thread(int fd,int ufd){
 	}
 	em->ifd = fd;
 	em->ufd = ufd;
+	if((em->mfd = open("/proc/mounts",O_RDONLY|O_NONBLOCK)) < 0){
+		close(em->efd);
+		free(em);
+		return -1;
+	}
+	// /proc/mounts always returns readable. On change it returns EPOLLERR.
+	ev.events = EPOLLRDHUP;
+	ev.data.fd = em->mfd;
+	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->mfd,&ev)){
+		fprintf(stderr,"Couldn't add %d to epoll (%s?)\n",em->mfd,strerror(errno));
+		close(em->mfd);
+		close(em->efd);
+		free(em);
+		return -1;
+	}
 	if( (r = pthread_create(&eventtid,NULL,event_posix_thread,em)) ){
 		fprintf(stderr,"Couldn't create event thread (%s?)\n",strerror(r));
+		close(em->mfd);
 		close(em->efd);
 		free(em);
 		return -1;

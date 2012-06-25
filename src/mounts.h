@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 struct device;
+struct controller;
 
 typedef struct mntentry {
 	char *path;
@@ -20,6 +21,7 @@ typedef struct mntentry {
 // /proc/mounts must be poll()ed with POLLPRI, not POLLIN!
 int parse_mounts(const char *);
 int unmount(struct device *);
+void clear_mounts(struct controller *);
 
 #ifdef __cplusplus
 }

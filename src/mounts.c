@@ -199,3 +199,24 @@ int unmount(device *d){
 	d->mnt = NULL;
 	return 0;
 }
+
+void clear_mounts(controller *c){
+	while(c){
+		device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			device *p;
+
+			// Don't free mnttype. There's still a filesystem.
+			free(d->mnt);
+			free(d->mntops);
+			d->mnt = d->mntops = NULL;
+			for(p = d->parts ; p ; p = p->next){
+				free(p->mnt);
+				free(p->mntops);
+				p->mnt = p->mntops = NULL;
+			}
+		}
+		c = c->next;
+	}
+}
