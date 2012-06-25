@@ -618,7 +618,7 @@ void add_new_virtual_blockdev(device *d){
 }
 
 static device *
-create_new_device(const char *name,int recurse){
+create_new_device_inner(const char *name,int recurse){
 	char buf[PATH_MAX] = "";
 	controller *c;
 	device *d;
@@ -829,6 +829,26 @@ create_new_device(const char *name,int recurse){
 	return d;
 }
 
+static device *
+create_new_device(const char *name,int recurse){
+	char cwd[PATH_MAX + 1];
+	device *d;
+
+	if(getcwd(cwd,sizeof(cwd)) == NULL){
+		fprintf(stderr,"Couldn't get working directory (%s?)\n",strerror(errno));
+		return NULL;
+	}
+	if(chdir(SYSROOT)){
+		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		return NULL;
+	}
+	d = create_new_device_inner(name,recurse);
+	if(chdir(cwd)){
+		fprintf(stderr,"Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
+	}
+	return d;
+}
+
 controller *lookup_controller(const char *name){
 	controller *c;
 
@@ -845,7 +865,6 @@ controller *lookup_controller(const char *name){
 
 // name must be an entry in /sys/class/block, and also one in /dev
 device *lookup_device(const char *name){
-	char cwd[PATH_MAX + 1];
 	controller *c;
 	device *d;
 	size_t s;
@@ -878,19 +897,7 @@ device *lookup_device(const char *name){
 			}
 		}
 	}
-	if(getcwd(cwd,sizeof(cwd)) == NULL){
-		fprintf(stderr,"Couldn't get working directory (%s?)\n",strerror(errno));
-		return NULL;
-	}
-	if(chdir(SYSROOT)){
-		fprintf(stderr,"Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
-		return NULL;
-	}
-	d = create_new_device(name,1);
-	if(chdir(cwd)){
-		fprintf(stderr,"Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
-	}
-	return d;
+	return create_new_device(name,1);
 }
 
 static void *

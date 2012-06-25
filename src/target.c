@@ -62,7 +62,7 @@ void free_targets(void){
 }
 
 int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
-	char devname[PATH_MAX + 1];
+	char devname[PATH_MAX + 1],pathext[PATH_MAX + 1];
 	struct target **pre,*m;
 
 	if(get_target() == NULL){
@@ -85,13 +85,17 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 		fprintf(stderr,"Bad device name: %s\n",d->name);
 		return -1;
 	}
+	if(snprintf(pathext,sizeof(pathext),"%s/%s",get_target(),path) >= (int)sizeof(devname)){
+		fprintf(stderr,"Bad mount point: %s\n",path);
+		return -1;
+	}
 	if(targets == NULL){
 		if(strcmp(path,"/")){
 			fprintf(stderr,"Need a root ('/') before mapping %s\n",path);
 			return -1;
 		}
-		if(mount(devname,path,fs,MS_NOATIME,NULL)){
-			fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,path,fs);
+		if(mount(devname,pathext,fs,MS_NOATIME,NULL)){
+			fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,pathext,fs);
 			return -1;
 		}
 		d->swapprio = SWAP_INVALID;
