@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <sys/stat.h>
+#include <sys/mount.h>
 
 #include "mmap.h"
 #include "mounts.h"
@@ -160,10 +161,6 @@ int parse_mounts(const char *fn){
 		if((d = lookup_device(rp)) == NULL){
 			goto err;
 		}
-		/*if((d = lookup_dentry(d,rp)) == NULL){
-			fprintf(stderr,"Couldn't find device %s\n",rp);
-			goto err;
-		}*/
 		if(d->mnt){
 			fprintf(stderr,"Already had mount for %s|%s: %s|%s\n",
 					dev,mnt,d->name,d->mnt);
@@ -185,4 +182,20 @@ err:
 	munmap_virt(map,len);
 	close(fd);
 	return -1;
+}
+
+int unmount(device *d){
+	if(d->mnt == NULL){
+		fprintf(stderr,"%s is not mounted\n",d->name);
+		return -1;
+	}
+	if(umount2(d->mnt,UMOUNT_NOFOLLOW)){
+		fprintf(stderr,"Error unmounting %s at %s (%s?)\n",
+				d->name,d->mnt,strerror(errno));
+		return -1;
+	}
+	printf("Unmounted %s from %s\n",d->name,d->mnt);
+	free(d->mnt);
+	d->mnt = NULL;
+	return 0;
 }

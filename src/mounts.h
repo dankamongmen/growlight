@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+struct device;
+
 typedef struct mntentry {
 	char *path;
 	char *dev;
@@ -17,6 +19,7 @@ typedef struct mntentry {
 // (Re)parse the specified file having /proc/mounts format. Remember that
 // /proc/mounts must be poll()ed with POLLPRI, not POLLIN!
 int parse_mounts(const char *);
+int unmount(struct device *);
 
 #ifdef __cplusplus
 }

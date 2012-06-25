@@ -15,6 +15,7 @@
 #include "sysfs.h"
 #include "popen.h"
 #include "config.h"
+#include "mounts.h"
 #include "target.h"
 #include "secure.h"
 #include "ptable.h"
@@ -1356,7 +1357,20 @@ fs(wchar_t * const *args,const char *arghelp){
 		return -1;
 	}
 	if(wcscmp(args[1],L"mkfs") == 0){
+		if(args[4]){
+			usage(args,arghelp);
+			return -1;
+		}
 		if(make_wfilesystem(d,args[3])){
+			return -1;
+		}
+		return 0;
+	}else if(wcscmp(args[1],L"umount") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		if(unmount(d)){
 			return -1;
 		}
 		return 0;
@@ -1741,7 +1755,7 @@ static const struct fxn {
 			"                 | [ \"setuuid\" fs uuid ]\n"
 			"                 | [ \"setlabel\" fs label ]\n"
 			"                 | [ \"mount\" blockdev mountpoint type options ]\n"
-			"                 | [ \"umount\" mountpoint ]\n"
+			"                 | [ \"umount\" blockdev ]\n"
 			"                 | no arguments to list all filesystems"),
 	FXN(swap,"[ \"on\"|\"off\" swapdevice ]\n"
 			"                 | no arguments to list all swaps"),
