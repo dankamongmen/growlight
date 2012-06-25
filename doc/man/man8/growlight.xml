@@ -316,6 +316,7 @@ be retained once ZFS is fully integrated.</para>
 		<varlistentry>
 			<term><option>target set path</option></term>
 			<term><option>target unset</option></term>
+			<term><option>target finalize</option></term>
 			<term><option>target</option></term>
 			<listitem>
 <para>The <emphasis role="bold">set</emphasis> subcommand sets the target (see the <emphasis role="bold">--target</emphasis>
@@ -323,8 +324,9 @@ option). If a target has already been set, the command will fail. If <emphasis r
 does not exist in the current filesystem, the command will fail. If <emphasis role="bold">path</emphasis>
 exists, but is not a directory, the command will fail. Called with <emphasis role="bold">unset</emphasis>,
 undefines the target and all mappings therein. If there is no target defined,
-the command will fail. Called with no arguments, lists the current target (if
-one exists).</para>
+the command will fail. Called with <emphasis role="bold">finalize</emphasis>,
+the target's /etc/fstab will be written out. Called with no arguments, lists
+the current target (if one exists).</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
