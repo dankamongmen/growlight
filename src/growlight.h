@@ -60,7 +60,7 @@ typedef struct device {
 	// set from among mnt, mntops and mnttype
 	char *mnttype;			// Type of mount
 	mntentry *target;		// Future mount point
-	uintmax_t size;			// Size in bytes
+	uintmax_t size;			// Size in bytes of device
 	unsigned logsec;		// Logical sector size
 	unsigned physsec;		// Physical sector size
 	// Ranges from 0 to 32565, 0 highest priority. For our purposes, we

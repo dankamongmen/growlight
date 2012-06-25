@@ -278,12 +278,12 @@ static int help(wchar_t * const *,const char *);
 static int print_mdadm(const device *,int,int);
 
 static int
-print_target(const mntentry *m){
+print_target(const device *d,const mntentry *m){
 	int r = 0,rr;
 
 	r += rr = printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s\n %s %s\n",
 			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
-			m->fs,
+			d->mnttype,
 			m->uuid ? m->uuid : "n/a",
 			"-1", // FIXME
 			m->dev,
@@ -367,7 +367,7 @@ print_fs(const device *p,int descend){
 		r += rr = print_swap(p);
 	}
 	if(p->target){
-		r += rr = print_target(p->target);
+		r += rr = print_target(p,p->target);
 		if(rr < 0){
 			return -1;
 		}
@@ -1250,7 +1250,7 @@ mounts(wchar_t * const *args,const char *arghelp){
 					return -1;
 				}
 			}else if(d->target){
-				if(print_target(p->target) < 0){
+				if(print_target(p,p->target) < 0){
 					return -1;
 				}
 			}
@@ -1260,7 +1260,7 @@ mounts(wchar_t * const *args,const char *arghelp){
 						return -1;
 					}
 				}else if(p->target){
-					if(print_target(p->target) < 0){
+					if(print_target(p,p->target) < 0){
 						return -1;
 					}
 				}

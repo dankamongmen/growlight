@@ -17,54 +17,43 @@ const char *growlight_target = NULL;
 
 static int targfd = -1; // reference to target root, once defined
 
-// Topologically sorted
-static struct target {
-	mntentry m;
-	int fd;			// Reference to mounted directory
-	struct target *next;
-} *targets;
-
-static struct target *
-create_target(const char *path,const char *dev,const char *fs,const char *ops){
-	struct target *t;
+static mntentry *
+create_target(const char *path,const char *dev,const char *ops){
+	mntentry *t;
 
 	if( (t = malloc(sizeof(*t))) ){
-		t->m.label = t->m.uuid = NULL;
-		t->m.path = strdup(path);
-		t->m.dev = strdup(dev);
-		t->m.fs = strdup(fs);
-		t->m.ops = strdup(ops);
-		t->next = NULL;
-	}else{
-		fprintf(stderr,"Failure creating %s on %s\n",fs,dev);
+		t->label = t->uuid = NULL;
+		t->path = strdup(path);
+		t->dev = strdup(dev);
+		t->ops = strdup(ops);
+		if(!t->path || !t->dev || !t->ops){
+			free(t->path);
+			free(t->dev);
+			free(t->ops);
+			free(t);
+			t = NULL;
+		}
+	}
+	if(!t){
+		fprintf(stderr,"Failure creating fs on %s\n",dev);
 	}
 	return t;
 }
 
-static void
-free_target(struct target *t){
+void free_mntentry(mntentry *t){
 	if(t){
-		free(t->m.label);
-		free(t->m.uuid);
-		free(t->m.path);
-		free(t->m.dev);
-		free(t->m.fs);
-		free(t->m.ops);
+		free(t->label);
+		free(t->uuid);
+		free(t->path);
+		free(t->dev);
+		free(t->ops);
 		free(t);
 	}
 }
 
-void free_targets(void){
-	while(targets){
-		struct target *t = targets->next;
-		free_target(targets);
-		targets = t;
-	}
-}
-
-int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
-	char devname[PATH_MAX + 1],pathext[PATH_MAX + 1];
-	struct target **pre,*m;
+int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
+	char devname[PATH_MAX + 1],pathext[PATH_MAX + 1],*fs;
+	mntentry *m;
 
 	if(get_target() == NULL){
 		fprintf(stderr,"No target is defined\n");
@@ -90,18 +79,24 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 		fprintf(stderr,"Bad mount point: %s\n",path);
 		return -1;
 	}
-	if(targets == NULL){
+	if((fs = strdup(cfs)) == NULL){
+		return -1;
+	}
+	if(targfd < 0){
 		if(strcmp(path,"/")){
 			fprintf(stderr,"Need a root ('/') before mapping %s\n",path);
+			free(fs);
 			return -1;
 		}
 		if(mount(devname,pathext,fs,MS_NOATIME,NULL)){
 			fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,pathext,fs);
+			free(fs);
 			return -1;
 		}
 		// we know we have enough space from the check of snprintf()...
 		if((targfd = open(pathext,O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0){
 			fprintf(stderr,"Couldn't open %s (%s?)\n",path,strerror(errno));
+			free(fs);
 			return -1;
 		}
 		strcat(pathext,"/etc");
@@ -110,63 +105,35 @@ int prepare_mount(device *d,const char *path,const char *fs,const char *ops){
 			close(targfd);
 			targfd = -1;
 			umount2(devname,UMOUNT_NOFOLLOW);
+			free(fs);
 			return -1;
 		}
 		d->swapprio = SWAP_INVALID;
-		free(d->mnttype);
-		d->mnttype = NULL;
-		if((targets = create_target(path,d->name,fs,ops)) == NULL){
+		if((d->target = create_target(path,d->name,ops)) == NULL){
 			close(targfd);
 			targfd = -1;
+			free(fs);
 			return -1;
 		}
-		d->target = &targets->m;
+		free(d->mnttype);
+		d->mnttype = fs;
 		return 0;
 	}
-	for(pre = &targets ; *pre ; pre = &(*pre)->next){
-		int s;
-
-		if((s = strcmp((*pre)->m.path,path)) == 0){
-			fprintf(stderr,"Already have %s at %s\n",(*pre)->m.dev,path);
-			return -1;
-		}else if(s < 0){
-			break;
-		}
-	}
+	// no need to check for preexisting mount at this point -- the mount(2)
+	// will fail if one's there.
 	if(mount(devname,path,fs,MS_NOATIME,NULL)){
 		fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,path,fs);
+		free(fs);
 		return -1;
 	}
 	d->swapprio = SWAP_INVALID;
-	free(d->mnttype);
-	d->mnttype = NULL;
-	if((m = create_target(path,d->name,fs,ops)) == NULL){
+	if((m = create_target(path,d->name,ops)) == NULL){
 		umount2(devname,UMOUNT_NOFOLLOW);
+		free(fs);
 		return -1;
 	}
-	d->target = &m->m;
-	m->next = *pre;
-	*pre = m;
-	return 0;
-}
-
-static int
-recursive_unmount(struct target **t,char *buf,int n){
-	if(*t){
-		if(recursive_unmount(&(*t)->next,buf,n)){
-			return -1;
-		}
-		if(snprintf(buf,n,"%s/%s",growlight_target,(*t)->m.path) >= n){
-			fprintf(stderr,"Path too long: %s/%s\n",growlight_target,(*t)->m.path);
-			return -1;
-		}
-		if(umount2(buf,UMOUNT_NOFOLLOW)){
-			fprintf(stderr,"Couldn't unmount %s (%s?)\n",buf,strerror(errno));
-			return -1;
-		}
-		printf("Unmounted %s at %s\n",(*t)->m.dev,buf);
-		*t = NULL;
-	}
+	free(d->mnttype);
+	d->mnttype = fs;
 	return 0;
 }
 
@@ -181,10 +148,34 @@ int set_target(const char *path){
 			return -1;
 		}
 	}else if(growlight_target){
-		char buf[PATH_MAX + 1];
+		const controller *c;
 
-		if(recursive_unmount(&targets,buf,sizeof(buf))){
-			return -1;
+		for(c = get_controllers() ; c ; c = c->next){
+			char buf[PATH_MAX + 1];
+			device *d,*p;
+
+			for(d = c->blockdevs ; d ; d = d->next){
+				if(d->target){
+					if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
+						fprintf(stderr,"Path too long: %s/%s\n",growlight_target,d->target->path);
+					}else if(umount2(buf,UMOUNT_NOFOLLOW)){
+						fprintf(stderr,"Couldn't unmount %s (%s?)\n",buf,strerror(errno));
+					}
+					free_mntentry(d->target);
+					d->target = NULL;
+				}
+				for(p = d->parts ; p ; p = p->next){
+					if(p->target){
+						if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
+							fprintf(stderr,"Path too long: %s/%s\n",growlight_target,d->target->path);
+						}else if(umount2(buf,UMOUNT_NOFOLLOW)){
+							fprintf(stderr,"Couldn't unmount %s (%s?)\n",buf,strerror(errno));
+						}
+						free_mntentry(d->target);
+						d->target = NULL;
+					}
+				}	
+			}
 		}
 		free(real_target);
 		growlight_target = real_target = NULL;
@@ -205,7 +196,7 @@ int finalize_target(void){
 		fprintf(stderr,"No target is defined\n");
 		return -1;
 	}
-	if(!targets){
+	if(targfd < 0){
 		fprintf(stderr,"No target mappings are defined\n");
 		return -1;
 	}
@@ -233,18 +224,31 @@ int finalize_target(void){
 }
 
 int dump_targets(FILE *fp){
-	const struct target *target = targets;
+	const controller *c;
 
-	if(!target){
+	if(targfd < 0){
 		return 0;
 	}
 	// FIXME allow various naming schemes
-	fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t1\n",target->m.dev,
-			target->m.path,target->m.fs,target->m.ops);
-	fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n");
-	while( (target = target->next) ){
-		fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t0\n",
-				target->m.dev,target->m.path,target->m.fs,target->m.ops);
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			const mntentry *m;
+			const device *p;
+
+			if( (m = d->target) ){
+				fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",m->dev,
+						m->path,d->mnttype,m->ops,strcmp(m->path,"/") ? 2 : 1);
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if( (m = p->target) ){
+					fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",m->dev,
+							m->path,p->mnttype,m->ops,strcmp(m->path,"/") ? 2 : 1);
+				}
+			}
+		}
 	}
+	fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n");
 	return 0;
 }

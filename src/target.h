@@ -8,6 +8,7 @@ extern "C" {
 #include <stdio.h>
 
 struct device;
+struct mntentry;
 
 int prepare_mount(struct device *,const char *,const char *,const char *);
 
@@ -22,6 +23,8 @@ static inline const char *
 get_target(void){
 	return growlight_target;
 }
+
+void free_mntentry(struct mntentry *);
 
 #ifdef __cplusplus
 }

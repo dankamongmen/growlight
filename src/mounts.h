@@ -11,7 +11,6 @@ struct controller;
 typedef struct mntentry {
 	char *path;
 	char *dev;
-	char *fs;
 	char *ops;
 	char *label;
 	char *uuid;
