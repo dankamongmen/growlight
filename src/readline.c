@@ -762,6 +762,18 @@ zpool(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+zfs(wchar_t * const *args,const char *arghelp){
+	if(args[1] == NULL){
+		usage(args,arghelp);
+		return -1;
+	}
+	if(vpopen_drain("zfs",args + 1)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 dm(wchar_t * const *args,const char *arghelp){
 	int descend;
 
@@ -1757,12 +1769,13 @@ static const struct fxn {
 			"                 | no arguments to list all filesystems"),
 	FXN(swap,"[ \"on\"|\"off\" swapdevice ]\n"
 			"                 | no arguments to list all swaps"),
-	FXN(mdadm,"[ arguments passed directly through to mdadm ]\n"
+	FXN(mdadm,"[ arguments passed directly through to mdadm(8) ]\n"
 			"                 | [ -v ] no arguments to list all md devices"),
-	FXN(zpool,"[ arguments passed directly through to apool ]\n"
-			"                 | [ -v ] no arguments to list all zpools"),
-	FXN(dm,"[ arguments passed directly through to dmsetup ]\n"
+	FXN(dm,"[ arguments passed directly through to dmsetup(8) ]\n"
 			"                 | [ -v ] no arguments to list all devicemaps"),
+	FXN(zpool,"[ arguments passed directly through to zpool(8) ]\n"
+			"                 | [ -v ] no arguments to list all zpools"),
+	FXN(zfs,"arguments passed directly through to zfs(8)\n"),
 	FXN(target,"[ \"set\" path ]\n"
 			"                 | [ \"unset\" ]\n"
 			"                 | [ \"finalize\" ]\n"
