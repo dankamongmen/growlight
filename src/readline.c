@@ -1546,14 +1546,13 @@ tokenize(const char *line,wchar_t ***tokes){
 		line += conv;
 		len -= conv;
 		if(s == NULL){
-			/*if(conv == 0){
-				break;
-			}*/
-			if(iswspace(w)){
-				continue;
-			}
-			if(w == L'"'){
-				inquotes = 1;
+			if(conv){
+				if(iswspace(w)){
+					break;
+				}
+				if(w == L'"'){
+					inquotes = 1;
+				}
 			}
 			s = line - conv;
 			sps = ps;
