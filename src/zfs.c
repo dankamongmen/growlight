@@ -133,7 +133,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 }
 
 static int
-zfscb(zfs_handle_t *zhf,void *arg){
+zfscb(zfs_handle_t *zhf,void *arg __attribute__ ((unused))){
 	char mntbuf[BUFSIZ],sbuf[BUFSIZ],*mnt;
 	uintmax_t totalsize;
 	const char *zname;
