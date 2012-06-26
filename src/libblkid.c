@@ -179,6 +179,8 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 		}
 		free(d->mnttype);
 		d->mnttype = mnttype;
+	}else{
+		free(mnttype);
 	}
 	if(d->uuid == NULL){
 		d->uuid = uuid;
@@ -189,6 +191,8 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 		}
 		free(d->uuid);
 		d->uuid = uuid;
+	}else{
+		free(uuid);
 	}
 	if(d->label == NULL){
 		d->label = label;
@@ -199,6 +203,8 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 		}
 		free(d->label);
 		d->label = label;
+	}else{
+		free(label);
 	}
 	if(sbp){
 		*sbp = bp;
