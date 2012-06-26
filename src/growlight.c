@@ -317,6 +317,8 @@ free_devtable(devtable *dt){
 			clobber_device(d);
 		}
 		dt->controllers = c->next;
+		free_controller(c);
+		free(c);
 	}
 	while( (d = dt->unknown_blockdevs) ){
 		dt->unknown_blockdevs = d->next;
