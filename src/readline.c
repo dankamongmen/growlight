@@ -1890,7 +1890,6 @@ growlight_completion(const char *text,int start __attribute__ ((unused)),int end
 }
 
 int main(int argc,char * const *argv){
-	fflush(stdout);
 	if(growlight_init(argc,argv)){
 		return EXIT_FAILURE;
 	}
