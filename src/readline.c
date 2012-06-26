@@ -485,7 +485,7 @@ print_drive(const device *d,int descend){
 			d->name,
 			d->model ? d->model : "n/a",
 			(uintmax_t)d->zpool.zpoolver,
-			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec, 'Z', '.', '.', '.',
 			"spa",
 			d->wwn ? d->wwn : "n/a",

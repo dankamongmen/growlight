@@ -123,11 +123,60 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	if((d->physsec = (1u << dehumanize(ashift))) == 0){
 		d->physsec = 512u;
 	}
+	d->logsec = 512;
 	d->zpool.state = state;
 	d->zpool.transport = AGGREGATE_UNKNOWN;
 	d->zpool.zpoolver = version;
 	add_new_virtual_blockdev(d);
 	zpool_close(zhp);
+	return 0;
+}
+
+static int
+zfscb(zfs_handle_t *zhf,void *arg){
+	char mntbuf[BUFSIZ],sbuf[BUFSIZ],*mnt;
+	uintmax_t totalsize;
+	const char *zname;
+	zfs_type_t ztype;
+	int version;
+	device *d;
+
+	zname = zfs_get_name(zhf);
+	ztype = zfs_get_type(zhf);
+	if(!zname || !ztype){
+		fprintf(stderr,"Couldn't get ZFS name/type\n");
+		return -1;
+	}
+	if((d = lookup_device(zname)) == NULL){
+		fprintf(stderr,"Coudln't look up zpool named %s\n",zname);
+		return -1;
+	}
+	if((version = zfs_prop_get_int(zhf,ZFS_PROP_VERSION)) < 0){
+		fprintf(stderr,"Couldn't get dataset version for %s\n",zname);
+		return -1;
+	}
+	totalsize = 0;
+	if(zfs_prop_get(zhf,ZFS_PROP_AVAILABLE,sbuf,sizeof(sbuf),NULL,NULL,0,0)){
+		fprintf(stderr,"Couldn't get available size for %s\n",zname);
+		return -1;
+	}
+	totalsize += dehumanize(sbuf);
+	if(zfs_prop_get(zhf,ZFS_PROP_USED,sbuf,sizeof(sbuf),NULL,NULL,0,0)){
+		fprintf(stderr,"Couldn't get used size for %s\n",zname);
+		return 0;
+	}
+	totalsize += dehumanize(sbuf);
+	if(zfs_prop_get(zhf,ZFS_PROP_MOUNTPOINT,mntbuf,sizeof(mntbuf),NULL,NULL,0,0)){
+		fprintf(stderr,"Couldn't get mountpoint for %s\n",zname);
+		return 0;
+	}
+	if((mnt = strdup(mntbuf)) == NULL){
+		fprintf(stderr,"Couldn't dup mountpoint %s\n",mntbuf);
+		return -1;
+	}
+	free(d->mnt);
+	d->mnt = mnt;
+	d->mntsize = totalsize;
 	return 0;
 }
 
@@ -145,6 +194,10 @@ int scan_zpools(void){
 	memset(&cb,0,sizeof(cb));
 	if(zpool_iter(zht,zpoolcb,&cb)){
 		fprintf(stderr,"Couldn't iterate over zpools\n");
+		return -1;
+	}
+	if(zfs_iter_root(zht,zfscb,&cb)){
+		fprintf(stderr,"Couldn't iterate over root datasets\n");
 		return -1;
 	}
 	verbf("Found %u ZFS zpool%s\n",cb.pools,cb.pools == 1 ? "" : "s");

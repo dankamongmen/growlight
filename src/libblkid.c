@@ -119,6 +119,8 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 			}else{
 				fprintf(stderr,"Warning: unknown type %s for %s\n",val,dev);
 			}
+		}else if(strcmp(name,"SIZE") == 0){
+			printf("SIZE: %s\n",val);
 		}else if(strcmp(name,"UUID") == 0){
 			if((uuid = strdup(val)) == NULL){
 				goto err;
