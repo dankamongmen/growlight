@@ -11,6 +11,7 @@ configure.scan
 depcomp
 .deps/
 doc/growlight.ent
+growlight-curses
 growlight-tty
 growlight.8
 growlight-*.tar.bz2
