@@ -28,15 +28,26 @@ AX_CHECK_DOCBOOK_XSLT
 
 AX_CHECK_OPENSSL
 
-AX_WITH_CURSES
+AC_ARG_ENABLE([zfs],
+ [  --enable-zfs               Build support for ZFS ],
+ [ case "${enableval}" in
+  yes) zfs=true ;;
+  no)  zfs=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-zfs]) ;;
+   esac ],
+ [zfs=true])
 
-AC_CHECK_LIB(zfs,libzfs_init, [have_libzfs=yes],
-	     [AC_MSG_WARN([Cannot find libzfs.])])
+if test "x$zfs" = "xtrue" ; then
+	AC_CHECK_LIB(zfs,libzfs_init, [have_libzfs=yes],
+		[AC_MSG_ERROR([Cannot find libzfs.])])
 if test "x$have_libzfs" = xyes; then
 	LIBS+=" -lzfs -lnvpair"
-	AC_CHECK_HEADER([libzfs.h],[],[AC_MSG_WARN([Found ZFS library but not headers.])])
+	AC_CHECK_HEADER([libzfs.h],[],[AC_MSG_ERROR([Found ZFS library but not headers.])])
 	AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs])
 fi
+fi
+
+AX_WITH_CURSES
 
 AC_CHECK_LIB(pciaccess,pci_system_init, [have_pciaccess=yes],
              [AC_MSG_ERROR([Cannot find libpciaccess.])])
