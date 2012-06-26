@@ -1886,11 +1886,8 @@ completion_engine(const char *text,int state){
 }
 
 static char **
-growlight_completion(const char *text,int start,int end __attribute__ ((unused))){
-	if(start == 0){
-		return rl_completion_matches(text,completion_engine);
-	}
-	return NULL;
+growlight_completion(const char *text,int start __attribute__ ((unused)),int end __attribute__ ((unused))){
+	return rl_completion_matches(text,completion_engine);
 }
 
 int main(int argc,char * const *argv){
