@@ -193,11 +193,13 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			if((pci = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
 				fprintf(stderr,"Couldn't look up PCIe device\n");
 				free_controller(c);
+				free(c);
 				return NULL;
 			}
 			if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
 				fprintf(stderr,"Couldn't look up PCIe device\n");
 				free_controller(c);
+				free(c);
 				return NULL;
 			}
 			assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
@@ -211,6 +213,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			if((c->name = strdup(buf)) == NULL){
 				pci_free_dev(pcidev);
 				free_controller(c);
+				free(c);
 				return NULL;
 			}
 			//verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
@@ -372,7 +375,6 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 	int sdevfd;
 	DIR *dir;
 
-	// do *not* call closedir(3) on dir: doing so will close(2) fd.
 	if((dir = fdopendir(fd)) == NULL){
 		fprintf(stderr,"Couldn't get DIR * from fd %d for %s (%s?)\n",
 				fd,name,strerror(errno));
@@ -406,7 +408,7 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 			return -1;
 		}
 		++dev;
-		if(create_new_device_inner(dev,0)){
+		if(create_new_device_inner(dev,0) == NULL){
 			fprintf(stderr,"Couldn't get disk: "SYSROOT"%s->%s/%s\n",name,buf,dev);
 			return -1;
 		}
@@ -672,6 +674,7 @@ create_new_device_inner(const char *name,int recurse){
 		clobber_device(d);
 		return NULL;
 	}
+	// close(2)s fd on success
 	if((r = explore_sysfs_node(fd,name,d,recurse)) < 0){
 		close(fd);
 		clobber_device(d);
@@ -679,17 +682,11 @@ create_new_device_inner(const char *name,int recurse){
 	}else if(r){
 		// The device ought exist now. Don't continue trying to create
 		// a new one, but instead look up the one that now exists.
-		close(fd);
 		clobber_device(d);
 		return lookup_device(name);
 	}
 	if(c == &unknown_bus && d->layout == LAYOUT_NONE){
 		d->blkdev.realdev = 0;
-	}
-	if(close(fd)){
-		fprintf(stderr,"Couldn't close fd %d (%s?)\n",fd,strerror(errno));
-		clobber_device(d);
-		return NULL;
 	}
 	if((d->layout == LAYOUT_NONE && d->blkdev.realdev) ||
 			(d->layout == LAYOUT_MDADM)){
@@ -1101,17 +1098,11 @@ usage(const char *name,int status){
 }
 
 static int
-get_dir_fd(DIR **dir,const char *root){
+get_dir_fd(const char *root){
 	int fd;
 
-	if((*dir = opendir(root)) == NULL){
-		fprintf(stderr,"Couldn't open directory at %s (%s?)\n",root,strerror(errno));
-		return -1;
-	}
-	if((fd = dirfd(*dir)) < 0){
+	if((fd = open(root,O_RDONLY|O_CLOEXEC|O_DIRECTORY)) < 0){
 		fprintf(stderr,"Couldn't get dirfd at %s (%s?)\n",root,strerror(errno));
-		closedir(*dir);
-		*dir = NULL;
 	}
 	return fd;
 }
@@ -1293,7 +1284,6 @@ int growlight_init(int argc,char * const *argv){
 	int fd,opt,longidx,udevfd;
 	char buf[BUFSIZ];
 	const char *enc;
-	DIR *sdir;
 
 	if(setlocale(LC_ALL,"") == NULL){
 		fprintf(stderr,"Couldn't set locale (%s?)\n",strerror(errno));
@@ -1352,10 +1342,10 @@ int growlight_init(int argc,char * const *argv){
 	}else{
 		usepci = 1;
 	}
-	if((sysfd = get_dir_fd(&sdir,SYSROOT)) < 0){
+	if((sysfd = get_dir_fd(SYSROOT)) < 0){
 		goto err;
 	}
-	if((devfd = get_dir_fd(&sdir,DEVROOT)) < 0){
+	if((devfd = get_dir_fd(DEVROOT)) < 0){
 		goto err;
 	}
 	if((fd = inotify_fd()) < 0){

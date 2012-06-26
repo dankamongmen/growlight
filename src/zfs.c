@@ -108,7 +108,6 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		zpool_close(zhp);
 		return -1;
 	}
-	zpool_close(zhp);
 	if((d = malloc(sizeof(*d))) == NULL){
 		fprintf(stderr,"Couldn't allocate device (%s?)\n",strerror(errno));
 		zpool_close(zhp);
@@ -128,6 +127,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	d->zpool.transport = AGGREGATE_UNKNOWN;
 	d->zpool.zpoolver = version;
 	add_new_virtual_blockdev(d);
+	zpool_close(zhp);
 	return 0;
 }
 
