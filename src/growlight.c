@@ -26,8 +26,9 @@
 #include <pciaccess.h>
 #include <pci/header.h>
 #include <sys/inotify.h>
-#include <libdevmapper.h>
 #include <openssl/ssl.h>
+#include <libdevmapper.h>
+#include <gnu/libc-version.h>
 
 #include "sg.h"
 #include "mbr.h"
@@ -1292,7 +1293,7 @@ int growlight_init(int argc,char * const *argv){
 		goto err;
 	}
 	if((!(enc = nl_langinfo(CODESET))) || strcmp(enc,"UTF-8")){
-		fprintf(stderr,"Output isn't UTF-8, aborting\n");
+		fprintf(stderr,"Locale isn't UTF-8, aborting\n");
 		goto err;
 	}
 	SSL_library_init();
@@ -1337,8 +1338,9 @@ int growlight_init(int argc,char * const *argv){
 		} }
 	}
 	dm_get_library_version(buf,sizeof(buf));
-	printf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s\n",PACKAGE,
-			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf);
+	printf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n",PACKAGE,
+			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf,
+			gnu_get_libc_version(),gnu_get_libc_release());
 	if(glight_pci_init()){
 		fprintf(stderr,"Couldn't init libpciaccess (%s?)\n",strerror(errno));
 	}else{
