@@ -2,7 +2,7 @@ LANG=C
 LC_ALL=c
 
 AM_CFLAGS=-Wall -g -W -Werror -Wextra -fvisibility=hidden \
-	$(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES)
+	-finput-charset=UTF-8 $(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES)
 AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common \
 	$(PTHREAD_LIBS) $(OPENSSL_LIBS) $(CURSES_LIB)
 AM_CC=$(PTHREAD_CC)
