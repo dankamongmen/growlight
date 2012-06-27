@@ -105,16 +105,13 @@ vdiag(const char *fmt,...){
 
 int verbf(const char *fmt,...){
 	va_list ap;
-	int v;
 
 	va_start(ap,fmt);
 	if(verbose){
-		v = vprintf(fmt,ap);
-	}else{
-		v = 0;
+		gui->vdiag(fmt,ap);
 	}
 	va_end(ap);
-	return v;
+	return 0;
 }
 
 static void
@@ -249,6 +246,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 		}
 		c->next = *pre;
 		*pre = c;
+		c->uistate = gui->adapter_event(c,NULL);
 	}else{
 		free(module);
 		free(sysfs);
@@ -1347,7 +1345,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		} }
 	}
 	dm_get_library_version(buf,sizeof(buf));
-	printf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n",PACKAGE,
+	verbf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n",PACKAGE,
 			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf,
 			gnu_get_libc_version(),gnu_get_libc_release());
 	if(glight_pci_init()){
@@ -1420,7 +1418,7 @@ int rescan_controller(controller *c){
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
-	printf("Wrote '1' to %s\n",buf);
+	vdiag("Wrote '1' to %s\n",buf);
 	sync();
 	return 0;
 }
@@ -1435,7 +1433,7 @@ int reset_controller(controller *c){
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
-	printf("Wrote '1' to %s\n",buf);
+	vdiag("Wrote '1' to %s\n",buf);
 	sync();
 	return 0;
 }
@@ -1465,7 +1463,7 @@ int rescan_blockdev(device *d){
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
-	printf("Wrote '1' to %s\n",buf);
+	vdiag("Wrote '1' to %s\n",buf);
 	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC)) < 0){
 		return -1;
 	}
@@ -1475,7 +1473,7 @@ int rescan_blockdev(device *d){
 	for(t = 0 ; t < 3 ; ++t){
 		if(ioctl(fd,BLKRRPART,NULL) == 0){
 			close(fd);
-			printf("Updated kernel partition table\n");
+			vdiag("Updated kernel partition table\n");
 			sync();
 			return 0;
 		}
