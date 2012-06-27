@@ -35,7 +35,7 @@ AC_ARG_ENABLE([zfs],
   no)  zfs=false ;;
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-zfs]) ;;
    esac ],
- [zfs=true])
+ [zfs=false])
 
 if test "x$zfs" = "xtrue" ; then
 	AC_CHECK_LIB(zfs,libzfs_init, [have_libzfs=yes],
