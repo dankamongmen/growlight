@@ -48,6 +48,9 @@ fi
 fi
 
 AX_WITH_CURSES
+if test "x$ax_cv_curses" = xyes; then
+	CFLAGS+=" -D_XOPEN_SOURCE_EXTENDED"
+fi
 
 AC_CHECK_LIB(pciaccess,pci_system_init, [have_pciaccess=yes],
              [AC_MSG_ERROR([Cannot find libpciaccess.])])
