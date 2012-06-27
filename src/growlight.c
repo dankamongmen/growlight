@@ -1086,6 +1086,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 		verbf("Waiting on %u devices...\n",thrcount);
 		pthread_cond_wait(&barrier_cond,&barrier);
 	}
+	verbf("Device discovery completed\n");
 	pthread_mutex_unlock(&barrier);
 	return r;
 }

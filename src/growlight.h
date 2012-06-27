@@ -195,6 +195,7 @@ typedef struct controller {
 	device *blockdevs;
 	struct controller *next;
 	dev_t devno;		// Don't expose this non-persistent datum
+	void *uistate;		// UI-managed opaque state
 } controller;
 
 // Currently, we just blindly hand out references to our internal store. This

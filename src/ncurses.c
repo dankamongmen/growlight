@@ -21,6 +21,12 @@
 #endif
 #endif
 
+static inline void
+screen_update(void){
+	update_panels();
+	assert(doupdate() == OK);
+}
+
 // Our color pairs
 enum {
 	BORDER_COLOR = 1,		// Main window
@@ -84,7 +90,7 @@ ncurses_cleanup(WINDOW **w){
 	return ret;
 }
 
-static char statusmsg[80];
+static char statusmsg[73];
 static unsigned count_adapters;
 
 #define START_COL 1		// Room to leave for borders
@@ -112,8 +118,7 @@ draw_main_window(WINDOW *w){
 	// addstr() doesn't interpret format strings, so this is safe. It will
 	// fail, however, if the string can't fit on the window, which will for
 	// instance happen if there's an embedded newline.
-	mvwaddstr(w,rows - 1,START_COL * 2,statusmsg); // FIXME
-	//assert(mvwaddwstr(w,rows - 1,START_COL * 2,statusmsg) != ERR);
+	assert(mvwaddstr(w,rows - 1,START_COL * 2,statusmsg) != ERR);
 	assert(wattroff(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
 	return OK;
 
@@ -211,14 +216,14 @@ handle_ncurses_input(WINDOW *w){
 
 static void
 diag(const char *fmt,va_list v){
-	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
-	draw_main_window(stdscr);
-}
+	char *nl;
 
-static inline void
-screen_update(void){
-	update_panels();
-	assert(doupdate() == OK);
+	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
+	if( (nl = strchr(statusmsg,'\n')) ){
+		*nl = '\0';
+	}
+	draw_main_window(stdscr);
+	screen_update();
 }
 
 static void *
@@ -226,6 +231,7 @@ adapter_callback(const controller *a __attribute__ ((unused)), void *state){
 	if(state == NULL){
 		++count_adapters;
 		draw_main_window(stdscr);
+		screen_update();
 		return adapter_callback;
 	}else{
 	}
@@ -244,11 +250,11 @@ int main(int argc,char * const *argv){
 		fprintf(stderr,"Couldn't find locale\n");
 		return EXIT_FAILURE;
 	}
-	if(growlight_init(argc,argv,&ui)){
-		ncurses_cleanup(&w);
+	if((w = ncurses_setup()) == NULL){
 		return EXIT_FAILURE;
 	}
-	if((w = ncurses_setup()) == NULL){
+	if(growlight_init(argc,argv,&ui)){
+		ncurses_cleanup(&w);
 		return EXIT_FAILURE;
 	}
 	handle_ncurses_input(w);
