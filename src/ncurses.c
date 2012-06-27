@@ -95,14 +95,13 @@ draw_main_window(WINDOW *w){
 	if(bevel(w) != OK){
 		goto err;
 	}
-	// FIXME move this over! it is ugly on the left, clashing with ifaces
 	// 5 for 0-offset, '[', ']', and 2 spaces on right side.
 	// 5 for '|', space before and after, and %2d-formatted integer
 	scol = cols - 5 - __builtin_strlen(PACKAGE) - 1 - __builtin_strlen(VERSION)
 		- 5 - __builtin_strlen("adapters" - (count_adapters != 1));
 	assert(mvwprintw(w,0,scol,"[") != ERR);
 	assert(wattron(w,A_BOLD | COLOR_PAIR(HEADER_COLOR)) != ERR);
-	assert(wprintw(w,"%s %s | %d iface%s",PACKAGE,VERSION,
+	assert(wprintw(w,"%s %s | %d adapter%s",PACKAGE,VERSION,
 			count_adapters,count_adapters == 1 ? "" : "s") != ERR);
 	assert(wattrset(w,COLOR_PAIR(BORDER_COLOR)) != ERR);
 	assert(wprintw(w,"]") != ERR);
