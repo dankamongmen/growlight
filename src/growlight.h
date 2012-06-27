@@ -20,9 +20,12 @@ int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 	// This isn't really suitable for use as a library to programs beyond
 	// growlight. Not yet, in any case.
 
+struct controller;
+
 // Growlight's callback-based UI
 typedef struct growlight_ui {
 	void (*vdiag)(const char *,va_list); // free-form diagnostics
+	void *(*adapter_event)(const struct controller *,void *);
 } glightui;
 
 int growlight_init(int,char * const *,const glightui *);

@@ -2,16 +2,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 
 #include "config.h"
 #include "growlight.h"
 
 #ifdef HAVE_NCURSESW_H
 #include <term.h>
+#include <panel.h>
 #include <ncurses.h>
 #else
 #ifdef HAVE_NCURSESW_CURSES_H
 #include <ncursesw/term.h>
+#include <ncursesw/panel.h>
 #include <ncursesw/curses.h>
 #else
 #error "Couldn't find working cursesw headers"
@@ -212,12 +215,35 @@ diag(const char *fmt,va_list v){
 	draw_main_window(stdscr);
 }
 
+static inline void
+screen_update(void){
+	update_panels();
+	assert(doupdate() == OK);
+}
+
+static void *
+adapter_callback(const controller *a __attribute__ ((unused)), void *state){
+	if(state == NULL){
+		++count_adapters;
+		draw_main_window(stdscr);
+		return adapter_callback;
+	}else{
+	}
+	screen_update();
+	return state;
+}
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = diag,
+		.adapter_event = adapter_callback,
 	};
 	WINDOW *w;
 
+	if(setlocale(LC_ALL,"") == NULL){
+		fprintf(stderr,"Couldn't find locale\n");
+		return EXIT_FAILURE;
+	}
 	if(growlight_init(argc,argv,&ui)){
 		ncurses_cleanup(&w);
 		return EXIT_FAILURE;
