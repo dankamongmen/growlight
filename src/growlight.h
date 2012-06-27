@@ -10,6 +10,7 @@ int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 #include <wchar.h>
 #include <limits.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <sys/types.h>
 
 #include "mounts.h"
@@ -19,7 +20,12 @@ int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 	// This isn't really suitable for use as a library to programs beyond
 	// growlight. Not yet, in any case.
 
-int growlight_init(int,char * const *);
+// Growlight's callback-based UI
+typedef struct growlight_ui {
+	void (*vdiag)(const char *,va_list); // free-form diagnostics
+} glightui;
+
+int growlight_init(int,char * const *,const glightui *);
 int growlight_stop(void);
 
 struct device;

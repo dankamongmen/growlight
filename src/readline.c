@@ -4,6 +4,7 @@
 #include <wctype.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <locale.h>
 #include <readline/history.h>
 #include <readline/readline.h>
@@ -1902,8 +1903,18 @@ growlight_completion(const char *text,int start __attribute__ ((unused)),int end
 	return rl_completion_matches(text,completion_engine);
 }
 
+static void
+diag(const char *fmt,va_list va){
+	vfprintf(stderr,fmt,va);
+	raise(SIGWINCH); // get prompt reprinted
+}
+
 int main(int argc,char * const *argv){
-	if(growlight_init(argc,argv)){
+	const glightui ui = {
+		.vdiag = diag,
+	};
+
+	if(growlight_init(argc,argv,&ui)){
 		return EXIT_FAILURE;
 	}
 	rl_readline_name = PACKAGE;

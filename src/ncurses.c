@@ -206,10 +206,19 @@ handle_ncurses_input(WINDOW *w){
 	}
 }
 
+static void
+diag(const char *fmt,va_list v){
+	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
+	draw_main_window(stdscr);
+}
+
 int main(int argc,char * const *argv){
+	const glightui ui = {
+		.vdiag = diag,
+	};
 	WINDOW *w;
 
-	if(growlight_init(argc,argv)){
+	if(growlight_init(argc,argv,&ui)){
 		ncurses_cleanup(&w);
 		return EXIT_FAILURE;
 	}
