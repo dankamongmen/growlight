@@ -4,7 +4,7 @@ LC_ALL=c
 AM_CFLAGS=-Wall -g -W -Werror -Wextra -fvisibility=hidden \
 	-finput-charset=UTF-8 $(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES)
 AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common \
-	$(PTHREAD_LIBS) $(OPENSSL_LIBS) $(CURSES_LIB)
+	$(PTHREAD_LIBS) $(OPENSSL_LIBS)
 AM_CC=$(PTHREAD_CC)
 
 dist_man_MANS = growlight.8
@@ -32,9 +32,11 @@ common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 
 growlight_tty_SOURCES=$(common_SOURCES)
 growlight_tty_SOURCES+=src/readline.c
+growlight_tty_LDADD:=$(CURSES_LIB)
 
 growlight_curses_SOURCES=$(common_SOURCES)
 growlight_curses_SOURCES+=src/ncurses.c
+growlight_curses_LDADD:=$(PANEL_LIB) $(CURSES_LIB)
 
 %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl $<

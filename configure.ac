@@ -48,6 +48,7 @@ fi
 fi
 
 AX_WITH_CURSES
+AX_WITH_CURSES_PANEL
 if test "x$ax_cv_curses" = xyes; then
 	CFLAGS+=" -D_XOPEN_SOURCE_EXTENDED"
 fi
