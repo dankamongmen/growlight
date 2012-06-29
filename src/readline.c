@@ -415,16 +415,6 @@ print_partition(const device *p,int descend){
 }
 
 static const char *
-pcie_gen(unsigned gen){
-	switch(gen){
-		case 1: return "1.0";
-		case 2: return "2.0";
-		case 3: return "3.0";
-		default: return "unknown";
-	}
-}
-
-static const char *
 transport_str(transport_e t){
 	return t == SERIAL_USB3 ? "USB3" : t == SERIAL_USB2 ? "USB2" :
 		t == SERIAL_USB ? "USB1" : t == SERIAL_ATAIII ? "SAT3" :\
@@ -1920,7 +1910,7 @@ diag(const char *fmt,...){
 
 static void *
 new_adapter(const controller *c,void *v __attribute__ ((unused))){
-	diag("New controller: %s at %s\n",c->name,c->ident);
+	diag("[%s] %s\n",c->ident,c->name);
 	return NULL;
 }
 

@@ -232,6 +232,16 @@ void add_new_virtual_blockdev(device *);
 int prepare_bios_boot(device *);
 int prepare_uefi_boot(device *);
 
+static inline const char *
+pcie_gen(unsigned gen){
+	switch(gen){
+		case 1: return "1.0";
+		case 2: return "2.0";
+		case 3: return "3.0";
+		default: return "unknown";
+	}
+}
+
 #ifdef __cplusplus
 }
 #endif

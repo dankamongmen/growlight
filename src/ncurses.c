@@ -511,6 +511,16 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 		}else{
 			assert(wattroff(w,A_BOLD) == OK);
 		}
+		if(as->c->pcie.lanes_neg == 0){
+			wprintw(w,"Southbridge device %04hx:%02x.%02x.%x",
+				as->c->pcie.domain,as->c->pcie.bus,
+				as->c->pcie.dev,as->c->pcie.func);
+		}else{
+			wprintw(w,"PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)",
+					as->c->pcie.domain,as->c->pcie.bus,
+					as->c->pcie.dev,as->c->pcie.func,
+					as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
+		}
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
 		if(active){
 			assert(wattron(w,A_BOLD) == OK);
