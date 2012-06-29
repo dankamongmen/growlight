@@ -3,9 +3,10 @@ LC_ALL=c
 
 AM_CFLAGS=-Wall -g -W -Werror -Wextra -fvisibility=hidden \
 	-finput-charset=UTF-8 $(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES)
-AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common \
-	$(PTHREAD_LIBS) $(OPENSSL_LIBS)
+AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
 AM_CC=$(PTHREAD_CC)
+
+LIBS+=$(PTHREAD_LIBS) $(OPENSSL_LIBS)
 
 dist_man_MANS = growlight.8
 
