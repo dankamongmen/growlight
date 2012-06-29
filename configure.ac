@@ -26,7 +26,7 @@ AC_CHECK_FUNC(epoll_create1,[],[AC_MSG_ERROR([Cannot use epoll_create1()])])
 
 AX_CHECK_DOCBOOK_XSLT
 
-AX_CHECK_OPENSSL
+AX_CHECK_OPENSSL([],[AC_MSG_ERROR([Could not find OpenSSL])])
 
 AC_ARG_ENABLE([zfs],
  [  --enable-zfs               Build support for ZFS ],
