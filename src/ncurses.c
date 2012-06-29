@@ -74,7 +74,7 @@ adapter_up_p(const adapterstate *as __attribute__ ((unused))){
 // fewer available to us on this screen at this time.
 static int
 lines_for_adapter(const struct adapterstate *as){
-	int l = 2 + adapter_up_p(as);
+	int l = 2;
 
 	switch(as->expansion){ // Intentional fallthrus
 		case EXPANSION_MOUNTS:
