@@ -422,9 +422,10 @@ create_adapter_state(const controller *a){
 	adapterstate *as;
 
 	if( (as = malloc(sizeof(*as))) ){
-		// next, prev, rb are managed by caller
+		memset(as,0,sizeof(*as));
 		as->c = a;
 		as->expansion = EXPANSION_MAX;
+		// next, prev, rb are managed by caller
 	}
 	return as;
 }
@@ -475,7 +476,8 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 		}else{
 			assert(wattroff(w,A_BOLD) == OK);
 		}
-		/*assert(waddstr(w,i->name) != ERR);
+		assert(waddstr(w,as->c->ident) != ERR);
+		/*
 		assert(wprintw(w," (%s",is->typestr) != ERR);
 		if(strlen(i->drv.driver)){
 			assert(waddch(w,' ') != ERR);
@@ -509,6 +511,7 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 		}else{
 			assert(wattroff(w,A_BOLD) == OK);
 		}
+		assert(wcolor_set(w,bcolor,NULL) != ERR);
 		if(active){
 			assert(wattron(w,A_BOLD) == OK);
 		}

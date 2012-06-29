@@ -1904,14 +1904,30 @@ growlight_completion(const char *text,int start __attribute__ ((unused)),int end
 }
 
 static void
-diag(const char *fmt,va_list va){
+vdiag(const char *fmt,va_list va){
 	vfprintf(stderr,fmt,va);
 	raise(SIGWINCH); // get prompt reprinted
 }
 
+static void
+diag(const char *fmt,...){
+	va_list va;
+
+	va_start(va,fmt);
+	vdiag(fmt,va);
+	va_end(va);
+}
+
+static void *
+new_adapter(const controller *c,void *v __attribute__ ((unused))){
+	diag("New controller: %s at %s\n",c->name,c->ident);
+	return NULL;
+}
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
-		.vdiag = diag,
+		.vdiag = vdiag,
+		.adapter_event = new_adapter,
 	};
 
 	if(growlight_init(argc,argv,&ui)){
