@@ -425,7 +425,7 @@ diag(const char *fmt,...){
 // is managed here; only the rows needed for display ought be provided.
 static int
 new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar_t *hstr){
-	const wchar_t crightstr[] = L"http://dank.qemfd.net/dankwiki/index.php/Omphalos";
+	const wchar_t crightstr[] = L"http://dank.qemfd.net/dankwiki/index.php/Growlight";
 	const int crightlen = wcslen(crightstr);
 	WINDOW *psw;
 	int x,y;
@@ -469,31 +469,15 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 // minus two for the top/bottom screen border, minus one for mandatory
 // subwindow top padding).
 static const wchar_t *helps[] = {
-	/*L"'n': network configuration",
-	L"       configure addresses, routes, bridges, and wireless",
-	L"'J': hijack configuration",
-	L"       configure fake APs, rogue DHCP/DNS, and ARP MitM",
-	L"'D': defense configuration",
-	L"       define authoritative configurations to enforce",
-	L"'S': secrets database",
-	L"       export pilfered passwords, cookies, and identifying data",
-	L"'c': crypto configuration",
-	L"       configure algorithm stepdown, WEP/WPA cracking, SSL MitM", */
-	//L"'m': change device MAC	'u': change device MTU",
-	L"'q': quit		     ctrl+'L': redraw the screen",
+	L"'q': quit		        ctrl+'L': redraw the screen",
 	L"'⇆Tab' move between displays  'P': toggle subdisplay pinning",
 	L"'e': view environment details 'h': toggle this help display",
-	L"'v': view interface details   'n': view network stack details",
-	L"'w': view wireless info       'b': view bridging info",
-	L"'a': attack configuration     'l': view recent diagnostics",
-	L"'⏎Enter': browse interface    '⌫BkSpc': leave interface browser",
+	L"'v': view adapter details     'l': view recent diagnostics",
+	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adaper browser",
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
 	L"'⇞PgUp': previous page	'⇟PgDwn': next page",
 	L"'↖Home': first selection      '↘End': last selection",
 	L"'-'/'←': collapse selection   '+'/'→': expand selection",
-	L"'r': reset selection's stats  'D': reresolve selection",
-	L"'d': bring down device	'p': toggle promiscuity",
-	L"'s': toggle sniffing, bringing up interface if down",
 	NULL
 };
 
@@ -582,6 +566,7 @@ handle_ncurses_input(WINDOW *w){
 			case 'h':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&help,display_help);
+				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
@@ -593,6 +578,7 @@ handle_ncurses_input(WINDOW *w){
 					use_prev_device();
 				}
 				pthread_mutex_unlock(&bfl);
+				break;
 			}
 			case KEY_DOWN: case 'j':{
 				pthread_mutex_lock(&bfl);
@@ -602,6 +588,7 @@ handle_ncurses_input(WINDOW *w){
 					use_next_device();
 				}*/
 				pthread_mutex_unlock(&bfl);
+				break;
 			}
 			default:{
 				const char *hstr = !help.p ? " ('h' for help)" : "";
