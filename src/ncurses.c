@@ -36,8 +36,18 @@ struct panel_state {
 
 static struct panel_state *active;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
+static struct panel_state details = PANEL_STATE_INITIALIZER;
 
 struct adapterstate;
+
+struct partobj;
+
+typedef struct blockobj {
+	struct blockobj *next,*prev;
+	//device *bo;
+	unsigned lns;			// number of lines obj would take up
+	struct partobj *pobjs;
+} blockobj;
 
 typedef struct reelbox {
 	WINDOW *win;
@@ -45,7 +55,7 @@ typedef struct reelbox {
 	struct reelbox *next,*prev;
 	struct adapterstate *as;
 	int scrline,selline;
-	void *selected;
+	blockobj *selected;
 } reelbox;
 
 typedef struct adapterstate {
@@ -102,7 +112,7 @@ lines_for_adapter(const struct adapterstate *as){
 			return l;
 	}
 	assert(0);
-	return -1; 
+	return -1;
 }
 
 static inline int
@@ -378,232 +388,6 @@ err:
 	return NULL;
 }
 
-static void
-use_prev_controller(WINDOW *w){
-	if(!current_adapter || current_adapter->as->next == current_adapter->as){
-		return;
-	}
-	assert(w); // FIXME
-}
-
-static void
-use_prev_device(void){
-	reelbox *rb;
-
-	if((rb = current_adapter) == NULL){
-		return;
-	}
-	// FIXME
-}
-
-static void
-vdiag(const char *fmt,va_list v){
-	char *nl;
-
-	pthread_mutex_lock(&bfl);
-	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
-	if( (nl = strchr(statusmsg,'\n')) ){
-		*nl = '\0';
-	}
-	draw_main_window(stdscr);
-	screen_update();
-	pthread_mutex_unlock(&bfl);
-}
-
-static void
-diag(const char *fmt,...){
-	va_list va;
-
-	va_start(va,fmt);
-	vdiag(fmt,va);
-	va_end(va);
-}
-
-
-// Create a panel at the bottom of the window, referred to as the "subdisplay".
-// Only one can currently be active at a time. Window decoration and placement
-// is managed here; only the rows needed for display ought be provided.
-static int
-new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar_t *hstr){
-	const wchar_t crightstr[] = L"http://dank.qemfd.net/dankwiki/index.php/Growlight";
-	const int crightlen = wcslen(crightstr);
-	WINDOW *psw;
-	int x,y;
-
-	getmaxyx(w,y,x);
-	if(cols == 0){
-		cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
-	}else{
-		assert(x >= cols + START_COL * 2);
-	}
-	assert(y >= rows + 3);
-	assert((x >= crightlen + START_COL * 2));
-	// Keep it one line up from the last display line, so that you get
-	// iface summaries (unless you've got a bottom-partial).
-	assert( (psw = newwin(rows + 2,cols,y - (rows + 4),x - cols)) );
-	if(psw == NULL){
-		return ERR;
-	}
-	assert((ps->p = new_panel(psw)));
-	if(ps->p == NULL){
-		delwin(psw);
-		return ERR;
-	}
-	ps->ysize = rows;
-	// memory leaks follow if we're compiled with NDEBUG! FIXME
-	assert(wattron(psw,A_BOLD) != ERR);
-	assert(wcolor_set(psw,PBORDER_COLOR,NULL) == OK);
-	assert(bevel(psw) == OK);
-	assert(wattroff(psw,A_BOLD) != ERR);
-	assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
-	assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
-	assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),crightstr) != ERR);
-	return OK;
-}
-
-// When this text is being displayed, the help window is the active subwindow.
-// Thus we refer to other subwindow commands as "viewing", while 'h' here is
-// described as "toggling". When other subwindows come up, they list their
-// own command as "toggling." We want to avoid having to scroll the help
-// synopsis, so keep it under 22 lines (25 lines on an ANSI standard terminal,
-// minus two for the top/bottom screen border, minus one for mandatory
-// subwindow top padding).
-static const wchar_t *helps[] = {
-	L"'q': quit		        ctrl+'L': redraw the screen",
-	L"'⇆Tab' move between displays  'P': toggle subdisplay pinning",
-	L"'e': view environment details 'h': toggle this help display",
-	L"'v': view adapter details     'l': view recent diagnostics",
-	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adaper browser",
-	L"'k'/'↑': previous selection   'j'/'↓': next selection",
-	L"'⇞PgUp': previous page	'⇟PgDwn': next page",
-	L"'↖Home': first selection      '↘End': last selection",
-	L"'-'/'←': collapse selection   '+'/'→': expand selection",
-	NULL
-};
-
-static size_t
-max_helpstr_len(const wchar_t **helps){
-	size_t max = 0;
-
-	while(*helps){
-		if(wcslen(*helps) > max){
-			max = wcslen(*helps);
-		}
-		++helps;
-	}
-	return max;
-}
-
-static int
-helpstrs(WINDOW *hw,int row,int rows){
-	const wchar_t *hs;
-	int z;
-
-	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
-	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
-		assert(mvwaddwstr(hw,row + z,1,hs) != ERR);
-	}
-	return OK;
-}
-
-static int
-display_help(WINDOW *mainw,struct panel_state *ps){
-	static const int helprows = sizeof(helps) / sizeof(*helps) - 1; // NULL != row
-	const int helpcols = max_helpstr_len(helps) + 4; // spacing + borders
-
-	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'h' to dismiss help")){
-		goto err;
-	}
-	if(helpstrs(panel_window(ps->p),1,ps->ysize)){
-		goto err;
-	}
-	return OK;
-
-err:
-	if(ps->p){
-		WINDOW *psw = panel_window(ps->p);
-
-		hide_panel(ps->p);
-		del_panel(ps->p);
-		delwin(psw);
-	}
-	memset(ps,0,sizeof(*ps));
-	return ERR;
-}
-
-static void
-hide_panel_locked(struct panel_state *ps){
-	if(ps){
-	        WINDOW *psw;
-
-	        psw = panel_window(ps->p);
-	        hide_panel(ps->p);
-	        assert(del_panel(ps->p) == OK);
-	        ps->p = NULL;
-	        assert(delwin(psw) == OK);
-	        ps->ysize = -1;
-	}
-}
-
-static void
-toggle_panel(WINDOW *w,struct panel_state *ps,int (*psfxn)(WINDOW *,struct panel_state *)){
-	if(ps->p){
-		hide_panel_locked(ps);
-		active = NULL;
-	}else{
-		hide_panel_locked(active);
-		active = ((psfxn(w,ps) == OK) ? ps : NULL);
-	}
-}
-
-static void
-handle_ncurses_input(WINDOW *w){
-	int ch;
-
-	while((ch = getch()) != 'q' && ch != 'Q'){
-		switch(ch){
-			case 'h':{
-				pthread_mutex_lock(&bfl);
-				toggle_panel(w,&help,display_help);
-				screen_update();
-				pthread_mutex_unlock(&bfl);
-				break;
-			}
-			case KEY_UP: case 'k':{
-				pthread_mutex_lock(&bfl);
-				if(!selection_active){
-					use_prev_controller(w);
-				}else{
-					use_prev_device();
-				}
-				pthread_mutex_unlock(&bfl);
-				break;
-			}
-			case KEY_DOWN: case 'j':{
-				pthread_mutex_lock(&bfl);
-				/*if(!selection_active){
-					use_next_controller(w);
-				}else{
-					use_next_device();
-				}*/
-				pthread_mutex_unlock(&bfl);
-				break;
-			}
-			default:{
-				const char *hstr = !help.p ? " ('h' for help)" : "";
-				// diag() locks/unlocks, and calls screen_update()
-				if(isprint(ch)){
-					diag("unknown command '%c'%s",ch,hstr);
-				}else{
-					diag("unknown scancode %d%s",ch,hstr);
-				}
-				break;
-			}
-		}
-	}
-}
-
 // Caller needs set up: next, prev
 static reelbox *
 create_reelbox(adapterstate *as,int rows,int scrline,int cols){
@@ -616,7 +400,6 @@ create_reelbox(adapterstate *as,int rows,int scrline,int cols){
 	}
 	if( (ret = malloc(sizeof(*ret))) ){
 		if((ret->win = newwin(l,PAD_COLS(cols),scrline,START_COL)) == NULL){
-			fprintf(stderr,"**************%d***********\n",scrline);
 			exit(0);
 		}
 		//assert( (ret->win = newwin(l,PAD_COLS(cols),scrline,START_COL)) );
@@ -630,24 +413,12 @@ create_reelbox(adapterstate *as,int rows,int scrline,int cols){
 	return ret;
 }
 
-static adapterstate *
-create_adapter_state(const controller *a){
-	adapterstate *as;
-
-	if( (as = malloc(sizeof(*as))) ){
-		memset(as,0,sizeof(*as));
-		as->c = a;
-		as->expansion = EXPANSION_MAX;
-		// next, prev, rb are managed by caller
+static const controller *
+get_current_adapter(void){
+	if(current_adapter){
+		return current_adapter->as->c;
 	}
-	return as;
-}
-
-static void
-free_adapter_state(adapterstate *as){
-	if(as){
-		free(as);
-	}
+	return NULL;
 }
 
 // Abovetop: lines hidden at the top of the screen
@@ -768,6 +539,788 @@ redraw_adapter(const reelbox *rb){
 	return OK;
 }
 
+// Positive delta moves down, negative delta moves up, except for l2 == NULL
+// where we always move to -1 (and delta is ignored).
+static int
+select_adapter_node(reelbox *rb,struct blockobj *bo,int delta){
+	assert(bo != rb->selected);
+	if((rb->selected = bo) == NULL){
+		rb->selline = -1;
+	}else{
+		rb->selline += delta;
+	}
+	return redraw_adapter(rb);
+}
+
+static int
+deselect_adapter_locked(void){
+	reelbox *rb;
+
+	if((rb = current_adapter) == NULL){
+		return 0;
+	}
+	if(rb->selected == NULL){
+		return 0;
+	}
+	return select_adapter_node(rb,NULL,0);
+}
+
+// Move this adapter, possibly hiding it. Negative delta indicates movement
+// up, positive delta moves down. rows and cols describe the containing window.
+static void
+move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
+	const adapterstate *as;
+	int nlines,rr;
+
+	as = rb->as;
+	//fprintf(stderr,"  moving %s (%d) from %d to %d (%d)\n",is->adapter->name,
+	//	      adapter_lines_bounded(is,rows),getbegy(rb->win),targ,delta);
+	assert(rb->as);
+	assert(rb->as->rb == rb);
+	assert(werase(rb->win) != ERR);
+	screen_update();
+	if(adapter_wholly_visible_p(rows,rb)){
+		assert(move_panel(rb->panel,targ,1) != ERR);
+		if(getmaxy(rb->win) != adapter_lines_bounded(as,rows)){
+			assert(wresize(rb->win,adapter_lines_bounded(as,rows),PAD_COLS(cols)) == OK);
+			if(panel_hidden(rb->panel)){
+				assert(show_panel(rb->panel) == OK);
+			}
+		}
+		assert(redraw_adapter(rb) == OK);
+		return;
+	}
+	rr = getmaxy(rb->win);
+	if(delta > 0){ // moving down
+		if(targ >= rows - 1){
+			assert(hide_panel(rb->panel) != ERR);
+			return;
+		}
+		nlines = rows - targ - 1; // sans-bottom partial
+	}else{
+		if((rr + getbegy(rb->win)) <= -delta){
+			assert(hide_panel(rb->panel) != ERR);
+			return;
+		}
+		if(targ < 1){
+			nlines = rr + (targ - 1);
+			targ = 1;
+		}else{
+			nlines = adapter_lines_bounded(as,rows - targ + 1);
+		}
+	}
+	if(nlines < 1){
+		assert(hide_panel(rb->panel) != ERR);
+		return;
+	}else if(nlines > rr){
+		assert(move_panel(rb->panel,targ,1) == OK);
+		assert(wresize(rb->win,nlines,PAD_COLS(cols)) == OK);
+	}else if(nlines < rr){
+		assert(wresize(rb->win,nlines,PAD_COLS(cols)) == OK);
+		assert(move_panel(rb->panel,targ,1) == OK);
+	}else{
+		assert(move_panel(rb->panel,targ,1) == OK);
+	}
+	assert(redraw_adapter(rb) == OK);
+	assert(show_panel(rb->panel) == OK);
+	return;
+}
+
+static inline void
+move_adapter_generic(reelbox *rb,int rows,int cols,int delta){
+	move_adapter(rb,rb->scrline,rows,cols,delta);
+	rb->scrline = getbegy(rb->win);
+}
+
+static void
+free_reelbox(reelbox *rb){
+	if(rb){
+		assert(rb->as);
+		assert(rb->as->rb == rb);
+
+		rb->as->rb = NULL;
+		assert(delwin(rb->win) == OK);
+		assert(del_panel(rb->panel) == OK);
+		free(rb);
+	}
+}
+
+// An adapter (pusher) has had its bottom border moved up or down (positive or
+// negative delta, respectively). Update the adapters below it on the screen
+// (all those up until those actually displayed above it on the screen). Should
+// be called before pusher->scrline has been updated.
+static void
+push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
+	reelbox *rb;
+
+	assert(delta > 0);
+	//fprintf(stderr,"pushing down %d from %s@%d\n",delta,pusher ? pusher->as ? pusher->as->adapter->name : "destroyed" : "all",
+	//	      pusher ? pusher->scrline : 0);
+	rb = last_reelbox;
+	while(rb){
+		if(rb == pusher){
+			break;
+		}
+		rb->scrline += delta;
+		move_adapter_generic(rb,rows,cols,delta);
+		if(panel_hidden(rb->panel)){
+			if((last_reelbox = rb->prev) == NULL){
+				top_reelbox = NULL;
+			}else{
+				last_reelbox->next = NULL;
+			}
+			free_reelbox(rb);
+			rb = last_reelbox;
+		}else{
+			rb = rb->prev;
+		}
+	}
+	// Now, if our delta was negative, see if we pulled any down below us
+	// FIXME pull_adapters_down();
+}
+
+static int
+adapter_details(WINDOW *hw,const controller *c,int rows){
+	assert(hw && c && rows); // FIXME
+	return 0;
+}
+
+static void pull_adapters_down(reelbox *,int,int,int);
+
+
+// Pass a NULL puller to move all adapters up
+static void
+pull_adapters_up(reelbox *puller,int rows,int cols,int delta){
+	reelbox *rb;
+
+	assert(delta > 0);
+	rb = puller ? puller->next : top_reelbox;
+	while(rb){
+		rb->scrline -= delta;
+		move_adapter_generic(rb,rows,cols,-delta);
+		if(panel_hidden(rb->panel)){
+			//fprintf(stderr,"PULLED THE TOP OFF\n");
+			if((top_reelbox = rb->next) == NULL){
+				last_reelbox = NULL;
+			}else{
+				top_reelbox->prev = NULL;
+			}
+			free_reelbox(rb);
+			rb = top_reelbox;
+		}else{
+			rb = rb->next;
+		}
+	}
+	while(last_reelbox){
+		struct adapterstate *i;
+		int scrline;
+
+		if((scrline = last_reelbox->scrline + getmaxy(last_reelbox->win)) >= rows - 2){
+			return;
+		}
+		i = last_reelbox->as->next;
+		if(i->rb){
+			return; // next adapter is already visible
+		}
+		if((rb = create_reelbox(i,rows,scrline + 1,cols)) == NULL){
+			return;
+		}
+		rb->prev = last_reelbox;
+		last_reelbox->next = rb;
+		rb->next = NULL;
+		last_reelbox = rb;
+		redraw_adapter(rb);
+	}
+}
+
+
+static inline int
+gap_above(reelbox *rb){
+	if(!rb->prev){
+		return 0;
+	}
+	return getbegy(rb->win) - (getmaxy(rb->prev->win) + getbegy(rb->prev->win)) - 1;
+}
+
+static inline int
+gap_below(reelbox *rb){
+	if(!rb->next){
+		return 0;
+	}
+	return getbegy(rb->next->win) - (getmaxy(rb->win) + getbegy(rb->win)) - 1;
+}
+
+// An adapter (pusher) has had its top border moved up or down (positive or
+// negative delta, respectively). Update the adapters above it on the screen
+// (all those up until those actually displayed below it on the screen).
+//
+// If an adapter is being brought onto the bottom of the screen, ensure that
+// last_reelbox has been updated to point to it, and top_reelbox has been
+// updated if the adapter came from the top of the screen. Any other updates
+// to reelboxes will be made by this function. Otherwise....
+//
+//     Update before: pusher->scrline, current_adapter
+//     Updated after: reelbox pointers, affected scrlines.
+//
+static void
+push_adapters_above(reelbox *pusher,int rows,int cols,int delta){
+	reelbox *rb;
+
+	assert(delta < 0);
+	//fprintf(stderr,"pushing up %d from %s@%d\n",delta,pusher ? pusher->is ? pusher->is->adapter->name : "destroyed" : "all",
+	//	      pusher ? pusher->scrline : rows);
+	rb = top_reelbox;
+	while(rb){
+		if(rb == pusher){
+			break;
+		}
+		rb->scrline += delta;
+		move_adapter_generic(rb,rows,cols,delta);
+		if(panel_hidden(rb->panel)){
+			if((top_reelbox = rb->next) == NULL){
+				last_reelbox = NULL;
+			}else{
+				top_reelbox->prev = NULL;
+			}
+			free_reelbox(rb);
+			rb = top_reelbox;
+		}else{
+			rb = rb->next;
+		}
+	}
+	// Now, if our delta was negative, see if we pulled any down below us
+	// FIXME pull_adapters_up(pusher,rows,cols,delta);
+}
+
+// Upon entry, the display might not have been updated to reflect a change in
+// the adapter's data. If so, the adapter panel is resized (subject to the
+// containing window's constraints) and other panels are moved as necessary.
+// The adapter's display is synchronized via redraw_adapter() whether a resize
+// is performed or not (unless it's invisible). The display ought be partially
+// visible -- ie, if we ought be invisible, we ought be already and this is not
+// going to make us so. We do not redraw -- that's the callers job (we
+// can't redraw, since we might not yet have been moved).
+static int
+resize_adapter(reelbox *rb){
+	const controller *i,*curi = get_current_adapter();
+	int rows,cols,subrows,subcols;
+	adapterstate *is;
+
+	assert(rb && rb->as);
+	i = rb->as->c;
+	assert(i);
+	if(panel_hidden(rb->panel)){ // resize upon becoming visible
+		return OK;
+	}
+	is = rb->as;
+	getmaxyx(stdscr,rows,cols);
+	const int nlines = adapter_lines_bounded(is,rows);
+	getmaxyx(rb->win,subrows,subcols);
+	assert(subcols); // FIXME
+	if(nlines < subrows){ // Shrink the adapter
+		assert(werase(rb->win) == OK);
+		// Without screen_update(), the werase() doesn't take effect,
+		// even if wclear() is used.
+		screen_update();
+		assert(wresize(rb->win,nlines,PAD_COLS(cols)) != ERR);
+		assert(replace_panel(rb->panel,rb->win) != ERR);
+		if(rb->scrline < current_adapter->scrline){
+			rb->scrline += subrows - nlines;
+			assert(move_panel(rb->panel,rb->scrline,1) != ERR);
+			pull_adapters_down(rb,rows,cols,subrows - nlines);
+		}else{
+			pull_adapters_up(rb,rows,cols,subrows - nlines);
+		}
+		return OK;
+	}else if(nlines == subrows){ // otherwise, expansion
+		return OK;
+	}
+	// The current adapter grows in both directions and never becomes a
+	// partial adapter. We don't try to make it one here, and
+	// move_adapter() will refuse to perform a move resulting in one.
+	if(i == curi){
+		// We can't already occupy the screen, or the nlines == subrows
+		// check would have thrown us out. There *is* space to grow.
+		if(rb->scrline + subrows < rows - 1){ // can we grow down?
+			int delta = (rows - 1) - (rb->scrline + subrows);
+
+			if(delta + subrows > nlines){
+				delta = nlines - subrows;
+			}
+			push_adapters_below(rb,rows,cols,delta);
+			subrows += delta;
+		}
+		if(nlines > subrows){ // can we grow up?
+			int delta = rb->scrline - 1;
+
+			if(delta + subrows > nlines){
+				delta = nlines - subrows;
+			}
+			delta = -delta;
+			rb->scrline += delta;
+			push_adapters_above(rb,rows,cols,delta);
+			assert(move_panel(rb->panel,rb->scrline,1) != ERR);
+		}
+		assert(wresize(rb->win,nlines,PAD_COLS(cols)) != ERR);
+		assert(replace_panel(rb->panel,rb->win) != ERR);
+	}else{ // we're not the current adapter
+		int delta;
+
+		if( (delta = bottom_space_p(rows)) ){ // always occupy free rows
+			if(delta > nlines - subrows){
+				delta = nlines - subrows;
+			}
+			delta -= gap_below(rb); // FIXME questionable
+			push_adapters_below(rb,rows,cols,delta);
+			subrows += delta;
+		}
+		if(nlines > subrows){
+			if(rb->scrline > current_adapter->scrline){ // only down
+				delta = (rows - 1) - (rb->scrline + subrows);
+				if(delta > nlines - subrows){
+					delta = nlines - subrows;
+				}
+				delta -= gap_below(rb);
+				if(delta > 0){
+					push_adapters_below(rb,rows,cols,delta);
+				}
+			}else{ // only up
+				delta = rb->scrline - 1;
+				if(delta > nlines - subrows){
+					delta = nlines - subrows;
+				}
+				delta -= gap_above(rb);
+				if(delta){
+					push_adapters_above(rb,rows,cols,-delta);
+					rb->scrline -= delta;
+					move_adapter_generic(rb,rows,cols,-delta);
+				}
+			}
+			subrows += delta;
+			if(nlines > subrows){
+				if( (delta = gap_below(rb)) ){
+					subrows += delta > (nlines - subrows) ?
+						nlines - subrows : delta;
+				}
+			}
+			if(nlines > subrows){
+				if( (delta = gap_above(rb)) ){
+					subrows += delta > (nlines - subrows) ?
+						nlines - subrows : delta;
+				}
+			}
+		}
+		if(subrows != getmaxy(rb->win)){
+			assert(wresize(rb->win,subrows,PAD_COLS(cols)) != ERR);
+			assert(replace_panel(rb->panel,rb->win) != ERR);
+		}
+	}
+	return OK;
+}
+
+// Pull the adapters above the puller down to fill unused space. Move from
+// the puller out, as we might need make visible some unknown number of
+// adapters (and the space has already been made).
+//
+// If the puller is being removed, it ought already have been spliced out of
+// the reelbox list, and all reelbox state updated, but it obviously must not
+// yet have been freed. Its ->as pointer must still be valid (though
+// ->as->adapter is no longer valid). Its ->next and ->prev pointers ought not
+// have been altered.
+static void
+pull_adapters_down(reelbox *puller,int rows,int cols,int delta){
+	reelbox *rb;
+
+	assert(delta > 0);
+	rb = puller ? puller->prev : last_reelbox;
+	while(rb){
+		int before = getmaxy(rb->win);
+
+		if(adapter_lines_bounded(rb->as,rows) > before){
+			assert(rb == top_reelbox);
+			resize_adapter(rb);
+			if((delta -= (getmaxy(rb->win) - before)) == 0){
+				return;
+			}
+		}
+		rb->scrline += delta;
+		move_adapter_generic(rb,rows,cols,delta);
+		if(panel_hidden(rb->panel)){
+			//fprintf(stderr,"PULLED THE BOTTOM OFF\n");
+			if((last_reelbox = rb->prev) == NULL){
+				top_reelbox = NULL;
+			}else{
+				last_reelbox->next = NULL;
+			}
+			free_reelbox(rb);
+			rb = last_reelbox;
+		}else{
+			rb = rb->prev;
+		}
+	}
+	while(top_reelbox){
+		struct adapterstate *i;
+		int maxl,nl;
+
+		if(top_reelbox->scrline <= 2){
+			return;
+		}
+		i = top_reelbox->as->prev;
+		if(i->rb){
+			return; // already visible
+		}
+		nl = adapter_lines_bounded(i,top_reelbox->scrline);
+		maxl = top_reelbox->scrline;
+		if((rb = create_reelbox(i,maxl,top_reelbox->scrline - 1 - nl,cols)) == NULL){
+			return;
+		}
+		rb->next = top_reelbox;
+		top_reelbox->prev = rb;
+		rb->prev = NULL;
+		top_reelbox = rb;
+		redraw_adapter(rb);
+	}
+}
+
+static void
+use_prev_controller(WINDOW *w,struct panel_state *ps){
+	reelbox *oldrb,*rb;
+	int rows,cols;
+
+	if(!current_adapter || current_adapter->as->next == current_adapter->as){
+		return;
+	}
+	getmaxyx(w,rows,cols);
+	oldrb = current_adapter;
+	deselect_adapter_locked();
+	// Don't redraw the old adapter yet; it might have been moved/hidden
+	if(current_adapter->prev){
+		current_adapter = current_adapter->prev;
+	}else{
+		adapterstate *as = current_adapter->as->prev;
+
+		if(as->rb){
+			current_adapter = as->rb;
+		}else{
+			if((as->rb = create_reelbox(as,rows,1,cols)) == NULL){
+				return; // FIXME
+			}
+			current_adapter = as->rb;
+			push_adapters_below(NULL,rows,cols,adapter_lines_bounded(as,rows) + 1);
+			if((current_adapter->next = top_reelbox) == NULL){
+				last_reelbox = current_adapter;
+			}else{
+				top_reelbox->prev = current_adapter;
+			}
+			current_adapter->prev = NULL;
+			top_reelbox = current_adapter;
+			redraw_adapter(current_adapter);
+			if(ps->p){
+				adapter_details(panel_window(ps->p),as->c,ps->ysize);
+			}
+			return;
+		}
+	}
+	rb = current_adapter;
+	// If the newly-selected adapter is wholly visible, we'll not need
+	// change visibility of any adapters. If it's below us, we'll need
+	// rotate the adapters 1 unit, moving all. Otherwise, none need change
+	// position. Redraw all affected adapters.
+	if(adapter_wholly_visible_p(rows,rb)){
+		if(rb->scrline < oldrb->scrline){ // new is above old
+			assert(redraw_adapter(oldrb) == OK);
+			assert(redraw_adapter(rb) == OK);
+		}else{ // we were at the top
+			// Selecting the previous adapter is simpler -- we
+			// take one from the bottom, and stick it in row 1.
+			if(last_reelbox->prev){
+				last_reelbox->prev->next = NULL;
+				last_reelbox = last_reelbox->prev;
+			}else{
+				last_reelbox = top_reelbox;
+			}
+			pull_adapters_down(rb,rows,cols,getmaxy(rb->win) + 1);
+			rb->scrline = 1;
+			rb->next = top_reelbox;
+			top_reelbox->prev = rb;
+			rb->prev = NULL;
+			top_reelbox = rb;
+			move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
+		}
+	}else{ // partially visible...
+		adapterstate *is = current_adapter->as;
+
+		if(rb->scrline < oldrb->scrline){ // ... at the top
+			rb->scrline = 1;
+			push_adapters_below(rb,rows,cols,-(getmaxy(rb->win) - adapter_lines_bounded(is,rows)));
+			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
+			assert(replace_panel(rb->panel,rb->win) != ERR);
+			assert(redraw_adapter(rb) == OK);
+		}else{ // at the bottom
+			if(last_reelbox->prev){
+				last_reelbox->prev->next = NULL;
+				last_reelbox = last_reelbox->prev;
+			}else{
+				last_reelbox = top_reelbox;
+			}
+			push_adapters_below(NULL,rows,cols,adapter_lines_bounded(is,rows) + 1);
+			rb->scrline = 1;
+			if( (rb->next = top_reelbox) ){
+				top_reelbox->prev = rb;
+			}else{
+				last_reelbox = rb;
+			}
+			rb->prev = NULL;
+			top_reelbox = rb;
+			move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
+			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
+			assert(replace_panel(rb->panel,rb->win) != ERR);
+			assert(redraw_adapter(rb) == OK);
+		}
+	}
+	if(ps->p){
+		adapter_details(panel_window(ps->p),rb->as->c,ps->ysize);
+	}
+}
+
+static void
+use_prev_device(void){
+	reelbox *rb;
+
+	if((rb = current_adapter) == NULL){
+		return;
+	}
+	// FIXME
+}
+
+static void
+vdiag(const char *fmt,va_list v){
+	char *nl;
+
+	pthread_mutex_lock(&bfl);
+	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
+	if( (nl = strchr(statusmsg,'\n')) ){
+		*nl = '\0';
+	}
+	draw_main_window(stdscr);
+	screen_update();
+	pthread_mutex_unlock(&bfl);
+}
+
+static void
+diag(const char *fmt,...){
+	va_list va;
+
+	va_start(va,fmt);
+	vdiag(fmt,va);
+	va_end(va);
+}
+
+
+// Create a panel at the bottom of the window, referred to as the "subdisplay".
+// Only one can currently be active at a time. Window decoration and placement
+// is managed here; only the rows needed for display ought be provided.
+static int
+new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar_t *hstr){
+	const wchar_t crightstr[] = L"http://dank.qemfd.net/dankwiki/index.php/Growlight";
+	const int crightlen = wcslen(crightstr);
+	WINDOW *psw;
+	int x,y;
+
+	getmaxyx(w,y,x);
+	if(cols == 0){
+		cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
+	}else{
+		assert(x >= cols + START_COL * 2);
+	}
+	assert(y >= rows + 3);
+	assert((x >= crightlen + START_COL * 2));
+	// Keep it one line up from the last display line, so that you get
+	// adapter summaries (unless you've got a bottom-partial).
+	assert( (psw = newwin(rows + 2,cols,y - (rows + 4),x - cols)) );
+	if(psw == NULL){
+		return ERR;
+	}
+	assert((ps->p = new_panel(psw)));
+	if(ps->p == NULL){
+		delwin(psw);
+		return ERR;
+	}
+	ps->ysize = rows;
+	// memory leaks follow if we're compiled with NDEBUG! FIXME
+	assert(wattron(psw,A_BOLD) != ERR);
+	assert(wcolor_set(psw,PBORDER_COLOR,NULL) == OK);
+	assert(bevel(psw) == OK);
+	assert(wattroff(psw,A_BOLD) != ERR);
+	assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
+	assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
+	assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),crightstr) != ERR);
+	return OK;
+}
+
+// When this text is being displayed, the help window is the active window.
+// Thus we refer to other window commands as "viewing", while 'h' here is
+// described as "toggling". When other windows come up, they list their
+// own command as "toggling." We want to avoid having to scroll the help
+// synopsis, so keep it under 22 lines (25 lines on an ANSI standard terminal,
+// minus two for the top/bottom screen border, minus one for mandatory
+// window top padding).
+static const wchar_t *helps[] = {
+	L"'q': quit			ctrl+'L': redraw the screen",
+	L"'⇆Tab' move between displays  'P': toggle subdisplay pinning",
+	L"'e': view environment details 'h': toggle this help display",
+	L"'v': view adapter details     'l': view recent diagnostics",
+	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adaper browser",
+	L"'k'/'↑': previous selection   'j'/'↓': next selection",
+	L"'⇞PgUp': previous page	'⇟PgDwn': next page",
+	L"'↖Home': first selection      '↘End': last selection",
+	L"'-'/'←': collapse selection   '+'/'→': expand selection",
+	NULL
+};
+
+static size_t
+max_helpstr_len(const wchar_t **helps){
+	size_t max = 0;
+
+	while(*helps){
+		if(wcslen(*helps) > max){
+			max = wcslen(*helps);
+		}
+		++helps;
+	}
+	return max;
+}
+
+static int
+helpstrs(WINDOW *hw,int row,int rows){
+	const wchar_t *hs;
+	int z;
+
+	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
+		assert(mvwaddwstr(hw,row + z,1,hs) != ERR);
+	}
+	return OK;
+}
+
+static int
+display_help(WINDOW *mainw,struct panel_state *ps){
+	static const int helprows = sizeof(helps) / sizeof(*helps) - 1; // NULL != row
+	const int helpcols = max_helpstr_len(helps) + 4; // spacing + borders
+
+	memset(ps,0,sizeof(*ps));
+	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'h' to dismiss help")){
+		goto err;
+	}
+	if(helpstrs(panel_window(ps->p),1,ps->ysize)){
+		goto err;
+	}
+	return OK;
+
+err:
+	if(ps->p){
+		WINDOW *psw = panel_window(ps->p);
+
+		hide_panel(ps->p);
+		del_panel(ps->p);
+		delwin(psw);
+	}
+	memset(ps,0,sizeof(*ps));
+	return ERR;
+}
+
+static void
+hide_panel_locked(struct panel_state *ps){
+	if(ps){
+		WINDOW *psw;
+
+		psw = panel_window(ps->p);
+		hide_panel(ps->p);
+		assert(del_panel(ps->p) == OK);
+		ps->p = NULL;
+		assert(delwin(psw) == OK);
+		ps->ysize = -1;
+	}
+}
+
+static void
+toggle_panel(WINDOW *w,struct panel_state *ps,int (*psfxn)(WINDOW *,struct panel_state *)){
+	if(ps->p){
+		hide_panel_locked(ps);
+		active = NULL;
+	}else{
+		hide_panel_locked(active);
+		active = ((psfxn(w,ps) == OK) ? ps : NULL);
+	}
+}
+
+static void
+handle_ncurses_input(WINDOW *w){
+	int ch;
+
+	while((ch = getch()) != 'q' && ch != 'Q'){
+		switch(ch){
+			case 'h':{
+				pthread_mutex_lock(&bfl);
+				toggle_panel(w,&help,display_help);
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case KEY_UP: case 'k':{
+				pthread_mutex_lock(&bfl);
+				if(!selection_active){
+					use_prev_controller(w,&details);
+				}else{
+					use_prev_device();
+				}
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case KEY_DOWN: case 'j':{
+				pthread_mutex_lock(&bfl);
+				/*if(!selection_active){
+					use_next_controller(w);
+				}else{
+					use_next_device();
+				}*/
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			default:{
+				const char *hstr = !help.p ? " ('h' for help)" : "";
+				// diag() locks/unlocks, and calls screen_update()
+				if(isprint(ch)){
+					diag("unknown command '%c'%s",ch,hstr);
+				}else{
+					diag("unknown scancode %d%s",ch,hstr);
+				}
+				break;
+			}
+		}
+	}
+}
+
+static adapterstate *
+create_adapter_state(const controller *a){
+	adapterstate *as;
+
+	if( (as = malloc(sizeof(*as))) ){
+		memset(as,0,sizeof(*as));
+		as->c = a;
+		as->expansion = EXPANSION_MAX;
+		// next, prev, rb are managed by caller
+	}
+	return as;
+}
+
+static void
+free_adapter_state(adapterstate *as){
+	if(as){
+		free(as);
+	}
+}
+
 static void *
 adapter_callback(const controller *a, void *state){
 	adapterstate *as;
@@ -787,7 +1340,7 @@ adapter_callback(const controller *a, void *state){
 					return NULL;
 				}
 				if(last_reelbox){
-					// set up the iface list entries
+					// set up the adapter list entries
 					as->next = last_reelbox->as->next;
 					as->next->prev = as;
 					as->prev = last_reelbox->as;
@@ -805,7 +1358,7 @@ adapter_callback(const controller *a, void *state){
 					current_adapter = rb;
 				}
 				last_reelbox = rb;
-				// Want the subdisplay left above this new iface,
+				// Want the subdisplay left above this new adapter,
 				// should they intersect.
 				assert(bottom_panel(rb->panel) == OK);
 			}else{ // insert it after the last visible one, no rb
