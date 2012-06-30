@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,17 @@
 #endif
 #endif
 
+static int selection_active;
 static pthread_mutex_t bfl = PTHREAD_MUTEX_INITIALIZER;
+
+struct panel_state {
+        PANEL *p;
+        int ysize;                      // number of lines of *text* (not win)
+};
+
+#define PANEL_STATE_INITIALIZER { .p = NULL, .ysize = -1, }
+
+static struct panel_state help = PANEL_STATE_INITIALIZER;
 
 struct adapterstate;
 
@@ -360,21 +371,21 @@ err:
 }
 
 static void
-handle_ncurses_input(WINDOW *w){
-	int ch;
-
-	while((ch = getch()) != 'q' && ch != 'Q'){
-		pthread_mutex_lock(&bfl);
-		switch(ch){
-			case 'h':{
-				// FIXME show help
-				wclear(w);
-				break;
-				 }
-
-		}
-		pthread_mutex_unlock(&bfl);
+use_prev_controller(WINDOW *w){
+	if(!current_adapter || current_adapter->as->next == current_adapter->as){
+		return;
 	}
+	assert(w); // FIXME
+}
+
+static void
+use_prev_device(void){
+	reelbox *rb;
+
+	if((rb = current_adapter) == NULL){
+		return;
+	}
+	// FIXME
 }
 
 static void
@@ -398,6 +409,41 @@ diag(const char *fmt,...){
 	va_start(va,fmt);
 	vdiag(fmt,va);
 	va_end(va);
+}
+
+static void
+handle_ncurses_input(WINDOW *w){
+	int ch;
+
+	while((ch = getch()) != 'q' && ch != 'Q'){
+		switch(ch){
+			case 'h':{
+				pthread_mutex_lock(&bfl);
+				// FIXME show help
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case KEY_UP: case 'k':{
+				pthread_mutex_lock(&bfl);
+				if(!selection_active){
+					use_prev_controller(w);
+				}else{
+					use_prev_device();
+				}
+				pthread_mutex_unlock(&bfl);
+			}
+			default:{
+				const char *hstr = !help.p ? " ('h' for help)" : "";
+				// diag() locks/unlocks, and calls screen_update()
+				if(isprint(ch)){
+					diag("unknown command '%c'%s",ch,hstr);
+				}else{
+					diag("unknown scancode %d%s",ch,hstr);
+				}
+				break;
+			}
+		}
+	}
 }
 
 // Caller needs set up: next, prev
