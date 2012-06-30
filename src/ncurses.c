@@ -27,12 +27,14 @@ static int selection_active;
 static pthread_mutex_t bfl = PTHREAD_MUTEX_INITIALIZER;
 
 struct panel_state {
-        PANEL *p;
-        int ysize;                      // number of lines of *text* (not win)
+	PANEL *p;
+	int ysize;		      // number of lines of *text* (not win)
 };
 
 #define PANEL_STATE_INITIALIZER { .p = NULL, .ysize = -1, }
+#define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
 
+static struct panel_state *active;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
 
 struct adapterstate;
@@ -155,6 +157,9 @@ enum {
 	UHEADING_COLOR,
 	DBORDER_COLOR,
 	UBORDER_COLOR,
+	PBORDER_COLOR,
+	PHEADING_COLOR,
+	SUBDISPLAY_COLOR,
 };
 
 int bevel_notop(WINDOW *w){
@@ -299,10 +304,13 @@ setup_colors(void){
 	assert(init_pair(BORDER_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(FOOTER_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(DHEADING_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(UHEADING_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(DBORDER_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(UBORDER_COLOR,COLOR_YELLOW,-1) == OK);
+	assert(init_pair(DHEADING_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
+	assert(init_pair(DBORDER_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
+	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
+	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
 	return 0;
 }
 
@@ -411,6 +419,160 @@ diag(const char *fmt,...){
 	va_end(va);
 }
 
+
+// Create a panel at the bottom of the window, referred to as the "subdisplay".
+// Only one can currently be active at a time. Window decoration and placement
+// is managed here; only the rows needed for display ought be provided.
+static int
+new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar_t *hstr){
+	const wchar_t crightstr[] = L"http://dank.qemfd.net/dankwiki/index.php/Omphalos";
+	const int crightlen = wcslen(crightstr);
+	WINDOW *psw;
+	int x,y;
+
+	getmaxyx(w,y,x);
+	if(cols == 0){
+		cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
+	}else{
+		assert(x >= cols + START_COL * 2);
+	}
+	assert(y >= rows + 3);
+	assert((x >= crightlen + START_COL * 2));
+	// Keep it one line up from the last display line, so that you get
+	// iface summaries (unless you've got a bottom-partial).
+	assert( (psw = newwin(rows + 2,cols,y - (rows + 4),x - cols)) );
+	if(psw == NULL){
+		return ERR;
+	}
+	assert((ps->p = new_panel(psw)));
+	if(ps->p == NULL){
+		delwin(psw);
+		return ERR;
+	}
+	ps->ysize = rows;
+	// memory leaks follow if we're compiled with NDEBUG! FIXME
+	assert(wattron(psw,A_BOLD) != ERR);
+	assert(wcolor_set(psw,PBORDER_COLOR,NULL) == OK);
+	assert(bevel(psw) == OK);
+	assert(wattroff(psw,A_BOLD) != ERR);
+	assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
+	assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
+	assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),crightstr) != ERR);
+	return OK;
+}
+
+// When this text is being displayed, the help window is the active subwindow.
+// Thus we refer to other subwindow commands as "viewing", while 'h' here is
+// described as "toggling". When other subwindows come up, they list their
+// own command as "toggling." We want to avoid having to scroll the help
+// synopsis, so keep it under 22 lines (25 lines on an ANSI standard terminal,
+// minus two for the top/bottom screen border, minus one for mandatory
+// subwindow top padding).
+static const wchar_t *helps[] = {
+	/*L"'n': network configuration",
+	L"       configure addresses, routes, bridges, and wireless",
+	L"'J': hijack configuration",
+	L"       configure fake APs, rogue DHCP/DNS, and ARP MitM",
+	L"'D': defense configuration",
+	L"       define authoritative configurations to enforce",
+	L"'S': secrets database",
+	L"       export pilfered passwords, cookies, and identifying data",
+	L"'c': crypto configuration",
+	L"       configure algorithm stepdown, WEP/WPA cracking, SSL MitM", */
+	//L"'m': change device MAC	'u': change device MTU",
+	L"'q': quit		     ctrl+'L': redraw the screen",
+	L"'⇆Tab' move between displays  'P': toggle subdisplay pinning",
+	L"'e': view environment details 'h': toggle this help display",
+	L"'v': view interface details   'n': view network stack details",
+	L"'w': view wireless info       'b': view bridging info",
+	L"'a': attack configuration     'l': view recent diagnostics",
+	L"'⏎Enter': browse interface    '⌫BkSpc': leave interface browser",
+	L"'k'/'↑': previous selection   'j'/'↓': next selection",
+	L"'⇞PgUp': previous page	'⇟PgDwn': next page",
+	L"'↖Home': first selection      '↘End': last selection",
+	L"'-'/'←': collapse selection   '+'/'→': expand selection",
+	L"'r': reset selection's stats  'D': reresolve selection",
+	L"'d': bring down device	'p': toggle promiscuity",
+	L"'s': toggle sniffing, bringing up interface if down",
+	NULL
+};
+
+static size_t
+max_helpstr_len(const wchar_t **helps){
+	size_t max = 0;
+
+	while(*helps){
+		if(wcslen(*helps) > max){
+			max = wcslen(*helps);
+		}
+		++helps;
+	}
+	return max;
+}
+
+static int
+helpstrs(WINDOW *hw,int row,int rows){
+	const wchar_t *hs;
+	int z;
+
+	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
+		assert(mvwaddwstr(hw,row + z,1,hs) != ERR);
+	}
+	return OK;
+}
+
+static int
+display_help(WINDOW *mainw,struct panel_state *ps){
+	static const int helprows = sizeof(helps) / sizeof(*helps) - 1; // NULL != row
+	const int helpcols = max_helpstr_len(helps) + 4; // spacing + borders
+
+	memset(ps,0,sizeof(*ps));
+	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'h' to dismiss help")){
+		goto err;
+	}
+	if(helpstrs(panel_window(ps->p),1,ps->ysize)){
+		goto err;
+	}
+	return OK;
+
+err:
+	if(ps->p){
+		WINDOW *psw = panel_window(ps->p);
+
+		hide_panel(ps->p);
+		del_panel(ps->p);
+		delwin(psw);
+	}
+	memset(ps,0,sizeof(*ps));
+	return ERR;
+}
+
+static void
+hide_panel_locked(struct panel_state *ps){
+	if(ps){
+	        WINDOW *psw;
+
+	        psw = panel_window(ps->p);
+	        hide_panel(ps->p);
+	        assert(del_panel(ps->p) == OK);
+	        ps->p = NULL;
+	        assert(delwin(psw) == OK);
+	        ps->ysize = -1;
+	}
+}
+
+static void
+toggle_panel(WINDOW *w,struct panel_state *ps,int (*psfxn)(WINDOW *,struct panel_state *)){
+	if(ps->p){
+		hide_panel_locked(ps);
+		active = NULL;
+	}else{
+		hide_panel_locked(active);
+		active = ((psfxn(w,ps) == OK) ? ps : NULL);
+	}
+}
+
 static void
 handle_ncurses_input(WINDOW *w){
 	int ch;
@@ -419,7 +581,7 @@ handle_ncurses_input(WINDOW *w){
 		switch(ch){
 			case 'h':{
 				pthread_mutex_lock(&bfl);
-				// FIXME show help
+				toggle_panel(w,&help,display_help);
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
@@ -430,6 +592,15 @@ handle_ncurses_input(WINDOW *w){
 				}else{
 					use_prev_device();
 				}
+				pthread_mutex_unlock(&bfl);
+			}
+			case KEY_DOWN: case 'j':{
+				pthread_mutex_lock(&bfl);
+				/*if(!selection_active){
+					use_next_controller(w);
+				}else{
+					use_next_device();
+				}*/
 				pthread_mutex_unlock(&bfl);
 			}
 			default:{
