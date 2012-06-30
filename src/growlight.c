@@ -847,6 +847,7 @@ create_new_device_inner(const char *name,int recurse){
 	}
 	d->next = c->blockdevs;
 	c->blockdevs = d;
+	d->uistate = gui->block_event(c,d,d->uistate);
 	return d;
 }
 

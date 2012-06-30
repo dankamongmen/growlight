@@ -378,7 +378,7 @@ handle_ncurses_input(WINDOW *w){
 }
 
 static void
-diag(const char *fmt,va_list v){
+vdiag(const char *fmt,va_list v){
 	char *nl;
 
 	pthread_mutex_lock(&bfl);
@@ -389,6 +389,15 @@ diag(const char *fmt,va_list v){
 	draw_main_window(stdscr);
 	screen_update();
 	pthread_mutex_unlock(&bfl);
+}
+
+static void
+diag(const char *fmt,...){
+	va_list va;
+
+	va_start(va,fmt);
+	vdiag(fmt,va);
+	va_end(va);
 }
 
 // Caller needs set up: next, prev
@@ -620,10 +629,18 @@ adapter_callback(const controller *a, void *state){
 	return as;
 }
 
+static void *
+block_callback(const controller *c,const device *d,void *v){
+	assert(c); // FIXME
+	diag("device: %s\n",d->name);
+	return v;
+}
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
-		.vdiag = diag,
+		.vdiag = vdiag,
 		.adapter_event = adapter_callback,
+		.block_event = block_callback,
 	};
 	WINDOW *w;
 

@@ -25,7 +25,13 @@ struct controller;
 // Growlight's callback-based UI
 typedef struct growlight_ui {
 	void (*vdiag)(const char *,va_list); // free-form diagnostics
+
+	// Called on a new adapter, or when one changes
 	void *(*adapter_event)(const struct controller *,void *);
+
+	// Called for a new blockdev, or when one changes
+	void *(*block_event)(const struct controller *,
+			const struct device *,void *);
 } glightui;
 
 int growlight_init(int,char * const *,const glightui *);
@@ -146,6 +152,7 @@ typedef struct device {
 	} layout;
 	struct device *parts;	// Partitions (can be NULL)
 	dev_t devno;		// Don't expose this non-persistent datum
+	void *uistate;		// UI-managed opaque state
 } device;
 
 // A block device controller.
