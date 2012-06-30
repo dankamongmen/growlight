@@ -1422,6 +1422,7 @@ handle_ncurses_input(WINDOW *w){
 				}else{
 					use_prev_device();
 				}
+				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
@@ -1433,6 +1434,7 @@ handle_ncurses_input(WINDOW *w){
 					use_next_device();
 				}
 				pthread_mutex_unlock(&bfl);
+				screen_update();
 				break;
 			}
 			default:{
