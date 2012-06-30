@@ -767,7 +767,7 @@ push_adapters_above(reelbox *pusher,int rows,int cols,int delta){
 	reelbox *rb;
 
 	assert(delta < 0);
-	//fprintf(stderr,"pushing up %d from %s@%d\n",delta,pusher ? pusher->is ? pusher->is->adapter->name : "destroyed" : "all",
+	//fprintf(stderr,"pushing up %d from %s@%d\n",delta,pusher ? pusher->as ? pusher->as->adapter->name : "destroyed" : "all",
 	//	      pusher ? pusher->scrline : rows);
 	rb = top_reelbox;
 	while(rb){
@@ -982,6 +982,144 @@ pull_adapters_down(reelbox *puller,int rows,int cols,int delta){
 	}
 }
 
+static inline int
+top_space_p(int rows){
+	if(!top_reelbox){
+		return rows - 2;
+	}
+	return getbegy(top_reelbox->win) - 1;
+}
+
+// Selecting the previous or next adapter (this doesn't apply to an arbitrary
+// repositioning): There are two phases to be considered.
+//
+//  1. There's not enough data to fill the screen. In this case, none will lose
+//     or gain visibility, but they might be rotated.
+//  2. There's a screen's worth, but not much more than that. An adapter might
+//     be split across the top/bottom boundaries. adapters can be caused to
+//     lose or gain visibility.
+static void
+use_next_controller(WINDOW *w,struct panel_state *ps){
+	int rows,cols,delta;
+	reelbox *oldrb;
+	reelbox *rb;
+
+	if(!current_adapter || current_adapter->as->next == current_adapter->as){
+		return;
+	}
+	// fprintf(stderr,"Want next adapter (%s->%s)\n",current_adapter->as->if
+	//	      current_adapter->as->next->adapter->name);
+	getmaxyx(w,rows,cols);
+	oldrb = current_adapter;
+	deselect_adapter_locked();
+	// Don't redraw the old inteface yet; it might have been moved/hidden
+	if(current_adapter->next == NULL){
+		adapterstate *is = current_adapter->as->next;
+
+		if(is->rb == NULL){ // it's off-screen
+			int delta;
+
+			if((is->rb = create_reelbox(is,rows,(rows - 1) - adapter_lines_bounded(is,rows),cols)) == NULL){
+				return; // FIXME
+			}
+			current_adapter = is->rb;
+			delta = -adapter_lines_bounded(is,rows);
+			if(getbegy(last_reelbox->win) + getmaxy(last_reelbox->win) >= rows - 1){
+				--delta;
+			}
+			push_adapters_above(NULL,rows,cols,delta);
+			if((current_adapter->prev = last_reelbox) == NULL){
+				top_reelbox = current_adapter;
+			}else{
+				last_reelbox->next = current_adapter;
+			}
+			current_adapter->next = NULL;
+			last_reelbox = current_adapter;
+			if( (delta = top_space_p(rows)) ){
+				pull_adapters_up(NULL,rows,cols,delta);
+			}
+			redraw_adapter(is->rb);
+			if(ps->p){
+				adapter_details(panel_window(ps->p),is->c,ps->ysize);
+			}
+			return;
+		}
+		current_adapter = is->rb; // it's at the top
+	}else{
+		current_adapter = current_adapter->next; // it's below us
+	}
+	rb = current_adapter;
+	// If the newly-selected adapter is wholly visible, we'll not need
+	// change visibility of any adapters. If it's above us, we'll need
+	// rotate the adapters 1 unit, moving all. Otherwise, none change
+	// position. Redraw all affected adapters.
+	if(adapter_wholly_visible_p(rows,rb)){
+		if(rb->scrline > oldrb->scrline){ // new is below old
+			assert(redraw_adapter(oldrb) == OK);
+			assert(redraw_adapter(rb) == OK);
+		}else{ // we were at the bottom (rotate)
+			if(top_reelbox->next){
+				top_reelbox->next->prev = NULL;
+				top_reelbox = top_reelbox->next;
+			}else{
+				top_reelbox = last_reelbox;
+			}
+			pull_adapters_up(rb,rows,cols,getmaxy(rb->win) + 1);
+			if(last_reelbox){
+				rb->scrline = last_reelbox->scrline + getmaxy(last_reelbox->win) + 1;
+			}else{
+				rb->scrline = 1;
+			}
+			rb->prev = last_reelbox;
+			last_reelbox->next = rb;
+			rb->next = NULL;
+			last_reelbox = rb;
+			move_adapter_generic(rb,rows,cols,rb->scrline - getbegy(rb->win));
+		}
+	}else{ // new is partially visible...
+		if(rb->scrline > oldrb->scrline){ // ...at the bottom
+			adapterstate *is = current_adapter->as;
+			int delta = getmaxy(rb->win) - adapter_lines_bounded(is,rows);
+
+			rb->scrline = rows - (adapter_lines_bounded(is,rows) + 1);
+			push_adapters_above(rb,rows,cols,delta);
+			move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
+			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
+			assert(replace_panel(rb->panel,rb->win) != ERR);
+			assert(redraw_adapter(rb) == OK);
+		}else{ // ...at the top (rotate)
+			int delta;
+
+			assert(top_reelbox == rb);
+			rb->scrline = rows - 1 - adapter_lines_bounded(rb->as,rows);
+			top_reelbox->next->prev = NULL;
+			top_reelbox = top_reelbox->next;
+			delta = -adapter_lines_bounded(rb->as,rows);
+			if(getbegy(last_reelbox->win) + getmaxy(last_reelbox->win) >= (rows - 1)){
+				--delta;
+			}
+			push_adapters_above(NULL,rows,cols,delta);
+			rb->next = NULL;
+			if( (rb->prev = last_reelbox) ){
+				last_reelbox->next = rb;
+			}else{
+				top_reelbox = rb;
+			}
+			last_reelbox = rb;
+			move_adapter_generic(rb,rows,cols,rb->scrline);
+			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
+			assert(replace_panel(rb->panel,rb->win) != ERR);
+			assert(redraw_adapter(rb) == OK);
+		}
+	}
+	if( (delta = top_space_p(rows)) ){
+		pull_adapters_up(NULL,rows,cols,delta);
+	}
+	if(ps->p){
+		adapter_details(panel_window(ps->p),rb->as->c,ps->ysize);
+	}
+}
+
 static void
 use_prev_controller(WINDOW *w,struct panel_state *ps){
 	reelbox *oldrb,*rb;
@@ -1085,6 +1223,16 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 
 static void
 use_prev_device(void){
+	reelbox *rb;
+
+	if((rb = current_adapter) == NULL){
+		return;
+	}
+	// FIXME
+}
+
+static void
+use_next_device(void){
 	reelbox *rb;
 
 	if((rb = current_adapter) == NULL){
@@ -1279,11 +1427,11 @@ handle_ncurses_input(WINDOW *w){
 			}
 			case KEY_DOWN: case 'j':{
 				pthread_mutex_lock(&bfl);
-				/*if(!selection_active){
-					use_next_controller(w);
+				if(!selection_active){
+					use_next_controller(w,&details);
 				}else{
 					use_next_device();
-				}*/
+				}
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
