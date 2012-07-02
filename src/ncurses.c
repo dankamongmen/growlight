@@ -1538,8 +1538,6 @@ adapter_callback(const controller *a, void *state){
 
 static void *
 block_callback(const controller *c,const device *d,void *v){
-	fprintf(stderr,"*****DEVICE: %s\n",d->name);
-	assert(c); // FIXME
 	assert(c->uistate);
 	diag("device: %s\n",d->name);
 	return v;
