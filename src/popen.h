@@ -9,6 +9,7 @@ extern "C" {
 
 int popen_drain(const char *);
 int vpopen_drain(const char *,wchar_t * const *);
+int vspopen_drain(const char *,...) __attribute__ ((format (printf,1,2)));
 
 #ifdef __cplusplus
 }
