@@ -7,12 +7,11 @@
 #include <sys/swap.h>
 
 #include "swap.h"
+#include "popen.h"
 #include "growlight.h"
 
 int mkswap(device *d){
-	char cmd[PATH_MAX],buf[BUFSIZ];
-	ssize_t r;
-	FILE *fp;
+	char cmd[PATH_MAX];
 
 	if(d->target){
 		fprintf(stderr,"Won't create swap on target mount %s (%s)\n",
@@ -32,24 +31,7 @@ int mkswap(device *d){
 		fprintf(stderr,"Error building command line for %s\n",d->name);
 		return -1;
 	}
-	if((fp = popen(cmd,"r")) == NULL){
-		fprintf(stderr,"Error running '%s' (%s?)\n",cmd,strerror(errno));
-		return -1;
-	}
-	while((r = fread(buf,1,BUFSIZ,fp)) > 0){
-		if(fwrite(buf,1,r,stdout) < (size_t)r){
-			fprintf(stderr,"Error echoing '%s' (%s?)\n",cmd,strerror(errno));
-			fclose(fp);
-			return -1;
-		}
-	}
-	if(r < 0){
-		fprintf(stderr,"Error draining '%s' (%s?)\n",cmd,strerror(errno));
-		fclose(fp);
-		return -1;
-	}
-	if(fclose(fp)){
-		fprintf(stderr,"Error closing '%s' (%s?)\n",cmd,strerror(errno));
+	if(popen_drain(cmd)){
 		return -1;
 	}
 	return 0;
