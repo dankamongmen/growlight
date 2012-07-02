@@ -625,11 +625,11 @@ print_controller(const controller *c,int descend){
 	switch(c->bus){
 		case BUS_PCIe:
 			if(c->pcie.lanes_neg == 0){
-				r += rr = printf("[%s] Southbridge device %04hx:%02x.%02x.%x\n",
+				r += rr = printf("[%s] Southbridge device %04x:%02x.%02x.%x\n",
 					c->ident,c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func);
 			}else{
-				r += rr = printf("[%s] PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)\n",
+				r += rr = printf("[%s] PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)\n",
 					c->ident,c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func,
 					c->pcie.lanes_neg,pcie_gen(c->pcie.gen));
