@@ -514,6 +514,32 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 	}
 }
 
+static void
+print_adapter_devs(const adapterstate *as){
+	const blockobj *bo;
+	const reelbox *rb;
+	unsigned line;
+
+	if((rb = as->rb) == NULL){
+		return;
+	}
+	if(as->expansion < EXPANSION_DEVS){
+		return;
+	}
+	bo = rb->selected;
+	line = rb->selline + 2;
+	// FIXME
+	while(bo){
+		assert(mvwprintw(rb->win,line,START_COL * 2,"%s",bo->d->name) != ERR);
+		bo = NULL; // FIXME
+	}
+	bo = rb->selected ? rb->selected->next : as->bobjs;
+	while(bo){
+		assert(mvwprintw(rb->win,line,START_COL * 2,"%s",bo->d->name) != ERR);
+		bo = NULL; // FIXME
+	}
+}
+
 static int
 redraw_adapter(const reelbox *rb){
 	const int active = (rb == current_adapter);
@@ -537,6 +563,7 @@ redraw_adapter(const reelbox *rb){
 	}
 	assert(werase(rb->win) != ERR);
 	adapter_box(as,rb->win,active,topp,endp);
+	print_adapter_devs(as);
 	return OK;
 }
 
