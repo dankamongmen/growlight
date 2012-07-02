@@ -70,12 +70,14 @@ typedef struct devtable {
 
 static controller unknown_bus = {
 	.name = "Unknown controller",
+	.ident = "unknown",
 	.bus = BUS_UNKNOWN,
 };
 
 static controller virtual_bus = {
 	.name = "Virtual device",
 	.next = &unknown_bus,
+	.ident = "virtual",
 	.bus = BUS_VIRTUAL,
 };
 
@@ -1263,6 +1265,15 @@ kill_event_thread(void){
 	return r;
 }
 
+static void
+init_special_adapters(void){
+	controller *c;
+
+	for(c = controllers ; c ; c = c->next){
+		c->uistate = gui->adapter_event(c,NULL);
+	}
+}
+
 int growlight_init(int argc,char * const *argv,const glightui *ui){
 	static const struct option ops[] = {
 		{
@@ -1364,6 +1375,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if((fd = inotify_fd()) < 0){
 		goto err;
 	}
+	init_special_adapters();
 	if(init_zfs_support()){
 		goto err;
 	}

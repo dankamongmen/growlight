@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "popen.h"
 
@@ -61,7 +62,7 @@ int popen_drain(const char *cmd){
 	if((safecmd = sanitize_cmd(cmd)) == NULL){
 		return -1;
 	}
-	if((fd = popen(safecmd,"r")) == NULL){
+	if((fd = popen(safecmd,"re")) == NULL){
 		fprintf(stderr,"Couldn't run %s (%s?)\n",safecmd,strerror(errno));
 		free(safecmd);
 		return -1;
@@ -82,8 +83,7 @@ int popen_drain(const char *cmd){
 }
 
 int vpopen_drain(const char *cmd,wchar_t * const *args){
-	char buf[BUFSIZ],*safecmd;
-	FILE *fd;
+	char buf[BUFSIZ];
 	int r;
 
 	if((r = snprintf(buf,sizeof(buf),"%s ",cmd)) >= (int)sizeof(buf)){
@@ -98,25 +98,19 @@ int vpopen_drain(const char *cmd,wchar_t * const *args){
 		r += rr;
 		++args;
 	}
-	if((safecmd = sanitize_cmd(buf)) == NULL){
+	return popen_drain(buf);
+}
+
+int vspopen_drain(const char *fmt,...){
+	char buf[BUFSIZ];
+	va_list va;
+
+	va_start(va,fmt);
+	if(vsnprintf(buf,sizeof(buf),fmt,va) >= (int)sizeof(buf)){
+		va_end(va);
+		fprintf(stderr,"Bad command: %s ...\n",fmt);
 		return -1;
 	}
-	if((fd = popen(safecmd,"r")) == NULL){
-		fprintf(stderr,"Couldn't run %s (%s?)\n",safecmd,strerror(errno));
-		free(safecmd);
-		return -1;
-	}
-	while(fgets(buf,sizeof(buf),fd)){
-		printf("%s",buf);
-	}
-	if(!feof(fd)){
-		fprintf(stderr,"Error reading from '%s' (%s?)\n",cmd,strerror(errno));
-		fclose(fd);
-		return -1;
-	}
-	if(fclose(fd)){
-		fprintf(stderr,"Error running '%s'\n",cmd);
-		return -1;
-	}
-	return 0;
+	va_end(va);
+	return popen_drain(buf);
 }
