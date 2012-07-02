@@ -1550,19 +1550,34 @@ create_blockobj(const device *d){
 
 static void *
 block_callback(const controller *c,const device *d,void *v){
+	adapterstate *as = c->uistate;
 	blockobj *b;
 
-	/*fprintf(stderr,"***%s\n",d->name);
-	fprintf(stderr,"***%s\n",c->ident);*/
 	if((b = v) == NULL){
-		adapterstate *as = c->uistate;
-
-		assert(as);
 		if( (b = create_blockobj(d)) ){
-			b->next = as->bobjs;
-			as->bobjs = b;
+			if(as->devs == 0){
+				b->prev = b->next = as->bobjs = b;
+			}else{
+				b->next = as->bobjs;
+				b->prev = as->bobjs->prev;
+				as->bobjs->prev = b;
+				b->prev->next = b;
+			}
+			++as->devs;
+		}
+		if(as->rb){
+			resize_adapter(as->rb);
+			redraw_adapter(as->rb);
 		}
 	}
+	if(as->rb == NULL){
+		return b;
+	}
+	if(as->rb != current_adapter){
+		return b;
+	}
+	assert(top_panel(as->rb->panel) != ERR);
+	screen_update();
 	return b;
 }
 
