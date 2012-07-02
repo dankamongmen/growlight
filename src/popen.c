@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "popen.h"
 
@@ -97,5 +98,19 @@ int vpopen_drain(const char *cmd,wchar_t * const *args){
 		r += rr;
 		++args;
 	}
+	return popen_drain(buf);
+}
+
+int vspopen_drain(const char *fmt,...){
+	char buf[BUFSIZ];
+	va_list va;
+
+	va_start(va,fmt);
+	if(vsnprintf(buf,sizeof(buf),fmt,va) >= (int)sizeof(buf)){
+		va_end(va);
+		fprintf(stderr,"Bad command: %s ...\n",fmt);
+		return -1;
+	}
+	va_end(va);
 	return popen_drain(buf);
 }
