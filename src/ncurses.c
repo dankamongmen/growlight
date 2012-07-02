@@ -44,7 +44,7 @@ struct partobj;
 
 typedef struct blockobj {
 	struct blockobj *next,*prev;
-	//device *bo;
+	const device *d;
 	unsigned lns;			// number of lines obj would take up
 	struct partobj *pobjs;
 } blockobj;
@@ -69,6 +69,7 @@ typedef struct adapterstate {
 		EXPANSION_MOUNTS,
 	} expansion;
 	struct adapterstate *next,*prev;
+	blockobj *bobjs;
 	reelbox *rb;
 } adapterstate;
 
@@ -1536,11 +1537,31 @@ adapter_callback(const controller *a, void *state){
 	return as;
 }
 
+static blockobj *
+create_blockobj(const device *d){
+	blockobj *b;
+
+	if( (b = malloc(sizeof(*b))) ){
+		memset(b,0,sizeof(*b));
+		b->d = d;
+	}
+	return b;
+}
+
 static void *
 block_callback(const controller *c,const device *d,void *v){
-	assert(c); // FIXME
-	diag("device: %s\n",d->name);
-	return v;
+	blockobj *b;
+
+	if((b = v) == NULL){
+		adapterstate *as = c->uistate;
+
+		assert(as);
+		if( (b = create_blockobj(d)) ){
+			b->next = as->bobjs;
+			as->bobjs = b;
+		}
+	}
+	return b;
 }
 
 int main(int argc,char * const *argv){
