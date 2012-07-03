@@ -518,6 +518,7 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 
 static void
 print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned endp){
+	char buf[PREFIXSTRLEN + 1];
 	const blockobj *bo;
 	const reelbox *rb;
 	unsigned line;
@@ -547,18 +548,22 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 		}
 		switch(bo->d->layout){
 			case LAYOUT_NONE:
-		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s %4uB %-6.6s%-16.16s %-4.4s",
+		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,bo->d->model,
-					bo->d->revision,bo->d->physsec,
+					bo->d->revision,
+					qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
+					bo->d->physsec,
 					bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
 					bo->d->wwn ? bo->d->wwn : "n/a",
 					bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a"
 					) != ERR);
 			break;
 			case LAYOUT_MDADM:
-		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s %4uB %-6.6s%-16.16s %-4.4s",
+		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,bo->d->model,
-					bo->d->revision,bo->d->physsec,
+					bo->d->revision,
+					qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
+					bo->d->physsec,
 					"n/a",
 					bo->d->wwn ? bo->d->wwn : "n/a",
 					transport_str(bo->d->mddev.transport)
