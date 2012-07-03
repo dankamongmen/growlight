@@ -1389,7 +1389,7 @@ static const wchar_t *helps[] = {
 	L"'v': view adapter details     'l': view recent diagnostics",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adaper browser",
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
-	L"'⇞PgUp': previous page        '⇟PgDwn': next page",
+	L"'⇞PgUp': previous page	'⇟PgDwn': next page",
 	L"'↖Home': first selection      '↘End': last selection",
 	L"'-'/'←': collapse selection   '+'/'→': expand selection",
 	NULL
@@ -1471,6 +1471,147 @@ toggle_panel(WINDOW *w,struct panel_state *ps,int (*psfxn)(WINDOW *,struct panel
 	}
 }
 
+
+static unsigned
+node_lines(int e,const blockobj *l __attribute__ ((unused))){
+	unsigned lns;
+
+	if(e == EXPANSION_NONE){
+		return 0;
+	}
+	lns = 1;
+	if(e > EXPANSION_DEVS){
+		/* for(l3 = l->l3objs ; l3 ; l3 = l3->next){
+			++lns;
+			if(e > EXPANSION_HOSTS){
+				lns += !!l3->l4objs;
+			}
+		}*/
+	}
+	return lns;
+}
+
+// Recompute ->lns values for all nodes, and return the number of lines of
+// output available before and after the current selection. If there is no
+// current selection, the return value ought not be ascribed meaning. O(N) on
+// the number of drives, not just those visible -- unacceptable! FIXME
+static void
+recompute_lines(adapterstate *is,int *before,int *after){
+	blockobj *l;
+	int newsel;
+
+	*after = -1;
+	*before = -1;
+	newsel = !!adapter_up_p(is);
+	for(l = is->bobjs ; l ; l = l->next){
+		l->lns = node_lines(is->expansion,l);
+		if(l == is->rb->selected){
+			*before = newsel;
+			*after = l->lns ? l->lns - 1 : 0;
+		}else if(*after >= 0){
+			*after += l->lns;
+		}else{
+			newsel += l->lns;
+		}
+	}
+}
+
+// When we expand or collapse, we want the current selection to contain above
+// it approximately the same proportion of the entire adapter. That is, if
+// we're at the top, we ought remain so; if we're at the bottom, we ought
+// remain so; if we fill the entire screen before and after the operation, we
+// oughtn't move more than a few rows at the most.
+//
+// oldsel: old line of the selection, within the window
+// oldrows: old number of rows in the iface
+// newrows: new number of rows in the iface
+// oldlines: number of lines selection used to occupy
+static void
+recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
+	int newsel,bef,aft;
+
+	// Calculate the maximum new line -- we can't leave space at the top or
+	// bottom, so we can't be after the true number of lines of output that
+	// precede us, or before the true number that follow us.
+	recompute_lines(is,&bef,&aft);
+	if(bef < 0 || aft < 0){
+		assert(!is->rb->selected);
+		return;
+	}
+	// Account for lost/restored lines within the selection. Negative means
+	// we shrank, positive means we grew, 0 stayed the same.
+	// Calculate the new target line for the selection
+	newsel = oldsel * newrows / oldrows;
+	if(oldsel * newrows % oldrows >= oldrows / 2){
+		++newsel;
+	}
+	// If we have a full screen's worth after us, we can go anywhere
+	if(newsel > bef){
+		newsel = bef;
+	}
+	/*wstatus_locked(stdscr,"newsel: %d bef: %d aft: %d oldsel: %d maxy: %d",
+			newsel,bef,aft,oldsel,getmaxy(is->rb->win));
+	update_panels();
+	doupdate();*/
+	if(newsel + aft <= getmaxy(is->rb->win) - 2 - !!adapter_up_p(is)){
+		newsel = getmaxy(is->rb->win) - aft - 2 - !!adapter_up_p(is);
+	}
+	if(newsel + (int)node_lines(is->expansion,is->rb->selected) >= getmaxy(is->rb->win) - 2){
+		newsel = getmaxy(is->rb->win) - 2 - node_lines(is->expansion,is->rb->selected);
+	}
+	/*wstatus_locked(stdscr,"newsel: %d bef: %d aft: %d oldsel: %d maxy: %d",
+			newsel,bef,aft,oldsel,getmaxy(is->rb->win));
+	update_panels();
+	doupdate();*/
+	if(newsel){
+		is->rb->selline = newsel;
+	}
+	assert(is->rb->selline >= 1);
+	assert(is->rb->selline < getmaxy(is->rb->win) - 1 || !is->expansion);
+}
+
+static int
+expand_adapter_locked(void){
+	adapterstate *is;
+	int old,oldrows;
+
+	if(!current_adapter){
+		return 0;
+	}
+	is = current_adapter->as;
+	if(is->expansion == EXPANSION_MAX){
+		return 0;
+	}
+	++is->expansion;
+	old = current_adapter->selline;
+	oldrows = getmaxy(current_adapter->win);
+	assert(resize_adapter(current_adapter) == OK);
+	recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
+	redraw_adapter(current_adapter);
+	return 0;
+}
+
+static int
+collapse_adapter_locked(void){
+	adapterstate *is;
+	int old,oldrows;
+
+	if(!current_adapter){
+		return 0;
+	}
+	is = current_adapter->as;
+	if(is->expansion == 0){
+		return 0;
+	}
+	--is->expansion;
+	old = current_adapter->selline;
+	oldrows = getmaxy(current_adapter->win);
+	assert(resize_adapter(current_adapter) == OK);
+	recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
+	redraw_adapter(current_adapter);
+	return 0;
+}
+
 static void
 handle_ncurses_input(WINDOW *w){
 	int ch;
@@ -1481,6 +1622,17 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&help,display_help);
 				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case '+': case KEY_RIGHT:
+				pthread_mutex_lock(&bfl);
+					expand_adapter_locked();
+				pthread_mutex_unlock(&bfl);
+				break;
+			case '-': case KEY_LEFT:{
+				pthread_mutex_lock(&bfl);
+					collapse_adapter_locked();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
@@ -1625,12 +1777,13 @@ block_callback(const controller *c,const device *d,void *v){
 	if((b = v) == NULL){
 		if( (b = create_blockobj(as,d)) ){
 			if(as->devs == 0){
-				b->prev = b->next = as->bobjs = b;
+				b->prev = b->next = NULL;
+				as->bobjs = b;
 			}else{
 				b->next = as->bobjs;
-				b->prev = as->bobjs->prev;
+				b->prev = NULL;
 				as->bobjs->prev = b;
-				b->prev->next = b;
+				as->bobjs = b;
 			}
 			++as->devs;
 		}
