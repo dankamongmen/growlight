@@ -515,7 +515,8 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 }
 
 static void
-print_adapter_devs(const adapterstate *as){
+print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,
+				unsigned endp __attribute__ ((unused))){
 	const blockobj *bo;
 	const reelbox *rb;
 	unsigned line;
@@ -527,16 +528,19 @@ print_adapter_devs(const adapterstate *as){
 		return;
 	}
 	bo = rb->selected;
-	line = rb->selline + 2;
-	// FIXME
-	while(bo){
+	line = rb->selline;
+	while(bo && line + bo->lns >= !!topp){
 		assert(mvwprintw(rb->win,line,START_COL * 2,"%s",bo->d->name) != ERR);
-		bo = NULL; // FIXME
+		if( (bo = bo->prev) ){
+			line -= bo->lns;
+		}
 	}
+	line = rb->selected ? rb->selline + rb->selected->lns : -topp + 1;
 	bo = rb->selected ? rb->selected->next : as->bobjs;
-	while(bo){
+	while(bo && line < rows){
 		assert(mvwprintw(rb->win,line,START_COL * 2,"%s",bo->d->name) != ERR);
-		bo = NULL; // FIXME
+		line += bo->lns;
+		bo = bo->next;
 	}
 }
 
@@ -544,7 +548,7 @@ static int
 redraw_adapter(const reelbox *rb){
 	const int active = (rb == current_adapter);
 	const adapterstate *as = rb->as;
-	int scrrows,scrcols;
+	int scrrows,scrcols,rows,cols;
 	unsigned topp,endp;
 
 	if(panel_hidden(rb->panel)){
@@ -561,9 +565,11 @@ redraw_adapter(const reelbox *rb){
 		topp = 0;
 		endp = 1; // no bottom FIXME
 	}
+	getmaxyx(rb->win,rows,cols);
+	assert(cols); // FIXME
 	assert(werase(rb->win) != ERR);
 	adapter_box(as,rb->win,active,topp,endp);
-	print_adapter_devs(as);
+	print_adapter_devs(as,rows,topp,endp);
 	return OK;
 }
 
@@ -1565,11 +1571,12 @@ adapter_callback(const controller *a, void *state){
 }
 
 static blockobj *
-create_blockobj(const device *d){
+create_blockobj(const adapterstate *as,const device *d){
 	blockobj *b;
 
 	if( (b = malloc(sizeof(*b))) ){
 		memset(b,0,sizeof(*b));
+		b->lns = as->expansion > EXPANSION_NONE;
 		b->d = d;
 	}
 	return b;
@@ -1581,7 +1588,7 @@ block_callback(const controller *c,const device *d,void *v){
 	blockobj *b;
 
 	if((b = v) == NULL){
-		if( (b = create_blockobj(d)) ){
+		if( (b = create_blockobj(as,d)) ){
 			if(as->devs == 0){
 				b->prev = b->next = as->bobjs = b;
 			}else{
