@@ -414,16 +414,6 @@ print_partition(const device *p,int descend){
 	return r;
 }
 
-static const char *
-transport_str(transport_e t){
-	return t == SERIAL_USB3 ? "USB3" : t == SERIAL_USB2 ? "USB2" :
-		t == SERIAL_USB ? "USB1" : t == SERIAL_ATAIII ? "SAT3" :\
-		t == SERIAL_ATAII ? "SAT2" :
-	 	t == SERIAL_ATAI ? "SAT1" : t == SERIAL_ATA8 ? "ATA8" :
-	 	t == SERIAL_UNKNOWN ? "SATA" : t == PARALLEL_ATA ? "PATA" :
-	 	t == AGGREGATE_MIXED ? "Mix" : "Ukn";
-}
-
 static int
 print_drive(const device *d,int descend){
 	char buf[PREFIXSTRLEN + 1];

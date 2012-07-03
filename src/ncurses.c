@@ -545,7 +545,30 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 		if(line >= rows - !endp){
 			break;
 		}
-		assert(mvwprintw(rb->win,line,START_COL * 2,"%s",bo->d->name) != ERR);
+		switch(bo->d->layout){
+			case LAYOUT_NONE:
+		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s %4uB %-6.6s%-16.16s %-4.4s",
+					bo->d->name,bo->d->model,
+					bo->d->revision,bo->d->physsec,
+					bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
+					bo->d->wwn ? bo->d->wwn : "n/a",
+					bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a"
+					) != ERR);
+			break;
+			case LAYOUT_MDADM:
+		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s %4uB %-6.6s%-16.16s %-4.4s",
+					bo->d->name,bo->d->model,
+					bo->d->revision,bo->d->physsec,
+					"n/a",
+					bo->d->wwn ? bo->d->wwn : "n/a",
+					transport_str(bo->d->mddev.transport)
+					) != ERR);
+			break;
+			case LAYOUT_PARTITION:
+			break;
+			case LAYOUT_ZPOOL:
+			break;
+		}
 		line += bo->lns;
 		bo = bo->next;
 	}
