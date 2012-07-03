@@ -515,8 +515,7 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 }
 
 static void
-print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,
-				unsigned endp __attribute__ ((unused))){
+print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned endp){
 	const blockobj *bo;
 	const reelbox *rb;
 	unsigned line;
@@ -530,6 +529,9 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,
 	bo = rb->selected;
 	line = rb->selline;
 	while(bo && line + bo->lns >= !!topp){
+		if(line >= rows - !endp){
+			break;
+		}
 		assert(mvwprintw(rb->win,line,START_COL * 2,"%s",bo->d->name) != ERR);
 		if( (bo = bo->prev) ){
 			line -= bo->lns;
@@ -538,6 +540,9 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,
 	line = rb->selected ? rb->selline + rb->selected->lns : -topp + 1;
 	bo = rb->selected ? rb->selected->next : as->bobjs;
 	while(bo && line < rows){
+		if(line >= rows - !endp){
+			break;
+		}
 		assert(mvwprintw(rb->win,line,START_COL * 2,"%s",bo->d->name) != ERR);
 		line += bo->lns;
 		bo = bo->next;
