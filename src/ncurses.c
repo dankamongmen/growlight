@@ -64,16 +64,19 @@ typedef struct adapterstate {
 	enum {
 		EXPANSION_NONE,
 		EXPANSION_DEVS,
+		/*
 		EXPANSION_PARTS,
 		EXPANSION_FS,
 		EXPANSION_MOUNTS,
+		*/
 	} expansion;
 	struct adapterstate *next,*prev;
 	blockobj *bobjs;
 	reelbox *rb;
 } adapterstate;
 
-#define EXPANSION_MAX EXPANSION_MOUNTS
+//EXPANSION_MOUNTS
+#define EXPANSION_MAX EXPANSION_DEVS
 
 static char statusmsg[73];
 static unsigned count_adapters;
@@ -101,12 +104,12 @@ lines_for_adapter(const struct adapterstate *as){
 	int l = 2;
 
 	switch(as->expansion){ // Intentional fallthrus
-		case EXPANSION_MOUNTS:
+		/*case EXPANSION_MOUNTS:
 			l += as->mounts;
 		case EXPANSION_FS:
 			l += as->fs;
 		case EXPANSION_PARTS:
-			l += as->parts;
+			l += as->parts;*/
 		case EXPANSION_DEVS:
 			l += as->devs;
 		case EXPANSION_NONE:
@@ -1627,12 +1630,14 @@ handle_ncurses_input(WINDOW *w){
 			}
 			case '+': case KEY_RIGHT:
 				pthread_mutex_lock(&bfl);
-					expand_adapter_locked();
+				expand_adapter_locked();
+				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			case '-': case KEY_LEFT:{
 				pthread_mutex_lock(&bfl);
-					collapse_adapter_locked();
+				collapse_adapter_locked();
+				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
