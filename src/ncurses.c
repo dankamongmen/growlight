@@ -1404,7 +1404,7 @@ static const wchar_t *helps[] = {
 	L"'v': view adapter details     'l': view recent diagnostics",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adaper browser",
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
-	L"'⇞PgUp': previous page	'⇟PgDwn': next page",
+	L"'⇞PgUp': previous page        '⇟PgDwn': next page",
 	L"'↖Home': first selection      '↘End': last selection",
 	L"'-'/'←': collapse selection   '+'/'→': expand selection",
 	NULL
