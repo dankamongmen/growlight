@@ -1838,27 +1838,21 @@ diag(const char *fmt,...){
 }*/
 
 static void *
-new_adapter(const controller *c,void *v){
-	assert(c);
-	return v;
-}
-
-static void *
 block_event(const controller *c,const device *d,void *v){
 	assert(c && d);
 	return v;
 }
 
-static void
-block_free(void *cv,void *bv){
-	assert(cv && bv);
-}
+static void *new_adapter(const controller *c,void *v){ assert(c); return v; }
+static void adapter_free(void *cv){ assert(cv); }
+static void block_free(void *cv,void *bv){ assert(cv && bv); }
 
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = vdiag,
 		.adapter_event = new_adapter,
 		.block_event = block_event,
+		.adapter_free = adapter_free,
 		.block_free = block_free,
 	};
 

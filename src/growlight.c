@@ -330,6 +330,9 @@ free_devtable(devtable *dt){
 			clobber_device(c,d);
 		}
 		dt->controllers = c->next;
+		if(c->uistate){
+			gui->adapter_free(c->uistate);
+		}
 		free_controller(c);
 		free(c);
 	}

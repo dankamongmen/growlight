@@ -554,7 +554,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
-					bo->d->revision,
+					bo->d->revision ? bo->d->revision : "n/a",
 					qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
 					bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
@@ -566,7 +566,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
-					bo->d->revision,
+					bo->d->revision ? bo->d->revision : "n/a",
 					qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
 					"n/a",
@@ -1711,6 +1711,12 @@ create_adapter_state(const controller *a){
 static void
 free_adapter_state(adapterstate *as){
 	if(as){
+		blockobj *b;
+
+		while( (b = as->bobjs) ){
+			as->bobjs = b->next;
+			free(b);
+		}
 		free(as);
 	}
 }
@@ -1850,11 +1856,76 @@ block_free(void *cv,void *bv){
 	pthread_mutex_unlock(&bfl);
 }
 
+static void
+adapter_free(void *cv){
+	adapterstate *as = cv;
+	reelbox *rb = rb;
+
+	pthread_mutex_lock(&bfl);
+	as->prev->next = as->next;
+	as->next->prev = as->prev;
+	if( (rb = as->rb) ){
+		int delta = getmaxy(rb->win) + 1,scrrows,scrcols;
+
+		//fprintf(stderr,"Removing iface at %d\n",rb->scrline);
+		assert(werase(rb->win) == OK);
+		assert(hide_panel(rb->panel) == OK);
+		getmaxyx(stdscr,scrrows,scrcols);
+		if(rb->next){
+			rb->next->prev = rb->prev;
+		}else{
+			last_reelbox = rb->prev;
+		}
+		if(rb->prev){
+			rb->prev->next = rb->next;
+		}else{
+			top_reelbox = rb->next;
+		}
+		as->next->prev = as->prev;
+		as->prev->next = as->next;
+		if(rb == current_adapter){
+			// FIXME need do all the stuff we do in _next_/_prev_
+			if((current_adapter = rb->next) == NULL){
+				current_adapter = rb->prev;
+			}
+			pull_adapters_up(rb,scrrows,scrcols,delta);
+			// give the details window to new current_iface
+			if(details.p){
+				if(current_adapter){
+					adapter_details(panel_window(details.p),get_current_adapter(),details.ysize);
+				}else{
+					hide_panel_locked(&details);
+					active = NULL;
+				}
+			}
+		}else if(rb->scrline > current_adapter->scrline){
+			pull_adapters_up(rb,scrrows,scrcols,delta);
+		}else{ // pull them down; removed is above current_adapter
+			int ts;
+
+			pull_adapters_down(rb,scrrows,scrcols,delta);
+			if( (ts = top_space_p(scrrows)) ){
+				pull_adapters_up(NULL,scrrows,scrcols,ts);
+			}
+		}
+		screen_update();
+		free_reelbox(rb);
+	}else{
+		as->next->prev = as->prev;
+		as->prev->next = as->next;
+	}
+	free_adapter_state(as); // clears subentries
+	--count_adapters;
+	draw_main_window(stdscr); // Update the device count
+	pthread_mutex_unlock(&bfl);
+}
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = vdiag,
 		.adapter_event = adapter_callback,
 		.block_event = block_callback,
+		.adapter_free = adapter_free,
 		.block_free = block_free,
 	};
 	WINDOW *w;

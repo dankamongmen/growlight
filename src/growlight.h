@@ -33,6 +33,9 @@ typedef struct growlight_ui {
 	void *(*block_event)(const struct controller *,
 			const struct device *,void *);
 
+	// Controller state
+	void (*adapter_free)(void *);
+
 	// Controller state followed by block state
 	void (*block_free)(void *,void *);
 } glightui;
