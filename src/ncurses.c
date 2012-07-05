@@ -1631,6 +1631,7 @@ handle_ncurses_input(WINDOW *w){
 			case 12: // CTRL+L FIXME
 				pthread_mutex_lock(&bfl);
 				wrefresh(curscr);
+				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			case '+': case KEY_RIGHT:
