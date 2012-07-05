@@ -46,6 +46,7 @@ typedef struct blockobj {
 	struct blockobj *next,*prev;
 	const device *d;
 	unsigned lns;			// number of lines obj would take up
+	unsigned parts;			// number of parts last we checked
 	struct partobj *pobjs;
 } blockobj;
 
@@ -1499,7 +1500,7 @@ toggle_panel(WINDOW *w,struct panel_state *ps,int (*psfxn)(WINDOW *,struct panel
 
 
 static unsigned
-node_lines(int e,const blockobj *l __attribute__ ((unused))){
+node_lines(int e,const blockobj *l){
 	unsigned lns;
 
 	if(e == EXPANSION_NONE){
@@ -1507,12 +1508,7 @@ node_lines(int e,const blockobj *l __attribute__ ((unused))){
 	}
 	lns = 1;
 	if(e > EXPANSION_DEVS){
-		/* for(l3 = l->l3objs ; l3 ; l3 = l3->next){
-			++lns;
-			if(e > EXPANSION_HOSTS){
-				lns += !!l3->l4objs;
-			}
-		}*/
+		lns += l->parts;
 	}
 	return lns;
 }
@@ -1802,9 +1798,14 @@ create_blockobj(const adapterstate *as,const device *d){
 	blockobj *b;
 
 	if( (b = malloc(sizeof(*b))) ){
+		const device *p;
+
 		memset(b,0,sizeof(*b));
-		b->lns = as->expansion > EXPANSION_NONE;
 		b->d = d;
+		for(p = d->parts ; p ; p = p->next){
+			++b->parts;
+		}
+		b->lns = node_lines(as->expansion,b);
 	}
 	return b;
 }
@@ -1817,12 +1818,6 @@ block_callback(const controller *c,const device *d,void *v){
 	pthread_mutex_lock(&bfl);
 	if((b = v) == NULL){
 		if( (b = create_blockobj(as,d)) ){
-			unsigned parts = 0;
-			const device *p;
-
-			for(p = d->parts ; p ; p = p->next){
-				++parts;
-			}
 			if(as->devs == 0){
 				b->prev = b->next = NULL;
 				as->bobjs = b;
@@ -1832,7 +1827,7 @@ block_callback(const controller *c,const device *d,void *v){
 				as->bobjs->prev = b;
 				as->bobjs = b;
 			}
-			as->parts += parts;
+			as->parts += b->parts;
 			++as->devs;
 		}
 		if(as->rb){
@@ -1851,9 +1846,7 @@ block_callback(const controller *c,const device *d,void *v){
 static void
 block_free(void *cv,void *bv){
 	adapterstate *as = cv;
-	unsigned parts = 0;
 	blockobj *bo = bv;
-	const device *p;
 
 	pthread_mutex_lock(&bfl);
 	if(bo->prev){
@@ -1865,10 +1858,7 @@ block_free(void *cv,void *bv){
 	if(as->bobjs == bo){
 		as->bobjs = bo->next;
 	}
-	for(p = bo->d->parts ; p ; p = p->next){
-		++parts;
-	}
-	as->parts -= parts;
+	as->parts -= bo->parts;
 	--as->devs;
 	free(bo);
 	if(as->rb){
