@@ -386,18 +386,12 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz)
 // successfully look up the containing disk (in which case lookup_device()
 // ought be rerun to acquire a reference).
 static int
-explore_sysfs_node(int fd,const char *name,device *d,int recurse){
+explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse){
 	struct dirent *dire;
 	unsigned long ul;
 	unsigned b;
 	int sdevfd;
-	DIR *dir;
 
-	if((dir = fdopendir(fd)) == NULL){
-		vdiag("Couldn't get DIR * from fd %d for %s (%s?)\n",
-				fd,name,strerror(errno));
-		return -1;
-	}
 	if(sysfs_exist_p(fd,"partition")){
 		char buf[PATH_MAX],*dev;
 		int r;
@@ -519,6 +513,21 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 		return -1;
 	}
 	return 0;
+}
+
+static int
+explore_sysfs_node(int fd,const char *name,device *d,int recurse){
+	DIR *dir;
+	int r;
+
+	if((dir = fdopendir(fd)) == NULL){
+		vdiag("Couldn't get DIR * from fd %d for %s (%s?)\n",
+				fd,name,strerror(errno));
+		return -1;
+	}
+	r = explore_sysfs_node_inner(dir,fd,name,d,recurse);
+	closedir(dir); // close(2)s fd
+	return r;
 }
 
 // Returns the sysfs node for the device
@@ -699,9 +708,8 @@ create_new_device_inner(const char *name,int recurse){
 		clobber_device(c,d);
 		return NULL;
 	}
-	// close(2)s fd on success
+	// close(2)s fd
 	if((r = explore_sysfs_node(fd,name,d,recurse)) < 0){
-		close(fd);
 		clobber_device(c,d);
 		return NULL;
 	}else if(r){
