@@ -33,6 +33,7 @@
 #include "mbr.h"
 #include "zfs.h"
 #include "swap.h"
+#include "loop.h"
 #include "udev.h"
 #include "mdadm.h"
 #include "popen.h"
@@ -396,7 +397,7 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 		char buf[PATH_MAX],*dev;
 		int r;
 
-		if(recurse == 0){
+		if(recurse){
 			verbf("Not recursing on partition %s\n",name);
 			return -1;
 		}
@@ -425,6 +426,12 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 			return -1;
 		}
 		return 1;
+	}
+	if(sysfs_exist_p(fd,"loop")){
+		if((d->model = get_sysfs_string(fd,"loop/backing_file")) == NULL){
+			vdiag("Couldn't get backing file: %s\n",name);
+			return -1;
+		}
 	}
 	if(get_sysfs_bool(fd,"removable",&b)){
 		vdiag("Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
@@ -700,8 +707,9 @@ create_new_device_inner(const char *name,int recurse){
 	if(c == &unknown_bus && d->layout == LAYOUT_NONE){
 		d->blkdev.realdev = 0;
 	}
-	if((d->layout == LAYOUT_NONE && d->blkdev.realdev) ||
-			(d->layout == LAYOUT_MDADM)){
+	// Allow d->model to run the checks on validly-filebacked loop devices
+	if((d->layout == LAYOUT_NONE && (d->blkdev.realdev || d->model))
+			|| (d->layout == LAYOUT_MDADM)){
 		char devbuf[PATH_MAX];
 		blkid_parttable ptbl;
 		blkid_topology tpr;
