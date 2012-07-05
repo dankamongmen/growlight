@@ -594,6 +594,12 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 		if(as->expansion >= EXPANSION_PARTS){
 			const device *p;
 
+			if(as->expansion >= EXPANSION_FS){
+				if(bo->d->mnttype){
+					// FIXME
+					++line;
+				}
+			}
 			for(p = bo->d->parts ; p ; p = p->next){
 				if(line >= rows - !endp){
 					break;
@@ -606,6 +612,12 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 							partrole_str(p->partdev.partrole,p->partdev.flags),
 							p->partdev.pname ? p->partdev.pname : L"n/a"
 							) != ERR);
+				if(as->expansion >= EXPANSION_FS){
+					if(p->mnttype){
+						// FIXME
+						++line;
+					}
+				}
 				++line;
 			}
 		}
