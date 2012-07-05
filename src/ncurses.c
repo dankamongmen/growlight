@@ -64,8 +64,8 @@ typedef struct adapterstate {
 	enum {
 		EXPANSION_NONE,
 		EXPANSION_DEVS,
-		/*
 		EXPANSION_PARTS,
+		/*
 		EXPANSION_FS,
 		EXPANSION_MOUNTS,
 		*/
@@ -75,8 +75,7 @@ typedef struct adapterstate {
 	reelbox *rb;
 } adapterstate;
 
-//EXPANSION_MOUNTS
-#define EXPANSION_MAX EXPANSION_DEVS
+#define EXPANSION_MAX EXPANSION_PARTS
 
 static char statusmsg[73];
 static unsigned count_adapters;
@@ -107,9 +106,9 @@ lines_for_adapter(const struct adapterstate *as){
 		/*case EXPANSION_MOUNTS:
 			l += as->mounts;
 		case EXPANSION_FS:
-			l += as->fs;
+			l += as->fs;*/
 		case EXPANSION_PARTS:
-			l += as->parts;*/
+			l += as->parts;
 		case EXPANSION_DEVS:
 			l += as->devs;
 		case EXPANSION_NONE:
@@ -1806,6 +1805,12 @@ block_callback(const controller *c,const device *d,void *v){
 	pthread_mutex_lock(&bfl);
 	if((b = v) == NULL){
 		if( (b = create_blockobj(as,d)) ){
+			unsigned parts = 0;
+			const device *p;
+
+			for(p = d->parts ; p ; p = p->next){
+				++parts;
+			}
 			if(as->devs == 0){
 				b->prev = b->next = NULL;
 				as->bobjs = b;
@@ -1815,6 +1820,7 @@ block_callback(const controller *c,const device *d,void *v){
 				as->bobjs->prev = b;
 				as->bobjs = b;
 			}
+			as->parts += parts;
 			++as->devs;
 		}
 		if(as->rb){
@@ -1833,7 +1839,9 @@ block_callback(const controller *c,const device *d,void *v){
 static void
 block_free(void *cv,void *bv){
 	adapterstate *as = cv;
+	unsigned parts = 0;
 	blockobj *bo = bv;
+	const device *p;
 
 	pthread_mutex_lock(&bfl);
 	if(bo->prev){
@@ -1845,6 +1853,10 @@ block_free(void *cv,void *bv){
 	if(as->bobjs == bo){
 		as->bobjs = bo->next;
 	}
+	for(p = bo->d->parts ; p ; p = p->next){
+		++parts;
+	}
+	as->parts -= parts;
 	--as->devs;
 	free(bo);
 	if(as->rb){
