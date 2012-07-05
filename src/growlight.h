@@ -32,6 +32,9 @@ typedef struct growlight_ui {
 	// Called for a new blockdev, or when one changes
 	void *(*block_event)(const struct controller *,
 			const struct device *,void *);
+
+	// Controller state followed by block state
+	void (*block_free)(void *,void *);
 } glightui;
 
 int growlight_init(int,char * const *,const glightui *);
@@ -226,7 +229,6 @@ int rescan_controller(controller *);
 
 int rescan_blockdev(device *);
 int benchmark_blockdev(const device *);
-void free_device(device *);
 
 // Very coarse locking
 int lock_growlight(void);

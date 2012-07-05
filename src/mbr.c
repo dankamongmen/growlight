@@ -116,32 +116,12 @@ int wipe_dosmbr(device *d){
 	if(wipe_first_sector(d,0,MBR_SIZE)){
 		return -1;
 	}
-	if(strcmp(d->blkdev.pttable,"dos") == 0){
-		device *p;
-
-		while( (p = d->parts) ){
-			d->parts = p->next;
-			free_device(p);
-		}
-		free(d->blkdev.pttable);
-		d->blkdev.pttable = NULL;
-	}
 	return 0;
 }
 
 int wipe_dos_ptable(device *d){
 	if(wipe_first_sector(d,MBR_CODE_SIZE,MBR_SIZE)){
 		return -1;
-	}
-	if(strcmp(d->blkdev.pttable,"dos") == 0){
-		device *p;
-
-		while( (p = d->parts) ){
-			d->parts = p->next;
-			free_device(p);
-		}
-		free(d->blkdev.pttable);
-		d->blkdev.pttable = NULL;
 	}
 	return 0;
 }

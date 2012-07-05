@@ -1797,6 +1797,7 @@ block_callback(const controller *c,const device *d,void *v){
 	adapterstate *as = c->uistate;
 	blockobj *b;
 
+	pthread_mutex_lock(&bfl);
 	if((b = v) == NULL){
 		if( (b = create_blockobj(as,d)) ){
 			if(as->devs == 0){
@@ -1815,15 +1816,38 @@ block_callback(const controller *c,const device *d,void *v){
 			redraw_adapter(as->rb);
 		}
 	}
-	if(as->rb == NULL){
-		return b;
+	if(as->rb){
+		assert(top_panel(as->rb->panel) != ERR);
+		screen_update();
 	}
-	if(as->rb != current_adapter){
-		return b;
-	}
-	assert(top_panel(as->rb->panel) != ERR);
-	screen_update();
+	pthread_mutex_unlock(&bfl);
 	return b;
+}
+
+static void
+block_free(void *cv,void *bv){
+	adapterstate *as = cv;
+	blockobj *bo = bv;
+
+	pthread_mutex_lock(&bfl);
+	if(bo->prev){
+		bo->prev->next = bo->next;
+	}
+	if(bo->next){
+		bo->next->prev = bo->prev;
+	}
+	if(as->bobjs == bo){
+		as->bobjs = bo->next;
+	}
+	--as->devs;
+	free(bo);
+	if(as->rb){
+		resize_adapter(as->rb);
+		redraw_adapter(as->rb);
+		assert(top_panel(as->rb->panel) != ERR);
+		screen_update();
+	}
+	pthread_mutex_unlock(&bfl);
 }
 
 int main(int argc,char * const *argv){
@@ -1831,6 +1855,7 @@ int main(int argc,char * const *argv){
 		.vdiag = vdiag,
 		.adapter_event = adapter_callback,
 		.block_event = block_callback,
+		.block_free = block_free,
 	};
 	WINDOW *w;
 

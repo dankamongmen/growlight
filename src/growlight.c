@@ -260,10 +260,13 @@ const controller *get_controllers(void){
 	return controllers; // FIXME hugely unsafe
 }
 
-void free_device(device *d){
+void free_device(controller *c,device *d){
 	if(d){
 		device *p;
 
+		if(c && c->uistate && d->uistate){
+			gui->block_free(c->uistate,d->uistate);
+		}
 		free_mntentry(d->target);
 		switch(d->layout){
 			case LAYOUT_NONE:{
@@ -293,7 +296,7 @@ void free_device(device *d){
 		}
 		while( (p = d->parts) ){
 			d->parts = p->next;
-			free_device(p);
+			free_device(c,p);
 		}
 		free(d->mntops);
 		free(d->mnttype);
@@ -306,8 +309,8 @@ void free_device(device *d){
 }
 
 static void
-clobber_device(device *d){
-	free_device(d);
+clobber_device(controller *c,device *d){
+	free_device(c,d);
 	free(d);
 }
 
@@ -324,7 +327,7 @@ free_devtable(devtable *dt){
 		}
 		while( (d = c->blockdevs) ){
 			c->blockdevs = d->next;
-			clobber_device(d);
+			clobber_device(c,d);
 		}
 		dt->controllers = c->next;
 		free_controller(c);
@@ -332,11 +335,11 @@ free_devtable(devtable *dt){
 	}
 	while( (d = dt->unknown_blockdevs) ){
 		dt->unknown_blockdevs = d->next;
-		clobber_device(d);
+		clobber_device(&unknown_bus,d);
 	}
 	while( (d = dt->virtual_blockdevs) ){
 		dt->virtual_blockdevs = d->next;
-		clobber_device(d);
+		clobber_device(&virtual_bus,d);
 	}
 }
 
@@ -689,18 +692,18 @@ create_new_device_inner(const char *name,int recurse){
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		vdiag("Couldn't open link at %s%s (%s?)\n",
 			SYSROOT,buf,strerror(errno));
-		clobber_device(d);
+		clobber_device(c,d);
 		return NULL;
 	}
 	// close(2)s fd on success
 	if((r = explore_sysfs_node(fd,name,d,recurse)) < 0){
 		close(fd);
-		clobber_device(d);
+		clobber_device(c,d);
 		return NULL;
 	}else if(r){
 		// The device ought exist now. Don't continue trying to create
 		// a new one, but instead look up the one that now exists.
-		clobber_device(d);
+		clobber_device(c,d);
 		return lookup_device(name);
 	}
 	if(c == &unknown_bus && d->layout == LAYOUT_NONE){
@@ -720,13 +723,13 @@ create_new_device_inner(const char *name,int recurse){
 		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
 			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 				vdiag("Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
-				clobber_device(d);
+				clobber_device(c,d);
 				return NULL;
 			}
 			if(c->transport == TRANSPORT_ATA){
 				if(sg_interrogate(d,dfd)){
 					close(dfd);
-					clobber_device(d);
+					clobber_device(c,d);
 					return NULL;
 				}
 				probe_smart(d);
@@ -739,7 +742,7 @@ create_new_device_inner(const char *name,int recurse){
 			}
 			if((d->blkdev.biossha1 = malloc(20)) == NULL){
 				vdiag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
-				clobber_device(d);
+				clobber_device(c,d);
 				return NULL;
 			}
 			if(mbrsha1(dfd,d->blkdev.biossha1)){
@@ -760,7 +763,7 @@ create_new_device_inner(const char *name,int recurse){
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					vdiag("Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
-					clobber_device(d);
+					clobber_device(c,d);
 					blkid_free_probe(pr);
 					return NULL;
 				}
@@ -770,7 +773,7 @@ create_new_device_inner(const char *name,int recurse){
 						pars,pars == 1 ? "" : "s",
 						pttable);
 				if((d->blkdev.pttable = strdup(pttable)) == NULL){
-					clobber_device(d);
+					clobber_device(c,d);
 					blkid_free_probe(pr);
 					return NULL;
 				}
@@ -802,14 +805,14 @@ create_new_device_inner(const char *name,int recurse){
 							if(p->partdev.partrole != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)){
 								vdiag("Warning: BIOS+MBR boot byte was %02llx on %s\n",
 										flags & 0xffu,p->name);
-								clobber_device(d);
+								clobber_device(c,d);
 								blkid_free_probe(pr);
 								return NULL;
 							}
 						}
 						p->partdev.flags = flags;
 						if(probe_blkid_superblock(p->name,NULL,p)){
-							clobber_device(d);
+							clobber_device(c,d);
 							blkid_free_probe(pr);
 							return NULL;
 						}
@@ -822,12 +825,12 @@ create_new_device_inner(const char *name,int recurse){
 				while( (p = d->parts) ){
 					vdiag("Eliminating malingering partition %s\n",p->name);
 					d->parts = p->next;
-					clobber_device(p);
+					clobber_device(c,p);
 				}
 			}
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
 				vdiag("Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
-				clobber_device(d);
+				clobber_device(c,d);
 				blkid_free_probe(pr);
 				return NULL;
 			}
@@ -848,7 +851,7 @@ create_new_device_inner(const char *name,int recurse){
 			blkid_free_probe(pr);
 		}else if(!d->blkdev.removable || errno != ENOMEDIUM){
 			vdiag("Couldn't probe %s (%s?)\n",name,strerror(errno));
-			clobber_device(d);
+			clobber_device(c,d);
 			return NULL;
 		}else{
 			verbf("\tDevice is unloaded/inaccessible\n");
@@ -1524,7 +1527,7 @@ int unlock_growlight(void){
 }
 
 static int
-rescan(device *d){
+rescan(controller *c,device *d){
 	device *tmp;
 
 	if((tmp = create_new_device(d->name,0)) == NULL){
@@ -1532,7 +1535,7 @@ rescan(device *d){
 	}
 	tmp->target = d->target;
 	d->target = NULL;
-	free_device(d);
+	free_device(c,d);
 	*d = *tmp;
 	free(tmp);
 	return 0;
@@ -1567,15 +1570,15 @@ int rescan_device(const char *name){
 				// partition links
 				device *d = *lnk;
 				*lnk = d->next;
-				free_device(d);
+				free_device(c,d);
 				return 0;
 			}
 			for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
 				if(strcmp(name,(*plnk)->name) == 0){
-					if(rescan(*plnk)){
+					if(rescan(c,*plnk)){
 						device *p = *plnk;
 						*plnk = p->next;
-						free_device(p);
+						free_device(c,p);
 						return 0;
 					}
 				}

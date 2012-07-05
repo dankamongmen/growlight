@@ -1849,11 +1849,17 @@ block_event(const controller *c,const device *d,void *v){
 	return v;
 }
 
+static void
+block_free(void *cv,void *bv){
+	assert(cv && bv);
+}
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = vdiag,
 		.adapter_event = new_adapter,
 		.block_event = block_event,
+		.block_free = block_free,
 	};
 
 	if(growlight_init(argc,argv,&ui)){
