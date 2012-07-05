@@ -577,12 +577,12 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 			case LAYOUT_PARTITION:
 			break;
 			case LAYOUT_ZPOOL:
-		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					(uintmax_t)bo->d->zpool.zpoolver,
 					qprefix(bo->d->size,1,buf,sizeof(buf),0),
-					bo->d->physsec, 'Z', '.', '.', '.',
+					bo->d->physsec,
 					"spa",
 					bo->d->wwn ? bo->d->wwn : "n/a",
 					transport_str(bo->d->zpool.transport)

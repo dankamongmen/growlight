@@ -401,7 +401,7 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_ZPOOL:{
 		use_terminfo_color(COLOR_RED,1);
-		r += rr = printf("%-10.10s %-16.16s %4.4ju " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-4.4s\n",
+		r += rr = printf("%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			(uintmax_t)d->zpool.zpoolver,

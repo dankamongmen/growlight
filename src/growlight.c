@@ -655,6 +655,7 @@ parse_bus_topology(const char *fn){
 void add_new_virtual_blockdev(device *d){
 	d->next = virtual_bus.blockdevs;
 	virtual_bus.blockdevs = d;
+	d->uistate = gui->block_event(&virtual_bus,d,d->uistate);
 }
 
 static device *
