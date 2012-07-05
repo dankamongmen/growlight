@@ -33,7 +33,6 @@
 #include "mbr.h"
 #include "zfs.h"
 #include "swap.h"
-#include "loop.h"
 #include "udev.h"
 #include "mdadm.h"
 #include "popen.h"
