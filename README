@@ -46,4 +46,4 @@ checkout, since by default using the SPL headers hides the real system headers.
 Unfortunately, the headers I've copied into libzfs/ in the checkout quite
 likely don't match yours. Have fun!
 
-	env CFLAGS="-I`pwd`/libzfs" LDFLAGS="-L/usr/local/lib" ./configure
+ env CFLAGS="-I`pwd`/libzfs" LDFLAGS="-L/usr/local/lib" ./configure --enable-zfs
