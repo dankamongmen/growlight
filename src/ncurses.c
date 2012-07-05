@@ -588,7 +588,19 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 					) != ERR);
 			break;
 		}
-		line += bo->lns;
+		++line;
+		if(as->expansion >= EXPANSION_PARTS){
+			const device *p;
+
+			for(p = bo->d->parts ; p ; p = p->next){
+				if(line >= rows - !endp){
+					break;
+				}
+				assert(mvwprintw(rb->win,line,START_COL * 2 + 1,
+							"partition %s",p->name) != ERR);
+				++line;
+			}
+		}
 		bo = bo->next;
 	}
 }
