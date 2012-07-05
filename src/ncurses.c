@@ -552,7 +552,8 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 		switch(bo->d->layout){
 			case LAYOUT_NONE:
 		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
-					bo->d->name,bo->d->model,
+					bo->d->name,
+					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision,
 					qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
@@ -563,7 +564,8 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 			break;
 			case LAYOUT_MDADM:
 		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
-					bo->d->name,bo->d->model,
+					bo->d->name,
+					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision,
 					qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
@@ -575,6 +577,16 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 			case LAYOUT_PARTITION:
 			break;
 			case LAYOUT_ZPOOL:
+		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+					bo->d->name,
+					bo->d->model ? bo->d->model : "n/a",
+					(uintmax_t)bo->d->zpool.zpoolver,
+					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					bo->d->physsec, 'Z', '.', '.', '.',
+					"spa",
+					bo->d->wwn ? bo->d->wwn : "n/a",
+					transport_str(bo->d->zpool.transport)
+					) != ERR);
 			break;
 		}
 		line += bo->lns;
