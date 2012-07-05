@@ -47,6 +47,7 @@ typedef struct blockobj {
 	const device *d;
 	unsigned lns;			// number of lines obj would take up
 	unsigned parts;			// number of parts last we checked
+	unsigned fs;			// number of filesystems...
 	struct partobj *pobjs;
 } blockobj;
 
@@ -66,8 +67,8 @@ typedef struct adapterstate {
 		EXPANSION_NONE,
 		EXPANSION_DEVS,
 		EXPANSION_PARTS,
-		/*
 		EXPANSION_FS,
+		/*
 		EXPANSION_MOUNTS,
 		*/
 	} expansion;
@@ -76,7 +77,7 @@ typedef struct adapterstate {
 	reelbox *rb;
 } adapterstate;
 
-#define EXPANSION_MAX EXPANSION_PARTS
+#define EXPANSION_MAX EXPANSION_FS
 
 static char statusmsg[73];
 static unsigned count_adapters;
@@ -105,9 +106,9 @@ lines_for_adapter(const struct adapterstate *as){
 
 	switch(as->expansion){ // Intentional fallthrus
 		/*case EXPANSION_MOUNTS:
-			l += as->mounts;
+			l += as->mounts;*/
 		case EXPANSION_FS:
-			l += as->fs;*/
+			l += as->fs;
 		case EXPANSION_PARTS:
 			l += as->parts;
 		case EXPANSION_DEVS:
@@ -1515,6 +1516,9 @@ node_lines(int e,const blockobj *l){
 	lns = 1;
 	if(e > EXPANSION_DEVS){
 		lns += l->parts;
+		if(e > EXPANSION_PARTS){
+			lns += l->fs;
+		}
 	}
 	return lns;
 }
@@ -1808,8 +1812,14 @@ create_blockobj(const adapterstate *as,const device *d){
 
 		memset(b,0,sizeof(*b));
 		b->d = d;
+		if(d->mnttype){
+			++b->fs;
+		}
 		for(p = d->parts ; p ; p = p->next){
 			++b->parts;
+			if(p->mnttype){
+				++b->fs;
+			}
 		}
 		b->lns = node_lines(as->expansion,b);
 	}
@@ -1834,6 +1844,7 @@ block_callback(const controller *c,const device *d,void *v){
 				as->bobjs = b;
 			}
 			as->parts += b->parts;
+			as->fs += b->fs;
 			++as->devs;
 		}
 		if(as->rb){
@@ -1865,6 +1876,7 @@ block_free(void *cv,void *bv){
 		as->bobjs = bo->next;
 	}
 	as->parts -= bo->parts;
+	as->fs -= bo->fs;
 	--as->devs;
 	free(bo);
 	if(as->rb){
