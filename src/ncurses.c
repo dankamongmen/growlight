@@ -598,7 +598,11 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 					break;
 				}
 				assert(mvwprintw(rb->win,line,START_COL * 2 + 1,
-							"partition %s",p->name) != ERR);
+							"%-10.10s %-36.36s " PREFIXFMT " %-5.5s",
+							p->name,p->partdev.uuid,
+							qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
+							partrole_str(p->partdev.partrole,p->partdev.flags)
+							) != ERR);
 				++line;
 			}
 		}

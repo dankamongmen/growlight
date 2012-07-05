@@ -255,6 +255,17 @@ pcie_gen(unsigned gen){
 }
 
 static inline const char *
+partrole_str(int partrole,uint64_t flags){
+	return ((partrole == PARTROLE_PRIMARY || partrole == PARTROLE_GPT) && (flags & 0xffu) == 0x80) ? "Boot" :
+		partrole == PARTROLE_PRIMARY ? "Pri" :
+		partrole == PARTROLE_EXTENDED ? "Ext" :
+		partrole == PARTROLE_LOGICAL ? "Log" :
+		partrole == PARTROLE_GPT ? "GPT" :
+		partrole == PARTROLE_EPS ? "ESP" :
+		"Unk";
+}
+
+static inline const char *
 transport_str(transport_e t){
 	return t == SERIAL_USB3 ? "USB3" : t == SERIAL_USB2 ? "USB2" :
 		t == SERIAL_USB ? "USB1" : t == SERIAL_ATAIII ? "SAT3" :\
