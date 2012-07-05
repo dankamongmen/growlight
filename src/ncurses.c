@@ -598,10 +598,12 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 					break;
 				}
 				assert(mvwprintw(rb->win,line,START_COL * 2 + 1,
-							"%-10.10s %-36.36s " PREFIXFMT " %-5.5s",
-							p->name,p->partdev.uuid,
+							"%-10.10s %-36.36s " PREFIXFMT " %-5.5s %-12.12ls",
+							p->name,
+							p->partdev.uuid ? p->partdev.uuid : "",
 							qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
-							partrole_str(p->partdev.partrole,p->partdev.flags)
+							partrole_str(p->partdev.partrole,p->partdev.flags),
+							p->partdev.pname ? p->partdev.pname : L"n/a"
 							) != ERR);
 				++line;
 			}
