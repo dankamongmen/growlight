@@ -303,6 +303,7 @@ void free_device(controller *c,device *d){
 		free(d->uuid);
 		free(d->mnt);
 		free(d->wwn);
+		free(d->label);
 		free(d->model);
 		free(d->revision);
 	}
