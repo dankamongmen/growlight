@@ -1628,6 +1628,11 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
+			case 12: // CTRL+L FIXME
+				pthread_mutex_lock(&bfl);
+				wrefresh(curscr);
+				pthread_mutex_unlock(&bfl);
+				break;
 			case '+': case KEY_RIGHT:
 				pthread_mutex_lock(&bfl);
 				expand_adapter_locked();
