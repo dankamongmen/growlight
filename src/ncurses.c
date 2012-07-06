@@ -48,6 +48,7 @@ typedef struct blockobj {
 	unsigned lns;			// number of lines obj would take up
 	unsigned parts;			// number of parts last we checked
 	unsigned fs;			// number of filesystems...
+	unsigned mounts;		// number of mounts...
 	struct partobj *pobjs;
 } blockobj;
 
@@ -68,16 +69,14 @@ typedef struct adapterstate {
 		EXPANSION_DEVS,
 		EXPANSION_PARTS,
 		EXPANSION_FS,
-		/*
 		EXPANSION_MOUNTS,
-		*/
 	} expansion;
 	struct adapterstate *next,*prev;
 	blockobj *bobjs;
 	reelbox *rb;
 } adapterstate;
 
-#define EXPANSION_MAX EXPANSION_FS
+#define EXPANSION_MAX EXPANSION_MOUNTS
 
 static char statusmsg[73];
 static unsigned count_adapters;
@@ -105,8 +104,8 @@ lines_for_adapter(const struct adapterstate *as){
 	int l = 2;
 
 	switch(as->expansion){ // Intentional fallthrus
-		/*case EXPANSION_MOUNTS:
-			l += as->mounts;*/
+		case EXPANSION_MOUNTS:
+			l += as->mounts;
 		case EXPANSION_FS:
 			l += as->fs;
 		case EXPANSION_PARTS:
@@ -595,9 +594,20 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 			const device *p;
 
 			if(as->expansion >= EXPANSION_FS){
+				if(line >= rows - !endp){
+					break;
+				}
 				if(bo->d->mnttype){
 					// FIXME
 					++line;
+					if(as->expansion >= EXPANSION_MOUNTS){
+						if(line >= rows - !endp){
+							break;
+						}
+						if(bo->d->mnt){
+							++line;
+						}
+					}
 				}
 			}
 			for(p = bo->d->parts ; p ; p = p->next){
@@ -612,13 +622,21 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 							partrole_str(p->partdev.partrole,p->partdev.flags),
 							p->partdev.pname ? p->partdev.pname : L"n/a"
 							) != ERR);
+				++line;
 				if(as->expansion >= EXPANSION_FS){
 					if(p->mnttype){
 						// FIXME
 						++line;
+						if(as->expansion >= EXPANSION_MOUNTS){
+							if(line >= rows - !endp){
+								break;
+							}
+							if(p->mnt){
+								++line;
+							}
+						}
 					}
 				}
-				++line;
 			}
 		}
 		bo = bo->next;
@@ -1826,11 +1844,17 @@ create_blockobj(const adapterstate *as,const device *d){
 		b->d = d;
 		if(d->mnttype){
 			++b->fs;
+			if(d->mnt){
+				++b->mounts;
+			}
 		}
 		for(p = d->parts ; p ; p = p->next){
 			++b->parts;
 			if(p->mnttype){
 				++b->fs;
+				if(p->mnt){
+					++b->mounts;
+				}
 			}
 		}
 		b->lns = node_lines(as->expansion,b);
@@ -1855,6 +1879,7 @@ block_callback(const controller *c,const device *d,void *v){
 				as->bobjs->prev = b;
 				as->bobjs = b;
 			}
+			as->mounts += b->mounts;
 			as->parts += b->parts;
 			as->fs += b->fs;
 			++as->devs;
@@ -1887,6 +1912,7 @@ block_free(void *cv,void *bv){
 	if(as->bobjs == bo){
 		as->bobjs = bo->next;
 	}
+	as->mounts -= bo->mounts;
 	as->parts -= bo->parts;
 	as->fs -= bo->fs;
 	--as->devs;
