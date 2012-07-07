@@ -520,10 +520,11 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 }
 
 static void
-print_fs(const device *d,WINDOW *w,unsigned *line){
-	assert(d->mnttype);
-	assert(w);
-	//assert(mvwprintw(w,*line,START_COL * 3,"%s",d->name) != ERR);
+print_fs(const device *d,WINDOW *w,unsigned *line,unsigned rows,unsigned endp){
+	if(*line >= rows - !endp){
+		return;
+	}
+	assert(mvwprintw(w,*line,START_COL * 3,"%s",d->name) != ERR);
 	++*line;
 }
 
@@ -539,18 +540,6 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 	}
 	if(as->expansion < EXPANSION_DEVS){
 		return;
-	}
-	bo = rb->selected;
-	line = rb->selline;
-	// FIXME what the fuck is this
-	while(bo && line + bo->lns >= !!topp){
-		if(line >= rows - !endp){
-			break;
-		}
-		assert(mvwprintw(rb->win,line,START_COL * 2,"%s",bo->d->name) != ERR);
-		if( (bo = bo->prev) ){
-			line -= bo->lns;
-		}
 	}
 	line = rb->selected ? rb->selline + rb->selected->lns : -topp + 1;
 	bo = rb->selected ? rb->selected->next : as->bobjs;
@@ -607,7 +596,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 					break;
 				}
 				if(bo->d->mnttype){
-					print_fs(bo->d,rb->win,&line);
+					print_fs(bo->d,rb->win,&line,rows,endp);
 					if(as->expansion >= EXPANSION_MOUNTS){
 						if(line >= rows - !endp){
 							break;
@@ -633,7 +622,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 				++line;
 				if(as->expansion >= EXPANSION_FS){
 					if(p->mnttype){
-						print_fs(p,rb->win,&line);
+						print_fs(p,rb->win,&line,rows,endp);
 						if(as->expansion >= EXPANSION_MOUNTS){
 							if(line >= rows - !endp){
 								break;
