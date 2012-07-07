@@ -1836,8 +1836,8 @@ diag(const char *fmt,...){
 }*/
 
 static void *
-block_event(const controller *c,const device *d,void *v){
-	assert(c && d);
+block_event(const device *d,void *v){
+	assert(d);
 	return v;
 }
 
