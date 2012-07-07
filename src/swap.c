@@ -73,13 +73,13 @@ int swapoffdev(device *d){
 }
 
 // Parse /proc/swaps to detect active swap devices
-int parse_swaps(void){
+int parse_swaps(const glightui *gui,const char *name){
 	char buf[BUFSIZ];
 	int line = 0;
 	FILE *fp;
 
-	if((fp = fopen("/proc/swaps","r")) == NULL){
-		fprintf(stderr,"Couldn't open /proc/swaps (%s?)\n",strerror(errno));
+	if((fp = fopen(name,"re")) == NULL){
+		diag("Couldn't open %s (%s?)\n",name,strerror(errno));
 		return -1;
 	}
 	// First line is a legend
@@ -99,13 +99,14 @@ int parse_swaps(void){
 		}
 		if(d->swapprio == SWAP_INVALID){
 			if(d->mnttype){
-				fprintf(stderr,"Warning: %s went from %s to swap\n",d->name,d->mnttype);
+				diag("Warning: %s went from %s to swap\n",d->name,d->mnttype);
 				free(d->mnttype);
 				// FIXME...
 			}
 			if((d->mnttype = strdup("swap")) == NULL){
 				goto err;
 			}
+			d->uistate = gui->block_event(d,d->uistate);
 		}
 		// FIXME we can get the real priority from the last field
 		d->swapprio = SWAP_MAXPRIO; // FIXME

@@ -45,6 +45,7 @@
 #include "growlight.h"
 
 #define SYSROOT "/sys/class/block/"
+#define SWAPS "/proc/swaps"
 #define MOUNTS	"/proc/mounts"
 #define DEVROOT "/dev"
 #define DEVBYID DEVROOT "/disk/by-id/"
@@ -96,8 +97,7 @@ push_devtable(devtable *dt){
 	controllers = &virtual_bus;
 }
 
-static void
-vdiag(const char *fmt,...){
+void diag(const char *fmt,...){
 	va_list ap;
 
 	va_start(ap,fmt);
@@ -200,13 +200,13 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			uint32_t data;
 
 			if((pci = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
-				vdiag("Couldn't look up PCIe device\n");
+				diag("Couldn't look up PCIe device\n");
 				free_controller(c);
 				free(c);
 				return NULL;
 			}
 			if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
-				vdiag("Couldn't look up PCIe device\n");
+				diag("Couldn't look up PCIe device\n");
 				free_controller(c);
 				free(c);
 				return NULL;
@@ -353,11 +353,11 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz)
 	device *p;
 
 	if(strlen(name) >= sizeof(p->name)){
-		vdiag("Bad name: %s\n",name);
+		diag("Bad name: %s\n",name);
 		return NULL;
 	}
 	if(!pnum){
-		vdiag("Can't work with partition number %u\n",pnum);
+		diag("Can't work with partition number %u\n",pnum);
 		return NULL;
 	}
 	if( (p = malloc(sizeof(*p))) ){
@@ -404,44 +404,44 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 			return -1;
 		}
 		if((r = readlinkat(sysfd,name,buf,sizeof(buf))) < 0){
-			vdiag("Couldn't read link at %s%s (%s?)\n",
+			diag("Couldn't read link at %s%s (%s?)\n",
 				SYSROOT,name,strerror(errno));
 			return -1;
 		}
 		buf[r] = '\0';
 		if((dev = strrchr(buf,'/')) == NULL){
-			vdiag("Bad link: "SYSROOT"%s->%s\n",name,buf);
+			diag("Bad link: "SYSROOT"%s->%s\n",name,buf);
 			return -1;
 		}
 		*dev++ = '\0';
 		if(strcmp(dev,name)){
-			vdiag("Invalid link: "SYSROOT"%s->%s/%s\n",name,buf,dev);
+			diag("Invalid link: "SYSROOT"%s->%s/%s\n",name,buf,dev);
 			return -1;
 		}
 		if((dev = strrchr(buf,'/')) == NULL){
-			vdiag("Bad toplink: "SYSROOT"%s->%s\n",name,buf);
+			diag("Bad toplink: "SYSROOT"%s->%s\n",name,buf);
 			return -1;
 		}
 		++dev;
 		if(create_new_device_inner(dev,0) == NULL){
-			vdiag("Couldn't get disk: "SYSROOT"%s->%s/%s\n",name,buf,dev);
+			diag("Couldn't get disk: "SYSROOT"%s->%s/%s\n",name,buf,dev);
 			return -1;
 		}
 		return 1;
 	}
 	if(sysfs_exist_p(fd,"loop")){
 		if((d->model = get_sysfs_string(fd,"loop/backing_file")) == NULL){
-			vdiag("Couldn't get backing file: %s\n",name);
+			diag("Couldn't get backing file: %s\n",name);
 			return -1;
 		}
 	}
 	if(get_sysfs_bool(fd,"removable",&b)){
-		vdiag("Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
+		diag("Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
 	}else{
 		d->blkdev.removable = !!b;
 	}
 	if(get_sysfs_uint(fd,"size",&ul)){
-		vdiag("Couldn't determine size for %s (%s?)\n",name,strerror(errno));
+		diag("Couldn't determine size for %s (%s?)\n",name,strerror(errno));
 	}else{
 		d->size = ul;
 	}
@@ -449,10 +449,10 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
 		d->blkdev.realdev = 1;
 		if((d->model = get_sysfs_string(sdevfd,"model")) == NULL){
-			vdiag("Couldn't get a model for %s (%s?)\n",name,strerror(errno));
+			diag("Couldn't get a model for %s (%s?)\n",name,strerror(errno));
 		}
 		if((d->revision = get_sysfs_string(sdevfd,"rev")) == NULL){
-			vdiag("Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
+			diag("Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
 		}
 		verbf("\tModel: %s revision %s S/N %s\n",
 				d->model ? d->model : "n/a",
@@ -460,7 +460,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 				d->blkdev.serial ? d->blkdev.serial : "n/a");
 		close(sdevfd);
 		if(get_sysfs_bool(fd,"queue/rotational",&b)){
-			vdiag("Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
+			diag("Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
 		}else{
 			d->blkdev.rotate = !!b;
 		}
@@ -488,13 +488,13 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 						return -1;
 					}
 					if(get_sysfs_uint(subfd,"partition",&pnum)){
-						vdiag("Couldn't determine pnum for %s (%s?)\n",
+						diag("Couldn't determine pnum for %s (%s?)\n",
 								dire->d_name,strerror(errno));
 						pnum = 0;
 					}
 					verbf("\tPartition %lu at %s\n",pnum,dire->d_name);
 					if(get_sysfs_uint(subfd,"size",&sz)){
-						vdiag("Couldn't determine size for %s (%s?)\n",
+						diag("Couldn't determine size for %s (%s?)\n",
 								dire->d_name,strerror(errno));
 						sz = 0;
 					}
@@ -505,14 +505,14 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 				}
 				close(subfd);
 			}else{
-				vdiag("Couldn't open directory at %s for %s (%s?)\n",
+				diag("Couldn't open directory at %s for %s (%s?)\n",
 						dire->d_name,name,strerror(errno));
 				return -1;
 			}
 		}
 	}
 	if(errno){
-		vdiag("Error walking sysfs:%s (%s?)\n",name,strerror(errno));
+		diag("Error walking sysfs:%s (%s?)\n",name,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -524,7 +524,7 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 	int r;
 
 	if((dir = fdopendir(fd)) == NULL){
-		vdiag("Couldn't get DIR * from fd %d for %s (%s?)\n",
+		diag("Couldn't get DIR * from fd %d for %s (%s?)\n",
 				fd,name,strerror(errno));
 		return -1;
 	}
@@ -613,19 +613,19 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 		return NULL;
 	}
 	if((dir = open(sysfs,O_RDONLY|O_CLOEXEC)) < 0){
-		vdiag("Couldn't open %s (%s?)\n",sysfs,strerror(errno));
+		diag("Couldn't open %s (%s?)\n",sysfs,strerror(errno));
 		free(sysfs);
 		return NULL;
 	}
 	if((r = readlinkat(dir,"driver/module",buf,sizeof(buf))) < 0){
-		vdiag("Couldn't read link at %.*s/driver/module (%s?)\n",(int)(cur - busid),busid,strerror(errno));
+		diag("Couldn't read link at %.*s/driver/module (%s?)\n",(int)(cur - busid),busid,strerror(errno));
 		free(sysfs);
 		return NULL;
 	}
 	buf[r] = '\0';
 	close(dir);
 	if((e = strrchr(buf,'/')) == NULL || !*++e){
-		vdiag("Bad module name: %s\n",buf);
+		diag("Bad module name: %s\n",buf);
 		free(sysfs);
 		return NULL;
 	}
@@ -648,7 +648,7 @@ parse_bus_topology(const char *fn){
 		return &virtual_bus;
 	}
 	if(realpath(fn,buf) == NULL){
-		vdiag("Couldn't canonicalize %s\n",fn);
+		diag("Couldn't canonicalize %s\n",fn);
 		return NULL;
 	}
 	if((sysfs = parse_pci_busid(buf,&domain,&bus,&dev,&func,&module)) == NULL){
@@ -678,35 +678,35 @@ create_new_device_inner(const char *name,int recurse){
 	int fd,r;
 
 	if(strlen(name) >= sizeof(d->name)){
-		vdiag("Bad name: %s\n",name);
+		diag("Bad name: %s\n",name);
 		return NULL;
 	}
 	if((d = malloc(sizeof(*d))) == NULL){
-		vdiag("Couldn't allocate space for %s\n",name);
+		diag("Couldn't allocate space for %s\n",name);
 		return NULL;
 	}
 	memset(d,0,sizeof(*d));
 	strcpy(d->name,name);
 	d->swapprio = SWAP_INVALID;
 	if(strlen(name) >= sizeof(d->name)){
-		vdiag("Name too long: %s\n",name);
+		diag("Name too long: %s\n",name);
 		return NULL;
 	}
 	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
-		vdiag("Couldn't read link at %s%s (%s?)\n",
+		diag("Couldn't read link at %s%s (%s?)\n",
 			SYSROOT,name,strerror(errno));
 		return NULL;
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
 	if((d->c = parse_bus_topology(buf)) == NULL){
-		vdiag("Couldn't get physical bus topology for %s\n",name);
+		diag("Couldn't get physical bus topology for %s\n",name);
 		return NULL;
 	}else{
 		verbf("\tController: %s\n",d->c->name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
-		vdiag("Couldn't open link at %s%s (%s?)\n",
+		diag("Couldn't open link at %s%s (%s?)\n",
 			SYSROOT,buf,strerror(errno));
 		clobber_device(d);
 		return NULL;
@@ -737,7 +737,7 @@ create_new_device_inner(const char *name,int recurse){
 
 		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
 			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
-				vdiag("Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
+				diag("Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
 				clobber_device(d);
 				return NULL;
 			}
@@ -756,13 +756,13 @@ create_new_device_inner(const char *name,int recurse){
 				d->blkdev.transport = SERIAL_USB3;
 			}
 			if((d->blkdev.biossha1 = malloc(20)) == NULL){
-				vdiag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
+				diag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
 				clobber_device(d);
 				return NULL;
 			}
 			if(mbrsha1(dfd,d->blkdev.biossha1)){
 				if(!d->blkdev.removable){
-					vdiag("Warning: Couldn't read MBR for %s\n",name);
+					diag("Warning: Couldn't read MBR for %s\n",name);
 				}
 				free(d->blkdev.biossha1);
 				d->blkdev.biossha1 = NULL;
@@ -777,7 +777,7 @@ create_new_device_inner(const char *name,int recurse){
 				device *p;
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
-					vdiag("Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
+					diag("Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
 					clobber_device(d);
 					blkid_free_probe(pr);
 					return NULL;
@@ -818,7 +818,7 @@ create_new_device_inner(const char *name,int recurse){
 // primary partition and doing BIOS+MBR booting, in which case it must be 0x80.
 						if((flags & 0xff) != 0){
 							if(p->partdev.partrole != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)){
-								vdiag("Warning: BIOS+MBR boot byte was %02llx on %s\n",
+								diag("Warning: BIOS+MBR boot byte was %02llx on %s\n",
 										flags & 0xffu,p->name);
 								clobber_device(d);
 								blkid_free_probe(pr);
@@ -838,13 +838,13 @@ create_new_device_inner(const char *name,int recurse){
 
 				verbf("\tNo partition table\n");
 				while( (p = d->parts) ){
-					vdiag("Eliminating malingering partition %s\n",p->name);
+					diag("Eliminating malingering partition %s\n",p->name);
 					d->parts = p->next;
 					clobber_device(p);
 				}
 			}
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
-				vdiag("Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
+				diag("Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
 				clobber_device(d);
 				blkid_free_probe(pr);
 				return NULL;
@@ -865,7 +865,7 @@ create_new_device_inner(const char *name,int recurse){
 			}
 			blkid_free_probe(pr);
 		}else if(!d->blkdev.removable || errno != ENOMEDIUM){
-			vdiag("Couldn't probe %s (%s?)\n",name,strerror(errno));
+			diag("Couldn't probe %s (%s?)\n",name,strerror(errno));
 			clobber_device(d);
 			return NULL;
 		}else{
@@ -884,16 +884,16 @@ create_new_device(const char *name,int recurse){
 	device *d;
 
 	if(getcwd(cwd,sizeof(cwd)) == NULL){
-		vdiag("Couldn't get working directory (%s?)\n",strerror(errno));
+		diag("Couldn't get working directory (%s?)\n",strerror(errno));
 		return NULL;
 	}
 	if(chdir(SYSROOT)){
-		vdiag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		diag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
 		return NULL;
 	}
 	d = create_new_device_inner(name,recurse);
 	if(chdir(cwd)){
-		vdiag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
+		diag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
 	}
 	return d;
 }
@@ -907,7 +907,7 @@ controller *lookup_controller(const char *name){
 		}
 	}
 	if(!c){
-		vdiag("Couldn't find device \"%s\"\n",name);
+		diag("Couldn't find device \"%s\"\n",name);
 	}
 	return c;
 }
@@ -957,12 +957,12 @@ scan_device(void *name){
 
 	pthread_mutex_lock(&barrier);
 	if(getcwd(cwd,sizeof(cwd)) == NULL){
-		vdiag("Couldn't get working directory (%s?)\n",strerror(errno));
+		diag("Couldn't get working directory (%s?)\n",strerror(errno));
 		pthread_mutex_unlock(&barrier);
 		return NULL;
 	}
 	if(chdir(SYSROOT)){
-		vdiag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		diag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
 		pthread_mutex_unlock(&barrier);
 		return NULL;
 	}
@@ -972,7 +972,7 @@ scan_device(void *name){
 		pthread_cond_signal(&barrier_cond);
 	}
 	if(chdir(cwd)){
-		vdiag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
+		diag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
 	}
 	pthread_mutex_unlock(&barrier);
 	free(name);
@@ -1004,7 +1004,7 @@ lookup_id_inner(const char *name){
 			d->wwn = wwn;
 		}
 	}else{
-		vdiag("Warning: couldn't trace down %s\n",path);
+		diag("Warning: couldn't trace down %s\n",path);
 	}
 	return d;
 }
@@ -1017,12 +1017,12 @@ lookup_id(void *uname){
 
 	pthread_mutex_lock(&barrier);
 	if(getcwd(cwd,sizeof(cwd)) == NULL){
-		vdiag("Couldn't get working directory (%s?)\n",strerror(errno));
+		diag("Couldn't get working directory (%s?)\n",strerror(errno));
 		pthread_mutex_unlock(&barrier);
 		return NULL;
 	}
 	if(chdir(SYSROOT)){
-		vdiag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		diag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
 		pthread_mutex_unlock(&barrier);
 		return NULL;
 	}
@@ -1031,7 +1031,7 @@ lookup_id(void *uname){
 		pthread_cond_signal(&barrier_cond);
 	}
 	if(chdir(cwd)){
-		vdiag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
+		diag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
 	}
 	pthread_mutex_unlock(&barrier);
 	free(uname);
@@ -1043,7 +1043,7 @@ inotify_fd(void){
 	int fd;
 
 	if((fd = inotify_init1(IN_NONBLOCK|IN_CLOEXEC)) < 0){
-		vdiag("Coudln't get inotify fd (%s?)\n",strerror(errno));
+		diag("Coudln't get inotify fd (%s?)\n",strerror(errno));
 	}
 	return fd;
 }
@@ -1061,12 +1061,12 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 
 	if( (r = pthread_attr_init(&attr)) ||
 		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
-		vdiag("Couldn't set threads detachable (%s?)\n",strerror(errno));
+		diag("Couldn't set threads detachable (%s?)\n",strerror(errno));
 	}
 	if(fd >= 0){
 		wfd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 		if(wfd < 0){
-			vdiag("Coudln't inotify on %s (%s?)\n",dfp,strerror(errno));
+			diag("Coudln't inotify on %s (%s?)\n",dfp,strerror(errno));
 			return -1;
 		}else{
 			verbf("Watching %s on fd %d\n",dfp,wfd);
@@ -1074,12 +1074,12 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 	}
 	r = 0;
 	if((dir = opendir(dfp)) == NULL){
-		vdiag("Coudln't open %s (%s?)\n",dfp,strerror(errno));
+		diag("Coudln't open %s (%s?)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,wfd); }
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
-		vdiag("Coudln't get fd on %s (%s?)\n",dfp,strerror(errno));
+		diag("Coudln't get fd on %s (%s?)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,wfd); }
 		closedir(dir);
 		return -1;
@@ -1092,7 +1092,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
 			if( (r = pthread_create(&tid,NULL,fxn,strdup(d->d_name))) ){
-				vdiag("Couldn't create thread (%s?)\n",strerror(errno));
+				diag("Couldn't create thread (%s?)\n",strerror(errno));
 				pthread_mutex_lock(&barrier);
 				--thrcount;
 				pthread_mutex_unlock(&barrier);
@@ -1102,10 +1102,10 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 		r = 0;
 	}
 	if(r == 0 && errno){
-		vdiag("Error reading %s (%s?)\n",dfp,strerror(errno));
+		diag("Error reading %s (%s?)\n",dfp,strerror(errno));
 		r = -1;
 	}else if(r){
-		vdiag("Error processing %s\n",d->d_name);
+		diag("Error processing %s\n",d->d_name);
 		r = -1;
 	}
 	closedir(dir);
@@ -1141,7 +1141,7 @@ get_dir_fd(const char *root){
 	int fd;
 
 	if((fd = open(root,O_RDONLY|O_CLOEXEC|O_DIRECTORY)) < 0){
-		vdiag("Couldn't get dirfd at %s (%s?)\n",root,strerror(errno));
+		diag("Couldn't get dirfd at %s (%s?)\n",root,strerror(errno));
 	}
 	return fd;
 }
@@ -1166,6 +1166,7 @@ struct event_marshal {
 	int ifd;		// inotify fd
 	int ufd;		// udev_monitor fd
 	int mfd;		// /proc/mounts fd
+	int sfd;		// /proc/swaps fd
 };
 
 static void *
@@ -1196,7 +1197,7 @@ event_posix_thread(void *unsafe){
 					}
 				}
 				if(s && errno != EAGAIN && errno != EWOULDBLOCK){
-					vdiag("Error reading inotify event on %d (%s?)\n",
+					diag("Error reading inotify event on %d (%s?)\n",
 							em->ifd,strerror(errno));
 				}
 			}else if(events[r].data.fd == em->ufd){
@@ -1207,12 +1208,17 @@ event_posix_thread(void *unsafe){
 				clear_mounts(controllers);
 				parse_mounts(gui,MOUNTS);
 				unlock_growlight();
+			}else if(events[r].data.fd == em->sfd){
+				lock_growlight();
+				printf("Reparsing %s...\n",SWAPS);
+				parse_swaps(gui,SWAPS);
+				unlock_growlight();
 			}else{
-				vdiag("Unknown fd %d saw event\n",events[r].data.fd);
+				diag("Unknown fd %d saw event\n",events[r].data.fd);
 			}
 		}
 	}while(e >= 0);
-	vdiag("Error processing event queue (%s?)\n",strerror(errno));
+	diag("Error processing event queue (%s?)\n",strerror(errno));
 	return NULL;
 }
 
@@ -1225,47 +1231,64 @@ event_thread(int fd,int ufd){
 	memset(&ev,0,sizeof(ev));
 	ev.events = EPOLLIN | EPOLLRDHUP;
 	if((em = malloc(sizeof(*em))) == NULL){
-		vdiag("Couldn't create event marshal (%s?)\n",strerror(errno));
+		diag("Couldn't create event marshal (%s?)\n",strerror(errno));
 		return -1;
 	}
 	if((em->efd = epoll_create1(EPOLL_CLOEXEC)) < 0){
-		vdiag("Couldn't create epoll (%s?)\n",strerror(errno));
+		diag("Couldn't create epoll (%s?)\n",strerror(errno));
 		free(em);
 		return -1;
 	}
 	ev.data.fd = fd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,fd,&ev)){
-		vdiag("Couldn't add %d to epoll (%s?)\n",fd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s?)\n",fd,strerror(errno));
 		close(em->efd);
 		free(em);
 		return -1;
 	}
 	ev.data.fd = ufd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,ufd,&ev)){
-		vdiag("Couldn't add %d to epoll (%s?)\n",ufd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s?)\n",ufd,strerror(errno));
 		close(em->efd);
 		free(em);
 		return -1;
 	}
 	em->ifd = fd;
 	em->ufd = ufd;
-	if((em->mfd = open(MOUNTS,O_RDONLY|O_NONBLOCK)) < 0){
+	if((em->mfd = open(MOUNTS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 		close(em->efd);
 		free(em);
 		return -1;
 	}
-	// /proc/mounts always returns readable. On change it returns EPOLLERR.
+	if((em->sfd = open(SWAPS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+		close(em->mfd);
+		close(em->efd);
+		free(em);
+		return -1;
+	}
+	// /proc/* always returns readable. On change they return EPOLLERR.
 	ev.events = EPOLLRDHUP;
+	ev.data.fd = em->sfd;
+	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->sfd,&ev)){
+		diag("Couldn't add %d to epoll (%s?)\n",em->sfd,strerror(errno));
+		close(em->sfd);
+		close(em->mfd);
+		close(em->efd);
+		free(em);
+		return -1;
+	}
 	ev.data.fd = em->mfd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->mfd,&ev)){
-		vdiag("Couldn't add %d to epoll (%s?)\n",em->mfd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s?)\n",em->mfd,strerror(errno));
+		close(em->sfd);
 		close(em->mfd);
 		close(em->efd);
 		free(em);
 		return -1;
 	}
 	if( (r = pthread_create(&eventtid,NULL,event_posix_thread,em)) ){
-		vdiag("Couldn't create event thread (%s?)\n",strerror(r));
+		diag("Couldn't create event thread (%s?)\n",strerror(r));
+		close(em->sfd);
 		close(em->mfd);
 		close(em->efd);
 		free(em);
@@ -1279,11 +1302,11 @@ kill_event_thread(void){
 	int r = 0,rr;
 
 	if( (rr = pthread_cancel(eventtid)) ){
-		vdiag("Couldn't cancel event thread (%s?)\n",strerror(rr));
+		diag("Couldn't cancel event thread (%s?)\n",strerror(rr));
 		r |= -1;
 	}
 	if( (rr = pthread_join(eventtid,NULL)) ){
-		vdiag("Couldn't join event thread (%s?)\n",strerror(rr));
+		diag("Couldn't join event thread (%s?)\n",strerror(rr));
 		r |= -1;
 	}
 	r |= shutdown_udev();
@@ -1333,11 +1356,11 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	const char *enc;
 
 	if(setlocale(LC_ALL,"") == NULL){
-		vdiag("Couldn't set locale (%s?)\n",strerror(errno));
+		diag("Couldn't set locale (%s?)\n",strerror(errno));
 		goto err;
 	}
 	if((!(enc = nl_langinfo(CODESET))) || strcmp(enc,"UTF-8")){
-		vdiag("Locale isn't UTF-8, aborting\n");
+		diag("Locale isn't UTF-8, aborting\n");
 		goto err;
 	}
 	SSL_library_init();
@@ -1350,11 +1373,11 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			break;
 		}case 't':{
 			if(growlight_target){
-				vdiag("Error: defined --target twice (%s, %s)\n",
+				diag("Error: defined --target twice (%s, %s)\n",
 						growlight_target,optarg);
 				usage(argv[0],EXIT_FAILURE);
 			}else if(optarg == NULL){
-				vdiag("-t|--target requires an argument\n");
+				diag("-t|--target requires an argument\n");
 				usage(argv[0],EXIT_FAILURE);
 			}else{
 				if(set_target(optarg)){
@@ -1369,15 +1392,15 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			version(argv[0],EXIT_SUCCESS);
 			break;
 		}case ':':{
-			vdiag("Option requires argument: '%c'\n",optopt);
+			diag("Option requires argument: '%c'\n",optopt);
 			usage(argv[0],EXIT_FAILURE);
 			break;
 		}case '?':{
-			vdiag("Unknown option: '%c'\n",optopt);
+			diag("Unknown option: '%c'\n",optopt);
 			usage(argv[0],EXIT_FAILURE);
 			break;
 		}default:{
-			vdiag("Misuse of option: '%c'\n",optopt);
+			diag("Misuse of option: '%c'\n",optopt);
 			usage(argv[0],EXIT_FAILURE);
 			break;
 		} }
@@ -1387,7 +1410,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf,
 			gnu_get_libc_version(),gnu_get_libc_release());
 	if(glight_pci_init()){
-		vdiag("Couldn't init libpciaccess (%s?)\n",strerror(errno));
+		diag("Couldn't init libpciaccess (%s?)\n",strerror(errno));
 	}else{
 		usepci = 1;
 	}
@@ -1408,12 +1431,12 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	if(watch_dir(fd,DEVBYID,lookup_id)){
-		vdiag("Couldn't monitor %s; won't have WWNs\n",DEVBYID);
+		diag("Couldn't monitor %s; won't have WWNs\n",DEVBYID);
 	}
 	if(parse_mounts(gui,MOUNTS)){
 		goto err;
 	}
-	if(parse_swaps()){
+	if(parse_swaps(gui,SWAPS)){
 		goto err;
 	}
 	if((udevfd = monitor_udev()) < 0){
@@ -1451,13 +1474,13 @@ int rescan_controller(controller *c){
 	char buf[PATH_MAX];
 
 	if(snprintf(buf,sizeof(buf),"%s/device/rescan",c->sysfs) >= (int)sizeof(buf)){
-		vdiag("Name too long: %s\n",c->sysfs);
+		diag("Name too long: %s\n",c->sysfs);
 		return -1;
 	}
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
-	vdiag("Wrote '1' to %s\n",buf);
+	diag("Wrote '1' to %s\n",buf);
 	sync();
 	return 0;
 }
@@ -1466,13 +1489,13 @@ int reset_controller(controller *c){
 	char buf[PATH_MAX];
 
 	if(snprintf(buf,sizeof(buf),"%s/device/reset",c->sysfs) >= (int)sizeof(buf)){
-		vdiag("Name too long: %s\n",c->sysfs);
+		diag("Name too long: %s\n",c->sysfs);
 		return -1;
 	}
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
-	vdiag("Wrote '1' to %s\n",buf);
+	diag("Wrote '1' to %s\n",buf);
 	sync();
 	return 0;
 }
@@ -1481,7 +1504,7 @@ int benchmark_blockdev(const device *d){
 	char buf[PATH_MAX];
 
 	if(snprintf(buf,sizeof(buf),"/sbin/hdparm -t /dev/%s",d->name) >= (int)sizeof(buf)){
-		vdiag("Name too long: %s\n",d->name);
+		diag("Name too long: %s\n",d->name);
 		return -1;
 	}
 	if(popen_drain(buf)){
@@ -1496,13 +1519,13 @@ int rescan_blockdev(device *d){
 	int fd;
 
 	if(snprintf(buf,sizeof(buf),SYSROOT"/%s/device/rescan",d->name) >= (int)sizeof(buf)){
-		vdiag("Name too long: %s\n",d->name);
+		diag("Name too long: %s\n",d->name);
 		return -1;
 	}
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
-	vdiag("Wrote '1' to %s\n",buf);
+	diag("Wrote '1' to %s\n",buf);
 	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC)) < 0){
 		return -1;
 	}
@@ -1512,11 +1535,11 @@ int rescan_blockdev(device *d){
 	for(t = 0 ; t < 3 ; ++t){
 		if(ioctl(fd,BLKRRPART,NULL) == 0){
 			close(fd);
-			vdiag("Updated kernel partition table\n");
+			diag("Updated kernel partition table\n");
 			sync();
 			return 0;
 		}
-		vdiag("Error calling BLKRRPART on %s (%s?), retrying in 5s...\n",buf,strerror(errno));
+		diag("Error calling BLKRRPART on %s (%s?), retrying in 5s...\n",buf,strerror(errno));
 		sleep(5);
 	}
 	close(fd);
@@ -1527,7 +1550,7 @@ int lock_growlight(void){
 	int r;
 
 	if( (r = pthread_mutex_lock(&lock)) ){
-		vdiag("Error locking mutex (%s?)\n",strerror(errno));
+		diag("Error locking mutex (%s?)\n",strerror(errno));
 	}
 	return r;
 }
@@ -1536,7 +1559,7 @@ int unlock_growlight(void){
 	int r;
 
 	if( (r = pthread_mutex_unlock(&lock)) ){
-		vdiag("Error unlocking mutex (%s?)\n",strerror(errno));
+		diag("Error unlocking mutex (%s?)\n",strerror(errno));
 	}
 	return r;
 }
@@ -1664,7 +1687,7 @@ int rescan_devices(void){
 	ret |= watch_dir(-1,SYSROOT,scan_device);
 	ret |= watch_dir(-1,DEVBYID,lookup_id);
 	ret |= parse_mounts(gui,MOUNTS);
-	ret |= parse_swaps();
+	ret |= parse_swaps(gui,SWAPS);
 	// Preserve any defined mappings, if possible. For a mapping to be
 	// preserved, the device must still exist, with the same parameters,
 	// and all containing mappings must also be preserved.
@@ -1724,15 +1747,15 @@ int rescan_devices(void){
 
 int prepare_bios_boot(device *d){
 	if(d->layout != LAYOUT_PARTITION){
-		vdiag("Must boot from a partition\n");
+		diag("Must boot from a partition\n");
 		return -1;
 	}
 	if(d->target == NULL){
-		vdiag("%s is not mapped as a target filesystem\n",d->name);
+		diag("%s is not mapped as a target filesystem\n",d->name);
 		return -1;
 	}
 	if(strcmp(d->target->path,"/")){
-		vdiag("%s is not mapped as the target root (%s)\n",d->name,d->target->path);
+		diag("%s is not mapped as the target root (%s)\n",d->name,d->target->path);
 		return -1;
 	}
 	if(d->partdev.partrole == PARTROLE_GPT){
@@ -1740,33 +1763,33 @@ int prepare_bios_boot(device *d){
 		char cmd[BUFSIZ];
 
 		if(!(d->partdev.flags & 0x80u)){
-			vdiag("%s is not marked as Active (bootable, 0x80)\n",d->name);
+			diag("%s is not marked as Active (bootable, 0x80)\n",d->name);
 			return -1;
 		}
 		if(snprintf(cmd,sizeof(cmd),"/sbin/grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
 					d->mnt,d->name) >= (int)sizeof(cmd)){
-			vdiag("Bad name: %s\n",d->name);
+			diag("Bad name: %s\n",d->name);
 			return -1;
 		}
 		if(popen_drain(cmd)){
 			return -1;
 		}
 	}else{
-		vdiag("BIOS boots from GPT or MSDOS 'Primary' partitions only\n");
+		diag("BIOS boots from GPT or MSDOS 'Primary' partitions only\n");
 		return -1;
 	}
 	// FIXME point grub at kernel?
-	vdiag("FIXME %s not yet implemented\n",d->name);
+	diag("FIXME %s not yet implemented\n",d->name);
 	return -1;
 }
 
 int prepare_uefi_boot(device *d){
 	if(d->layout != LAYOUT_PARTITION){
-		vdiag("Must boot from a partition\n");
+		diag("Must boot from a partition\n");
 		return -1;
 	}
 	if(d->partdev.partrole != PARTROLE_GPT){
-		vdiag("UEFI boots from GPT partitions only\n");
+		diag("UEFI boots from GPT partitions only\n");
 		return -1;
 	}
 	// FIXME ensure the partition is a viable ESP
@@ -1774,6 +1797,6 @@ int prepare_uefi_boot(device *d){
 	// FIXME prepare protective MBR
 	// FIXME install rEFInd to ESP
 	// FIXME point rEFInd at kernel
-	vdiag("FIXME %s not yet implemented\n",d->name);
+	diag("FIXME %s not yet implemented\n",d->name);
 	return -1;
 }

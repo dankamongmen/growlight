@@ -22,6 +22,8 @@ int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
 struct controller;
 
+void diag(const char *,...);
+
 // Growlight's callback-based UI
 typedef struct growlight_ui {
 	void (*vdiag)(const char *,va_list); // free-form diagnostics

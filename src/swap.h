@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 struct device;
+struct growlight_ui;
 
 // Create swap on the device, and use it
 int swapondev(struct device *);
@@ -14,7 +15,7 @@ int swapondev(struct device *);
 int swapoffdev(struct device *);
 
 // Parse /proc/swaps to detect active swap devices
-int parse_swaps(void);
+int parse_swaps(const struct growlight_ui *,const char *);
 
 #ifdef __cplusplus
 }

@@ -531,7 +531,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		return;
 	}
 	if(d->mnttype){
-		assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
+		assert(mvwprintw(w,*line,START_COL * 3,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
@@ -542,7 +542,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		}
 	}
 	if(d->swapprio != SWAP_INVALID){
-		assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
+		assert(mvwprintw(w,*line,START_COL * 3,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
@@ -556,14 +556,14 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		return;
 	}
 	if(d->mnt){
-		assert(mvwprintw(w,*line,START_COL * 5,"%s %s",
+		assert(mvwprintw(w,*line,START_COL * 4,"%s %s",
 					d->mnt,d->mntops) != ERR);
 		if(++*line >= rows - !endp){
 			return;
 		}
 	}
 	if(d->target){
-		assert(mvwprintw(w,*line,START_COL * 5,"%s %s",
+		assert(mvwprintw(w,*line,START_COL * 4,"%s %s",
 				d->target->path,d->target->ops) != ERR);
 		if(++*line >= rows - !endp){
 			return;
@@ -592,7 +592,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 		}
 		switch(bo->d->layout){
 			case LAYOUT_NONE:
-		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision ? bo->d->revision : "n/a",
@@ -604,7 +604,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 					) != ERR);
 			break;
 			case LAYOUT_MDADM:
-		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision ? bo->d->revision : "n/a",
@@ -618,7 +618,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 			case LAYOUT_PARTITION:
 			break;
 			case LAYOUT_ZPOOL:
-		assert(mvwprintw(rb->win,line,START_COL * 2,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					(uintmax_t)bo->d->zpool.zpoolver,
@@ -639,8 +639,8 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 				if(line >= rows - !endp){
 					break;
 				}
-				assert(mvwprintw(rb->win,line,START_COL * 2 + 1,
-							"%-10.10s %-36.36s " PREFIXFMT " %-5.5s %-12.12ls",
+				assert(mvwprintw(rb->win,line,START_COL * 2,
+							"%-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13ls",
 							p->name,
 							p->partdev.uuid ? p->partdev.uuid : "",
 							qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
@@ -1398,16 +1398,6 @@ vdiag(const char *fmt,va_list v){
 	screen_update();
 	pthread_mutex_unlock(&bfl);
 }
-
-static void
-diag(const char *fmt,...){
-	va_list va;
-
-	va_start(va,fmt);
-	vdiag(fmt,va);
-	va_end(va);
-}
-
 
 // Create a panel at the bottom of the window, referred to as the "subdisplay".
 // Only one can currently be active at a time. Window decoration and placement
