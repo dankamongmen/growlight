@@ -729,7 +729,6 @@ create_new_device_inner(const char *name,int recurse){
 			|| (d->layout == LAYOUT_MDADM)){
 		char devbuf[PATH_MAX];
 		blkid_parttable ptbl;
-		blkid_topology tpr;
 		blkid_partlist ppl;
 		blkid_probe pr;
 		int pars;
@@ -843,16 +842,6 @@ create_new_device_inner(const char *name,int recurse){
 					clobber_device(p);
 				}
 			}
-			if((tpr = blkid_probe_get_topology(pr)) == NULL){
-				diag("Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
-				clobber_device(d);
-				blkid_free_probe(pr);
-				return NULL;
-			}
-			d->logsec = d->physsec = 0;
-			// FIXME errorchecking!
-			d->logsec = blkid_topology_get_logical_sector_size(tpr);
-			d->physsec = blkid_topology_get_physical_sector_size(tpr);
 			if(d->logsec || d->physsec){
 				device *p;
 
