@@ -520,6 +520,14 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 }
 
 static void
+print_fs(const device *d,WINDOW *w,unsigned *line){
+	assert(d->mnttype);
+	assert(w);
+	//assert(mvwprintw(w,*line,START_COL * 3,"") != ERR);
+	++*line;
+}
+
+static void
 print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
 	const blockobj *bo;
@@ -534,6 +542,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 	}
 	bo = rb->selected;
 	line = rb->selline;
+	// FIXME what the fuck is this
 	while(bo && line + bo->lns >= !!topp){
 		if(line >= rows - !endp){
 			break;
@@ -598,8 +607,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 					break;
 				}
 				if(bo->d->mnttype){
-					// FIXME
-					++line;
+					print_fs(bo->d,rb->win,&line);
 					if(as->expansion >= EXPANSION_MOUNTS){
 						if(line >= rows - !endp){
 							break;
@@ -625,8 +633,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 				++line;
 				if(as->expansion >= EXPANSION_FS){
 					if(p->mnttype){
-						// FIXME
-						++line;
+						print_fs(p,rb->win,&line);
 						if(as->expansion >= EXPANSION_MOUNTS){
 							if(line >= rows - !endp){
 								break;
@@ -1884,12 +1891,10 @@ block_callback(const controller *c,const device *d,void *v){
 			as->fs += b->fs;
 			++as->devs;
 		}
-		if(as->rb){
-			resize_adapter(as->rb);
-			redraw_adapter(as->rb);
-		}
 	}
 	if(as->rb){
+		resize_adapter(as->rb);
+		redraw_adapter(as->rb);
 		assert(top_panel(as->rb->panel) != ERR);
 		screen_update();
 	}
