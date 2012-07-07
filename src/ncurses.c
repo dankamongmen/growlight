@@ -1555,6 +1555,9 @@ node_lines(int e,const blockobj *l){
 		lns += l->parts;
 		if(e > EXPANSION_PARTS){
 			lns += l->fs;
+			if(e > EXPANSION_FS){
+				lns += l->mounts;
+			}
 		}
 	}
 	return lns;
@@ -1840,41 +1843,55 @@ adapter_callback(const controller *a, void *state){
 	return as;
 }
 
+static void
+update_blockobj(adapterstate *as,blockobj *b,const device *d){
+	unsigned fs,mounts,parts;
+	const device *p;
+
+	fs = mounts = parts = 0;
+	if(d->mnttype){
+		++fs;
+		if(d->mnt){
+			++mounts;
+		}
+	}
+	for(p = d->parts ; p ; p = p->next){
+		++parts;
+		if(p->mnttype){
+			++fs;
+			if(p->mnt){
+				++mounts;
+			}
+		}
+	}
+	as->mounts += (mounts - b->mounts);
+	as->parts += (parts - b->parts);
+	as->fs += (fs - b->fs);
+	b->fs = fs;
+	b->mounts = mounts;
+	b->parts = parts;
+	b->lns = node_lines(as->expansion,b);
+}
+
 static blockobj *
-create_blockobj(const adapterstate *as,const device *d){
+create_blockobj(adapterstate *as,const device *d){
 	blockobj *b;
 
 	if( (b = malloc(sizeof(*b))) ){
-		const device *p;
-
 		memset(b,0,sizeof(*b));
 		b->d = d;
-		if(d->mnttype){
-			++b->fs;
-			if(d->mnt){
-				++b->mounts;
-			}
-		}
-		for(p = d->parts ; p ; p = p->next){
-			++b->parts;
-			if(p->mnttype){
-				++b->fs;
-				if(p->mnt){
-					++b->mounts;
-				}
-			}
-		}
-		b->lns = node_lines(as->expansion,b);
+		update_blockobj(as,b,d);
 	}
 	return b;
 }
 
 static void *
 block_callback(const controller *c,const device *d,void *v){
-	adapterstate *as = c->uistate;
+	adapterstate *as;
 	blockobj *b;
 
 	pthread_mutex_lock(&bfl);
+	as = c->uistate;
 	if((b = v) == NULL){
 		if( (b = create_blockobj(as,d)) ){
 			if(as->devs == 0){
@@ -1886,11 +1903,10 @@ block_callback(const controller *c,const device *d,void *v){
 				as->bobjs->prev = b;
 				as->bobjs = b;
 			}
-			as->mounts += b->mounts;
-			as->parts += b->parts;
-			as->fs += b->fs;
 			++as->devs;
 		}
+	}else{
+		update_blockobj(as,b,d);
 	}
 	if(as->rb){
 		resize_adapter(as->rb);
