@@ -30,8 +30,7 @@ typedef struct growlight_ui {
 	void *(*adapter_event)(const struct controller *,void *);
 
 	// Called for a new blockdev, or when one changes
-	void *(*block_event)(const struct controller *,
-			const struct device *,void *);
+	void *(*block_event)(const struct device *,void *);
 
 	// Controller state
 	void (*adapter_free)(void *);
@@ -100,6 +99,7 @@ typedef struct device {
 	} swapprio;			// Priority as a swap device
 	char *uuid;			// *Filesystem* UUID
 	char *label;			// *Filesystem* label
+	struct controller *c;
 	union {
 		struct {
 			transport_e transport;

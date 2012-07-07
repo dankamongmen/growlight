@@ -260,12 +260,13 @@ const controller *get_controllers(void){
 	return controllers; // FIXME hugely unsafe
 }
 
-void free_device(controller *c,device *d){
+static void
+free_device(device *d){
 	if(d){
 		device *p;
 
-		if(c && c->uistate && d->uistate){
-			gui->block_free(c->uistate,d->uistate);
+		if(d->c && d->c->uistate && d->uistate){
+			gui->block_free(d->c->uistate,d->uistate);
 		}
 		free_mntentry(d->target);
 		switch(d->layout){
@@ -296,7 +297,7 @@ void free_device(controller *c,device *d){
 		}
 		while( (p = d->parts) ){
 			d->parts = p->next;
-			free_device(c,p);
+			free_device(p);
 		}
 		free(d->mntops);
 		free(d->mnttype);
@@ -310,8 +311,8 @@ void free_device(controller *c,device *d){
 }
 
 static void
-clobber_device(controller *c,device *d){
-	free_device(c,d);
+clobber_device(device *d){
+	free_device(d);
 	free(d);
 }
 
@@ -328,7 +329,7 @@ free_devtable(devtable *dt){
 		}
 		while( (d = c->blockdevs) ){
 			c->blockdevs = d->next;
-			clobber_device(c,d);
+			clobber_device(d);
 		}
 		dt->controllers = c->next;
 		if(c->uistate){
@@ -339,11 +340,11 @@ free_devtable(devtable *dt){
 	}
 	while( (d = dt->unknown_blockdevs) ){
 		dt->unknown_blockdevs = d->next;
-		clobber_device(&unknown_bus,d);
+		clobber_device(d);
 	}
 	while( (d = dt->virtual_blockdevs) ){
 		dt->virtual_blockdevs = d->next;
-		clobber_device(&virtual_bus,d);
+		clobber_device(d);
 	}
 }
 
@@ -377,6 +378,7 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz)
 		p->devno = devno;
 		p->size = sz;
 		p->next = *pre;
+		p->c = d->c;
 		*pre = p;
 	}
 	return p;
@@ -663,15 +665,15 @@ parse_bus_topology(const char *fn){
 
 // Used by systems which don't properly populate sysfs (*cough* zfs *cough*)
 void add_new_virtual_blockdev(device *d){
+	d->c = &virtual_bus;
 	d->next = virtual_bus.blockdevs;
 	virtual_bus.blockdevs = d;
-	d->uistate = gui->block_event(&virtual_bus,d,d->uistate);
+	d->uistate = gui->block_event(d,d->uistate);
 }
 
 static device *
 create_new_device_inner(const char *name,int recurse){
 	char buf[PATH_MAX] = "";
-	controller *c;
 	device *d;
 	int fd,r;
 
@@ -697,29 +699,29 @@ create_new_device_inner(const char *name,int recurse){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
-	if((c = parse_bus_topology(buf)) == NULL){
+	if((d->c = parse_bus_topology(buf)) == NULL){
 		vdiag("Couldn't get physical bus topology for %s\n",name);
 		return NULL;
 	}else{
-		verbf("\tController: %s\n",c->name);
+		verbf("\tController: %s\n",d->c->name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
 		vdiag("Couldn't open link at %s%s (%s?)\n",
 			SYSROOT,buf,strerror(errno));
-		clobber_device(c,d);
+		clobber_device(d);
 		return NULL;
 	}
 	// close(2)s fd
 	if((r = explore_sysfs_node(fd,name,d,recurse)) < 0){
-		clobber_device(c,d);
+		clobber_device(d);
 		return NULL;
 	}else if(r){
 		// The device ought exist now. Don't continue trying to create
 		// a new one, but instead look up the one that now exists.
-		clobber_device(c,d);
+		clobber_device(d);
 		return lookup_device(name);
 	}
-	if(c == &unknown_bus && d->layout == LAYOUT_NONE){
+	if(d->c == &unknown_bus && d->layout == LAYOUT_NONE){
 		d->blkdev.realdev = 0;
 	}
 	// Allow d->model to run the checks on validly-filebacked loop devices
@@ -736,26 +738,26 @@ create_new_device_inner(const char *name,int recurse){
 		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
 			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 				vdiag("Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
-				clobber_device(c,d);
+				clobber_device(d);
 				return NULL;
 			}
-			if(c->transport == TRANSPORT_ATA){
+			if(d->c->transport == TRANSPORT_ATA){
 				if(sg_interrogate(d,dfd)){
 					close(dfd);
-					clobber_device(c,d);
+					clobber_device(d);
 					return NULL;
 				}
 				probe_smart(d);
-			}else if(c->transport == TRANSPORT_USB){
+			}else if(d->c->transport == TRANSPORT_USB){
 				d->blkdev.transport = SERIAL_USB;
-			}else if(c->transport == TRANSPORT_USB2){
+			}else if(d->c->transport == TRANSPORT_USB2){
 				d->blkdev.transport = SERIAL_USB2;
-			}else if(c->transport == TRANSPORT_USB3){
+			}else if(d->c->transport == TRANSPORT_USB3){
 				d->blkdev.transport = SERIAL_USB3;
 			}
 			if((d->blkdev.biossha1 = malloc(20)) == NULL){
 				vdiag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
-				clobber_device(c,d);
+				clobber_device(d);
 				return NULL;
 			}
 			if(mbrsha1(dfd,d->blkdev.biossha1)){
@@ -776,7 +778,7 @@ create_new_device_inner(const char *name,int recurse){
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
 					vdiag("Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
-					clobber_device(c,d);
+					clobber_device(d);
 					blkid_free_probe(pr);
 					return NULL;
 				}
@@ -786,7 +788,7 @@ create_new_device_inner(const char *name,int recurse){
 						pars,pars == 1 ? "" : "s",
 						pttable);
 				if((d->blkdev.pttable = strdup(pttable)) == NULL){
-					clobber_device(c,d);
+					clobber_device(d);
 					blkid_free_probe(pr);
 					return NULL;
 				}
@@ -818,14 +820,14 @@ create_new_device_inner(const char *name,int recurse){
 							if(p->partdev.partrole != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)){
 								vdiag("Warning: BIOS+MBR boot byte was %02llx on %s\n",
 										flags & 0xffu,p->name);
-								clobber_device(c,d);
+								clobber_device(d);
 								blkid_free_probe(pr);
 								return NULL;
 							}
 						}
 						p->partdev.flags = flags;
 						if(probe_blkid_superblock(p->name,NULL,p)){
-							clobber_device(c,d);
+							clobber_device(d);
 							blkid_free_probe(pr);
 							return NULL;
 						}
@@ -838,12 +840,12 @@ create_new_device_inner(const char *name,int recurse){
 				while( (p = d->parts) ){
 					vdiag("Eliminating malingering partition %s\n",p->name);
 					d->parts = p->next;
-					clobber_device(c,p);
+					clobber_device(p);
 				}
 			}
 			if((tpr = blkid_probe_get_topology(pr)) == NULL){
 				vdiag("Couldn't probe topology of %s (%s?)\n",name,strerror(errno));
-				clobber_device(c,d);
+				clobber_device(d);
 				blkid_free_probe(pr);
 				return NULL;
 			}
@@ -864,15 +866,15 @@ create_new_device_inner(const char *name,int recurse){
 			blkid_free_probe(pr);
 		}else if(!d->blkdev.removable || errno != ENOMEDIUM){
 			vdiag("Couldn't probe %s (%s?)\n",name,strerror(errno));
-			clobber_device(c,d);
+			clobber_device(d);
 			return NULL;
 		}else{
 			verbf("\tDevice is unloaded/inaccessible\n");
 		}
 	}
-	d->next = c->blockdevs;
-	c->blockdevs = d;
-	d->uistate = gui->block_event(c,d,d->uistate);
+	d->next = d->c->blockdevs;
+	d->c->blockdevs = d;
+	d->uistate = gui->block_event(d,d->uistate);
 	return d;
 }
 
@@ -1203,7 +1205,7 @@ event_posix_thread(void *unsafe){
 				lock_growlight();
 				printf("Reparsing %s...\n",MOUNTS);
 				clear_mounts(controllers);
-				parse_mounts(MOUNTS);
+				parse_mounts(gui,MOUNTS);
 				unlock_growlight();
 			}else{
 				vdiag("Unknown fd %d saw event\n",events[r].data.fd);
@@ -1408,7 +1410,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if(watch_dir(fd,DEVBYID,lookup_id)){
 		vdiag("Couldn't monitor %s; won't have WWNs\n",DEVBYID);
 	}
-	if(parse_mounts(MOUNTS)){
+	if(parse_mounts(gui,MOUNTS)){
 		goto err;
 	}
 	if(parse_swaps()){
@@ -1540,7 +1542,7 @@ int unlock_growlight(void){
 }
 
 static int
-rescan(controller *c,device *d){
+rescan(device *d){
 	device *tmp;
 
 	if((tmp = create_new_device(d->name,0)) == NULL){
@@ -1548,7 +1550,7 @@ rescan(controller *c,device *d){
 	}
 	tmp->target = d->target;
 	d->target = NULL;
-	free_device(c,d);
+	free_device(d);
 	*d = *tmp;
 	free(tmp);
 	return 0;
@@ -1583,15 +1585,15 @@ int rescan_device(const char *name){
 				// partition links
 				device *d = *lnk;
 				*lnk = d->next;
-				free_device(c,d);
+				free_device(d);
 				return 0;
 			}
 			for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
 				if(strcmp(name,(*plnk)->name) == 0){
-					if(rescan(c,*plnk)){
+					if(rescan(*plnk)){
 						device *p = *plnk;
 						*plnk = p->next;
-						free_device(c,p);
+						free_device(p);
 						return 0;
 					}
 				}
@@ -1661,7 +1663,7 @@ int rescan_devices(void){
 	ret |= scan_zpools();
 	ret |= watch_dir(-1,SYSROOT,scan_device);
 	ret |= watch_dir(-1,DEVBYID,lookup_id);
-	ret |= parse_mounts(MOUNTS);
+	ret |= parse_mounts(gui,MOUNTS);
 	ret |= parse_swaps();
 	// Preserve any defined mappings, if possible. For a mapping to be
 	// preserved, the device must still exist, with the same parameters,
