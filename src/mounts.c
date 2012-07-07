@@ -114,7 +114,7 @@ err:
 	return -1;
 }
 
-int parse_mounts(const char *fn){
+int parse_mounts(const glightui *gui,const char *fn){
 	char *mnt,*dev,*ops,*fs;
 	off_t len,idx;
 	char *map;
@@ -174,6 +174,7 @@ int parse_mounts(const char *fn){
 		d->mnttype = fs;
 		d->mntops = ops;
 		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
+		d->uistate = gui->block_event(d,d->uistate);
 		mnt = fs = ops = NULL;
 	}
 	free(dev); free(mnt); free(fs); free(ops);

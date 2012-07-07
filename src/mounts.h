@@ -7,6 +7,7 @@ extern "C" {
 
 struct device;
 struct controller;
+struct growlight_ui;
 
 typedef struct mntentry {
 	char *path;
@@ -18,7 +19,7 @@ typedef struct mntentry {
 
 // (Re)parse the specified file having /proc/mounts format. Remember that
 // /proc/mounts must be poll()ed with POLLPRI, not POLLIN!
-int parse_mounts(const char *);
+int parse_mounts(const struct growlight_ui *,const char *);
 int unmount(struct device *);
 void clear_mounts(struct controller *);
 
