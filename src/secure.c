@@ -14,7 +14,7 @@ int ata_secure_erase(device *d){
 		fprintf(stderr,"Can only run ATA Erase on ATA-connected blockdevs\n");
 		return -1;
 	}
-	if(snprintf(buf,sizeof(buf),"/sbin/hdparm --user-master u --security-set-pass erasepw /dev/%s",d->name) >= (int)sizeof(buf)){
+	if(snprintf(buf,sizeof(buf),"hdparm --user-master u --security-set-pass erasepw /dev/%s",d->name) >= (int)sizeof(buf)){
 		fprintf(stderr,"Bad pw name: %s\n",d->name);
 		return -1;
 	}
@@ -22,7 +22,7 @@ int ata_secure_erase(device *d){
 		fprintf(stderr,"Couldn't set ATA user password\n");
 		return -1;
 	}
-	if(snprintf(buf,sizeof(buf),"/sbin/hdparm --user-master u --security-erase erasepw /dev/%s",d->name) >= (int)sizeof(buf)){
+	if(snprintf(buf,sizeof(buf),"hdparm --user-master u --security-erase erasepw /dev/%s",d->name) >= (int)sizeof(buf)){
 		fprintf(stderr,"Bad erase name: %s\n",d->name);
 		return -1;
 	}

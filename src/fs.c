@@ -19,7 +19,7 @@ ext4_mkfs(const char *dev){
 	// allow a UUID to be supplied FIXME
 	// set creator OS FIXME
 	// allow -c (badblock check) FIXME
-	if(snprintf(cmd,sizeof(cmd),"/sbin/mkfs -t ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L SprezzaExt4 -O dir_index,extent,^uninit_bg %s",dev) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"mkfs -t ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L SprezzaExt4 -O dir_index,extent,^uninit_bg %s",dev) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Error building command line for %s\n",dev);
 		return -1;
 	}

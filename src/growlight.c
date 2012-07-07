@@ -1503,7 +1503,7 @@ int reset_controller(controller *c){
 int benchmark_blockdev(const device *d){
 	char buf[PATH_MAX];
 
-	if(snprintf(buf,sizeof(buf),"/sbin/hdparm -t /dev/%s",d->name) >= (int)sizeof(buf)){
+	if(snprintf(buf,sizeof(buf),"hdparm -t /dev/%s",d->name) >= (int)sizeof(buf)){
 		diag("Name too long: %s\n",d->name);
 		return -1;
 	}
@@ -1766,7 +1766,7 @@ int prepare_bios_boot(device *d){
 			diag("%s is not marked as Active (bootable, 0x80)\n",d->name);
 			return -1;
 		}
-		if(snprintf(cmd,sizeof(cmd),"/sbin/grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
+		if(snprintf(cmd,sizeof(cmd),"grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
 					d->mnt,d->name) >= (int)sizeof(cmd)){
 			diag("Bad name: %s\n",d->name);
 			return -1;

@@ -27,7 +27,7 @@ int mkswap(device *d){
 		fprintf(stderr,"Already swapping on %s\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/mkswap -L SprezzaSwap /dev/%s",d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"mkswap -L SprezzaSwap /dev/%s",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Error building command line for %s\n",d->name);
 		return -1;
 	}

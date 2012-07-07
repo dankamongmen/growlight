@@ -1441,7 +1441,7 @@ static int
 grubmap(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 
-	if(popen_drain("/usr/sbin/grub-mkdevicemap -m /dev/stdout")){
+	if(popen_drain("grub-mkdevicemap -m /dev/stdout")){
 		return -1;
 	}
 	return 0;
@@ -1574,15 +1574,15 @@ version(wchar_t * const *args,const char *arghelp){
 "++'''''#++++++++++++++++++++++++++++++++'''''++++++++++##########++++''++++++'''"
 "++#++++++++++++++++++++++++++++++++++++++++#++++++++++++#########++++'+''''''+++\n");
 	use_terminfo_color(COLOR_WHITE,1);
-	ret |= popen_drain("/usr/sbin/smartctl --version");
+	ret |= popen_drain("smartctl --version");
 	printf("\n");
-	ret |= popen_drain("/sbin/parted --version");
+	ret |= popen_drain("parted --version");
 	printf("\n");
-	ret |= popen_drain("/sbin/mkswap --version");
+	ret |= popen_drain("mkswap --version");
 	printf("\n");
-	ret |= popen_drain("/usr/sbin/grub-mkdevicemap --version");
+	ret |= popen_drain("grub-mkdevicemap --version");
 	printf("\n");
-	ret |= popen_drain("/sbin/sgdisk --version");
+	ret |= popen_drain("sgdisk --version");
 	if(print_zfs_version(stdout) < 0){
 		ret |= -1;
 	}

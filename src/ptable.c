@@ -13,7 +13,7 @@ static int
 gpt_make_table(device *d){
 	char cmd[BUFSIZ];
 
-	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s mklabel gpt",d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"parted /dev/%s mklabel gpt",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
 		return -1;
 	}
@@ -27,7 +27,7 @@ static int
 gpt_zap_table(device *d){
 	char cmd[BUFSIZ];
 
-	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --zap-all /dev/%s",d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"sgdisk --zap-all /dev/%s",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
 		return -1;
 	}
@@ -41,7 +41,7 @@ static int
 dos_make_table(device *d){
 	char cmd[BUFSIZ];
 
-	if(snprintf(cmd,sizeof(cmd),"/sbin/parted /dev/%s mklabel msdos",d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"parted /dev/%s mklabel msdos",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
 		return -1;
 	}
@@ -84,14 +84,14 @@ gpt_add_part(device *d,const wchar_t *name,uintmax_t size){
 			}while(p != pcheck);
 		}
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --new=%u:0:%ju /dev/%s",partno,sectors,d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"sgdisk --new=%u:0:%ju /dev/%s",partno,sectors,d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
 		return -1;
 	}
 	if(popen_drain(cmd)){
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk --change-name=%u:%ls /dev/%s",partno,name,d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"sgdisk --change-name=%u:%ls /dev/%s",partno,name,d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad names: %d / %ls\n",d->partdev.pnumber,name);
 		return -1;
 	}
@@ -238,7 +238,7 @@ int wipe_partition(device *d){
 		return -1;
 	}
 	p = d->partdev.parent;
-	if(snprintf(cmd,sizeof(cmd),"/sbin/gdisk /dev/%s --delete=%u",p->name,d->partdev.pnumber) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"gdisk /dev/%s --delete=%u",p->name,d->partdev.pnumber) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad names: %s / %s\n",p->name,d->name);
 		return -1;
 	}
@@ -267,7 +267,7 @@ int name_partition(device *d,const wchar_t *name){
 		fprintf(stderr,"Cannot name %s; bad partition table type\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk /dev/%s --change-name=%u:%ls",par->name,d->partdev.pnumber,name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"sgdisk /dev/%s --change-name=%u:%ls",par->name,d->partdev.pnumber,name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad names: %s / %u / %ls\n",par->name,d->partdev.pnumber,name);
 		return -1;
 	}
@@ -291,7 +291,7 @@ int check_partition(device *d){
 		fprintf(stderr,"Will not check mounted filesystem %s\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/fsck -C 0 /dev/%s",d->name) >= (int)sizeof(cmd)){
+	if(snprintf(cmd,sizeof(cmd),"fsck -C 0 /dev/%s",d->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",d->name);
 		return -1;
 	}
@@ -320,7 +320,7 @@ int partition_set_flag(device *d,uint64_t flag,unsigned state){
 		fprintf(stderr,"Cannot set flags on %s; bad partition type\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk -A %u:%s:%jx /dev/%s",
+	if(snprintf(cmd,sizeof(cmd),"sgdisk -A %u:%s:%jx /dev/%s",
 				d->partdev.pnumber,state ? "set" : "clear",
 				(uintmax_t)flag,par->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",par->name);
@@ -351,7 +351,7 @@ int partition_set_code(device *d,unsigned code){
 		fprintf(stderr,"Cannot set code on %s; bad partition type\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"/sbin/sgdisk -t %u:%04x /dev/%s",
+	if(snprintf(cmd,sizeof(cmd),"sgdisk -t %u:%04x /dev/%s",
 			d->partdev.pnumber,code,par->name) >= (int)sizeof(cmd)){
 		fprintf(stderr,"Bad name: %s\n",par->name);
 		return -1;
