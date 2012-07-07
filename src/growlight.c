@@ -1204,13 +1204,13 @@ event_posix_thread(void *unsafe){
 				udev_event();
 			}else if(events[r].data.fd == em->mfd){
 				lock_growlight();
-				printf("Reparsing %s...\n",MOUNTS);
+				diag("Reparsing %s...\n",MOUNTS);
 				clear_mounts(controllers);
 				parse_mounts(gui,MOUNTS);
 				unlock_growlight();
 			}else if(events[r].data.fd == em->sfd){
 				lock_growlight();
-				printf("Reparsing %s...\n",SWAPS);
+				diag("Reparsing %s...\n",SWAPS);
 				parse_swaps(gui,SWAPS);
 				unlock_growlight();
 			}else{
