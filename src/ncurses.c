@@ -523,7 +523,7 @@ static void
 print_fs(const device *d,WINDOW *w,unsigned *line){
 	assert(d->mnttype);
 	assert(w);
-	//assert(mvwprintw(w,*line,START_COL * 3,"") != ERR);
+	//assert(mvwprintw(w,*line,START_COL * 3,"%s",d->name) != ERR);
 	++*line;
 }
 
@@ -1086,7 +1086,6 @@ pull_adapters_down(reelbox *puller,int rows,int cols,int delta){
 		rb->scrline += delta;
 		move_adapter_generic(rb,rows,cols,delta);
 		if(panel_hidden(rb->panel)){
-			//fprintf(stderr,"PULLED THE BOTTOM OFF\n");
 			if((last_reelbox = rb->prev) == NULL){
 				top_reelbox = NULL;
 			}else{
@@ -1891,6 +1890,9 @@ block_callback(const device *d,void *v){
 	blockobj *b;
 
 	pthread_mutex_lock(&bfl);
+	if(d->layout == LAYOUT_PARTITION){
+		d = d->partdev.parent;
+	}
 	as = d->c->uistate;
 	if((b = v) == NULL){
 		if( (b = create_blockobj(as,d)) ){
