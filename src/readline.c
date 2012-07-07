@@ -271,13 +271,16 @@ print_unmount(const device *d){
 
 static int
 print_swap(const device *p){
+	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
 
 	assert(p->mnttype);
-	r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s",
+	r += rr = printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
 			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
 			p->mnttype,
-			p->uuid ? p->uuid : "n/a",p->name);
+			p->uuid ? p->uuid : "n/a",
+			qprefix(p->mntsize,1,buf,sizeof(buf),0),
+			p->name);
 	if(rr < 0){
 		return -1;
 	}
@@ -552,27 +555,30 @@ print_controller(const controller *c,int descend){
 	switch(c->bus){
 		case BUS_PCIe:
 			if(c->pcie.lanes_neg == 0){
-				r += rr = printf("[%s] Southbridge device %04x:%02x.%02x.%x\n",
+				r += rr = printf("[%s] Southbridge device %04x:%02x.%02x.%x\n ",
 					c->ident,c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func);
 			}else{
-				r += rr = printf("[%s] PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)\n",
+				r += rr = printf("[%s] PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)\n ",
 					c->ident,c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func,
 					c->pcie.lanes_neg,pcie_gen(c->pcie.gen));
 			}
-			if(rr < 0){
-				return -1;
-			}
 			break;
 		case BUS_VIRTUAL:
+			rr = 0;
+			break;
 		case BUS_UNKNOWN:
-			return 0;
+			rr = 0;
+			break;
 		default:
 			fprintf(stderr,"Unknown bus type: %d\n",c->bus);
 			return -1;
 	}
-	r += rr = printf(" %s\n",c->name);
+	if(rr < 0){
+		return -1;
+	}
+	r += rr = printf("%s\n",c->name);
 	if(rr < 0){
 		return -1;
 	}
