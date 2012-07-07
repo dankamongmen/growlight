@@ -1459,13 +1459,9 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 // window top padding).
 static const wchar_t *helps[] = {
 	L"'q': quit			ctrl+'L': redraw the screen",
-	L"'⇆Tab' move between displays  'P': toggle subdisplay pinning",
 	L"'e': view environment details 'h': toggle this help display",
 	L"'v': view adapter details     'l': view recent diagnostics",
-	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adaper browser",
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
-	L"'⇞PgUp': previous page        '⇟PgDwn': next page",
-	L"'↖Home': first selection      '↘End': last selection",
 	L"'-'/'←': collapse selection   '+'/'→': expand selection",
 	NULL
 };
