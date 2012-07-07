@@ -1852,6 +1852,9 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 	if(d->target){
 		++mounts;
 	}
+	if(d->swapprio != SWAP_INVALID){
+		++fs;
+	}
 	for(p = d->parts ; p ; p = p->next){
 		++parts;
 		if(p->mnttype){
@@ -1862,6 +1865,9 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 		}
 		if(p->target){
 			++mounts;
+		}
+		if(p->swapprio != SWAP_INVALID){
+			++fs;
 		}
 	}
 	as->mounts += (mounts - b->mounts);
