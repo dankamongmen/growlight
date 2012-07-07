@@ -1886,12 +1886,12 @@ create_blockobj(adapterstate *as,const device *d){
 }
 
 static void *
-block_callback(const controller *c,const device *d,void *v){
+block_callback(const device *d,void *v){
 	adapterstate *as;
 	blockobj *b;
 
 	pthread_mutex_lock(&bfl);
-	as = c->uistate;
+	as = d->c->uistate;
 	if((b = v) == NULL){
 		if( (b = create_blockobj(as,d)) ){
 			if(as->devs == 0){
