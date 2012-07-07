@@ -15,13 +15,17 @@
 #include "sysfs.h"
 #include "growlight.h"
 
-// Taken from hdparm-9.39's sgio.h
-enum {
+// Taken from hdparm-9.39's sgio.h.
+enum {					// Features for CMDS_SUPP_0
 	FEATURE_SMART = 1u,
 	FEATURE_SECMODE = 1u << 1,	// Security Mode feature set
 	FEATURE_REMMODE = 1u << 2,	// Removable Media feature set
 	FEATURE_WRITE_CACHE = 1u << 4,
 } scsi_features;
+
+enum {					// Features for CMDS_SUPP_3 (119)
+	FEATURE_READWRITEVERIFY = 1u << 1,
+} scsi_feats3;
 
 #define SG_ATA_16	0x85
 #define SG_ATA_16_LEN	16
@@ -280,6 +284,10 @@ int sg_interrogate(device *d,int fd){
 	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
 		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
 		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
+	}
+	if(ntohs(buf[CMDS_SUPP_3]) & FEATURE_READWRITEVERIFY){
+		d->blkdev.rwverify = !!(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY);
+		verbf("\tRead-write-verify: %s\n",d->blkdev.rwverify ? "Enabled" : "Disabled/not present");
 	}
 	for(n = START_SERIAL ; n < START_SERIAL + LENGTH_SERIAL ; ++n){
 		unsigned char c1 = (buf[n] & 0xff00) >> 8u;
