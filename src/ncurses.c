@@ -546,7 +546,16 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		return;
 	}
 	if(d->mnt){
-		++*line;
+		assert(mvwprintw(w,*line,START_COL * 5,"%s %s",
+					d->mnt,d->mntops) != ERR);
+		if(++*line >= rows - !endp){
+			return;
+		}
+	}
+	if(d->target){
+		if(++*line >= rows - !endp){
+			return;
+		}
 	}
 }
 
