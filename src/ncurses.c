@@ -521,10 +521,17 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 
 static void
 print_fs(const device *d,WINDOW *w,unsigned *line,unsigned rows,unsigned endp){
+	char buf[PREFIXSTRLEN + 1];
+
 	if(*line >= rows - !endp){
 		return;
 	}
-	assert(mvwprintw(w,*line,START_COL * 3,"%s",d->name) != ERR);
+	assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
+				FSLABELSIZ,FSLABELSIZ,
+				d->label ? d->label : "n/a",
+				d->mnttype,
+				d->uuid ? d->uuid : "n/a",
+				qprefix(d->mntsize,1,buf,sizeof(buf),0)) != ERR);
 	++*line;
 }
 
