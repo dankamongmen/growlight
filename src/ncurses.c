@@ -530,17 +530,27 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 	if(*line >= rows - !endp){
 		return;
 	}
-	if(!d->mnttype){
-		return;
-	}
-	assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
+	if(d->mnttype){
+		assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a",
 				qprefix(d->mntsize,1,buf,sizeof(buf),0)) != ERR);
-	if(++*line >= rows - !endp){
-		return;
+		if(++*line >= rows - !endp){
+			return;
+		}
+	}
+	if(d->swapprio != SWAP_INVALID){
+		assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
+				FSLABELSIZ,FSLABELSIZ,
+				d->label ? d->label : "n/a",
+				d->mnttype,
+				d->uuid ? d->uuid : "n/a",
+				qprefix(d->mntsize,1,buf,sizeof(buf),0)) != ERR);
+		if(++*line >= rows - !endp){
+			return;
+		}
 	}
 	if(expansion < EXPANSION_MOUNTS){
 		return;

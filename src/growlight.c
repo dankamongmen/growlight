@@ -75,7 +75,7 @@ static controller unknown_bus = {
 };
 
 static controller virtual_bus = {
-	.name = "Virtual device",
+	.name = "Virtual devices",
 	.next = &unknown_bus,
 	.ident = "virtual",
 	.bus = BUS_VIRTUAL,
