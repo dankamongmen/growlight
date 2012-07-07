@@ -1849,6 +1849,9 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 			++mounts;
 		}
 	}
+	if(d->target){
+		++mounts;
+	}
 	for(p = d->parts ; p ; p = p->next){
 		++parts;
 		if(p->mnttype){
@@ -1856,6 +1859,9 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 			if(p->mnt){
 				++mounts;
 			}
+		}
+		if(p->target){
+			++mounts;
 		}
 	}
 	as->mounts += (mounts - b->mounts);
