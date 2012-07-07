@@ -305,6 +305,9 @@ print_fs(const device *p,int descend){
 			return 0;
 		}
 		r += rr = print_swap(p);
+		if(rr < 0){
+			return -1;
+		}
 	}
 	if(p->target){
 		r += rr = print_target(p,p->target);
