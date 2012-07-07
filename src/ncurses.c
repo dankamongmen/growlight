@@ -520,10 +520,17 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 }
 
 static void
-print_fs(const device *d,WINDOW *w,unsigned *line,unsigned rows,unsigned endp){
+print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
+						unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
 
+	if(expansion < EXPANSION_FS){
+		return;
+	}
 	if(*line >= rows - !endp){
+		return;
+	}
+	if(!d->mnttype){
 		return;
 	}
 	assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
@@ -532,7 +539,15 @@ print_fs(const device *d,WINDOW *w,unsigned *line,unsigned rows,unsigned endp){
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a",
 				qprefix(d->mntsize,1,buf,sizeof(buf),0)) != ERR);
-	++*line;
+	if(++*line >= rows - !endp){
+		return;
+	}
+	if(expansion < EXPANSION_MOUNTS){
+		return;
+	}
+	if(d->mnt){
+		++*line;
+	}
 }
 
 static void
@@ -598,22 +613,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 		if(as->expansion >= EXPANSION_PARTS){
 			const device *p;
 
-			if(as->expansion >= EXPANSION_FS){
-				if(line >= rows - !endp){
-					break;
-				}
-				if(bo->d->mnttype){
-					print_fs(bo->d,rb->win,&line,rows,endp);
-					if(as->expansion >= EXPANSION_MOUNTS){
-						if(line >= rows - !endp){
-							break;
-						}
-						if(bo->d->mnt){
-							++line;
-						}
-					}
-				}
-			}
+			print_fs(as->expansion,bo->d,rb->win,&line,rows,endp);
 			for(p = bo->d->parts ; p ; p = p->next){
 				if(line >= rows - !endp){
 					break;
@@ -627,19 +627,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 							p->partdev.pname ? p->partdev.pname : L"n/a"
 							) != ERR);
 				++line;
-				if(as->expansion >= EXPANSION_FS){
-					if(p->mnttype){
-						print_fs(p,rb->win,&line,rows,endp);
-						if(as->expansion >= EXPANSION_MOUNTS){
-							if(line >= rows - !endp){
-								break;
-							}
-							if(p->mnt){
-								++line;
-							}
-						}
-					}
-				}
+				print_fs(as->expansion,p,rb->win,&line,rows,endp);
 			}
 		}
 		bo = bo->next;
