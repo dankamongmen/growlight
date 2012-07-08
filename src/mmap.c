@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 
 #include "mmap.h"
+#include "growlight.h"
 
 // Handle files which aren't easily supported by mmap(), such as /proc entries
 // which don't return their true lengths to fstat() and friends. fd should be
@@ -22,7 +23,7 @@ read_map_virt_fd(int fd,off_t *len){
 	*len = 0;
 
 	if(pgsize < 0){
-		fprintf(stderr,"Invalid pagesize: %d (%s?)\n",pgsize,strerror(errno));
+		diag("Invalid pagesize: %d (%s?)\n",pgsize,strerror(errno));
 		return MAP_FAILED;
 	}
 	while((r = read(fd,buf,sizeof(buf))) > 0){
@@ -36,7 +37,7 @@ read_map_virt_fd(int fd,off_t *len){
 	}
 	if(r < 0){
 		int e = errno;
-		fprintf(stderr,"Error reading %d (%s?)\n",fd,strerror(errno));
+		diag("Error reading %d (%s?)\n",fd,strerror(errno));
 		if(map != MAP_FAILED){
 			munmap(map,*len);
 		}
@@ -53,7 +54,7 @@ read_map_virt_fd(int fd,off_t *len){
 	return map;
 
 maperr:
-	fprintf(stderr,"Couldn't extend map of %d past %ju (%s?)\n",fd,(uintmax_t)*len,strerror(errno));
+	diag("Couldn't extend map of %d past %ju (%s?)\n",fd,(uintmax_t)*len,strerror(errno));
 	*len = -1;
 	return MAP_FAILED;
 }
@@ -63,7 +64,7 @@ void *map_virt_fd(int fd,off_t *len){
 	void *map;
 
 	if(fstat(fd,&st)){
-		fprintf(stderr,"Couldn't get size of fd %d (%s?)\n",fd,strerror(errno));
+		diag("Couldn't get size of fd %d (%s?)\n",fd,strerror(errno));
 		return MAP_FAILED;
 	}
 	// Most /proc entries return a 0 length
@@ -72,7 +73,7 @@ void *map_virt_fd(int fd,off_t *len){
 	}
 	if((map = mmap(NULL,*len,PROT_READ,MAP_SHARED,fd,0)) == MAP_FAILED){
 		int e = errno;
-		fprintf(stderr,"Couldn't map %ju at %d (%s?)\n",
+		diag("Couldn't map %ju at %d (%s?)\n",
 				(uintmax_t)*len,fd,strerror(errno));
 		errno = e;
 		return MAP_FAILED;
@@ -86,7 +87,7 @@ void *map_virt_file(const char *fn,int *fd,off_t *len){
 
 	if((tfd = open(fn,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 		int e = errno;
-		fprintf(stderr,"Couldn't open %s (%s?)\n",fn,strerror(errno));
+		diag("Couldn't open %s (%s?)\n",fn,strerror(errno));
 		errno = e;
 		return MAP_FAILED;
 	}

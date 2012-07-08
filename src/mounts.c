@@ -107,7 +107,7 @@ parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops
 	return r;
 
 err:
-	fprintf(stderr,"Couldn't extract mount info from %s\n",map);
+	diag("Couldn't extract mount info from %s\n",map);
 	free(*dev);
 	free(*mnt);
 	free(*fs);
@@ -143,18 +143,18 @@ int parse_mounts(const glightui *gui,const char *fn){
 			continue;
 		}
 		if(statvfs(mnt,&vfs)){
-			fprintf(stderr,"Couldn't stat fs %s (%s?)\n",dev,strerror(errno));
+			diag("Couldn't stat fs %s (%s?)\n",dev,strerror(errno));
 			return -1;
 		}
 		rp = dev;
 		if(lstat(rp,&st) == 0){
 			if(S_ISLNK(st.st_mode)){
 				if((r = readlink(dev,buf,sizeof(buf))) < 0){
-					fprintf(stderr,"Couldn't deref %s (%s?)\n",dev,strerror(errno));
+					diag("Couldn't deref %s (%s?)\n",dev,strerror(errno));
 					goto err;
 				}
 				if((size_t)r >= sizeof(buf)){
-					fprintf(stderr,"Name too long for %s (%d?)\n",dev,r);
+					diag("Name too long for %s (%d?)\n",dev,r);
 					goto err;
 				}
 				buf[r] = '\0';
@@ -166,7 +166,7 @@ int parse_mounts(const glightui *gui,const char *fn){
 		}
 		if(d->mnt){
 			if(strcmp(d->mnt,mnt)){
-				fprintf(stderr,"Already had mount for %s|%s: %s|%s\n",
+				diag("Already had mount for %s|%s: %s|%s\n",
 						dev,mnt,d->name,d->mnt);
 				goto err;
 			}
@@ -196,11 +196,11 @@ err:
 
 int unmount(device *d){
 	if(d->mnt == NULL){
-		fprintf(stderr,"%s is not mounted\n",d->name);
+		diag("%s is not mounted\n",d->name);
 		return -1;
 	}
 	if(umount2(d->mnt,UMOUNT_NOFOLLOW)){
-		fprintf(stderr,"Error unmounting %s at %s (%s?)\n",
+		diag("Error unmounting %s at %s (%s?)\n",
 				d->name,d->mnt,strerror(errno));
 		return -1;
 	}
