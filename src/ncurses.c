@@ -38,6 +38,7 @@ static struct panel_state *active;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
 static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
+static struct panel_state environment = PANEL_STATE_INITIALIZER;
 
 struct adapterstate;
 
@@ -1505,8 +1506,8 @@ display_diags(WINDOW *mainw,struct panel_state *ps){
 	assert(y);
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,DIAGROWS,x - START_COL * 4,L"press 'l' to dismiss diagnostics")){
-		goto err;       
-	}               
+		goto err;
+	}
 	/*
 	if(update_diags_locked(ps)){
 		goto err;
@@ -1532,24 +1533,24 @@ static int
 display_details(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,DETAILROWS,0,L"press 'v' to dismiss details")){
-	        goto err;
+		goto err;
 	}
 	if(current_adapter){
 /*
-	        if(iface_details(panel_window(ps->p),current_iface->is->iface,ps->ysize)){
-	                goto err;
-	        }
+		if(iface_details(panel_window(ps->p),current_iface->is->iface,ps->ysize)){
+			goto err;
+		}
 */
 	}
 	return 0;
 
 err:
 	if(ps->p){
-	        WINDOW *psw = panel_window(ps->p);
+		WINDOW *psw = panel_window(ps->p);
 
-	        hide_panel(ps->p);
-	        del_panel(ps->p);
-	        delwin(psw);
+		hide_panel(ps->p);
+		del_panel(ps->p);
+		delwin(psw);
 	}
 	memset(ps,0,sizeof(*ps));
 	return ERR;
@@ -1565,6 +1566,83 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 		goto err;
 	}
 	if(helpstrs(panel_window(ps->p),1,ps->ysize)){
+		goto err;
+	}
+	return OK;
+
+err:
+	if(ps->p){
+		WINDOW *psw = panel_window(ps->p);
+
+		hide_panel(ps->p);
+		del_panel(ps->p);
+		delwin(psw);
+	}
+	memset(ps,0,sizeof(*ps));
+	return ERR;
+}
+
+#define ENVROWS 10
+#define COLORSPERROW 32
+
+static int
+env_details(WINDOW *hw,int rows){
+	const int col = START_COL;
+	const int row = 1;
+	int z,srows,scols;
+
+	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	getmaxyx(stdscr,srows,scols);
+	if((z = rows) >= ENVROWS){
+		z = ENVROWS - 1;
+	}
+	switch(z){ // Intentional fallthroughs all the way to 0
+	case (ENVROWS - 1):{
+		while(z > 1){
+			int c0,c1;
+
+			c0 = (z - 2) * COLORSPERROW;
+			c1 = c0 + (COLORSPERROW - 1);
+			assert(mvwprintw(hw,row + z,col,"0x%02x--0x%02x: ",c0,c1) == OK);
+			while(c0 <= c1){
+			        if(c0 < COLORS){
+			                assert(wattrset(hw,COLOR_PAIR(c0)) == OK);
+			                assert(wprintw(hw,"X") == OK);
+			        }else{
+			                assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+			                assert(wprintw(hw," ") == OK);
+			        }
+			        ++c0;
+			}
+			--z;
+			assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+		}
+	}case 1:{
+		assert(mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d",
+			        COLORS,COLOR_PAIRS,srows,scols) != ERR);
+		--z;
+	}case 0:{
+		const char *lang = getenv("LANG");
+		const char *term = getenv("TERM");
+
+		lang = lang ? lang : "Undefined";
+		assert(mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s",lang,term) != ERR);
+		--z;
+		break;
+	}default:{
+		return ERR;
+	}
+	}
+	return OK;
+}
+
+static int
+display_enviroment(WINDOW *mainw,struct panel_state *ps){
+	memset(ps,0,sizeof(*ps));
+	if(new_display_panel(mainw,ps,ENVROWS,0,L"press 'e' to dismiss display")){
+		goto err;
+	}
+	if(env_details(panel_window(ps->p),ps->ysize)){
 		goto err;
 	}
 	return OK;
@@ -1771,6 +1849,13 @@ handle_ncurses_input(WINDOW *w){
 			case 'v':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&details,display_details);
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'e':{
+				pthread_mutex_lock(&bfl);
+				toggle_panel(w,&environment,display_enviroment);
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
