@@ -255,7 +255,7 @@ int print_zfs_version(FILE *fp){
 			ZPL_VERSION_STRING,SPA_VERSION_STRING);
 }
 #else
-int init_zfs_support(void){
+int init_zfs_support(const glightui *gui __attribute__ ((unused))){
 	verbf("No ZFS support in this build.\n");
 	return 0;
 }
@@ -268,7 +268,7 @@ int print_zfs_version(FILE *fp){
 	return fprintf(fp,"No ZFS support in this build.\n");
 }
 
-int scan_zpools(void){
+int scan_zpools(const glightui *gui __attribute__ ((unused))){
 	verbf("No ZFS support in this build.\n");
 	return 0;
 }
