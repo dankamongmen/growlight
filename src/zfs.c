@@ -23,6 +23,7 @@ static char props[] = "name,size,allocated,free,capacity,dedupratio,health,altro
 
 struct zpoolcb_t {
 	unsigned pools;
+	const glightui *gui;
 };
 
 static uintmax_t
@@ -132,14 +133,17 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 }
 
 static int
-zfscb(zfs_handle_t *zhf,void *arg __attribute__ ((unused))){
+zfscb(zfs_handle_t *zhf,void *arg){
 	char mntbuf[BUFSIZ],sbuf[BUFSIZ],*mnt,*mnttype;
+	struct zpoolcb_t *cb = arg;
+	const glightui *gui;
 	uintmax_t totalsize;
 	const char *zname;
 	zfs_type_t ztype;
 	int version;
 	device *d;
 
+	gui = cb->gui;
 	zname = zfs_get_name(zhf);
 	ztype = zfs_get_type(zhf);
 	if(!zname || !ztype){
@@ -184,10 +188,11 @@ zfscb(zfs_handle_t *zhf,void *arg __attribute__ ((unused))){
 	d->mnt = mnt;
 	d->mnttype = mnttype;
 	d->mntsize = totalsize;
+	d->uistate = gui->block_event(d,d->uistate);
 	return 0;
 }
 
-int scan_zpools(void){
+int scan_zpools(const glightui *gui){
 	libzfs_handle_t *zfs = zht;
 	zprop_list_t *pools = NULL;
 	struct zpoolcb_t cb;
@@ -199,6 +204,7 @@ int scan_zpools(void){
 	// FIXME do what with it?
 	zprop_free_list(pools);
 	memset(&cb,0,sizeof(cb));
+	cb.gui = gui;
 	if(zpool_iter(zht,zpoolcb,&cb)){
 		fprintf(stderr,"Couldn't iterate over zpools\n");
 		return -1;
@@ -211,7 +217,7 @@ int scan_zpools(void){
 	return 0;
 }
 
-int init_zfs_support(void){
+int init_zfs_support(const glightui *gui){
 	if((zht = libzfs_init()) == NULL){
 		fprintf(stderr,"Warning: couldn't initialize ZFS\n");
 		return 0;
@@ -222,7 +228,7 @@ int init_zfs_support(void){
 		fprintf(stderr,"ZFS history didn't match!\n");
 		return -1;
 	}
-	if(scan_zpools()){
+	if(scan_zpools(gui)){
 		stop_zfs_support();
 		return -1;
 	}

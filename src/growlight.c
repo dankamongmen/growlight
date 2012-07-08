@@ -1413,7 +1413,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	init_special_adapters();
-	if(init_zfs_support()){
+	if(init_zfs_support(gui)){
 		goto err;
 	}
 	if(watch_dir(fd,SYSROOT,scan_device)){
@@ -1672,7 +1672,7 @@ int rescan_devices(void){
 	devtable dt;
 
 	push_devtable(&dt);
-	ret |= scan_zpools();
+	ret |= scan_zpools(gui);
 	ret |= watch_dir(-1,SYSROOT,scan_device);
 	ret |= watch_dir(-1,DEVBYID,lookup_id);
 	ret |= parse_mounts(gui,MOUNTS);

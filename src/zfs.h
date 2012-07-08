@@ -7,9 +7,11 @@ extern "C" {
 
 #include <stdio.h>
 
-int init_zfs_support(void);
+struct growlight_ui;
+
+int init_zfs_support(const struct growlight_ui *);
 int stop_zfs_support(void);
-int scan_zpools(void);
+int scan_zpools(const struct growlight_ui *);
 int print_zfs_version(FILE *);
 
 #ifdef __cplusplus

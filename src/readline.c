@@ -458,28 +458,6 @@ print_zpool(const device *d,int descend){
 	if(!descend){
 		return r;
 	}
-	/*
-	for(md = d->mddev.slaves ; md ; md = md->next){
-		r += rr = print_dev_mplex(md->component,1,descend);
-		if(rr < 0){
-			return -1;
-		}
-		if(strcmp(md->name,md->component->name)){
-			const device *p;
-
-			for(p = md->component->parts ; p ; p = p->next){
-				if(strcmp(md->name,p->name)){
-					continue;
-				}
-				r += rr = print_partition(p,descend);
-				if(rr < 0){
-					return -1;
-				}
-			}
-		}
-
-	}
-	*/
 	return r;
 }
 
