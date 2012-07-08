@@ -1462,7 +1462,7 @@ tokenize(const char *line,wchar_t ***tokes){
 		if(s == NULL){
 			if(conv){
 				if(iswspace(w)){
-					break;
+					continue;
 				}
 				if(w == L'"'){
 					inquotes = 1;
