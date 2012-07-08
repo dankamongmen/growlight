@@ -65,19 +65,12 @@ static pthread_cond_t barrier_cond = PTHREAD_COND_INITIALIZER;
 // Global state for a growlight instance
 typedef struct devtable {
 	controller *controllers;
-	device *unknown_blockdevs;
 	device *virtual_blockdevs;
 } devtable;
 
-static controller unknown_bus = {
-	.name = "Unknown controller",
-	.ident = "unknown",
-	.bus = BUS_UNKNOWN,
-};
-
 static controller virtual_bus = {
 	.name = "Virtual devices",
-	.next = &unknown_bus,
+	.next = NULL,
 	.ident = "virtual",
 	.bus = BUS_VIRTUAL,
 };
@@ -90,8 +83,6 @@ static device *create_new_device_inner(const char *,int);
 static void
 push_devtable(devtable *dt){
 	dt->controllers = controllers;
-	dt->unknown_blockdevs = unknown_bus.blockdevs;
-	unknown_bus.blockdevs = NULL;
 	dt->virtual_blockdevs = virtual_bus.blockdevs;
 	virtual_bus.blockdevs = NULL;
 	controllers = &virtual_bus;
@@ -337,10 +328,6 @@ free_devtable(devtable *dt){
 		}
 		free_controller(c);
 		free(c);
-	}
-	while( (d = dt->unknown_blockdevs) ){
-		dt->unknown_blockdevs = d->next;
-		clobber_device(d);
 	}
 	while( (d = dt->virtual_blockdevs) ){
 		dt->virtual_blockdevs = d->next;
@@ -653,7 +640,7 @@ parse_bus_topology(const char *fn){
 	}
 	if((sysfs = parse_pci_busid(buf,&domain,&bus,&dev,&func,&module)) == NULL){
 		verbf("Couldn't extract PCI address from %s\n",buf);
-		return &unknown_bus;
+		return &virtual_bus;
 	}
 	if((c = find_pcie_controller(domain,bus,dev,func,module,sysfs)) == NULL){
 		free(module);
@@ -721,7 +708,7 @@ create_new_device_inner(const char *name,int recurse){
 		clobber_device(d);
 		return lookup_device(name);
 	}
-	if(d->c == &unknown_bus && d->layout == LAYOUT_NONE){
+	if(d->c == &virtual_bus && d->layout == LAYOUT_NONE){
 		d->blkdev.realdev = 0;
 	}
 	// Allow d->model to run the checks on validly-filebacked loop devices
@@ -1694,22 +1681,6 @@ int rescan_devices(void){
 						t->target = p->target;
 						p->target = NULL;
 					}
-				}
-			}
-		}
-	}
-	for(d = dt.unknown_blockdevs ; d ; d = d->next){
-		if(d->target){
-			if( (t = match_device(d)) ){
-				t->target = d->target;
-				d->target = NULL;
-			}
-		}
-		for(p = d->parts ; p ; p = p->next){
-			if(p->target){
-				if( (t = match_device(p)) ){
-					t->target = p->target;
-					p->target = NULL;
 				}
 			}
 		}
