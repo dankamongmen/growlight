@@ -252,7 +252,7 @@ int sg_interrogate(device *d,int fd){
 	io.sbp = sb;
 	io.cmd_len = sizeof(cdb);
 	if(ioctl(fd,SG_IO,&io)){
-		fprintf(stderr,"Couldn't perform SG_IO ioctl on %d (%s?)\n",fd,strerror(errno));
+		diag("Couldn't perform SG_IO ioctl on %d (%s?)\n",fd,strerror(errno));
 		return -1;
 	}
 	if(io.status && io.status != SG_CHECK_CONDITION){
@@ -329,7 +329,7 @@ int sg_interrogate(device *d,int fd){
 			}
 		break;
 		default:
-			fprintf(stderr,"Unknown transport type %hu on %s\n",maj,d->name);
+			diag("Unknown transport type %hu on %s\n",maj,d->name);
 			break;
 	}
 	return 0;
