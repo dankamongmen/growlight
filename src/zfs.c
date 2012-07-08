@@ -11,7 +11,6 @@
 #ifdef HAVE_LIBZFS
 
 // FIXME hacks around the libspl/libzfs autotools-dominated jank
-#define HAVE_IOCTL_IN_SYS_IOCTL_H
 #define ulong_t unsigned long
 #define boolean_t bool
 #include <stdbool.h>
@@ -134,7 +133,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 
 static int
 zfscb(zfs_handle_t *zhf,void *arg __attribute__ ((unused))){
-	char mntbuf[BUFSIZ],sbuf[BUFSIZ],*mnt;
+	char mntbuf[BUFSIZ],sbuf[BUFSIZ],*mnt,*mnttype;
 	uintmax_t totalsize;
 	const char *zname;
 	zfs_type_t ztype;
@@ -170,12 +169,20 @@ zfscb(zfs_handle_t *zhf,void *arg __attribute__ ((unused))){
 		fprintf(stderr,"Couldn't get mountpoint for %s\n",zname);
 		return 0;
 	}
+	// FIXME check for existing mnttype?
 	if((mnt = strdup(mntbuf)) == NULL){
 		fprintf(stderr,"Couldn't dup mountpoint %s\n",mntbuf);
 		return -1;
 	}
+	if((mnttype = strdup("zfs")) == NULL){
+		fprintf(stderr,"Couldn't dup mnttype\n");
+		free(mnt);
+		return -1;
+	}
 	free(d->mnt);
+	free(d->mnttype);
 	d->mnt = mnt;
+	d->mnttype = mnttype;
 	d->mntsize = totalsize;
 	return 0;
 }
