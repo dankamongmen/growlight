@@ -106,10 +106,13 @@ int parse_swaps(const glightui *gui,const char *name){
 			if((d->mnttype = strdup("swap")) == NULL){
 				goto err;
 			}
+			// FIXME we can get the real priority from the last field
+			d->swapprio = SWAP_MAXPRIO; // FIXME
+			if(d->layout == LAYOUT_PARTITION){
+				d = d->partdev.parent;
+			}
 			d->uistate = gui->block_event(d,d->uistate);
 		}
-		// FIXME we can get the real priority from the last field
-		d->swapprio = SWAP_MAXPRIO; // FIXME
 	}
 	fclose(fp);
 	return 0;

@@ -175,6 +175,9 @@ int parse_mounts(const glightui *gui,const char *fn){
 		d->mnttype = fs;
 		d->mntops = ops;
 		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
+		if(d->layout == LAYOUT_PARTITION){
+			d = d->partdev.parent;
+		}
 		d->uistate = gui->block_event(d,d->uistate);
 		mnt = fs = ops = NULL;
 	}

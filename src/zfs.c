@@ -191,6 +191,9 @@ zfscb(zfs_handle_t *zhf,void *arg){
 	d->label = label;
 	d->mnttype = mnttype;
 	d->mntsize = totalsize;
+	if(d->layout == LAYOUT_PARTITION){
+		d = d->partdev.parent;
+	}
 	d->uistate = gui->block_event(d,d->uistate);
 	return 0;
 }

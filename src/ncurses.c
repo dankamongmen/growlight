@@ -1906,9 +1906,6 @@ block_callback(const device *d,void *v){
 	blockobj *b;
 
 	pthread_mutex_lock(&bfl);
-	if(d->layout == LAYOUT_PARTITION){
-		d = d->partdev.parent;
-	}
 	as = d->c->uistate;
 	if((b = v) == NULL){
 		if( (b = create_blockobj(as,d)) ){
