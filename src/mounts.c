@@ -10,6 +10,7 @@
 #include <sys/mount.h>
 #include <sys/statvfs.h>
 
+#include "fs.h"
 #include "mmap.h"
 #include "mounts.h"
 #include "growlight.h"
@@ -138,37 +139,37 @@ int parse_mounts(const glightui *gui,const char *fn){
 			goto err;
 		}
 		idx += r;
-		if(dev[0] != '/'){
+		if(virtual_mnttype_p(fs)){
 			continue;
 		}
 		if(statvfs(mnt,&vfs)){
 			fprintf(stderr,"Couldn't stat fs %s (%s?)\n",dev,strerror(errno));
-			goto err;
+			return -1;
 		}
 		rp = dev;
-		if(lstat(rp,&st)){
-			fprintf(stderr,"Couldn't stat %s (%s?)\n",rp,strerror(errno));
-			goto err;
-		}
-		if(S_ISLNK(st.st_mode)){
-			if((r = readlink(dev,buf,sizeof(buf))) < 0){
-				fprintf(stderr,"Couldn't deref %s (%s?)\n",dev,strerror(errno));
-				goto err;
+		if(lstat(rp,&st) == 0){
+			if(S_ISLNK(st.st_mode)){
+				if((r = readlink(dev,buf,sizeof(buf))) < 0){
+					fprintf(stderr,"Couldn't deref %s (%s?)\n",dev,strerror(errno));
+					goto err;
+				}
+				if((size_t)r >= sizeof(buf)){
+					fprintf(stderr,"Name too long for %s (%d?)\n",dev,r);
+					goto err;
+				}
+				buf[r] = '\0';
+				rp = buf;
 			}
-			if((size_t)r >= sizeof(buf)){
-				fprintf(stderr,"Name too long for %s (%d?)\n",dev,r);
-				goto err;
-			}
-			buf[r] = '\0';
-			rp = buf;
 		}
 		if((d = lookup_device(rp)) == NULL){
-			goto err;
+			continue;
 		}
 		if(d->mnt){
-			fprintf(stderr,"Already had mount for %s|%s: %s|%s\n",
-					dev,mnt,d->name,d->mnt);
-			goto err;
+			if(strcmp(d->mnt,mnt)){
+				fprintf(stderr,"Already had mount for %s|%s: %s|%s\n",
+						dev,mnt,d->name,d->mnt);
+				goto err;
+			}
 		}
 		d->mnt = mnt;
 		d->mnttype = fs;
