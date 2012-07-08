@@ -36,6 +36,7 @@ struct panel_state {
 
 static struct panel_state *active;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
+static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
 
 struct adapterstate;
@@ -1494,6 +1495,37 @@ helpstrs(WINDOW *hw,int row,int rows){
 	return OK;
 }
 
+static const int DIAGROWS = 8;
+
+static int
+display_diags(WINDOW *mainw,struct panel_state *ps){
+	int x,y;
+
+	getmaxyx(mainw,y,x);
+	assert(y);
+	memset(ps,0,sizeof(*ps));
+	if(new_display_panel(mainw,ps,DIAGROWS,x - START_COL * 4,L"press 'l' to dismiss diagnostics")){
+		goto err;       
+	}               
+	/*
+	if(update_diags_locked(ps)){
+		goto err;
+	}
+	*/
+	return OK;
+
+err:
+	if(ps->p){
+		WINDOW *psw = panel_window(ps->p);
+
+		hide_panel(ps->p);
+		del_panel(ps->p);
+		delwin(psw);
+	}
+	memset(ps,0,sizeof(*ps));
+	return ERR;
+}
+
 static int
 display_help(WINDOW *mainw,struct panel_state *ps){
 	static const int helprows = sizeof(helps) / sizeof(*helps) - 1; // NULL != row
@@ -1696,6 +1728,13 @@ handle_ncurses_input(WINDOW *w){
 			case 'h':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&help,display_help);
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'l':{
+				pthread_mutex_lock(&bfl);
+				toggle_panel(w,&diags,display_diags);
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
