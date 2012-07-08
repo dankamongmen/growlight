@@ -6,12 +6,11 @@ extern "C" {
 #endif
 
 #include <stdio.h>
+#include "growlight.h"
 
-struct growlight_ui;
-
-int init_zfs_support(const struct growlight_ui *);
+int init_zfs_support(const glightui *);
 int stop_zfs_support(void);
-int scan_zpools(const struct growlight_ui *);
+int scan_zpools(const glightui *);
 int print_zfs_version(FILE *);
 
 #ifdef __cplusplus
