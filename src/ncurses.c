@@ -1526,6 +1526,35 @@ err:
 	return ERR;
 }
 
+static const int DETAILROWS = 9;
+
+static int
+display_details(WINDOW *mainw,struct panel_state *ps){
+	memset(ps,0,sizeof(*ps));
+	if(new_display_panel(mainw,ps,DETAILROWS,0,L"press 'v' to dismiss details")){
+	        goto err;
+	}
+	if(current_adapter){
+/*
+	        if(iface_details(panel_window(ps->p),current_iface->is->iface,ps->ysize)){
+	                goto err;
+	        }
+*/
+	}
+	return 0;
+
+err:
+	if(ps->p){
+	        WINDOW *psw = panel_window(ps->p);
+
+	        hide_panel(ps->p);
+	        del_panel(ps->p);
+	        delwin(psw);
+	}
+	memset(ps,0,sizeof(*ps));
+	return ERR;
+}
+
 static int
 display_help(WINDOW *mainw,struct panel_state *ps){
 	static const int helprows = sizeof(helps) / sizeof(*helps) - 1; // NULL != row
@@ -1735,6 +1764,13 @@ handle_ncurses_input(WINDOW *w){
 			case 'l':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&diags,display_diags);
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'v':{
+				pthread_mutex_lock(&bfl);
+				toggle_panel(w,&details,display_details);
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
