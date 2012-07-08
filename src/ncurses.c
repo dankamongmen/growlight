@@ -430,15 +430,16 @@ get_current_adapter(void){
 // Abovetop: lines hidden at the top of the screen
 // Belowend: lines hidden at the bottom of the screen
 static void
-adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
+adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 						unsigned belowend){
+	int current = as->rb == current_adapter;
 	int bcolor,hcolor,rows,cols;
 	int attrs;
 
 	getmaxyx(w,rows,cols);
 	bcolor = adapter_up_p(as) ? UBORDER_COLOR : DBORDER_COLOR;
 	hcolor = adapter_up_p(as) ? UHEADING_COLOR : DHEADING_COLOR;
-	attrs = active ? A_REVERSE : A_BOLD;
+	attrs = current ? A_REVERSE : A_BOLD;
 	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
 	if(abovetop == 0){
 		if(belowend == 0){
@@ -456,12 +457,12 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 	assert(wattroff(w,A_REVERSE) == OK);
 
 	if(abovetop == 0){
-		if(active){
+		if(current){
 			assert(wattron(w,A_BOLD) == OK);
 		}
 		assert(mvwprintw(w,0,1,"[") != ERR);
 		assert(wcolor_set(w,hcolor,NULL) == OK);
-		if(active){
+		if(current){
 			assert(wattron(w,A_BOLD) == OK);
 		}else{
 			assert(wattroff(w,A_BOLD) == OK);
@@ -482,7 +483,7 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 		assert(waddch(w,')') != ERR);
 		*/
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
-		if(active){
+		if(current){
 			assert(wattron(w,A_BOLD) == OK);
 		}
 		assert(wprintw(w,"]") != ERR);
@@ -497,7 +498,7 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 		if(as->c->bus == BUS_PCIe){
 			assert(mvwprintw(w,rows - 1,2,"[") != ERR);
 			assert(wcolor_set(w,hcolor,NULL) != ERR);
-			if(active){
+			if(current){
 				assert(wattron(w,A_BOLD) == OK);
 			}else{
 				assert(wattroff(w,A_BOLD) == OK);
@@ -513,7 +514,7 @@ adapter_box(const adapterstate *as,WINDOW *w,int active,unsigned abovetop,
 						as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
 			}
 			assert(wcolor_set(w,bcolor,NULL) != ERR);
-			if(active){
+			if(current){
 				assert(wattron(w,A_BOLD) == OK);
 			}
 			assert(wprintw(w,"]") != ERR);
@@ -672,7 +673,6 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 
 static int
 redraw_adapter(const reelbox *rb){
-	const int active = (rb == current_adapter);
 	const adapterstate *as = rb->as;
 	int scrrows,scrcols,rows,cols;
 	unsigned topp,endp;
@@ -694,7 +694,7 @@ redraw_adapter(const reelbox *rb){
 	getmaxyx(rb->win,rows,cols);
 	assert(cols); // FIXME
 	assert(werase(rb->win) != ERR);
-	adapter_box(as,rb->win,active,topp,endp);
+	adapter_box(as,rb->win,topp,endp);
 	print_adapter_devs(as,rows,topp,endp);
 	return OK;
 }
@@ -722,7 +722,10 @@ deselect_adapter_locked(void){
 	if(rb->selected == NULL){
 		return 0;
 	}
-	return select_adapter_node(rb,NULL,0);
+	if(select_adapter_node(rb,NULL,0)){
+		return -1;
+	}
+	return redraw_adapter(rb);
 }
 
 // Move this adapter, possibly hiding it. Negative delta indicates movement
