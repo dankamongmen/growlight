@@ -134,7 +134,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 
 static int
 zfscb(zfs_handle_t *zhf,void *arg){
-	char mntbuf[BUFSIZ],sbuf[BUFSIZ],*mnt,*mnttype;
+	char mntbuf[BUFSIZ],sbuf[BUFSIZ],*mnt,*mnttype,*label;
 	struct zpoolcb_t *cb = arg;
 	const glightui *gui;
 	uintmax_t totalsize;
@@ -178,14 +178,17 @@ zfscb(zfs_handle_t *zhf,void *arg){
 		fprintf(stderr,"Couldn't dup mountpoint %s\n",mntbuf);
 		return -1;
 	}
-	if((mnttype = strdup("zfs")) == NULL){
-		fprintf(stderr,"Couldn't dup mnttype\n");
+	if((mnttype = strdup("zfs")) == NULL || (label = strdup(zname)) == NULL){
+		fprintf(stderr,"Couldn't dup string\n");
+		free(mnttype);
 		free(mnt);
 		return -1;
 	}
 	free(d->mnt);
+	free(d->label);
 	free(d->mnttype);
 	d->mnt = mnt;
+	d->label = label;
 	d->mnttype = mnttype;
 	d->mntsize = totalsize;
 	d->uistate = gui->block_event(d,d->uistate);
