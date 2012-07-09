@@ -203,6 +203,9 @@ int scan_zpools(const glightui *gui){
 	zprop_list_t *pools = NULL;
 	struct zpoolcb_t cb;
 
+	if(zht == NULL){
+		return 0; // ZFS wasn't successfully initialized
+	}
 	if(zprop_get_list(zfs,props,&pools,ZFS_TYPE_POOL)){
 		fprintf(stderr,"Coudln't list ZFS pools\n");
 		return -1;
