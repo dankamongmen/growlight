@@ -598,12 +598,12 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 			case LAYOUT_NONE:
 		if(bo->d->blkdev.realdev){
 			if(bo->d->blkdev.rotate){
-				assert(wcolor_set(rb->win,COLOR_YELLOW,NULL) == OK);
+				assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
 			}else{
 				assert(wcolor_set(rb->win,COLOR_CYAN,NULL) == OK);
 			}
 		}else{
-			assert(wcolor_set(rb->win,COLOR_MAGENTA,NULL) == OK);
+			assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
 		}
 		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
@@ -617,7 +617,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 					) != ERR);
 			break;
 			case LAYOUT_MDADM:
-		assert(wcolor_set(rb->win,COLOR_YELLOW,NULL) == OK);
+		assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
 		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
@@ -632,7 +632,7 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 			case LAYOUT_PARTITION:
 			break;
 			case LAYOUT_ZPOOL:
-		assert(wcolor_set(rb->win,COLOR_RED,NULL) == OK);
+		assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
 		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
