@@ -291,6 +291,7 @@ draw_main_window(WINDOW *w){
 	int rows,cols,scol;
 
 	getmaxyx(w,rows,cols);
+	assert(cols >= 80);
 	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
 	if(bevel(w) != OK){
 		goto err;
