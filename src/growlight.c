@@ -50,8 +50,9 @@
 #define DEVROOT "/dev"
 #define DEVBYID DEVROOT "/disk/by-id/"
 
+unsigned verbose = 0;
+
 static unsigned usepci;
-static unsigned verbose;
 static const glightui *gui;
 static struct pci_access *pciacc;
 static int sysfd = -1; // Hold a reference to SYSROOT

@@ -231,7 +231,7 @@ int init_zfs_support(const glightui *gui){
 		fprintf(stderr,"Warning: couldn't initialize ZFS\n");
 		return 0;
 	}
-	libzfs_print_on_error(zht,true);
+	libzfs_print_on_error(zht,verbose ? true : false);
 	zpool_set_history_str(PACKAGE, 0, NULL, history);
 	if(zpool_stage_history(zht,history)){
 		fprintf(stderr,"ZFS history didn't match!\n");

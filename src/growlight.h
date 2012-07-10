@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+extern int verbose;
 int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
 #include <wchar.h>
