@@ -1339,6 +1339,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	char buf[BUFSIZ];
 	const char *enc;
 
+	gui = ui;
 	if(setlocale(LC_ALL,"") == NULL){
 		diag("Couldn't set locale (%s?)\n",strerror(errno));
 		goto err;
@@ -1348,7 +1349,6 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	SSL_library_init();
-	gui = ui;
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
 	while((opt = getopt_long(argc,argv,":ht:vV",ops,&longidx)) >= 0){
 		switch(opt){
