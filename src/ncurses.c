@@ -861,7 +861,6 @@ pull_adapters_up(reelbox *puller,int rows,int cols,int delta){
 		rb->scrline -= delta;
 		move_adapter_generic(rb,rows,cols,-delta);
 		if(panel_hidden(rb->panel)){
-			//fprintf(stderr,"PULLED THE TOP OFF\n");
 			if((top_reelbox = rb->next) == NULL){
 				last_reelbox = NULL;
 			}else{
