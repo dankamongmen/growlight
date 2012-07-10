@@ -75,6 +75,7 @@
 		for using the devices to boot or in a chroot, and is fully
 		aware of variable sector sizes, GPT, and UEFI. <emphasis>&dhpackage;</emphasis>
 		facilitates use of UUID/WWN- and HBA-based identification of block devices.</para>
+	<para>This page describes the <emphasis role="bold">ncurses(3ncurses)</emphasis> implementation.</para>
 	</refsect1>
 	<refsect1 id="options">
 		<title>OPTIONS</title>
@@ -483,14 +484,14 @@ ought be fixed.</para>
 			<refentrytitle>mount</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
+			<refentrytitle>ncurses</refentrytitle>
+			<manvolnum>3ncurses</manvolnum>
+		</citerefentry>, <citerefentry>
 			<refentrytitle>parted</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>proc</refentrytitle>
 			<manvolnum>5</manvolnum>
-		</citerefentry>, <citerefentry>
-			<refentrytitle>readline</refentrytitle>
-			<manvolnum>3</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>sfdisk</refentrytitle>
 			<manvolnum>8</manvolnum>
