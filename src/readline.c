@@ -1411,8 +1411,13 @@ biosboot(wchar_t * const *args,const char *arghelp){
 
 static int
 rescan(wchar_t * const *args,const char *arghelp){
+	int r;
+
 	ZERO_ARG_CHECK(args,arghelp);
-	return rescan_devices();
+	assert(unlock_growlight() == 0);
+	r = rescan_devices();
+	assert(lock_growlight() == 0);
+	return r;
 }
 
 static int

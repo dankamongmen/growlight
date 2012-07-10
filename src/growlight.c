@@ -1028,21 +1028,22 @@ inotify_fd(void){
 	return fd;
 }
 
-//typedef int (*eventfxn)(const char *);
 typedef void *(*eventfxn)(void *);
 
 static inline int
 watch_dir(int fd,const char *dfp,eventfxn fxn){
 	pthread_attr_t attr;
 	struct dirent *d;
+	int wfd,r,dfd;
 	DIR *dir;
-	int wfd,r;
-	int dfd;
 
 	if( (r = pthread_attr_init(&attr)) ||
 		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
 		diag("Couldn't set threads detachable (%s?)\n",strerror(errno));
 	}
+	pthread_mutex_lock(&barrier);
+	assert(thrcount == 0);
+	pthread_mutex_unlock(&barrier);
 	if(fd >= 0){
 		wfd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 		if(wfd < 0){
@@ -1056,12 +1057,14 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 	if((dir = opendir(dfp)) == NULL){
 		diag("Coudln't open %s (%s?)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,wfd); }
+		pthread_attr_destroy(&attr);
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
 		diag("Coudln't get fd on %s (%s?)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,wfd); }
 		closedir(dir);
+		pthread_attr_destroy(&attr);
 		return -1;
 	}
 	while( errno = 0, (d = readdir(dir)) ){
@@ -1096,6 +1099,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 	}
 	verbf("Device discovery completed\n");
 	pthread_mutex_unlock(&barrier);
+	pthread_attr_destroy(&attr);
 	return r;
 }
 
