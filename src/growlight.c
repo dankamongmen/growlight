@@ -931,7 +931,6 @@ scan_device(void *name){
 	device *d;
 	int sig;
 
-	pthread_mutex_lock(&barrier);
 	if(getcwd(cwd,sizeof(cwd)) == NULL){
 		diag("Couldn't get working directory (%s?)\n",strerror(errno));
 		pthread_mutex_unlock(&barrier);
@@ -942,15 +941,16 @@ scan_device(void *name){
 		pthread_mutex_unlock(&barrier);
 		return NULL;
 	}
+	pthread_mutex_lock(&barrier);
 	d = name ? lookup_device(name) : NULL;
 	sig = --thrcount == 0;
 	if(sig){
 		pthread_cond_signal(&barrier_cond);
 	}
+	pthread_mutex_unlock(&barrier);
 	if(chdir(cwd)){
 		diag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
 	}
-	pthread_mutex_unlock(&barrier);
 	free(name);
 	return d;
 }
