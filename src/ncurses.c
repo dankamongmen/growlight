@@ -247,8 +247,10 @@ bevel(WINDOW *w){
 	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
 	assert(whline(w,ACS_HLINE,cols - 2) != ERR);
 	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
-	assert(mvwvline(w,1,cols - 1,ACS_VLINE,rows - 1) != ERR);
-	assert(mvwvline(w,1,0,ACS_VLINE,rows - 1) != ERR);
+	if(rows > 2){
+		assert(mvwvline(w,1,cols - 1,ACS_VLINE,rows - 1) != ERR);
+		assert(mvwvline(w,1,0,ACS_VLINE,rows - 1) != ERR);
+	}
 	assert(mvwadd_wch(w,rows - 1,0,&bchr[2]) != ERR);
 	assert(whline(w,ACS_HLINE,cols - 2) != ERR);
 	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[3]) != ERR);
@@ -293,10 +295,7 @@ draw_main_window(WINDOW *w){
 	if(bevel(w) != OK){
 		goto err;
 	}
-	// 5 for 0-offset, '[', ']', and 2 spaces on right side.
-	// 5 for '|', space before and after, and %2d-formatted integer
-	scol = cols - 5 - __builtin_strlen(PACKAGE) - 1 - __builtin_strlen(VERSION)
-		- 5 - __builtin_strlen("adapters" - (count_adapters != 1));
+	scol = START_COL * 4;
 	assert(mvwprintw(w,0,scol,"[") != ERR);
 	assert(wattron(w,A_BOLD | COLOR_PAIR(HEADER_COLOR)) != ERR);
 	assert(wprintw(w,"%s %s | %d adapter%s",PACKAGE,VERSION,
@@ -1886,6 +1885,9 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_lock(&bfl);
 				if(!selection_active){
 					use_prev_controller(w,&details);
+					if(active){
+						assert(top_panel(active->p) != ERR);
+					}
 				}else{
 					use_prev_device();
 				}
@@ -1897,11 +1899,14 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_lock(&bfl);
 				if(!selection_active){
 					use_next_controller(w,&details);
+					if(active){
+						assert(top_panel(active->p) != ERR);
+					}
 				}else{
 					use_next_device();
 				}
-				pthread_mutex_unlock(&bfl);
 				screen_update();
+				pthread_mutex_unlock(&bfl);
 				break;
 			}
 			default:{
