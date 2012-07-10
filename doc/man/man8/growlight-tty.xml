@@ -13,8 +13,8 @@
 <!ENTITY dhtitle "growlight reference">
   
 <!-- This is the application/package name.	-->
-<!ENTITY dhucpackage "growlight">
-<!ENTITY dhpackage "growlight">
+<!ENTITY dhucpackage "growlight-tty">
+<!ENTITY dhpackage "growlight-tty">
 
 <!-- If the application e.g. belongs to a package like X.org,	-->
 <!-- this should be set to the package/suite name instead of	-->

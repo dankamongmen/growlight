@@ -1,0 +1,524 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+	"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd" [
+
+<!ENTITY % growlightents SYSTEM "growlight.ent" >
+%growlightents;
+
+<!-- TITLE should be something like "User commands",		-->
+<!-- "&dhpackage; command-line reference" or similar (see e.g.	-->
+<!-- http://www.tldp.org/HOWTO/Man-Page/q2.html). But limit	-->
+<!-- it to 30    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" chars.	-->
+<!ENTITY dhtitle "growlight reference">
+  
+<!-- This is the application/package name.	-->
+<!ENTITY dhucpackage "growlight-curses">
+<!ENTITY dhpackage "growlight-curses">
+
+<!-- If the application e.g. belongs to a package like X.org,	-->
+<!-- this should be set to the package/suite name instead of	-->
+<!-- dhpackage.							-->
+<!ENTITY dhproduct "growlight">
+
+<!-- SECTION should be 1-8, maybe w/ subsection other	-->
+<!-- parameters are allowed: see man(7), man(1) and	-->
+<!-- http://www.tldp.org/HOWTO/Man-Page/q2.html.	-->
+<!ENTITY dhsection "8">
+
+]>
+
+<refentry>
+	<refentryinfo>
+		<title>&dhtitle;</title>
+		<!-- Better put a suite name instead of &dhpackage; into productname -->
+		<productname>&dhproduct;</productname>
+		<releaseinfo role="version">&dhrelease;</releaseinfo>
+		<authorgroup>
+			<author>
+				<firstname>&dhfirstname;</firstname>
+				<surname>&dhsurname;</surname>
+				<contrib>Design and implementation.</contrib>
+				<address>
+					<email>&dhemail;</email>
+				</address>
+			</author>
+		</authorgroup>
+		<copyright>
+			<year>2012</year>
+			<holder>&dhusername;</holder>
+		</copyright>
+	</refentryinfo>
+	<refmeta>
+		<refentrytitle>&dhucpackage;</refentrytitle>
+		<manvolnum>&dhsection;</manvolnum>
+	</refmeta>
+	<refnamediv>
+		<refname>&dhpackage;</refname>
+		<refpurpose>System disk preparation</refpurpose>
+	</refnamediv>
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>&dhpackage;</command>
+			<arg>-h|--help</arg>
+			<arg>-t|--target path</arg>
+			<arg>-v|--verbose</arg>
+			<arg>-V|--version</arg>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+	<refsect1 id="description">
+		<title>DESCRIPTION</title>
+		<para><emphasis>&dhpackage;</emphasis> detects and describes
+                disk pools, block devices, partition tables, and partitions.
+		It can partition devices, manipulate ZFS, MD, DM, LVM and
+		hardware RAID virtual devices, and prepare an fstab file
+		for using the devices to boot or in a chroot, and is fully
+		aware of variable sector sizes, GPT, and UEFI. <emphasis>&dhpackage;</emphasis>
+		facilitates use of UUID/WWN- and HBA-based identification of block devices.</para>
+	</refsect1>
+	<refsect1 id="options">
+		<title>OPTIONS</title>
+		<varlistentry>
+			<term><option>-h|--help</option></term>
+			<listitem>
+			<para>Print a brief usage summary and exit.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>-v|--verbose</option></term>
+			<listitem>
+			<para>Be more verbose.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>-V|--version</option></term>
+			<listitem>
+			<para>Print version information and exit.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>-t|--target path</option></term>
+			<listitem>
+<para>Run in system installation mode, using <emphasis role="bold">path</emphasis> as the temporary mountpoint
+for the target's root filesystem. "map" commands will populate the hierarchy
+rooted at this mountpoint. System installation mode can also be entered at run
+time with the "target" command. The "map" command will not result in active
+mounts unless <emphasis>&dhpackage;</emphasis> is operating in system installation mode (they will
+merely be used to construct target fstab output). Once system installation mode
+is entered, <emphasis>&dhpackage;</emphasis> will return 0 only as a result of a successful invocation
+of the <emphasis role="bold">"target finalize"</emphasis> command.
+<emphasis role="bold">path</emphasis> must exist at the time of its
+specification.</para>
+			</listitem>
+		</varlistentry>
+	</refsect1>
+	<refsect1 id="commands">
+		<title>USAGE</title>
+<para><emphasis>Growlight</emphasis> is primarily intended for interactive use at the command line via GNU
+Readline. Commands are entered; a newline causes input to be interpreted, and 
+output resulting from this interpretation is displayed to the user. Unlike
+programs such as <emphasis role="bold">fdisk(8)</emphasis> and <emphasis role="bold">gdisk(8)</emphasis>,
+<emphasis>&dhpackage;</emphasis> acts on commands immediately, rather than requiring an explicit
+commit step.</para>
+
+<para>An argument specified as <emphasis>blockdev</emphasis> can be either a
+real block device, a virtual block device, or a partition. An argument
+specified as <emphasis>partition</emphasis> must be a partition within some
+kernel-recognized partition table. An argument specified as <emphasis>fs</emphasis>
+must be a kernel-recognizable filesystem. An argument specified as <emphasis>uuid</emphasis>
+must be 36 ASCII characters forming a valid DCE 1.1 UUID.
+Devices can be specified via any appropriate identifier (label, UUID, etc.).
+</para>
+		<variablelist>
+		<varlistentry>
+			<term><option>uefiboot [ -protectmbr ]</option></term>
+			<listitem>
+<para>Prepare the target for UEFI-based booting. A target root filesystem map
+must be defined, and this filesystem must be mounted at the chroot's toplevel.
+The filesystem must reside within a GPT partition having type ef00 and TUID
+C12A7328-F81F-11D2-BA4B-00A0C93EC93B (EFI System Partition). This GPT
+table must not reside on an mdadm, device-mapper, or zfs device. Preferably, no
+other devices in the system are bootable, but this is not enforced.</para>
+
+<para>If all these conditions are met, <emphasis>GRUB2</emphasis> will be installed into this filesystem,
+configured to boot a Linux kernel residing at FIXME. This kernel must be
+compiled with EFI stub loader support. The bootloader portion of the device's
+MBR will be overwritten with zeroes, if possible, to deter attempting to
+perform a BIOS/MBR boot from the device. Alternatively, the
+<emphasis role="bold">-protectmbr</emphasis> option will install a
+"protective MBR" consisting of one type 0xEE (EFI GPT) partition spanning the
+disk. This might be preferable if interoperating with GPT-unaware tools.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>biosboot</option></term>
+			<listitem>
+<para>Prepare the target for BIOS-based booting. A target root filesystem map
+must be defined, and this filesystem must be mounted at the chroot's toplevel.
+The filesystem must reside either within a GPT partition having type ef02 and
+TUID 21686148-6449-6E6F-744E-656564454649 (BIOS Boot Partition), or within a
+MBR partition having type 0x83 (Linux). The partition table must not reside
+on an mdadm, device-mapper, or zfs device. Preferably, no other devices in the
+system are bootable, but this is not enforced.
+
+If all these conditions are met, <emphasis>GRUB2</emphasis> will be installed into this filesystem
+at /boot/grub, configured to boot a Linux kernel residing at FIXME. <emphasis>GRUB2's</emphasis>
+first stage will be loaded into the bootloader portion of the device's MBR. The
+partition containing <emphasis>GRUB2</emphasis> will be marked as <emphasis>active</emphasis>
+(flag 0x80).</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>adapter reset adapter</option></term>
+			<term><option>adapter rescan adapter</option></term>
+			<term><option>adapter [ -v ]</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">adapter</emphasis> lists each
+HBA (Host Bus Adapter) device known to the system, including those not
+actively used. Passed "-v", attached devices of each HBA will also be listed.
+For each adapter listed, the first token is an identifier suitable for use with
+other <emphasis role="bold">adapter</emphasis> subcommands (it is typically the
+device driver's module name suffixed by a small integer, but the exact form
+is intentionally left implementation-defined). The "reset" subcommand resets
+the HBA, if it supports this functionality. The "rescan" subcommand causes the
+kernel to scan the HBA for newly connected devices. Both operations are
+performed via the Linux kernel's sysfs filesystem.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>blockdev rescan blockdev</option></term>
+			<term><option>blockdev badblocks blockdev [ rw ]</option></term>
+			<term><option>blockdev wipebiosboot blockdev</option></term>
+			<term><option>blockdev ataerase blockdev</option></term>
+			<term><option>blockdev rmtable blockdev</option></term>
+			<term><option>blockdev mktable [ blockdev tabletype ]</option></term>
+			<term><option>blockdev [ -v ]</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">blockdev</emphasis> concisely lists
+all block devices recognized by the system. Passed "-v", partitions and
+filesystems present on a given block device will also be listed. The "rescan"
+command causes the kernel to reanalyze the device's geometry and partition tables.
+Any changes will be propagated to <emphasis>growlight</emphasis>. "badblocks"
+runs a non-destructive bad block check on the device. If provided "rw", "badblocks"
+will perform a destructive, lenghtier, more strenuous read-write check. "wipebiosboot"
+writes zeroes to the BIOS bootcode section of a disk (the first 446 bytes of
+the first sector), hopefully ensuring that no attempt will be made to perform
+a BIOS-type boot from the device. "ataerase" uses the ATA Secure Erase functionality
+of the disk, if supported, to restore the device to factory settings. This can
+lead to noticeably improved performance from used Solid State Devices (SSDs).
+"rmtable" will attempt to write zeros over all partition table structures such
+that <emphasis>libblkid(3)</emphasis> does not recognize the disk as being
+partitioned. "mktable" will create a partition table of the provided type; with
+no arguments, supported partition table types are listed.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>partition del partition</option></term>
+			<term><option>partition fsck partition</option></term>
+			<term><option>partition add blockdev name size</option></term>
+			<term><option>partition setuuid partition uuid</option></term>
+			<term><option>partition setname partition name</option></term>
+			<term><option>partition setflag [ partition on|off flag ]</option></term>
+			<term><option>partition [ -v ]</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">partition</emphasis> concisely lists all
+detected partitions. Passed "-v", data present on a given partition will also
+be listed. "del" attempts to convert a partition to unallocated space. "add"
+attempts to carve a partition of size bytes and having name as its label from
+the specified block device's free space. "setuuid" attempts to set the partition
+GUID (<emphasis>not</emphasis> the Type UUID) to uuid. "setname" attempts to
+set the partition label to name. With no arguments, "setflag" lists the
+partition flags supported by this system. Otherwise, it attempts to set or unset
+the specified flag on the specified partition.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>fs mkfs [ blockdev fstype ]</option></term>
+			<term><option>fs wipefs blockdev</option></term>
+			<term><option>fs setuuid blockdev uuid</option></term>
+			<term><option>fs setlabel blockdev label</option></term>
+			<term><option>fs mount blockdev mountpoint mnttype options</option></term>
+			<term><option>fs umount blockdev</option></term>
+			<term><option>fs</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">fs</emphasis> concisely lists all
+detected possible filesystems, irrespective of mount status or viability. The
+"mkfs" subcommand will create a filesystem on the specified block device of the
+specified type. "mkfs" with no arguments lists supported filesystem types.
+"wipefs" will attempt to destroy the specified filesystem's superblocks, to the
+degree that <emphasis>libblkid(3)</emphasis> does not detect them. "setuuid"
+will set the UUID of the filesystem on blockdev, assuming that filesystem
+supports UUIDs. "setlabel" will set the volume label of the filesystem on
+blockdev, assuming that filesystem supports volume labels. "mount" will attempt
+to mount the block device as a mnttype-type filesystem at mountpoint. This mount
+will not be added to either the host or target's /etc/fstab, and will thus not
+persist across reboots. "umount" will attempt to unmount the filesystem underlain
+by blockdev.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>swap on swapdev label [ uuid ]</option></term>
+			<term><option>swap off swapdev</option></term>
+			<term><option>swap</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">swap</emphasis> concisely lists
+each swap device known to the system, including those not actively used. The
+"on" subcommand attempts to create and use a swap device on <emphasis role="bold">swapdev</emphasis>. This
+command will fail if <emphasis role="bold">swapdev</emphasis> is referenced by any map, mount, md device, dm
+device, or zpool, if <emphasis role="bold">swapdev</emphasis> is not writable, or on any
+<emphasis role="bold">mkswap(8)</emphasis> or <emphasis role="bold">swapon(2)</emphasis>
+error. The "off" subcommand attempts to halt an active swap device (it does not
+write to the swap device itself, and thus the swap device remains usable). It
+will fail if the device is not an active swap, or on any <emphasis role="bold">swapoff(2)</emphasis>
+failure.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>mdadm arguments</option></term>
+			<term><option>mdadm [ -v ]</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">mdadm</emphasis> concisely lists
+each MD (Multiple Device, aka the Linux kernel's mdraid driver) device
+currently available to the system. Passed "-v", each MD device's components
+will also be listed. Otherwise, arguments will be sanitized and passed to the
+external <emphasis role="bold">mdadm(8)</emphasis> tool. Note that this
+behavior is subject to change as MD is more fully integrated.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>dmsetup arguments</option></term>
+			<listitem>
+<para>Arguments are sanitized and passed to the external
+<emphasis role="bold">dmsetup(8)</emphasis> tool. Note that this behavior is
+subject to change as DM is more fully integrated.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>zpool arguments</option></term>
+			<term><option>zpool [ -v ]</option></term>
+			<listitem>
+<para>Passed no arguments, <emphasis role="bold">zpool</emphasis> concisely lists
+each zpool (ZFS storage pool) device currently available to the system. Passed
+"-v", each zpool's components will also be listed. Otherwise, arguments will be
+sanitized and passed to the external <emphasis role="bold">zpool(8)</emphasis>
+tool. Note that this behavior is subject to change as ZFS is more fully
+integrated.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>zfs arguments</option></term>
+			<listitem>
+<para>Arguments are sanitized and passed to the external
+<emphasis role="bold">zfs(8)</emphasis> tool. This command is not expected to
+be retained once ZFS is fully integrated.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>target set path</option></term>
+			<term><option>target unset</option></term>
+			<term><option>target finalize</option></term>
+			<term><option>target</option></term>
+			<listitem>
+<para>The <emphasis role="bold">set</emphasis> subcommand sets the target (see the <emphasis role="bold">--target</emphasis>
+option). If a target has already been set, the command will fail. If <emphasis role="bold">path</emphasis>
+does not exist in the current filesystem, the command will fail. If <emphasis role="bold">path</emphasis>
+exists, but is not a directory, the command will fail. Called with <emphasis role="bold">unset</emphasis>,
+undefines the target and all mappings therein. If there is no target defined,
+the command will fail. Called with <emphasis role="bold">finalize</emphasis>,
+the target's /etc/fstab will be written out. Called with no arguments, lists
+the current target (if one exists).</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>map [ mountdev mountpoint mnttype options ]</option></term>
+			<term><option>map</option></term>
+			<listitem>
+<para>Provided no arguments, <emphasis role="bold">map</emphasis> dumps the
+target's /etc/fstab as currently envisioned. Otherwise, attempt to mount
+mountdev at mountpoint (relative to the target root) as a filesystem of type
+mnttype, using the specified mount options (see <emphasis role="bold">mount(8)</emphasis>).
+If the mount is successful, the mapping will be added to the target /etc/fstab
+(though this will not be written out until <emphasis role="bold">target finalize</emphasis>
+is run). The <emphasis role="bold">map</emphasis> command is unavailable unless in
+system preparation mode (see <emphasis role="bold">target</emphasis>).</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>mounts</option></term>
+			<listitem>
+<para>Displays all currently-mounted filesystems. Accepts no arguments.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>grubmap</option></term>
+			<listitem>
+<para>Invokes <emphasis role="bold">grub-mkdevicemap</emphasis> to display
+<emphasis>GRUB2's</emphasis> calculated device map. This will not overwrite any existing device
+map, but is included merely for diagnostic purposes. Accepts no arguments.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>benchmark blockdev</option></term>
+			<listitem>
+<para>Run a simple, non-destructive benchmark on the block device. Currently,
+	this is implemented via <emphasis>hdparm -t</emphasis>.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>troubleshoot</option></term>
+			<listitem>
+<para>Look for problems, both physical and logical, in the storage setup. This
+command's behavior is not yet well-defined FIXME.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>version</option></term>
+			<listitem>
+<para>Displays the <emphasis>&dhpackage;</emphasis> banner and version, and the version of various
+tools/libraries. <emphasis role="bold">version</emphasis> accepts no arguments.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>rescan</option></term>
+			<listitem><para>
+Completely reinitializes growlight's idea of the storage system. Files like
+/proc/mounts and /proc/filesystems will be reparsed, superblocks will be reread,
+etc. Note that this only affects growlight; the devices themselves are not
+rescanned by the kernel as a result of <emphasis role="bold">rescan</emphasis>
+(see <emphasis role="bold">adapter rescan</emphasis> and
+<emphasis role="bold">blockdev rescan</emphasis> for this functionality).
+Furthermore, though <emphasis>&dhpackage;</emphasis> itself makes use of
+<emphasis role="bold">O_DIRECT</emphasis> to read boot sectors etc, other tools
+might not, and the kernel is not guaranteed in any case to honor it. If any
+detail of a block device underlying a mapping changes, that mapping will be
+dropped. If the target root mapping is dropped, all mappings will be dropped.</para>
+<para><emphasis>Growlight</emphasis> is designed to support on-the-fly external storage reconfiguration
+through use of <emphasis role="bold">libudev(3)</emphasis> and
+<emphasis role="bold">inotify(7)</emphasis>. This command should not be needed
+or used outside of debugging.</para></listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>reset</option></term>
+			<listitem><para>
+Reset all adapters advertising this capability, presumably following addition
+or removal of a device. The exact effects of this command are unknown, and its
+use is <emphasis role="bold">strongly discouraged</emphasis>. <emphasis>Growlight</emphasis> is designed
+to support on-the-fly external storage reconfiguration through use of
+<emphasis role="bold">libudev(3)</emphasis> and <emphasis role="bold">inotify(7)</emphasis>.
+This command should not be needed or used outside of debugging.</para></listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>help command</option></term>
+			<term><option>help</option></term>
+			<listitem><para>
+Invoked upon a <emphasis role="bold">command</emphasis>, <emphasis role="bold">help</emphasis>
+displays that command's synopsis. Otherwise, <emphasis role="bold">help</emphasis> lists a
+synopsis of each command.</para></listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>quit</option></term>
+			<listitem>
+<para>Exits the program. See the <emphasis role="bold">--target</emphasis>
+command line option and <emphasis role="bold">target</emphasis> command to
+understand the conditions for a successful return during installation mode.
+<emphasis role="bold">quit</emphasis> accepts no arguments.</para>
+			</listitem>
+		</varlistentry>
+		</variablelist>
+	</refsect1>
+	<refsect1 id="bugs">
+		<title>BUGS</title>
+		<para>Search <ulink url="http://www.sprezzatech.com/bugs/buglist.cgi?component=Growlight"/>.
+		Mail bug reports and/or patches to the authors.</para>
+
+<para>Pedantic collections of ambiguous identifiers (for instance, if a label
+equals another device's /dev/ name) will lead to questionable results. This
+ought be fixed.</para>
+	</refsect1>
+	<refsect1 id="see_also">
+		<title>SEE ALSO</title>
+		<para>GitHub: <ulink url="http://github.com/dankamongmen/growlight"/></para>
+		<para>Project wiki: <ulink url="http://dank.qemfd.net/dankwiki/index.php/growlight"/></para>
+		<para>
+		<citerefentry>
+			<refentrytitle>blkid</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>dmraid</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>dmsetup</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>fstab</refentrytitle>
+			<manvolnum>5</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>grub-install</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>grub-mkdevicemap</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>hdparm</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>inotify</refentrytitle>
+			<manvolnum>7</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>libblkid</refentrytitle>
+			<manvolnum>3</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>lsblk</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>mdadm</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>mkfs</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>mount</refentrytitle>
+			<manvolnum>2</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>mount</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>parted</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>proc</refentrytitle>
+			<manvolnum>5</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>readline</refentrytitle>
+			<manvolnum>3</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>sfdisk</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>sgdisk</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>swapoff</refentrytitle>
+			<manvolnum>2</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>swapon</refentrytitle>
+			<manvolnum>2</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>udev</refentrytitle>
+			<manvolnum>7</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>umount</refentrytitle>
+			<manvolnum>2</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>umount</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>zfs</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>zpool</refentrytitle>
+			<manvolnum>8</manvolnum>
+		</citerefentry>
+		</para>
+	</refsect1>
+</refentry>

@@ -8,7 +8,7 @@ AM_CC=$(PTHREAD_CC)
 
 LIBS+=$(PTHREAD_LIBS) $(OPENSSL_LIBS)
 
-dist_man_MANS = growlight.8
+dist_man_MANS = growlight-tty.8 growlight-curses.8
 
 doc_DIR=doc
 doc_DATA=
