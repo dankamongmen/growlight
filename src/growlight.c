@@ -1563,6 +1563,11 @@ rescan(device *d){
 	return 0;
 }
 
+int reset_adapters(void){
+	diag("Not yet implemented.");
+	return -1;
+}
+
 int rescan_device(const char *name){
 	device **lnk;
 	controller *c;

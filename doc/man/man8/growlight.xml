@@ -140,7 +140,7 @@ C12A7328-F81F-11D2-BA4B-00A0C93EC93B (EFI System Partition). This GPT
 table must not reside on an mdadm, device-mapper, or zfs device. Preferably, no
 other devices in the system are bootable, but this is not enforced.</para>
 
-<para>If all these conditions are met, <emphasis>rEFInd</emphasis> will be installed into this filesystem,
+<para>If all these conditions are met, <emphasis>GRUB2</emphasis> will be installed into this filesystem,
 configured to boot a Linux kernel residing at FIXME. This kernel must be
 compiled with EFI stub loader support. The bootloader portion of the device's
 MBR will be overwritten with zeroes, if possible, to deter attempting to
@@ -396,6 +396,16 @@ dropped. If the target root mapping is dropped, all mappings will be dropped.</p
 through use of <emphasis role="bold">libudev(3)</emphasis> and
 <emphasis role="bold">inotify(7)</emphasis>. This command should not be needed
 or used outside of debugging.</para></listitem>
+		</varlistentry>
+		<varlistentry>
+			<term><option>reset</option></term>
+			<listitem><para>
+Reset all adapters advertising this capability, presumably following addition
+or removal of a device. The exact effects of this command are unknown, and its
+use is <emphasis role="bold">strongly discouraged</emphasis>. <emphasis>Growlight</emphasis> is designed
+to support on-the-fly external storage reconfiguration through use of
+<emphasis role="bold">libudev(3)</emphasis> and <emphasis role="bold">inotify(7)</emphasis>.
+This command should not be needed or used outside of debugging.</para></listitem>
 		</varlistentry>
 		<varlistentry>
 			<term><option>help command</option></term>

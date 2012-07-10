@@ -239,16 +239,18 @@ int benchmark_blockdev(const device *);
 // Very coarse locking
 int lock_growlight(void);
 int unlock_growlight(void);
-int rescan_devices(void);
 
-// Unlike virtually every other function, this one MUST NOT be called while
-// growlight is locked (ie, amidst lock_growlight()/unlock_growlight() pairs).
 int rescan_device(const char *);
 
 void add_new_virtual_blockdev(device *);
 
 int prepare_bios_boot(device *);
 int prepare_uefi_boot(device *);
+
+// Unlike virtually every other function, these two MUST NOT be called while
+// growlight is locked (ie, amidst lock_growlight()/unlock_growlight() pairs).
+int rescan_devices(void);
+int reset_adapters(void);
 
 static inline const char *
 pcie_gen(unsigned gen){

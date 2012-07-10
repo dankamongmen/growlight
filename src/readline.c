@@ -1421,6 +1421,17 @@ rescan(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+reset(wchar_t * const *args,const char *arghelp){
+	int r;
+
+	ZERO_ARG_CHECK(args,arghelp);
+	assert(unlock_growlight() == 0);
+	r = reset_adapters();
+	assert(lock_growlight() == 0);
+	return r;
+}
+
+static int
 grubmap(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 
@@ -1643,6 +1654,7 @@ static const struct fxn {
 	const char *arghelp;
 } fxns[] = {
 #define FXN(x,args) { .cmd = L###x, .fxn = x, .arghelp = args, }
+	FXN(reset,""),
 	FXN(rescan,""),
 	FXN(adapter,"[ \"reset\" adapter ]\n"
 			"                 | [ \"rescan\" adapter ]\n"
