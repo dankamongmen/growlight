@@ -993,7 +993,6 @@ lookup_id(void *uname){
 	char cwd[PATH_MAX + 1];
 	device *d;
 
-	pthread_mutex_lock(&barrier);
 	if(getcwd(cwd,sizeof(cwd)) == NULL){
 		diag("Couldn't get working directory (%s?)\n",strerror(errno));
 		pthread_mutex_unlock(&barrier);
@@ -1004,14 +1003,17 @@ lookup_id(void *uname){
 		pthread_mutex_unlock(&barrier);
 		return NULL;
 	}
+	assert(lock_growlight() == 0);
 	d = name ? lookup_id_inner(name) : NULL;
+	assert(unlock_growlight() == 0);
+	assert(pthread_mutex_lock(&barrier) == 0);
 	if(--thrcount == 0){
 		pthread_cond_signal(&barrier_cond);
 	}
+	assert(pthread_mutex_unlock(&barrier) == 0);
 	if(chdir(cwd)){
 		diag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
 	}
-	pthread_mutex_unlock(&barrier);
 	free(uname);
 	return d;
 }
