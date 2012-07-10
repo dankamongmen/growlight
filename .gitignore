@@ -8,12 +8,14 @@ config.status*
 config.sub*
 configure
 configure.scan
+debian/
 depcomp
 .deps/
 doc/growlight.ent
 growlight-curses
 growlight-tty
-growlight.8
+growlight-curses.8
+growlight-tty.8
 growlight-*.tar.bz2
 growlight-*.tar.gz
 install-sh
