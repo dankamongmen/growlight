@@ -380,6 +380,13 @@ tools/libraries. <emphasis role="bold">version</emphasis> accepts no arguments.<
 			</listitem>
 		</varlistentry>
 		<varlistentry>
+			<term><option>diags [ count ]</option></term>
+			<listitem><para>
+Dump up through count diagnostic messages from the logging ringbuffer to stdout.
+Provided no parameter, all available diagnostic messages will be printed. Timestamps
+are printed along with each message.</para></listitem>
+		</varlistentry>
+		<varlistentry>
 			<term><option>rescan</option></term>
 			<listitem><para>
 Completely reinitializes growlight's idea of the storage system. Files like
