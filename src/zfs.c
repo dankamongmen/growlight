@@ -134,7 +134,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 
 static int
 zfscb(zfs_handle_t *zhf,void *arg){
-	char mntbuf[BUFSIZ],sbuf[BUFSIZ],*mnt,*mnttype,*label;
+	char sbuf[BUFSIZ],*mnttype,*label;
 	struct zpoolcb_t *cb = arg;
 	const glightui *gui;
 	uintmax_t totalsize;
@@ -169,25 +169,16 @@ zfscb(zfs_handle_t *zhf,void *arg){
 		return 0;
 	}
 	totalsize += dehumanize(sbuf);
-	if(zfs_prop_get(zhf,ZFS_PROP_MOUNTPOINT,mntbuf,sizeof(mntbuf),NULL,NULL,0,0)){
-		fprintf(stderr,"Couldn't get mountpoint for %s\n",zname);
-		return 0;
-	}
+	// ZFS_PROP_MOUNTPOINT is the default mount point, not the current
+	// mount point (which indeed might not exist). No need to look it up.
 	// FIXME check for existing mnttype?
-	if((mnt = strdup(mntbuf)) == NULL){
-		fprintf(stderr,"Couldn't dup mountpoint %s\n",mntbuf);
-		return -1;
-	}
 	if((mnttype = strdup("zfs")) == NULL || (label = strdup(zname)) == NULL){
 		fprintf(stderr,"Couldn't dup string\n");
 		free(mnttype);
-		free(mnt);
 		return -1;
 	}
-	free(d->mnt);
 	free(d->label);
 	free(d->mnttype);
-	d->mnt = mnt;
 	d->label = label;
 	d->mnttype = mnttype;
 	d->mntsize = totalsize;
