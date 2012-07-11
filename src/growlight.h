@@ -5,9 +5,7 @@
 extern "C" {
 #endif
 
-extern unsigned verbose;
-int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
-
+#include <time.h>
 #include <wchar.h>
 #include <limits.h>
 #include <stdint.h>
@@ -16,14 +14,16 @@ int verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
 #include "mounts.h"
 
+extern unsigned verbose;
+void diag(const char *,...) __attribute__ ((format (printf,1,2)));
+void verbf(const char *,...) __attribute__ ((format (printf,1,2)));
+
 #define FSLABELSIZ 17
 
 	// This isn't really suitable for use as a library to programs beyond
 	// growlight. Not yet, in any case.
 
 struct controller;
-
-void diag(const char *,...);
 
 // Growlight's callback-based UI
 typedef struct growlight_ui {
@@ -345,6 +345,22 @@ static inline const char *
 bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
 	return genprefix(val,decimal,buf,bsize,omitdec,1024,'i');
 }
+
+// Uses the omphalos_ctx's ->diag function pointer. Acquires omphalos_ctx via
+// lookup on a TSD (omphalos_ctx_key).
+void diagnostic(const char *,...) __attribute__ ((format (printf,1,2)));
+
+typedef struct logent {
+        char *msg;
+        time_t when;
+} logent;
+
+#define MAXIMUM_LOG_ENTRIES 1024
+
+// Get up to the last n diagnostics. n should not be 0 nor greater than
+// MAXIMUM_LOG_ENTRIES. If there are less than n present, they'll be copied
+// into the first n logents; logent[n].msg will then be NULL.
+int get_logs(unsigned,logent *);
 
 #ifdef __cplusplus
 }

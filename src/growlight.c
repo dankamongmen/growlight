@@ -81,6 +81,68 @@ static controller *controllers = &virtual_bus;
 static device *create_new_device(const char *,int);
 static device *create_new_device_inner(const char *,int);
 
+// Diagnostics. We keep the last MAXIMUM_LOG_ENTRIES records around for clients
+// to examine at their leisure, ala dmesg(1).
+static unsigned rblast;
+static logent logs[MAXIMUM_LOG_ENTRIES];
+static pthread_mutex_t loglock = PTHREAD_MUTEX_INITIALIZER;
+
+static void
+add_log(const char *fmt,va_list vac){
+	va_list vacc;
+	char *b;
+	int len;
+
+	va_copy(vacc,vac);
+	assert(pthread_mutex_lock(&loglock) == 0);
+	if(++rblast == sizeof(logs) / sizeof(*logs)){
+		rblast = 0;
+	}
+	// FIXME reuse the entry!
+	len = vsnprintf(NULL,0,fmt,vac);
+	if( (b = malloc(len + 1)) ){
+		logs[rblast].when = time(NULL);
+		if(logs[rblast].msg){
+			free(logs[rblast].msg);
+		}
+		logs[rblast].msg = b;
+		vsnprintf(b,len + 1,fmt,vacc);
+	}
+	assert(pthread_mutex_unlock(&loglock) == 0);
+	va_end(vacc);
+}
+
+int get_logs(unsigned n,logent *cplogs){
+	unsigned idx = 0;
+	unsigned rb;
+
+	if(n == 0 || n > MAXIMUM_LOG_ENTRIES){
+		return -1;
+	}
+	assert(pthread_mutex_lock(&loglock) == 0);
+	rb = rblast;
+	while(logs[rb].msg){
+		if((cplogs[idx].msg = strdup(logs[rb].msg)) == NULL){
+			while(idx){
+				free(cplogs[--idx].msg);
+			}
+			return -1;
+		}
+		cplogs[idx].when = logs[rb].when;
+		if(rb-- == 0){
+			rb = sizeof(logs) / sizeof(*logs) - 1;
+		}
+		if(++idx == n){
+			break; // got all requested
+		}
+	}
+	assert(pthread_mutex_unlock(&loglock) == 0);
+	if(idx < n){
+		cplogs[idx].msg = NULL;
+	}
+	return 0;
+}
+
 static void
 push_devtable(devtable *dt){
 	dt->controllers = controllers;
@@ -89,23 +151,30 @@ push_devtable(devtable *dt){
 	controllers = &virtual_bus;
 }
 
+
 void diag(const char *fmt,...){
-	va_list ap;
+	va_list vac,ap;
 
 	va_start(ap,fmt);
+	va_copy(vac,ap);
 	gui->vdiag(fmt,ap);
-	va_end(ap);
+	add_log(fmt,vac);
+	va_end(vac);
 }
 
-int verbf(const char *fmt,...){
+void verbf(const char *fmt,...){
 	va_list ap;
 
 	va_start(ap,fmt);
 	if(verbose){
-		gui->vdiag(fmt,ap);
+		va_list vac;
+
+		va_copy(vac,ap);
+		gui->vdiag(fmt,vac);
+		va_end(vac);
 	}
+	add_log(fmt,ap);
 	va_end(ap);
-	return 0;
 }
 
 static void
