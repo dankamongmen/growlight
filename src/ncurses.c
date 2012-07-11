@@ -1453,7 +1453,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 static const wchar_t *helps[] = {
 	L"'q': quit			ctrl+'L': redraw the screen",
 	L"'e': view environment details 'h': toggle this help display",
-	L"'v': view adapter details     'l': view recent diagnostics",
+	L"'v': view selection details   'l': view recent diagnostics",
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
 	L"'-'/'←': collapse selection   '+'/'→': expand selection",
 	NULL
