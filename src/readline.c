@@ -1655,8 +1655,8 @@ diags(wchar_t * const *args,const char *arghelp){
 				usage(args,arghelp);
 				return -1;
 			}
-			if(ull > idx){
-				fprintf(stderr,"Can request no more than %u log records\n",idx);
+			if(ull > idx || ull == 0){
+				fprintf(stderr,"Request no more than %u log records, and no fewer than 1\n",idx);
 				return -1;
 			}
 			idx = ull;
