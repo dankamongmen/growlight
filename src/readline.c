@@ -1642,6 +1642,51 @@ target(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+diags(wchar_t * const *args,const char *arghelp){
+	logent logs[MAXIMUM_LOG_ENTRIES];
+	unsigned idx,z;
+
+	idx = sizeof(logs) / sizeof(*logs);
+	if(args[1]){
+		if(!args[2]){
+			unsigned long long ull;
+
+			if(wstrtoull(args[1],&ull)){
+				usage(args,arghelp);
+				return -1;
+			}
+			if(ull > idx){
+				fprintf(stderr,"Can request no more than %u log records\n",idx);
+				return -1;
+			}
+			idx = ull;
+		}else{
+			usage(args,arghelp);
+			return -1;
+		}
+	}
+	if(get_logs(idx,logs)){
+		return -1;
+	}
+	for(z = 0 ; z < idx ; ++z){
+		char tbuf[26]; // see ctime_r(3)
+
+		if(logs[z].msg == NULL){
+			break;
+		}
+		if(ctime_r(&logs[z].when,tbuf) == NULL){
+			printf("Bad timestamp at index %d! %s\n",z,logs[z].msg);
+		}else{
+			tbuf[strlen(tbuf) - 1] = ' '; // kill newline
+			printf("%s%s",tbuf,logs[z].msg);
+		}
+		free(logs[z].msg);
+	}
+	fflush(stdout);
+	return 0;
+}
+
+static int
 quit(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	lights_off = 1;
@@ -1704,6 +1749,7 @@ static const struct fxn {
 	FXN(mounts,""),
 	FXN(uefiboot,"root fs map must be defined in GPT partition"),
 	FXN(biosboot,"root fs map must be defined in GPT/MBR partition"),
+	FXN(diags,"[ count ]"),
 	FXN(grubmap,""),
 	FXN(benchmark,"blockdev"),
 	FXN(troubleshoot,""),
