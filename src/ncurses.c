@@ -1402,20 +1402,6 @@ use_next_device(void){
 	// FIXME
 }
 
-static void
-vdiag(const char *fmt,va_list v){
-	char *nl;
-
-	pthread_mutex_lock(&bfl);
-	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
-	if( (nl = strchr(statusmsg,'\n')) ){
-		*nl = '\0';
-	}
-	draw_main_window(stdscr);
-	screen_update();
-	pthread_mutex_unlock(&bfl);
-}
-
 // Create a panel at the bottom of the window, referred to as the "subdisplay".
 // Only one can currently be active at a time. Window decoration and placement
 // is managed here; only the rows needed for display ought be provided.
@@ -1493,12 +1479,45 @@ helpstrs(WINDOW *hw,int row,int rows){
 
 	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
-		assert(mvwaddwstr(hw,row + z,1,hs) != ERR);
+		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
 	}
 	return OK;
 }
 
 static const int DIAGROWS = 8;
+
+static int
+update_diags(struct panel_state *ps){
+	WINDOW *w = panel_window(ps->p);
+	logent l[DIAGROWS];
+	int y,x,r;
+
+	getmaxyx(w,y,x);
+	y = ps->ysize;
+	assert(x > 26 + START_COL * 2); // see ctime_r(3)
+	if(get_logs(y,l)){
+		return -1;
+	}
+	assert(wattrset(w,SUBDISPLAY_ATTR) == OK);
+	for(r = 0 ; r < y ; ++r){
+		char *c,tbuf[x - START_COL * 2 + 1];
+
+		if(l[r].msg == NULL){
+			break;
+		}
+		assert(ctime_r(&l[r].when,tbuf));
+		tbuf[strlen(tbuf) - 1] = ' '; // kill newline
+		snprintf(tbuf + strlen(tbuf) - 1,sizeof(tbuf) / sizeof(*tbuf) - strlen(tbuf)," %s",l[r].msg);
+		if( (c = strchr(tbuf,'\n')) ){
+			*c = '\0';
+		}
+		assert(mvwaddstr(w,y - r,START_COL,tbuf) != ERR);
+		/*assert(mvwprintw(w,y - r,START_COL,"%-*.*s%-*.*s",
+			25,25,tbuf,spr,spr,l[r].msg) != ERR);*/
+		free(l[r - 1].msg);
+	}
+	return 0;
+}
 
 static int
 display_diags(WINDOW *mainw,struct panel_state *ps){
@@ -1510,11 +1529,9 @@ display_diags(WINDOW *mainw,struct panel_state *ps){
 	if(new_display_panel(mainw,ps,DIAGROWS,x - START_COL * 4,L"press 'l' to dismiss diagnostics")){
 		goto err;
 	}
-	/*
-	if(update_diags_locked(ps)){
+	if(update_diags(ps)){
 		goto err;
 	}
-	*/
 	return OK;
 
 err:
@@ -2191,6 +2208,23 @@ adapter_free(void *cv){
 	free_adapter_state(as); // clears subentries
 	--count_adapters;
 	draw_main_window(stdscr); // Update the device count
+	pthread_mutex_unlock(&bfl);
+}
+
+static void
+vdiag(const char *fmt,va_list v){
+	char *nl;
+
+	pthread_mutex_lock(&bfl);
+	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
+	if( (nl = strchr(statusmsg,'\n')) ){
+		*nl = '\0';
+	}
+	draw_main_window(stdscr);
+	if(diags.p){
+		update_diags(&diags);
+	}
+	screen_update();
 	pthread_mutex_unlock(&bfl);
 }
 
