@@ -90,6 +90,9 @@ static reelbox *current_adapter,*top_reelbox,*last_reelbox;
 
 static inline void
 screen_update(void){
+	if(active){
+		assert(top_panel(active->p) != ERR);
+	}
 	update_panels();
 	assert(doupdate() == OK);
 }
@@ -408,7 +411,6 @@ create_reelbox(adapterstate *as,int rows,int scrline,int cols){
 		if((ret->win = newwin(l,PAD_COLS(cols),scrline,START_COL)) == NULL){
 			exit(0);
 		}
-		//assert( (ret->win = newwin(l,PAD_COLS(cols),scrline,START_COL)) );
 		assert( (ret->panel = new_panel(ret->win)) );
 		ret->scrline = scrline;
 		ret->selected = NULL;
@@ -1427,6 +1429,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 		return ERR;
 	}
 	assert((ps->p = new_panel(psw)));
+	assert(top_panel(ps->p) != ERR);
 	if(ps->p == NULL){
 		delwin(psw);
 		return ERR;
@@ -2007,9 +2010,6 @@ adapter_callback(const controller *a, void *state){
 					current_adapter = rb;
 				}
 				last_reelbox = rb;
-				// Want the subdisplay left above this new adapter,
-				// should they intersect.
-				assert(bottom_panel(rb->panel) == OK);
 			}else{ // insert it after the last visible one, no rb
 				as->next = top_reelbox->as;
 				top_reelbox->as->prev->next = as;
