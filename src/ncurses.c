@@ -23,7 +23,7 @@
 #endif
 #endif
 
-static int selection_active;
+static int selection_active; // FIXME we ought be able to eliminate this
 static pthread_mutex_t bfl = PTHREAD_MUTEX_INITIALIZER;
 
 struct panel_state {
@@ -2012,10 +2012,13 @@ handle_ncurses_input(WINDOW *w){
 				break;
 			}
 			case '\r': case '\n': case KEY_ENTER:
-				 if(select_adapter() == 0){
-					 selection_active = 1;
-				 }
-				 break;
+				pthread_mutex_lock(&bfl);
+				if(select_adapter() == 0){
+					selection_active = 1;
+				}
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
 			case 12: // CTRL+L FIXME
 				pthread_mutex_lock(&bfl);
 				wrefresh(curscr);
