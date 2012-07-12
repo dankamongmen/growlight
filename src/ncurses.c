@@ -23,7 +23,6 @@
 #endif
 #endif
 
-static int selection_active; // FIXME we ought be able to eliminate this
 static pthread_mutex_t bfl = PTHREAD_MUTEX_INITIALIZER;
 
 struct panel_state {
@@ -100,6 +99,17 @@ screen_update(void){
 static inline int
 adapter_up_p(const adapterstate *as __attribute__ ((unused))){
 	return 1; // FIXME
+}
+
+static int
+selection_active(void){
+	if(current_adapter == NULL){
+		return 0;
+	}
+	if(current_adapter->selected == NULL){
+		return 0;
+	}
+	return 1;
 }
 
 // This is the number of l we'd have in an optimal world; we might have
@@ -2015,15 +2025,12 @@ handle_ncurses_input(WINDOW *w){
 			case KEY_BACKSPACE:
 				pthread_mutex_lock(&bfl);
 				deselect_adapter_locked();
-				selection_active = 0;
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			case '\r': case '\n': case KEY_ENTER:
 				pthread_mutex_lock(&bfl);
-				if(select_adapter() == 0){
-					selection_active = 1;
-				}
+				select_adapter();
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -2048,7 +2055,7 @@ handle_ncurses_input(WINDOW *w){
 			}
 			case KEY_UP: case 'k':{
 				pthread_mutex_lock(&bfl);
-				if(!selection_active){
+				if(!selection_active()){
 					use_prev_controller(w,&details);
 					if(active){
 						assert(top_panel(active->p) != ERR);
@@ -2062,7 +2069,7 @@ handle_ncurses_input(WINDOW *w){
 			}
 			case KEY_DOWN: case 'j':{
 				pthread_mutex_lock(&bfl);
-				if(!selection_active){
+				if(!selection_active()){
 					use_next_controller(w,&details);
 					if(active){
 						assert(top_panel(active->p) != ERR);
