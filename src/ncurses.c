@@ -1517,10 +1517,7 @@ update_diags(struct panel_state *ps){
 		if( (c = strchr(tbuf,'\n')) ){
 			*c = '\0';
 		}
-		//assert(mvwaddstr(w,y - r,START_COL,tbuf) != ERR);
 		assert(mvwprintw(w,y - r,START_COL,"%s",tbuf) != ERR);
-		/*assert(mvwprintw(w,y - r,START_COL,"%-*.*s%-*.*s",
-			25,25,tbuf,spr,spr,l[r].msg) != ERR);*/
 		free(l[r - 1].msg);
 	}
 	return 0;
