@@ -861,7 +861,13 @@ adapter_details(WINDOW *hw,const controller *c,int rows){
 	if(rows == 1){
 		return 0;
 	}
-	assert(mvwprintw(hw,2,START_COL,"BIOS boot SHA1:") != ERR);
+	if(c->bus == BUS_VIRTUAL){
+		assert(mvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available") != ERR);
+		return 0;
+	}
+	assert(mvwprintw(hw,2,START_COL,"Firmware: %s BIOS: %s",
+				c->fwver ? c->fwver : "Unknown",
+				c->biosver ? c->biosver : "Unknown") != ERR);
 	return 0;
 }
 

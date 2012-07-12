@@ -573,6 +573,20 @@ print_controller(const controller *c,int descend){
 }
 
 static int
+detail_controller(const controller *c){
+	int r,rr;
+
+	if((r = print_controller(c,0)) < 0){
+		return r;
+	}
+	r += rr = printf("Firmware: %s\n",c->fwver ? c->fwver : "Unknown / inapplicable");
+	if(rr < 0){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 adapter(wchar_t * const *args,const char *arghelp){
 	const controller *c;
 	int descend;
@@ -595,6 +609,11 @@ adapter(wchar_t * const *args,const char *arghelp){
 				return 0;
 			}else if(wcscmp(args[1],L"rescan") == 0){
 				if(rescan_controller(c)){
+					return -1;
+				}
+				return 0;
+			}else if(wcscmp(args[1],L"detail") == 0){
+				if(detail_controller(c)){
 					return -1;
 				}
 				return 0;
@@ -1703,6 +1722,7 @@ static const struct fxn {
 	FXN(rescan,""),
 	FXN(adapter,"[ \"reset\" adapter ]\n"
 			"                 | [ \"rescan\" adapter ]\n"
+			"                 | [ \"detail\" adapter ]\n"
 			"                 | [ -v ] no arguments to list all host bus adapters"),
 	FXN(blockdev,"[ \"rescan\" blockdev ]\n"
 			"                 | [ \"badblocks\" blockdev [ \"rw\" ] ]\n"

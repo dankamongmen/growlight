@@ -179,6 +179,8 @@ typedef struct controller {
 	char *sysfs;		// Sysfs node
 	char *driver;		// From sysfs, 'device/module'
 	char *ident;		// Manufactured identifier to reference adapter
+	char *fwver;		// Firmware version, if known
+	char *biosver;		// BIOS version, if known
 	enum {
 		BUS_UNKNOWN,
 		BUS_VIRTUAL,

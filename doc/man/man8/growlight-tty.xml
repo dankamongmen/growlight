@@ -172,6 +172,7 @@ partition containing <emphasis>GRUB2</emphasis> will be marked as <emphasis>acti
 		<varlistentry>
 			<term><option>adapter reset adapter</option></term>
 			<term><option>adapter rescan adapter</option></term>
+			<term><option>adapter detail adapter</option></term>
 			<term><option>adapter [ -v ]</option></term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">adapter</emphasis> lists each
@@ -183,7 +184,8 @@ device driver's module name suffixed by a small integer, but the exact form
 is intentionally left implementation-defined). The "reset" subcommand resets
 the HBA, if it supports this functionality. The "rescan" subcommand causes the
 kernel to scan the HBA for newly connected devices. Both operations are
-performed via the Linux kernel's sysfs filesystem.</para>
+performed via the Linux kernel's sysfs filesystem. "detail" will display
+detailed information about the adapter.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
@@ -193,6 +195,7 @@ performed via the Linux kernel's sysfs filesystem.</para>
 			<term><option>blockdev ataerase blockdev</option></term>
 			<term><option>blockdev rmtable blockdev</option></term>
 			<term><option>blockdev mktable [ blockdev tabletype ]</option></term>
+			<term><option>blockdev detail blockdev</option></term>
 			<term><option>blockdev [ -v ]</option></term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">blockdev</emphasis> concisely lists
@@ -210,7 +213,8 @@ lead to noticeably improved performance from used Solid State Devices (SSDs).
 "rmtable" will attempt to write zeros over all partition table structures such
 that <emphasis>libblkid(3)</emphasis> does not recognize the disk as being
 partitioned. "mktable" will create a partition table of the provided type; with
-no arguments, supported partition table types are listed.</para>
+no arguments, supported partition table types are listed. "detail" will display
+detailed information about the block device.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>

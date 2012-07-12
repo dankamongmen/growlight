@@ -180,6 +180,8 @@ void verbf(const char *fmt,...){
 static void
 free_controller(controller *c){
 	if(c){
+		free(c->biosver);
+		free(c->fwver);
 		free(c->driver);
 		free(c->ident);
 		free(c->sysfs);
