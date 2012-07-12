@@ -1871,6 +1871,34 @@ collapse_adapter_locked(void){
 	return 0;
 }
 
+static int
+select_adapter_dev(reelbox *rb,blockobj *bo,int delta){
+	assert(bo != rb->selected);
+	if((rb->selected = bo) == NULL){
+		rb->selline = -1;
+	}else{
+		rb->selline += delta;
+	}
+	return redraw_adapter(rb);
+}
+
+static int
+select_adapter(void){
+	reelbox *rb;
+
+	if((rb = current_adapter) == NULL){
+		return -1;
+	}
+	if(rb->selected){
+		return 0;
+	}
+	if(rb->as->bobjs == NULL){
+		return -1;
+	}
+	assert(rb->selline == -1);
+	return select_adapter_dev(rb,rb->as->bobjs,2);
+}
+
 static void
 handle_ncurses_input(WINDOW *w){
 	int ch;
@@ -1905,6 +1933,11 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
+			case '\r': case '\n': case KEY_ENTER:
+				 if(select_adapter() == 0){
+					 selection_active = 1;
+				 }
+				 break;
 			case 12: // CTRL+L FIXME
 				pthread_mutex_lock(&bfl);
 				wrefresh(curscr);
@@ -2144,8 +2177,20 @@ static void
 block_free(void *cv,void *bv){
 	adapterstate *as = cv;
 	blockobj *bo = bv;
+	reelbox *rb;
 
 	pthread_mutex_lock(&bfl);
+	if( (rb = as->rb) ){
+		if(bo == rb->selected){
+			if(bo->prev){
+				select_adapter_dev(rb,bo->prev,-1);
+			}else if(bo->next){
+				select_adapter_dev(rb,bo->next,1);
+			}else{
+				select_adapter_dev(rb,NULL,0);
+			}
+		}
+	}
 	if(bo->prev){
 		bo->prev->next = bo->next;
 	}
