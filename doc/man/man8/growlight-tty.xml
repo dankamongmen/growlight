@@ -82,25 +82,25 @@ variant.</para>
 	<refsect1 id="options">
 		<title>OPTIONS</title>
 		<varlistentry>
-			<term><option>-h|--help</option></term>
+			<term>-h|--help</term>
 			<listitem>
 			<para>Print a brief usage summary and exit.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>-v|--verbose</option></term>
+			<term>-v|--verbose</term>
 			<listitem>
 			<para>Be more verbose.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>-V|--version</option></term>
+			<term>-V|--version</term>
 			<listitem>
 			<para>Print version information and exit.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>-t|--target path</option></term>
+			<term>-t|--target path</term>
 			<listitem>
 <para>Run in system installation mode, using <emphasis role="bold">path</emphasis> as the temporary mountpoint
 for the target's root filesystem. "map" commands will populate the hierarchy
@@ -134,7 +134,7 @@ Devices can be specified via any appropriate identifier (label, UUID, etc.).
 </para>
 		<variablelist>
 		<varlistentry>
-			<term><option>uefiboot [ -protectmbr ]</option></term>
+			<term>uefiboot [ -protectmbr ]</term>
 			<listitem>
 <para>Prepare the target for UEFI-based booting. A target root filesystem map
 must be defined, and this filesystem must be mounted at the chroot's toplevel.
@@ -154,7 +154,7 @@ disk. This might be preferable if interoperating with GPT-unaware tools.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>biosboot</option></term>
+			<term>biosboot</term>
 			<listitem>
 <para>Prepare the target for BIOS-based booting. A target root filesystem map
 must be defined, and this filesystem must be mounted at the chroot's toplevel.
@@ -172,10 +172,16 @@ partition containing <emphasis>GRUB2</emphasis> will be marked as <emphasis>acti
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>adapter reset adapter</option></term>
-			<term><option>adapter rescan adapter</option></term>
-			<term><option>adapter detail adapter</option></term>
-			<term><option>adapter [ -v ]</option></term>
+			<term>adapter reset adapter</term>
+		</varlistentry>
+		<varlistentry>
+			<term>adapter rescan adapter</term>
+		</varlistentry>
+		<varlistentry>
+			<term>adapter detail adapter</term>
+		</varlistentry>
+		<varlistentry>
+			<term>adapter [ -v ]</term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">adapter</emphasis> lists each
 HBA (Host Bus Adapter) device known to the system, including those not
@@ -191,14 +197,28 @@ detailed information about the adapter.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>blockdev rescan blockdev</option></term>
-			<term><option>blockdev badblocks blockdev [ rw ]</option></term>
-			<term><option>blockdev wipebiosboot blockdev</option></term>
-			<term><option>blockdev ataerase blockdev</option></term>
-			<term><option>blockdev rmtable blockdev</option></term>
-			<term><option>blockdev mktable [ blockdev tabletype ]</option></term>
-			<term><option>blockdev detail blockdev</option></term>
-			<term><option>blockdev [ -v ]</option></term>
+			<term>blockdev rescan blockdev</term>
+		</varlistentry>
+		<varlistentry>
+			<term>blockdev badblocks blockdev [ rw ]</term>
+		</varlistentry>
+		<varlistentry>
+			<term>blockdev wipebiosboot blockdev</term>
+		</varlistentry>
+		<varlistentry>
+			<term>blockdev ataerase blockdev</term>
+		</varlistentry>
+		<varlistentry>
+			<term>blockdev rmtable blockdev</term>
+		</varlistentry>
+		<varlistentry>
+			<term>blockdev mktable [ blockdev tabletype ]</term>
+		</varlistentry>
+		<varlistentry>
+			<term>blockdev detail blockdev</term>
+		</varlistentry>
+		<varlistentry>
+			<term>blockdev [ -v ]</term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">blockdev</emphasis> concisely lists
 all block devices recognized by the system. Passed "-v", partitions and
@@ -220,13 +240,25 @@ detailed information about the block device.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>partition del partition</option></term>
-			<term><option>partition fsck partition</option></term>
-			<term><option>partition add blockdev name size</option></term>
-			<term><option>partition setuuid partition uuid</option></term>
-			<term><option>partition setname partition name</option></term>
-			<term><option>partition setflag [ partition on|off flag ]</option></term>
-			<term><option>partition [ -v ]</option></term>
+			<term>partition del partition</term>
+		</varlistentry>
+		<varlistentry>
+			<term>partition fsck partition</term>
+		</varlistentry>
+		<varlistentry>
+			<term>partition add blockdev name size</term>
+		</varlistentry>
+		<varlistentry>
+			<term>partition setuuid partition uuid</term>
+		</varlistentry>
+		<varlistentry>
+			<term>partition setname partition name</term>
+		</varlistentry>
+		<varlistentry>
+			<term>partition setflag [ partition on|off flag ]</term>
+		</varlistentry>
+		<varlistentry>
+			<term>partition [ -v ]</term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">partition</emphasis> concisely lists all
 detected partitions. Passed "-v", data present on a given partition will also
@@ -240,13 +272,25 @@ the specified flag on the specified partition.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>fs mkfs [ blockdev fstype ]</option></term>
-			<term><option>fs wipefs blockdev</option></term>
-			<term><option>fs setuuid blockdev uuid</option></term>
-			<term><option>fs setlabel blockdev label</option></term>
-			<term><option>fs mount blockdev mountpoint mnttype options</option></term>
-			<term><option>fs umount blockdev</option></term>
-			<term><option>fs</option></term>
+			<term>fs mkfs [ blockdev fstype ]</term>
+		</varlistentry>
+		<varlistentry>
+			<term>fs wipefs blockdev</term>
+		</varlistentry>
+		<varlistentry>
+			<term>fs setuuid blockdev uuid</term>
+		</varlistentry>
+		<varlistentry>
+			<term>fs setlabel blockdev label</term>
+		</varlistentry>
+		<varlistentry>
+			<term>fs mount blockdev mountpoint mnttype options</term>
+		</varlistentry>
+		<varlistentry>
+			<term>fs umount blockdev</term>
+		</varlistentry>
+		<varlistentry>
+			<term>fs</term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">fs</emphasis> concisely lists all
 detected possible filesystems, irrespective of mount status or viability. The
@@ -264,9 +308,13 @@ by blockdev.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>swap on swapdev label [ uuid ]</option></term>
-			<term><option>swap off swapdev</option></term>
-			<term><option>swap</option></term>
+			<term>swap on swapdev label [ uuid ]</term>
+		</varlistentry>
+		<varlistentry>
+			<term>swap off swapdev</term>
+		</varlistentry>
+		<varlistentry>
+			<term>swap</term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">swap</emphasis> concisely lists
 each swap device known to the system, including those not actively used. The
@@ -281,8 +329,10 @@ failure.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>mdadm arguments</option></term>
-			<term><option>mdadm [ -v ]</option></term>
+			<term>mdadm arguments</term>
+		</varlistentry>
+		<varlistentry>
+			<term>mdadm [ -v ]</term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">mdadm</emphasis> concisely lists
 each MD (Multiple Device, aka the Linux kernel's mdraid driver) device
@@ -293,7 +343,7 @@ behavior is subject to change as MD is more fully integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>dmsetup arguments</option></term>
+			<term>dmsetup arguments</term>
 			<listitem>
 <para>Arguments are sanitized and passed to the external
 <emphasis role="bold">dmsetup(8)</emphasis> tool. Note that this behavior is
@@ -301,8 +351,10 @@ subject to change as DM is more fully integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>zpool arguments</option></term>
-			<term><option>zpool [ -v ]</option></term>
+			<term>zpool arguments</term>
+		</varlistentry>
+		<varlistentry>
+			<term>zpool [ -v ]</term>
 			<listitem>
 <para>Passed no arguments, <emphasis role="bold">zpool</emphasis> concisely lists
 each zpool (ZFS storage pool) device currently available to the system. Passed
@@ -313,7 +365,7 @@ integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>zfs arguments</option></term>
+			<term>zfs arguments</term>
 			<listitem>
 <para>Arguments are sanitized and passed to the external
 <emphasis role="bold">zfs(8)</emphasis> tool. This command is not expected to
@@ -321,10 +373,16 @@ be retained once ZFS is fully integrated.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>target set path</option></term>
-			<term><option>target unset</option></term>
-			<term><option>target finalize</option></term>
-			<term><option>target</option></term>
+			<term>target set path</term>
+		</varlistentry>
+		<varlistentry>
+			<term>target unset</term>
+		</varlistentry>
+		<varlistentry>
+			<term>target finalize</term>
+		</varlistentry>
+		<varlistentry>
+			<term>target</term>
 			<listitem>
 <para>The <emphasis role="bold">set</emphasis> subcommand sets the target (see the <emphasis role="bold">--target</emphasis>
 option). If a target has already been set, the command will fail. If <emphasis role="bold">path</emphasis>
@@ -337,8 +395,10 @@ the current target (if one exists).</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>map [ mountdev mountpoint mnttype options ]</option></term>
-			<term><option>map</option></term>
+			<term>map [ mountdev mountpoint mnttype options ]</term>
+		</varlistentry>
+		<varlistentry>
+			<term>map</term>
 			<listitem>
 <para>Provided no arguments, <emphasis role="bold">map</emphasis> dumps the
 target's /etc/fstab as currently envisioned. Otherwise, attempt to mount
@@ -351,13 +411,13 @@ system preparation mode (see <emphasis role="bold">target</emphasis>).</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>mounts</option></term>
+			<term>mounts</term>
 			<listitem>
 <para>Displays all currently-mounted filesystems. Accepts no arguments.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>grubmap</option></term>
+			<term>grubmap</term>
 			<listitem>
 <para>Invokes <emphasis role="bold">grub-mkdevicemap</emphasis> to display
 <emphasis>GRUB2's</emphasis> calculated device map. This will not overwrite any existing device
@@ -365,35 +425,35 @@ map, but is included merely for diagnostic purposes. Accepts no arguments.</para
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>benchmark blockdev</option></term>
+			<term>benchmark blockdev</term>
 			<listitem>
 <para>Run a simple, non-destructive benchmark on the block device. Currently,
 	this is implemented via <emphasis>hdparm -t</emphasis>.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>troubleshoot</option></term>
+			<term>troubleshoot</term>
 			<listitem>
 <para>Look for problems, both physical and logical, in the storage setup. This
 command's behavior is not yet well-defined FIXME.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>version</option></term>
+			<term>version</term>
 			<listitem>
 <para>Displays the <emphasis>&dhpackage;</emphasis> banner and version, and the version of various
 tools/libraries. <emphasis role="bold">version</emphasis> accepts no arguments.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>diags [ count ]</option></term>
+			<term>diags [ count ]</term>
 			<listitem><para>
 Dump up through count diagnostic messages from the logging ringbuffer to stdout.
 Provided no parameter, all available diagnostic messages will be printed. Timestamps
 are printed along with each message.</para></listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>rescan</option></term>
+			<term>rescan</term>
 			<listitem><para>
 Completely reinitializes growlight's idea of the storage system. Files like
 /proc/mounts and /proc/filesystems will be reparsed, superblocks will be reread,
@@ -412,7 +472,7 @@ through use of <emphasis role="bold">libudev(3)</emphasis> and
 or used outside of debugging.</para></listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>reset</option></term>
+			<term>reset</term>
 			<listitem><para>
 Reset all adapters advertising this capability, presumably following addition
 or removal of a device. The exact effects of this command are unknown, and its
@@ -422,15 +482,17 @@ to support on-the-fly external storage reconfiguration through use of
 This command should not be needed or used outside of debugging.</para></listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>help command</option></term>
-			<term><option>help</option></term>
+			<term>help command</term>
+		</varlistentry>
+		<varlistentry>
+			<term>help</term>
 			<listitem><para>
 Invoked upon a <emphasis role="bold">command</emphasis>, <emphasis role="bold">help</emphasis>
 displays that command's synopsis. Otherwise, <emphasis role="bold">help</emphasis> lists a
 synopsis of each command.</para></listitem>
 		</varlistentry>
 		<varlistentry>
-			<term><option>quit</option></term>
+			<term>quit</term>
 			<listitem>
 <para>Exits the program. See the <emphasis role="bold">--target</emphasis>
 command line option and <emphasis role="bold">target</emphasis> command to
