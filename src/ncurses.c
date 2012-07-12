@@ -2111,7 +2111,6 @@ block_callback(const device *d,void *v){
 	if(as->rb){
 		resize_adapter(as->rb);
 		redraw_adapter(as->rb);
-		assert(top_panel(as->rb->panel) != ERR);
 		screen_update();
 	}
 	pthread_mutex_unlock(&bfl);
@@ -2141,7 +2140,6 @@ block_free(void *cv,void *bv){
 	if(as->rb){
 		resize_adapter(as->rb);
 		redraw_adapter(as->rb);
-		assert(top_panel(as->rb->panel) != ERR);
 		screen_update();
 	}
 	pthread_mutex_unlock(&bfl);
