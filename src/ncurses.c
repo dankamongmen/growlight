@@ -2230,6 +2230,16 @@ vdiag(const char *fmt,va_list v){
 	pthread_mutex_unlock(&bfl);
 }
 
+static void
+fatal(const char *fmt,...){
+	va_list va;
+
+	assert(endwin() != ERR);
+	va_start(va,fmt);
+	vfprintf(stderr,fmt,va);
+	va_end(va);
+}
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = vdiag,
@@ -2237,6 +2247,7 @@ int main(int argc,char * const *argv){
 		.block_event = block_callback,
 		.adapter_free = adapter_free,
 		.block_free = block_free,
+		.fatal = fatal,
 	};
 	WINDOW *w;
 

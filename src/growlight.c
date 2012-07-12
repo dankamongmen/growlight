@@ -1175,18 +1175,27 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 
 static void
 version(const char *name,int status){
-	FILE *fp = status == EXIT_SUCCESS ? stdout : stderr;
+	if(gui->fatal){
+		gui->fatal("%s version %s\n",name,VERSION);
+	}else{
+		FILE *fp = status == EXIT_SUCCESS ? stdout : stderr;
 
-	fprintf(fp,"%s version %s\n",name,VERSION);
+		fprintf(fp,"%s version %s\n",name,VERSION);
+	}
 	exit(status);
 }
 
 static void
 usage(const char *name,int status){
-	FILE *fp = status == EXIT_SUCCESS ? stdout : stderr;
+	if(gui->fatal){
+		gui->fatal("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
+				"\t\t[ -t|--target path ]\n",name);
+	}else{
+		FILE *fp = status != EXIT_SUCCESS ? stderr : stdout;
 
-	fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
-			"\t\t[ -t|--target path ]\n",name);
+		fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
+				"\t\t[ -t|--target path ]\n",name);
+	}
 	exit(status);
 }
 

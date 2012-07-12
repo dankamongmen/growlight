@@ -40,6 +40,12 @@ typedef struct growlight_ui {
 
 	// Controller state followed by block state
 	void (*block_free)(void *,void *);
+
+	// I'm sorry about this ugly customer :/. Like vdiag(), but we're going
+	// to abort after we're done calling you. Only used thus far during
+	// initialization, to allow ncurses to call endwin(). If NULL, we use
+	// good ol' fprintf(stderr). Hopefully this will one day go away. FIXME
+	void (*fatal)(const char *,...);
 } glightui;
 
 int growlight_init(int,char * const *,const glightui *);
