@@ -1569,6 +1569,7 @@ static const wchar_t *helps[] = {
 	L"'v': view selection details   'l': view recent diagnostics",
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
 	L"'-'/'←': collapse selection   '+'/'→': expand selection",
+	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	NULL
 };
 
@@ -2011,6 +2012,13 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
+			case KEY_BACKSPACE:
+				pthread_mutex_lock(&bfl);
+				deselect_adapter_locked();
+				selection_active = 0;
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
 			case '\r': case '\n': case KEY_ENTER:
 				pthread_mutex_lock(&bfl);
 				if(select_adapter() == 0){
