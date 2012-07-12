@@ -597,6 +597,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 static void
 print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 			unsigned line,unsigned rows,unsigned endp){
+	const int selected = bo == rb->selected;
 	char buf[PREFIXSTRLEN + 1];
 
 	if(line >= rows - !endp){
@@ -606,12 +607,24 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 		case LAYOUT_NONE:
 	if(bo->d->blkdev.realdev){
 		if(bo->d->blkdev.rotate){
-			assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
+			if(selected){
+				assert(wattrset(rb->win,A_REVERSE|COLOR_WHITE) == OK);
+			}else{
+				assert(wattrset(rb->win,COLOR_WHITE) == OK);
+			}
 		}else{
-			assert(wcolor_set(rb->win,COLOR_CYAN,NULL) == OK);
+			if(selected){
+				assert(wattrset(rb->win,A_REVERSE|COLOR_CYAN) == OK);
+			}else{
+				assert(wattrset(rb->win,COLOR_CYAN) == OK);
+			}
 		}
 	}else{
-		assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
+		if(selected){
+			assert(wattrset(rb->win,A_REVERSE|COLOR_WHITE) == OK);
+		}else{
+			assert(wattrset(rb->win,COLOR_WHITE) == OK);
+		}
 	}
 	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 				bo->d->name,
@@ -625,7 +638,11 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 				) != ERR);
 		break;
 		case LAYOUT_MDADM:
-	assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
+	if(selected){
+		assert(wattrset(rb->win,A_REVERSE|COLOR_MAGENTA) == OK);
+	}else{
+		assert(wattrset(rb->win,COLOR_MAGENTA) == OK);
+	}
 	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
@@ -640,7 +657,11 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 		case LAYOUT_PARTITION:
 		break;
 		case LAYOUT_ZPOOL:
-	assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
+	if(selected){
+		assert(wattrset(rb->win,A_REVERSE|COLOR_MAGENTA) == OK);
+	}else{
+		assert(wattrset(rb->win,COLOR_MAGENTA) == OK);
+	}
 	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
