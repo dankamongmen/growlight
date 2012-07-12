@@ -844,9 +844,24 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 	// FIXME pull_adapters_down();
 }
 
+// FIXME why accept 'rows' just to blow it away?
 static int
 adapter_details(WINDOW *hw,const controller *c,int rows){
-	assert(hw && c && rows); // FIXME
+	int cols;
+
+	getmaxyx(hw,rows,cols);
+	if(cols < START_COL * 2){
+		return 0;
+	}
+	if(rows == 0){
+		return 0;
+	}
+	assert(wattrset(hw,SUBDISPLAY_ATTR) != ERR);
+	assert(mvwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name) != ERR);
+	if(rows == 1){
+		return 0;
+	}
+	assert(mvwprintw(hw,2,START_COL,"BIOS boot SHA1:") != ERR);
 	return 0;
 }
 
@@ -1562,11 +1577,9 @@ display_details(WINDOW *mainw,struct panel_state *ps){
 		goto err;
 	}
 	if(current_adapter){
-/*
-		if(iface_details(panel_window(ps->p),current_iface->is->iface,ps->ysize)){
+		if(adapter_details(panel_window(ps->p),current_adapter->as->c,ps->ysize)){
 			goto err;
 		}
-*/
 	}
 	return 0;
 
