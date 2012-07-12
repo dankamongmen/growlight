@@ -714,7 +714,6 @@ print_adapter_devs(const adapterstate *as,int rows,unsigned topp,unsigned endp){
 	const blockobj *cur;
 	const reelbox *rb;
 	long line;
-	int cols;
 
 	if((rb = as->rb) == NULL){
 		return;
@@ -722,7 +721,6 @@ print_adapter_devs(const adapterstate *as,int rows,unsigned topp,unsigned endp){
 	if(as->expansion < EXPANSION_DEVS){
 		return;
 	}
-	cols = getmaxx(rb->win);
 	// First, print the selected device (if there is one)
 	cur = rb->selected;
 	line = rb->selline;
