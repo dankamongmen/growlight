@@ -124,6 +124,23 @@ lines_for_adapter(const struct adapterstate *as){
 	return -1;
 }
 
+static int
+device_lines(int expa,const blockobj *bo){
+	int l = 0;
+
+	switch(expa){ // Intentional fallthroughs
+		case EXPANSION_MOUNTS:
+			l += bo->mounts;
+		case EXPANSION_FS:
+			l += bo->fs;
+		case EXPANSION_PARTS:
+			l += bo->parts;
+		case EXPANSION_DEVS:
+			++l;
+	}
+	return l;
+}
+
 static inline int
 adapter_lines_bounded(const adapterstate *as,int rows){
 	int l = lines_for_adapter(as);
@@ -578,11 +595,95 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 }
 
 static void
-print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned endp){
+print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
+			unsigned line,unsigned rows,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
-	const blockobj *bo;
+
+	if(line >= rows - !endp){
+		return;
+	}
+	switch(bo->d->layout){
+		case LAYOUT_NONE:
+	if(bo->d->blkdev.realdev){
+		if(bo->d->blkdev.rotate){
+			assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
+		}else{
+			assert(wcolor_set(rb->win,COLOR_CYAN,NULL) == OK);
+		}
+	}else{
+		assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
+	}
+	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+				bo->d->name,
+				bo->d->model ? bo->d->model : "n/a",
+				bo->d->revision ? bo->d->revision : "n/a",
+				qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
+				bo->d->physsec,
+				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
+				bo->d->wwn ? bo->d->wwn : "n/a",
+				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a"
+				) != ERR);
+		break;
+		case LAYOUT_MDADM:
+	assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
+	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+				bo->d->name,
+				bo->d->model ? bo->d->model : "n/a",
+				bo->d->revision ? bo->d->revision : "n/a",
+				qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
+				bo->d->physsec,
+				"n/a",
+				bo->d->wwn ? bo->d->wwn : "n/a",
+				transport_str(bo->d->mddev.transport)
+				) != ERR);
+		break;
+		case LAYOUT_PARTITION:
+		break;
+		case LAYOUT_ZPOOL:
+	assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
+	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+				bo->d->name,
+				bo->d->model ? bo->d->model : "n/a",
+				(uintmax_t)bo->d->zpool.zpoolver,
+				qprefix(bo->d->size,1,buf,sizeof(buf),0),
+				bo->d->physsec,
+				"spa",
+				bo->d->wwn ? bo->d->wwn : "n/a",
+				transport_str(bo->d->zpool.transport)
+				) != ERR);
+		break;
+	}
+	++line;
+	if(as->expansion >= EXPANSION_PARTS){
+		const device *p;
+
+		print_fs(as->expansion,bo->d,rb->win,&line,rows,endp);
+		for(p = bo->d->parts ; p ; p = p->next){
+			if(line >= rows - !endp){
+				return;
+			}
+			assert(wcolor_set(rb->win,COLOR_BLUE,NULL) == OK);
+			assert(mvwprintw(rb->win,line,START_COL * 2,
+						"%-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13ls",
+						p->name,
+						p->partdev.uuid ? p->partdev.uuid : "",
+						qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
+						partrole_str(p->partdev.partrole,p->partdev.flags),
+						p->partdev.pname ? p->partdev.pname : L"n/a"
+						) != ERR);
+			++line;
+			print_fs(as->expansion,p,rb->win,&line,rows,endp);
+		}
+	}
+}
+
+static void
+print_adapter_devs(const adapterstate *as,int rows,unsigned topp,unsigned endp){
+	// If the interface is down, we don't lead with the summary line
+	const blockobj *cur;
 	const reelbox *rb;
-	unsigned line;
+	long line;
+	int cols;
 
 	if((rb = as->rb) == NULL){
 		return;
@@ -590,86 +691,25 @@ print_adapter_devs(const adapterstate *as,unsigned rows,unsigned topp,unsigned e
 	if(as->expansion < EXPANSION_DEVS){
 		return;
 	}
-	line = rb->selected ? rb->selline + rb->selected->lns : -topp + 1;
-	bo = rb->selected ? rb->selected->next : as->bobjs;
-	while(bo && line < rows){
-		if(line >= rows - !endp){
-			break;
+	cols = getmaxx(rb->win);
+	// First, print the selected device (if there is one)
+	cur = rb->selected;
+	line = rb->selline;
+	while(cur && line + (long)device_lines(as->expansion,cur) >= !!topp){
+		print_dev(rb,as,cur,line,rows,endp);
+		// here we traverse, then account...
+		if( (cur = cur->prev) ){
+			line -= device_lines(as->expansion,cur);
 		}
-		switch(bo->d->layout){
-			case LAYOUT_NONE:
-		if(bo->d->blkdev.realdev){
-			if(bo->d->blkdev.rotate){
-				assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
-			}else{
-				assert(wcolor_set(rb->win,COLOR_CYAN,NULL) == OK);
-			}
-		}else{
-			assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
-		}
-		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
-					bo->d->name,
-					bo->d->model ? bo->d->model : "n/a",
-					bo->d->revision ? bo->d->revision : "n/a",
-					qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
-					bo->d->physsec,
-					bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
-					bo->d->wwn ? bo->d->wwn : "n/a",
-					bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a"
-					) != ERR);
-			break;
-			case LAYOUT_MDADM:
-		assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
-		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
-					bo->d->name,
-					bo->d->model ? bo->d->model : "n/a",
-					bo->d->revision ? bo->d->revision : "n/a",
-					qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
-					bo->d->physsec,
-					"n/a",
-					bo->d->wwn ? bo->d->wwn : "n/a",
-					transport_str(bo->d->mddev.transport)
-					) != ERR);
-			break;
-			case LAYOUT_PARTITION:
-			break;
-			case LAYOUT_ZPOOL:
-		assert(wcolor_set(rb->win,COLOR_WHITE,NULL) == OK);
-		assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
-					bo->d->name,
-					bo->d->model ? bo->d->model : "n/a",
-					(uintmax_t)bo->d->zpool.zpoolver,
-					qprefix(bo->d->size,1,buf,sizeof(buf),0),
-					bo->d->physsec,
-					"spa",
-					bo->d->wwn ? bo->d->wwn : "n/a",
-					transport_str(bo->d->zpool.transport)
-					) != ERR);
-			break;
-		}
-		++line;
-		if(as->expansion >= EXPANSION_PARTS){
-			const device *p;
-
-			print_fs(as->expansion,bo->d,rb->win,&line,rows,endp);
-			for(p = bo->d->parts ; p ; p = p->next){
-				if(line >= rows - !endp){
-					break;
-				}
-				assert(wcolor_set(rb->win,COLOR_BLUE,NULL) == OK);
-				assert(mvwprintw(rb->win,line,START_COL * 2,
-							"%-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13ls",
-							p->name,
-							p->partdev.uuid ? p->partdev.uuid : "",
-							qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
-							partrole_str(p->partdev.partrole,p->partdev.flags),
-							p->partdev.pname ? p->partdev.pname : L"n/a"
-							) != ERR);
-				++line;
-				print_fs(as->expansion,p,rb->win,&line,rows,endp);
-			}
-		}
-		bo = bo->next;
+	}
+	line = rb->selected ? (rb->selline +
+		(long)device_lines(as->expansion,rb->selected)) : -(long)topp + 1;
+	cur = (rb->selected ? rb->selected->next : as->bobjs);
+	while(cur && line < rows){
+		print_dev(rb,as,cur,line,rows,endp);
+		// here, we account before we traverse. this is correct.
+		line += device_lines(as->expansion,cur);
+		cur = cur->next;
 	}
 }
 
@@ -699,6 +739,17 @@ redraw_adapter(const reelbox *rb){
 	adapter_box(as,rb->win,topp,endp);
 	print_adapter_devs(as,rows,topp,endp);
 	return OK;
+}
+
+static int
+select_adapter_dev(reelbox *rb,blockobj *bo,int delta){
+	assert(bo != rb->selected);
+	if((rb->selected = bo) == NULL){
+		rb->selline = -1;
+	}else{
+		rb->selline += delta;
+	}
+	return redraw_adapter(rb);
 }
 
 // Positive delta moves down, negative delta moves up, except for l2 == NULL
@@ -1408,21 +1459,38 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 static void
 use_prev_device(void){
 	reelbox *rb;
+	int delta;
 
 	if((rb = current_adapter) == NULL){
 		return;
 	}
-	// FIXME
+	if(rb->selected == NULL || rb->selected->prev == NULL){
+		return;
+	}
+	delta = -device_lines(rb->as->expansion,rb->selected->prev);
+	if(rb->selline + delta <= 1){ // FIXME verify
+		delta = 1 - rb->selline;
+	}
+	select_adapter_dev(rb,rb->selected->prev,delta);
 }
 
 static void
 use_next_device(void){
 	reelbox *rb;
+	int delta;
 
 	if((rb = current_adapter) == NULL){
 		return;
 	}
-	// FIXME
+	if(rb->selected == NULL || rb->selected->next == NULL){
+		return;
+	}
+	delta = device_lines(rb->as->expansion,rb->selected);
+	if(rb->selline + delta + device_lines(rb->as->expansion,rb->selected->next) >= getmaxy(rb->win) - 1){
+		delta = (getmaxy(rb->win) - 2 - device_lines(rb->as->expansion,rb->selected->next))
+				- rb->selline;
+	}
+	select_adapter_dev(rb,rb->selected->next,delta);
 }
 
 // Create a panel at the bottom of the window, referred to as the "subdisplay".
@@ -1869,17 +1937,6 @@ collapse_adapter_locked(void){
 	recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
 	redraw_adapter(current_adapter);
 	return 0;
-}
-
-static int
-select_adapter_dev(reelbox *rb,blockobj *bo,int delta){
-	assert(bo != rb->selected);
-	if((rb->selected = bo) == NULL){
-		rb->selline = -1;
-	}else{
-		rb->selline += delta;
-	}
-	return redraw_adapter(rb);
 }
 
 static int
