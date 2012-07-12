@@ -1501,17 +1501,24 @@ update_diags(struct panel_state *ps){
 	assert(wattrset(w,SUBDISPLAY_ATTR) == OK);
 	for(r = 0 ; r < y ; ++r){
 		char *c,tbuf[x - START_COL * 2 + 1];
+		size_t tb;
+		int p;
 
 		if(l[r].msg == NULL){
 			break;
 		}
 		assert(ctime_r(&l[r].when,tbuf));
 		tbuf[strlen(tbuf) - 1] = ' '; // kill newline
-		snprintf(tbuf + strlen(tbuf) - 1,sizeof(tbuf) / sizeof(*tbuf) - strlen(tbuf)," %s",l[r].msg);
+		tb = sizeof(tbuf) / sizeof(*tbuf) - strlen(tbuf);
+		p = snprintf(tbuf + strlen(tbuf) - 1,tb," %s",l[r].msg);
+		if(p < 0 || (unsigned)p >= tb){
+			tbuf[tb - 1] = '\0';
+		}
 		if( (c = strchr(tbuf,'\n')) ){
 			*c = '\0';
 		}
-		assert(mvwaddstr(w,y - r,START_COL,tbuf) != ERR);
+		//assert(mvwaddstr(w,y - r,START_COL,tbuf) != ERR);
+		assert(mvwprintw(w,y - r,START_COL,"%s",tbuf) != ERR);
 		/*assert(mvwprintw(w,y - r,START_COL,"%-*.*s%-*.*s",
 			25,25,tbuf,spr,spr,l[r].msg) != ERR);*/
 		free(l[r - 1].msg);
