@@ -168,12 +168,15 @@ int parse_mounts(const glightui *gui,const char *fn){
 			if(strcmp(d->mnt,mnt)){
 				diag("Already had mount for %s|%s: %s|%s\n",
 						dev,mnt,d->name,d->mnt);
-				goto err;
+				// FIXME need to track both! see bug 175
+				free(d->mnttype);
+				free(d->mntops);
+				free(d->mnt);
 			}
 		}
 		d->mnt = mnt;
-		d->mnttype = fs;
 		d->mntops = ops;
+		d->mnttype = fs;
 		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
 		if(d->layout == LAYOUT_PARTITION){
 			d = d->partdev.parent;
