@@ -721,7 +721,7 @@ print_adapter_devs(const adapterstate *as,int rows,unsigned topp,unsigned endp){
 	if(as->expansion < EXPANSION_DEVS){
 		return;
 	}
-	// First, print the selected device (if there is one)
+	// First, print the selected device (if there is one), and those above
 	cur = rb->selected;
 	line = rb->selline;
 	while(cur && line + (long)device_lines(as->expansion,cur) >= !!topp){
@@ -1516,7 +1516,7 @@ use_next_device(void){
 	}
 	delta = device_lines(rb->as->expansion,rb->selected);
 	if(rb->selline + delta + device_lines(rb->as->expansion,rb->selected->next) >= getmaxy(rb->win) - 1){
-		delta = (getmaxy(rb->win) - 2 - device_lines(rb->as->expansion,rb->selected->next))
+		delta = (getmaxy(rb->win) - 1 - device_lines(rb->as->expansion,rb->selected->next))
 				- rb->selline;
 	}
 	select_adapter_dev(rb,rb->selected->next,delta);
@@ -1914,7 +1914,7 @@ recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
 		newsel = getmaxy(is->rb->win) - aft - 2 - !!adapter_up_p(is);
 	}
 	if(newsel + (int)node_lines(is->expansion,is->rb->selected) >= getmaxy(is->rb->win) - 2){
-		newsel = getmaxy(is->rb->win) - 2 - node_lines(is->expansion,is->rb->selected);
+		newsel = getmaxy(is->rb->win) - 1 - node_lines(is->expansion,is->rb->selected);
 	}
 	/*wstatus_locked(stdscr,"newsel: %d bef: %d aft: %d oldsel: %d maxy: %d",
 			newsel,bef,aft,oldsel,getmaxy(is->rb->win));
