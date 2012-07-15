@@ -553,7 +553,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 
 static void
 print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
-						unsigned endp){
+						unsigned cols,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
 
 	if(expansion < EXPANSION_FS){
@@ -589,8 +589,13 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		return;
 	}
 	if(d->mnt){
-		assert(mvwprintw(w,*line,START_COL * 4,"%s %s",
-					d->mnt,d->mntops) != ERR);
+		char buf[cols + 1];
+
+		snprintf(buf,sizeof(buf),"%s %s",d->mnt,d->mntops);
+		assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s",
+					cols - (START_COL * 4) - 1,
+					cols - (START_COL * 4) - 1,
+					buf) != ERR);
 		if(++*line >= rows - !endp){
 			return;
 		}
@@ -606,7 +611,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 
 static void
 print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
-			unsigned line,unsigned rows,unsigned endp){
+		unsigned line,unsigned rows,unsigned cols,unsigned endp){
 	const int selected = bo == rb->selected;
 	char buf[PREFIXSTRLEN + 1];
 
@@ -688,7 +693,7 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 	if(as->expansion >= EXPANSION_PARTS){
 		const device *p;
 
-		print_fs(as->expansion,bo->d,rb->win,&line,rows,endp);
+		print_fs(as->expansion,bo->d,rb->win,&line,rows,cols,endp);
 		for(p = bo->d->parts ; p ; p = p->next){
 			if(line >= rows - !endp){
 				return;
@@ -703,13 +708,14 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 						p->partdev.pname ? p->partdev.pname : L"n/a"
 						) != ERR);
 			++line;
-			print_fs(as->expansion,p,rb->win,&line,rows,endp);
+			print_fs(as->expansion,p,rb->win,&line,rows,cols,endp);
 		}
 	}
 }
 
 static void
-print_adapter_devs(const adapterstate *as,int rows,unsigned topp,unsigned endp){
+print_adapter_devs(const adapterstate *as,int rows,int cols,
+				unsigned topp,unsigned endp){
 	// If the interface is down, we don't lead with the summary line
 	const blockobj *cur;
 	const reelbox *rb;
@@ -725,7 +731,7 @@ print_adapter_devs(const adapterstate *as,int rows,unsigned topp,unsigned endp){
 	cur = rb->selected;
 	line = rb->selline;
 	while(cur && line + (long)device_lines(as->expansion,cur) >= !!topp){
-		print_dev(rb,as,cur,line,rows,endp);
+		print_dev(rb,as,cur,line,rows,cols,endp);
 		// here we traverse, then account...
 		if( (cur = cur->prev) ){
 			line -= device_lines(as->expansion,cur);
@@ -735,7 +741,7 @@ print_adapter_devs(const adapterstate *as,int rows,unsigned topp,unsigned endp){
 		(long)device_lines(as->expansion,rb->selected)) : -(long)topp + 1;
 	cur = (rb->selected ? rb->selected->next : as->bobjs);
 	while(cur && line < rows){
-		print_dev(rb,as,cur,line,rows,endp);
+		print_dev(rb,as,cur,line,rows,cols,endp);
 		// here, we account before we traverse. this is correct.
 		line += device_lines(as->expansion,cur);
 		cur = cur->next;
@@ -766,7 +772,7 @@ redraw_adapter(const reelbox *rb){
 	assert(cols); // FIXME
 	assert(werase(rb->win) != ERR);
 	adapter_box(as,rb->win,topp,endp);
-	print_adapter_devs(as,rows,topp,endp);
+	print_adapter_devs(as,rows,cols,topp,endp);
 	return OK;
 }
 
