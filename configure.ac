@@ -71,6 +71,10 @@ PKG_CHECK_MODULES([libudev], [libudev], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])
 	CFLAGS+=" $libudev_CFLAGS"
 	LIBS+=" $libudev_LIBS"
 
+AX_LIB_READLINE
+AC_CHECK_LIB([readline], [main], [have_readline=yes],
+	[AC_MSG_ERROR([Cannot find libreadline.])])
+
 PKG_CHECK_MODULES([libblkid], [blkid], [have_libblkid=yes])
 	CFLAGS+=" $libblkid_CFLAGS"
 	LIBS+=" $libblkid_LIBS"
@@ -78,10 +82,6 @@ PKG_CHECK_MODULES([libblkid], [blkid], [have_libblkid=yes])
 PKG_CHECK_MODULES([libdevmapper], [devmapper], [have_libdevmapper=yes])
 	CFLAGS+=" $libdevmapper_CFLAGS"
 	LIBS+=" $libdevmapper_LIBS"
-
-AX_LIB_READLINE
-AC_CHECK_LIB([readline], [main], [have_readline=yes],
-	[AC_MSG_ERROR([Cannot find libreadline.])])
 
 ## output
 AC_SUBST([CFLAGS])
