@@ -564,23 +564,25 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		return;
 	}
 	if(d->mnttype){
-		assert(mvwprintw(w,*line,START_COL * 3,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
+		assert(mvwprintw(w,*line,START_COL * 3,"%-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a",
-				qprefix(d->mntsize,1,buf,sizeof(buf),0)) != ERR);
+				qprefix(d->mntsize,1,buf,sizeof(buf),0),
+				cols - 72,cols - 72,"") != ERR);
 		if(++*line >= rows - !endp){
 			return;
 		}
 	}
 	if(d->swapprio != SWAP_INVALID){
-		assert(mvwprintw(w,*line,START_COL * 3,"%-*.*s %-5.5s %-36.36s " PREFIXFMT,
+		assert(mvwprintw(w,*line,START_COL * 3,"%-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a",
-				qprefix(d->mntsize,1,buf,sizeof(buf),0)) != ERR);
+				qprefix(d->mntsize,1,buf,sizeof(buf),0),
+				cols - 72,cols - 72,"") != ERR);
 		if(++*line >= rows - !endp){
 			return;
 		}
@@ -601,8 +603,13 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		}
 	}
 	if(d->target){
-		assert(mvwprintw(w,*line,START_COL * 4,"%s %s",
-				d->target->path,d->target->ops) != ERR);
+		char buf[cols + 1];
+
+		snprintf(buf,sizeof(buf),"%s %s",d->target->path,d->target->ops);
+		assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s",
+					cols - (START_COL * 4) - 1,
+					cols - (START_COL * 4) - 1,
+					buf) != ERR);
 		if(++*line >= rows - !endp){
 			return;
 		}
