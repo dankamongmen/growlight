@@ -706,7 +706,7 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 		print_fs(as->expansion,bo->d,rb->win,&line,rows,cols,endp);
 		for(p = bo->d->parts ; p ; p = p->next){
 			char pname[cols];
-			unsigned y,x;
+			unsigned x,y __attribute__ ((unused));
 
 			if(line >= rows - !endp){
 				return;
