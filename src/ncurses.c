@@ -705,18 +705,25 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 
 		print_fs(as->expansion,bo->d,rb->win,&line,rows,cols,endp);
 		for(p = bo->d->parts ; p ; p = p->next){
+			char pname[cols];
+			unsigned y,x;
+
 			if(line >= rows - !endp){
 				return;
 			}
 			assert(wcolor_set(rb->win,COLOR_BLUE,NULL) == OK);
+			wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
 			assert(mvwprintw(rb->win,line,START_COL * 2,
-						"%-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13ls",
+						"%-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
 						p->name,
 						p->partdev.uuid ? p->partdev.uuid : "",
 						qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
 						partrole_str(p->partdev.partrole,p->partdev.flags),
-						p->partdev.pname ? p->partdev.pname : L"n/a"
-						) != ERR);
+						pname) != ERR);
+			getyx(rb->win,y,x);
+			if(x != cols){
+				assert(wprintw(rb->win,"%-*.*s",cols - x - 1,cols - x - 1,"") != ERR);
+			}
 			++line;
 			print_fs(as->expansion,p,rb->win,&line,rows,cols,endp);
 		}
