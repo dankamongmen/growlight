@@ -648,7 +648,7 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 			assert(wattrset(rb->win,COLOR_WHITE) == OK);
 		}
 	}
-	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -656,7 +656,8 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 				bo->d->physsec,
 				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
 				bo->d->wwn ? bo->d->wwn : "n/a",
-				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a"
+				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
+				cols - 77,cols - 77,""
 				) != ERR);
 		break;
 		case LAYOUT_MDADM:
@@ -665,7 +666,7 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 	}else{
 		assert(wattrset(rb->win,COLOR_MAGENTA) == OK);
 	}
-	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -673,7 +674,8 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 				bo->d->physsec,
 				"n/a",
 				bo->d->wwn ? bo->d->wwn : "n/a",
-				transport_str(bo->d->mddev.transport)
+				transport_str(bo->d->mddev.transport),
+				cols - 77,cols - 77,""
 				) != ERR);
 		break;
 		case LAYOUT_PARTITION:
@@ -684,7 +686,7 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 	}else{
 		assert(wattrset(rb->win,COLOR_MAGENTA) == OK);
 	}
-	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s",
+	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				(uintmax_t)bo->d->zpool.zpoolver,
@@ -692,7 +694,8 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 				bo->d->physsec,
 				"spa",
 				bo->d->wwn ? bo->d->wwn : "n/a",
-				transport_str(bo->d->zpool.transport)
+				transport_str(bo->d->zpool.transport),
+				cols - 77,cols - 77,""
 				) != ERR);
 		break;
 	}
