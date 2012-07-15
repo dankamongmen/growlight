@@ -564,7 +564,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		return;
 	}
 	if(d->mnttype){
-		assert(mvwprintw(w,*line,START_COL * 3,"%-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
+		assert(mvwprintw(w,*line,START_COL,"  %-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
@@ -576,7 +576,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		}
 	}
 	if(d->swapprio != SWAP_INVALID){
-		assert(mvwprintw(w,*line,START_COL * 3,"%-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
+		assert(mvwprintw(w,*line,START_COL,"  %-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
@@ -594,7 +594,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		char buf[cols + 1];
 
 		snprintf(buf,sizeof(buf),"%s %s",d->mnt,d->mntops);
-		assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s",
+		assert(mvwprintw(w,*line,START_COL,"   %-*.*s",
 					cols - (START_COL * 4) - 1,
 					cols - (START_COL * 4) - 1,
 					buf) != ERR);
@@ -606,7 +606,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 		char buf[cols + 1];
 
 		snprintf(buf,sizeof(buf),"%s %s",d->target->path,d->target->ops);
-		assert(mvwprintw(w,*line,START_COL * 4,"%-*.*s",
+		assert(mvwprintw(w,*line,START_COL,"   %-*.*s",
 					cols - (START_COL * 4) - 1,
 					cols - (START_COL * 4) - 1,
 					buf) != ERR);
@@ -713,8 +713,8 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 			}
 			assert(wcolor_set(rb->win,COLOR_BLUE,NULL) == OK);
 			wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
-			assert(mvwprintw(rb->win,line,START_COL * 2,
-						"%-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
+			assert(mvwprintw(rb->win,line,START_COL,
+						" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
 						p->name,
 						p->partdev.uuid ? p->partdev.uuid : "",
 						qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
