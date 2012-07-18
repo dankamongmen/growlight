@@ -1550,7 +1550,7 @@ use_next_device(void){
 // is managed here; only the rows needed for display ought be provided.
 static int
 new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar_t *hstr){
-	const wchar_t crightstr[] = L"http://dank.qemfd.net/dankwiki/index.php/Growlight";
+	const wchar_t crightstr[] = L"http://nick-black.com/dankwiki/index.php/Growlight";
 	const int crightlen = wcslen(crightstr);
 	WINDOW *psw;
 	int x,y;
