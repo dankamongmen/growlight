@@ -1640,7 +1640,7 @@ update_diags(struct panel_state *ps){
 	getmaxyx(w,y,x);
 	y = ps->ysize;
 	assert(x > 26 + START_COL * 2); // see ctime_r(3)
-	if(get_logs(y,l)){
+	if((y = get_logs(y,l)) < 0){
 		return -1;
 	}
 	assert(wattrset(w,SUBDISPLAY_ATTR) == OK);

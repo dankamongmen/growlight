@@ -1663,7 +1663,8 @@ target(wchar_t * const *args,const char *arghelp){
 static int
 diags(wchar_t * const *args,const char *arghelp){
 	logent logs[MAXIMUM_LOG_ENTRIES];
-	unsigned idx,z;
+	unsigned idx;
+	int z;
 
 	idx = sizeof(logs) / sizeof(*logs);
 	if(args[1]){
@@ -1684,17 +1685,14 @@ diags(wchar_t * const *args,const char *arghelp){
 			return -1;
 		}
 	}
-	if(get_logs(idx,logs)){
+	if((z = get_logs(idx,logs)) < 0){
 		return -1;
 	}
-	for(z = 0 ; z < idx ; ++z){
+	while(z--){
 		char tbuf[26]; // see ctime_r(3)
 
-		if(logs[z].msg == NULL){
-			break;
-		}
 		if(ctime_r(&logs[z].when,tbuf) == NULL){
-			printf("Bad timestamp at index %d! %s\n",z,logs[z].msg);
+			fprintf(stderr,"Bad timestamp at index %d! %s\n",z,logs[z].msg);
 		}else{
 			tbuf[strlen(tbuf) - 1] = ' '; // kill newline
 			printf("%s%s",tbuf,logs[z].msg);
