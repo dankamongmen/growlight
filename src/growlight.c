@@ -140,7 +140,7 @@ int get_logs(unsigned n,logent *cplogs){
 	if(idx < n){
 		cplogs[idx].msg = NULL;
 	}
-	return 0;
+	return idx;
 }
 
 static void
