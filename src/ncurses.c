@@ -1663,7 +1663,7 @@ update_diags(struct panel_state *ps){
 			*c = '\0';
 		}
 		assert(mvwprintw(w,y - r,START_COL,"%s",tbuf) != ERR);
-		free(l[r - 1].msg);
+		free(l[r].msg);
 	}
 	return 0;
 }
