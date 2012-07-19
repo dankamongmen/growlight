@@ -96,11 +96,6 @@ screen_update(void){
 	assert(doupdate() == OK);
 }
 
-static inline int
-adapter_up_p(const adapterstate *as __attribute__ ((unused))){
-	return 1; // FIXME
-}
-
 static int
 selection_active(void){
 	if(current_adapter == NULL){
@@ -199,9 +194,7 @@ enum {
 	BORDER_COLOR = 1,		// Main window
 	HEADER_COLOR,
 	FOOTER_COLOR,
-	DHEADING_COLOR,
 	UHEADING_COLOR,
-	DBORDER_COLOR,
 	UBORDER_COLOR,
 	PBORDER_COLOR,
 	PHEADING_COLOR,
@@ -350,9 +343,7 @@ setup_colors(void){
 	assert(init_pair(BORDER_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(FOOTER_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(DHEADING_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(DBORDER_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
@@ -466,8 +457,8 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 	int attrs;
 
 	getmaxyx(w,rows,cols);
-	bcolor = adapter_up_p(as) ? UBORDER_COLOR : DBORDER_COLOR;
-	hcolor = adapter_up_p(as) ? UHEADING_COLOR : DHEADING_COLOR;
+	bcolor = UBORDER_COLOR;
+	hcolor = UHEADING_COLOR;
 	attrs = current ? A_REVERSE : A_BOLD;
 	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
 	if(abovetop == 0){
@@ -1888,7 +1879,7 @@ recompute_lines(adapterstate *is,int *before,int *after){
 
 	*after = -1;
 	*before = -1;
-	newsel = !!adapter_up_p(is);
+	newsel = 1;
 	for(l = is->bobjs ; l ; l = l->next){
 		l->lns = node_lines(is->expansion,l);
 		if(l == is->rb->selected){
@@ -1939,8 +1930,8 @@ recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
 			newsel,bef,aft,oldsel,getmaxy(is->rb->win));
 	update_panels();
 	doupdate();*/
-	if(newsel + aft <= getmaxy(is->rb->win) - 2 - !!adapter_up_p(is)){
-		newsel = getmaxy(is->rb->win) - aft - 2 - !!adapter_up_p(is);
+	if(newsel + aft <= getmaxy(is->rb->win) - 3){
+		newsel = getmaxy(is->rb->win) - aft - 3;
 	}
 	if(newsel + (int)node_lines(is->expansion,is->rb->selected) >= getmaxy(is->rb->win) - 2){
 		newsel = getmaxy(is->rb->win) - 1 - node_lines(is->expansion,is->rb->selected);
