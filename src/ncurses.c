@@ -199,6 +199,10 @@ enum {
 	PBORDER_COLOR,
 	PHEADING_COLOR,
 	SUBDISPLAY_COLOR,
+	ROTATE_COLOR,
+	SSD_COLOR,
+	FS_COLOR,
+	PARTITION_COLOR,
 };
 
 int bevel_notop(WINDOW *w){
@@ -348,6 +352,10 @@ setup_colors(void){
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(SSD_COLOR,COLOR_CYAN,-1) == OK);
+	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(PARTITION_COLOR,COLOR_BLUE,-1) == OK);
 	return 0;
 }
 
@@ -550,7 +558,7 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 	if(expansion < EXPANSION_FS){
 		return;
 	}
-	assert(wcolor_set(w,COLOR_GREEN,NULL) == OK);
+	assert(wcolor_set(w,FS_COLOR,NULL) == OK);
 	if(*line >= rows - !endp){
 		return;
 	}
@@ -621,15 +629,15 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 	if(bo->d->blkdev.realdev){
 		if(bo->d->blkdev.rotate){
 			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|COLOR_WHITE) == OK);
+				assert(wattrset(rb->win,A_REVERSE|ROTATE_COLOR) == OK);
 			}else{
-				assert(wattrset(rb->win,COLOR_WHITE) == OK);
+				assert(wattrset(rb->win,ROTATE_COLOR) == OK);
 			}
 		}else{
 			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|COLOR_CYAN) == OK);
+				assert(wattrset(rb->win,A_REVERSE|SSD_COLOR) == OK);
 			}else{
-				assert(wattrset(rb->win,COLOR_CYAN) == OK);
+				assert(wattrset(rb->win,SSD_COLOR) == OK);
 			}
 		}
 	}else{
@@ -702,7 +710,7 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 			if(line >= rows - !endp){
 				return;
 			}
-			assert(wcolor_set(rb->win,COLOR_BLUE,NULL) == OK);
+			assert(wcolor_set(rb->win,PARTITION_COLOR,NULL) == OK);
 			wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
 			assert(mvwprintw(rb->win,line,START_COL,
 						" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
