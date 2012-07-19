@@ -921,7 +921,9 @@ static void
 push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 	reelbox *rb;
 
-	assert(delta > 0);
+	if(delta <= 0){
+		return;
+	}
 	//fprintf(stderr,"pushing down %d from %s@%d\n",delta,pusher ? pusher->as ? pusher->as->adapter->name : "destroyed" : "all",
 	//	      pusher ? pusher->scrline : 0);
 	rb = last_reelbox;
@@ -982,7 +984,9 @@ static void
 pull_adapters_up(reelbox *puller,int rows,int cols,int delta){
 	reelbox *rb;
 
-	assert(delta > 0);
+	if(delta <= 0){
+		return;
+	}
 	rb = puller ? puller->next : top_reelbox;
 	while(rb){
 		rb->scrline -= delta;
@@ -1219,7 +1223,9 @@ static void
 pull_adapters_down(reelbox *puller,int rows,int cols,int delta){
 	reelbox *rb;
 
-	assert(delta > 0);
+	if(delta <= 0){
+		return;
+	}
 	rb = puller ? puller->prev : last_reelbox;
 	while(rb){
 		int before = getmaxy(rb->win);
