@@ -200,6 +200,7 @@ enum {
 	PHEADING_COLOR,
 	SUBDISPLAY_COLOR,
 	ROTATE_COLOR,
+	VIRTUAL_COLOR,
 	SSD_COLOR,
 	FS_COLOR,
 	PARTITION_COLOR,
@@ -353,6 +354,7 @@ setup_colors(void){
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(SSD_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_BLUE,-1) == OK);
@@ -551,14 +553,18 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 }
 
 static void
-print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
-						unsigned cols,unsigned endp){
+print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
+			unsigned cols,unsigned endp,int selected){
 	char buf[PREFIXSTRLEN + 1];
 
 	if(expansion < EXPANSION_FS){
 		return;
 	}
-	assert(wcolor_set(w,FS_COLOR,NULL) == OK);
+	if(selected){
+		assert(wattrset(w,A_REVERSE|FS_COLOR) == OK);
+	}else{
+		assert(wattrset(w,FS_COLOR) == OK);
+	}
 	if(*line >= rows - !endp){
 		return;
 	}
@@ -617,15 +623,16 @@ print_fs(int expansion,const device *d,WINDOW *w,unsigned *line,unsigned rows,
 
 static void
 print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
-		unsigned line,unsigned rows,unsigned cols,unsigned endp){
-	const int selected = bo == rb->selected;
+		int line,int rows,unsigned cols,unsigned endp){
+	int selected;
 	char buf[PREFIXSTRLEN + 1];
 
 	if(line >= rows - !endp){
 		return;
 	}
+	selected = line == rb->selline;
 	switch(bo->d->layout){
-		case LAYOUT_NONE:
+case LAYOUT_NONE:
 	if(bo->d->blkdev.realdev){
 		if(bo->d->blkdev.rotate){
 			if(selected){
@@ -642,9 +649,9 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 		}
 	}else{
 		if(selected){
-			assert(wattrset(rb->win,A_REVERSE|COLOR_WHITE) == OK);
+			assert(wattrset(rb->win,A_REVERSE|VIRTUAL_COLOR) == OK);
 		}else{
-			assert(wattrset(rb->win,COLOR_WHITE) == OK);
+			assert(wattrset(rb->win,VIRTUAL_COLOR) == OK);
 		}
 	}
 	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
@@ -659,7 +666,7 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 				cols - 77,cols - 77,""
 				) != ERR);
 		break;
-		case LAYOUT_MDADM:
+case LAYOUT_MDADM:
 	if(selected){
 		assert(wattrset(rb->win,A_REVERSE|COLOR_MAGENTA) == OK);
 	}else{
@@ -677,9 +684,9 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 				cols - 77,cols - 77,""
 				) != ERR);
 		break;
-		case LAYOUT_PARTITION:
+case LAYOUT_PARTITION:
 		break;
-		case LAYOUT_ZPOOL:
+case LAYOUT_ZPOOL:
 	if(selected){
 		assert(wattrset(rb->win,A_REVERSE|COLOR_MAGENTA) == OK);
 	}else{
@@ -699,10 +706,11 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 		break;
 	}
 	++line;
+	selected = line == rb->selline;
 	if(as->expansion >= EXPANSION_PARTS){
 		const device *p;
 
-		print_fs(as->expansion,bo->d,rb->win,&line,rows,cols,endp);
+		print_fs(as->expansion,bo->d,rb->win,&line,rows,cols,endp,selected);
 		for(p = bo->d->parts ; p ; p = p->next){
 			char pname[cols];
 			unsigned x,y __attribute__ ((unused));
@@ -710,7 +718,12 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 			if(line >= rows - !endp){
 				return;
 			}
-			assert(wcolor_set(rb->win,PARTITION_COLOR,NULL) == OK);
+			selected = line == rb->selline;
+			if(selected){
+				assert(wattrset(rb->win,A_REVERSE|PARTITION_COLOR) == OK);
+			}else{
+				assert(wattrset(rb->win,PARTITION_COLOR) == OK);
+			}
 			wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
 			assert(mvwprintw(rb->win,line,START_COL,
 						" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
@@ -724,7 +737,8 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 				assert(wprintw(rb->win,"%-*.*s",cols - x - 1,cols - x - 1,"") != ERR);
 			}
 			++line;
-			print_fs(as->expansion,p,rb->win,&line,rows,cols,endp);
+			selected = line == rb->selline;
+			print_fs(as->expansion,p,rb->win,&line,rows,cols,endp,selected);
 		}
 	}
 }
