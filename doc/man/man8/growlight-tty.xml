@@ -243,9 +243,6 @@ detailed information about the block device.</para>
 			<term>partition del partition</term>
 		</varlistentry>
 		<varlistentry>
-			<term>partition fsck partition</term>
-		</varlistentry>
-		<varlistentry>
 			<term>partition add blockdev name size</term>
 		</varlistentry>
 		<varlistentry>
@@ -278,6 +275,9 @@ the specified flag on the specified partition.</para>
 			<term>fs wipefs blockdev</term>
 		</varlistentry>
 		<varlistentry>
+			<term>fs fsck blockdev</term>
+		</varlistentry>
+		<varlistentry>
 			<term>fs setuuid blockdev uuid</term>
 		</varlistentry>
 		<varlistentry>
@@ -304,7 +304,7 @@ blockdev, assuming that filesystem supports volume labels. "mount" will attempt
 to mount the block device as a mnttype-type filesystem at mountpoint. This mount
 will not be added to either the host or target's /etc/fstab, and will thus not
 persist across reboots. "umount" will attempt to unmount the filesystem underlain
-by blockdev.</para>
+by blockdev. "fsck" will check the filesystem for correctness.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>

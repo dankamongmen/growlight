@@ -1124,15 +1124,6 @@ partition(wchar_t * const *args,const char *arghelp){
 				return -1;
 			}
 			return 0;
-		}else if(wcscmp(args[1],L"fsck") == 0){
-			if(args[3]){
-				usage(args,arghelp);
-				return -1;
-			}
-			if(check_partition(d)){
-				return -1;
-			}
-			return 0;
 		}else if(wcscmp(args[1],L"setname") == 0){
 			if(!args[3] || args[4]){
 				usage(args,arghelp);
@@ -1298,6 +1289,15 @@ fs(wchar_t * const *args,const char *arghelp){
 			return -1;
 		}
 		if(make_wfilesystem(d,args[3])){
+			return -1;
+		}
+		return 0;
+	}else if(wcscmp(args[1],L"fsck") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		if(check_partition(d)){
 			return -1;
 		}
 		return 0;
@@ -1730,11 +1730,9 @@ static const struct fxn {
 			"                 | [ \"rmtable\" blockdev ]\n"
 			"                 | [ \"mktable\" [ blockdev tabletype ] ]\n"
 			"                    | no arguments to list supported table types\n"
-			"                 | [ \"fsck\" blockdev ]\n"
 			"                 | [ \"detail\" blockdev ]\n"
 			"                 | [ -v ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
-			"                 | [ \"fsck\" partition ]\n"
 			"                 | [ \"add\" blockdev name size ]\n"
 			"                 | [ \"setuuid\" partition uuid ]\n"
 			"                 | [ \"setname\" partition name ]\n"
@@ -1743,6 +1741,7 @@ static const struct fxn {
 			"                 | [ -v ] no arguments to list all partitions"),
 	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
 			"                 | no arguments to list supported fs types\n"
+			"                 | [ \"fsck\" ks ]\n"
 			"                 | [ \"wipefs\" fs ]\n"
 			"                 | [ \"setuuid\" fs uuid ]\n"
 			"                 | [ \"setlabel\" fs label ]\n"
