@@ -1639,6 +1639,7 @@ static const wchar_t *helps[] = {
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'R'escan selection            re'S'et selection",
 	L"'m'ake partition table        'r'emove partition table",
+	L"'n'ew partition               'd'elete partition",
 	NULL
 };
 
@@ -2085,6 +2086,29 @@ remove_ptable(void){
 }
 
 static void
+new_partition(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Partition creation requires selection of a block device");
+		return;
+	}
+	// FIXME do stuff
+}
+
+static void
+delete_partition(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Partition deletion requires selection of a partition");
+		return;
+	}
+	// FIXME verify blockdev is partition
+	// FIXME do stuff
+}
+
+static void
 rescan_selection(void){
 	blockobj *b;
 
@@ -2095,22 +2119,24 @@ rescan_selection(void){
 			locked_diag("Need a selected adapter or block device");
 			return;
 		}
-		locked_diag("Resetting adapter %s",as->c->name);
+		locked_diag("Rescanning adapter %s",as->c->name);
 		rescan_controller(as->c);
 		return;
 	}
-	locked_diag("Resetting block device %s",b->d->name);
+	locked_diag("Rescanning block device %s",b->d->name);
 	rescan_blockdev(b->d);
 }
 
 static void
 reset_selection(void){
-	blockobj *b;
+	adapterstate *as;
 
-	if((b = get_selected_blockobj()) == NULL){
+	if((as = get_selected_adapter()) == NULL){
+		locked_diag("Need a selected adapter");
 		return;
 	}
-	// FIXME do stuff
+	locked_diag("Resetting adapter %s",as->c->name);
+	reset_controller(as->c);
 }
 
 static void
@@ -2227,6 +2253,18 @@ handle_ncurses_input(WINDOW *w){
 			case 'S':{
 				pthread_mutex_lock(&bfl);
 				reset_selection();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'n':{
+				pthread_mutex_lock(&bfl);
+				new_partition();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'd':{
+				pthread_mutex_lock(&bfl);
+				delete_partition();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
