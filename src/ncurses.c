@@ -39,6 +39,8 @@ static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
 static struct panel_state environment = PANEL_STATE_INITIALIZER;
 
+static int update_diags(struct panel_state *);
+
 struct adapterstate;
 
 struct partobj;
@@ -343,6 +345,24 @@ err:
 	return ERR;
 }
 
+static void
+locked_diag(const char *fmt,...){
+	va_list v;
+	char *nl;
+
+	va_start(v,fmt);
+	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
+	va_end(v);
+	if( (nl = strchr(statusmsg,'\n')) ){
+		*nl = '\0';
+	}
+	draw_main_window(stdscr);
+	if(diags.p){
+		update_diags(&diags);
+	}
+	screen_update();
+}
+
 static int
 setup_colors(void){
 	assert(init_pair(BORDER_COLOR,COLOR_GREEN,-1) == OK);
@@ -569,25 +589,25 @@ print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
 		return;
 	}
 	if(d->mnttype){
-		assert(mvwprintw(w,*line,START_COL,"  %-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
+		mvwprintw(w,*line,START_COL,"  %-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a",
 				qprefix(d->mntsize,1,buf,sizeof(buf),0),
-				cols - 72,cols - 72,"") != ERR);
+				cols - 72,cols - 72,"");
 		if(++*line >= rows - !endp){
 			return;
 		}
 	}
 	if(d->swapprio != SWAP_INVALID){
-		assert(mvwprintw(w,*line,START_COL,"  %-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
+		mvwprintw(w,*line,START_COL,"  %-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
 				FSLABELSIZ,FSLABELSIZ,
 				d->label ? d->label : "n/a",
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a",
 				qprefix(d->mntsize,1,buf,sizeof(buf),0),
-				cols - 72,cols - 72,"") != ERR);
+				cols - 72,cols - 72,"");
 		if(++*line >= rows - !endp){
 			return;
 		}
@@ -599,10 +619,10 @@ print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
 		char buf[cols + 1];
 
 		snprintf(buf,sizeof(buf),"%s %s",d->mnt,d->mntops);
-		assert(mvwprintw(w,*line,START_COL,"   %-*.*s",
+		mvwprintw(w,*line,START_COL,"   %-*.*s",
 					cols - (START_COL * 4) - 1,
 					cols - (START_COL * 4) - 1,
-					buf) != ERR);
+					buf);
 		if(++*line >= rows - !endp){
 			return;
 		}
@@ -611,10 +631,10 @@ print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
 		char buf[cols + 1];
 
 		snprintf(buf,sizeof(buf),"%s %s",d->target->path,d->target->ops);
-		assert(mvwprintw(w,*line,START_COL,"   %-*.*s",
+		mvwprintw(w,*line,START_COL,"   %-*.*s",
 					cols - (START_COL * 4) - 1,
 					cols - (START_COL * 4) - 1,
-					buf) != ERR);
+					buf);
 		if(++*line >= rows - !endp){
 			return;
 		}
@@ -654,7 +674,7 @@ case LAYOUT_NONE:
 			assert(wattrset(rb->win,VIRTUAL_COLOR) == OK);
 		}
 	}
-	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -663,8 +683,7 @@ case LAYOUT_NONE:
 				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
-				cols - 77,cols - 77,""
-				) != ERR);
+				cols - 77,cols - 77,"");
 		break;
 case LAYOUT_MDADM:
 	if(selected){
@@ -672,7 +691,7 @@ case LAYOUT_MDADM:
 	}else{
 		assert(wattrset(rb->win,COLOR_MAGENTA) == OK);
 	}
-	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -681,8 +700,7 @@ case LAYOUT_MDADM:
 				"n/a",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->mddev.transport),
-				cols - 77,cols - 77,""
-				) != ERR);
+				cols - 77,cols - 77,"");
 		break;
 case LAYOUT_PARTITION:
 		break;
@@ -692,7 +710,7 @@ case LAYOUT_ZPOOL:
 	}else{
 		assert(wattrset(rb->win,COLOR_MAGENTA) == OK);
 	}
-	assert(mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				(uintmax_t)bo->d->zpool.zpoolver,
@@ -701,8 +719,7 @@ case LAYOUT_ZPOOL:
 				"spa",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->zpool.transport),
-				cols - 77,cols - 77,""
-				) != ERR);
+				cols - 77,cols - 77,"");
 		break;
 	}
 	++line;
@@ -725,13 +742,13 @@ case LAYOUT_ZPOOL:
 				assert(wattrset(rb->win,PARTITION_COLOR) == OK);
 			}
 			wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
-			assert(mvwprintw(rb->win,line,START_COL,
+			mvwprintw(rb->win,line,START_COL,
 						" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
 						p->name,
 						p->partdev.uuid ? p->partdev.uuid : "",
 						qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
 						partrole_str(p->partdev.partrole,p->partdev.flags),
-						pname) != ERR);
+						pname);
 			getyx(rb->win,y,x);
 			if(x != cols){
 				assert(wprintw(rb->win,"%-*.*s",cols - x - 1,cols - x - 1,"") != ERR);
@@ -1620,6 +1637,7 @@ static const wchar_t *helps[] = {
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
 	L"'-'/'←': collapse selection   '+'/'→': expand selection",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
+	L"'m'ake partition table        'r'emove partition table",
 	NULL
 };
 
@@ -2028,6 +2046,32 @@ select_adapter(void){
 	return select_adapter_dev(rb,rb->as->bobjs,2);
 }
 
+static blockobj *
+get_selected_blockobj(void){
+	locked_diag("That command requires selection of a block device");
+	return NULL; // FIXME
+}
+
+static void
+make_ptable(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		return;
+	}
+	// FIXME do stuff
+}
+
+static void
+remove_ptable(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		return;
+	}
+	// FIXME do stuff
+}
+
 static void
 handle_ncurses_input(WINDOW *w){
 	int ch;
@@ -2118,6 +2162,18 @@ handle_ncurses_input(WINDOW *w){
 					use_next_device();
 				}
 				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'm':{
+				pthread_mutex_lock(&bfl);
+				make_ptable();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'r':{
+				pthread_mutex_lock(&bfl);
+				remove_ptable();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
