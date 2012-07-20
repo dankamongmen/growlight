@@ -7,6 +7,7 @@
 #include <pthread.h>
 
 #include "config.h"
+#include "ptable.h"
 #include "growlight.h"
 
 #ifdef HAVE_NCURSESW_H
@@ -23,7 +24,7 @@
 #endif
 #endif
 
-static pthread_mutex_t bfl = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 struct panel_state {
 	PANEL *p;
@@ -2052,7 +2053,6 @@ select_adapter(void){
 static adapterstate *
 get_selected_adapter(void){
 	if(!current_adapter){
-		locked_diag("That command requires selection of an adapter");
 		return NULL;
 	}
 	return current_adapter->as;
@@ -2060,7 +2060,12 @@ get_selected_adapter(void){
 
 static blockobj *
 get_selected_blockobj(void){
-	return NULL; // FIXME
+	reelbox *rb;
+
+	if((rb = current_adapter) == NULL){
+		return NULL;
+	}
+	return rb->selected;
 }
 
 static void
@@ -2071,7 +2076,8 @@ make_ptable(void){
 		locked_diag("Partition table creation requires selection of a block device");
 		return;
 	}
-	// FIXME do stuff
+	// FIXME: support multiple partition table types
+	make_partition_table(b->d,"gpt");
 }
 
 static void
@@ -2082,7 +2088,11 @@ remove_ptable(void){
 		locked_diag("Partition table removal requires selection of a block device");
 		return;
 	}
-	// FIXME do stuff
+	if(b->d->layout != LAYOUT_NONE){
+		locked_diag("Not a partitionable block device");
+		return;
+	}
+	wipe_ptable(b->d);
 }
 
 static void
@@ -2104,8 +2114,11 @@ delete_partition(void){
 		locked_diag("Partition deletion requires selection of a partition");
 		return;
 	}
-	// FIXME verify blockdev is partition
-	// FIXME do stuff
+	if(b->d->layout != LAYOUT_PARTITION){
+		locked_diag("Selected object is not a partition");
+		return;
+	}
+	wipe_partition(b->d);
 }
 
 static void
