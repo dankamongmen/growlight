@@ -1900,12 +1900,12 @@ diag(const char *fmt,...){
 }*/
 
 static void *
-block_event(const device *d,void *v){
+block_event(device *d,void *v){
 	assert(d);
 	return v;
 }
 
-static void *new_adapter(const controller *c,void *v){ assert(c); return v; }
+static void *new_adapter(controller *c,void *v){ assert(c); return v; }
 static void adapter_free(void *cv){ assert(cv); }
 static void block_free(void *cv,void *bv){ assert(cv && bv); }
 

@@ -47,7 +47,7 @@ struct partobj;
 
 typedef struct blockobj {
 	struct blockobj *next,*prev;
-	const device *d;
+	device *d;
 	unsigned lns;			// number of lines obj would take up
 	unsigned parts;			// number of parts last we checked
 	unsigned fs;			// number of filesystems...
@@ -65,7 +65,7 @@ typedef struct reelbox {
 } reelbox;
 
 typedef struct adapterstate {
-	const controller *c;
+	controller *c;
 	unsigned mounts,fs,parts,devs;
 	enum {
 		EXPANSION_NONE,
@@ -1637,6 +1637,7 @@ static const wchar_t *helps[] = {
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
 	L"'-'/'←': collapse selection   '+'/'→': expand selection",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
+	L"'R'escan selection            re'S'et selection",
 	L"'m'ake partition table        'r'emove partition table",
 	NULL
 };
@@ -2046,9 +2047,18 @@ select_adapter(void){
 	return select_adapter_dev(rb,rb->as->bobjs,2);
 }
 
+/* Action interface -- always require a selection */
+static adapterstate *
+get_selected_adapter(void){
+	if(!current_adapter){
+		locked_diag("That command requires selection of an adapter");
+		return NULL;
+	}
+	return current_adapter->as;
+}
+
 static blockobj *
 get_selected_blockobj(void){
-	locked_diag("That command requires selection of a block device");
 	return NULL; // FIXME
 }
 
@@ -2057,6 +2067,7 @@ make_ptable(void){
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Partition table creation requires selection of a block device");
 		return;
 	}
 	// FIXME do stuff
@@ -2064,6 +2075,36 @@ make_ptable(void){
 
 static void
 remove_ptable(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Partition table removal requires selection of a block device");
+		return;
+	}
+	// FIXME do stuff
+}
+
+static void
+rescan_selection(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		adapterstate *as;
+
+		if((as = get_selected_adapter()) == NULL){
+			locked_diag("Need a selected adapter or block device");
+			return;
+		}
+		locked_diag("Resetting adapter %s",as->c->name);
+		rescan_controller(as->c);
+		return;
+	}
+	locked_diag("Resetting block device %s",b->d->name);
+	rescan_blockdev(b->d);
+}
+
+static void
+reset_selection(void){
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
@@ -2177,6 +2218,18 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
+			case 'R':{
+				pthread_mutex_lock(&bfl);
+				rescan_selection();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'S':{
+				pthread_mutex_lock(&bfl);
+				reset_selection();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
 			default:{
 				const char *hstr = !help.p ? " ('h' for help)" : "";
 				// diag() locks/unlocks, and calls screen_update()
@@ -2192,7 +2245,7 @@ handle_ncurses_input(WINDOW *w){
 }
 
 static adapterstate *
-create_adapter_state(const controller *a){
+create_adapter_state(controller *a){
 	adapterstate *as;
 
 	if( (as = malloc(sizeof(*as))) ){
@@ -2218,7 +2271,7 @@ free_adapter_state(adapterstate *as){
 }
 
 static void *
-adapter_callback(const controller *a, void *state){
+adapter_callback(controller *a, void *state){
 	adapterstate *as;
 	reelbox *rb;
 
@@ -2322,7 +2375,7 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 }
 
 static blockobj *
-create_blockobj(adapterstate *as,const device *d){
+create_blockobj(adapterstate *as,device *d){
 	blockobj *b;
 
 	if( (b = malloc(sizeof(*b))) ){
@@ -2334,7 +2387,7 @@ create_blockobj(adapterstate *as,const device *d){
 }
 
 static void *
-block_callback(const device *d,void *v){
+block_callback(device *d,void *v){
 	adapterstate *as;
 	blockobj *b;
 

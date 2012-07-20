@@ -30,10 +30,10 @@ typedef struct growlight_ui {
 	void (*vdiag)(const char *,va_list); // free-form diagnostics
 
 	// Called on a new adapter, or when one changes
-	void *(*adapter_event)(const struct controller *,void *);
+	void *(*adapter_event)(struct controller *,void *);
 
 	// Called for a new blockdev, or when one changes
-	void *(*block_event)(const struct device *,void *);
+	void *(*block_event)(struct device *,void *);
 
 	// Controller state
 	void (*adapter_free)(void *);
