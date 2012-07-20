@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([growlight], [0.0.99-pre3], [sprezzos-dev@sprezzatech.com], [growlight], [http://http://nick-black.com/dankwiki/index.php/Growlight])
+AC_INIT([growlight], [0.0.99-rc3], [sprezzos-dev@sprezzatech.com], [growlight], [http://http://nick-black.com/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-bzip2 std-options subdir-objects nostdinc])
 AC_CONFIG_HEADER([src/config.h])
