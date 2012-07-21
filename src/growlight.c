@@ -1812,29 +1812,19 @@ int prepare_bios_boot(device *d){
 		diag("%s is not mapped as the target root (%s)\n",d->name,d->target->path);
 		return -1;
 	}
-	if(d->partdev.partrole == PARTROLE_GPT){
-	}else if(d->partdev.partrole == PARTROLE_PRIMARY){
-		char cmd[BUFSIZ];
-
+	if(d->partdev.partrole == PARTROLE_GPT || d->partdev.partrole == PARTROLE_PRIMARY){
 		if(!(d->partdev.flags & 0x80u)){
 			diag("%s is not marked as Active (bootable, 0x80)\n",d->name);
 			return -1;
 		}
-		if(snprintf(cmd,sizeof(cmd),"grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
-					d->mnt,d->name) >= (int)sizeof(cmd)){
-			diag("Bad name: %s\n",d->name);
-			return -1;
-		}
-		if(popen_drain(cmd)){
+		if(vspopen_drain("grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",d->mnt,d->name)){
 			return -1;
 		}
 	}else{
 		diag("BIOS boots from GPT or MSDOS 'Primary' partitions only\n");
 		return -1;
 	}
-	// FIXME point grub at kernel?
-	diag("FIXME %s not yet implemented\n",d->name);
-	return -1;
+	return 0;
 }
 
 int prepare_uefi_boot(device *d){
@@ -1849,8 +1839,8 @@ int prepare_uefi_boot(device *d){
 	// FIXME ensure the partition is a viable ESP
 	// FIXME ensure kernel is in ESP
 	// FIXME prepare protective MBR
-	// FIXME install rEFInd to ESP
-	// FIXME point rEFInd at kernel
+	// FIXME install grub-efi to ESP
+	// FIXME point grub-efi at kernel
 	diag("FIXME %s not yet implemented\n",d->name);
 	return -1;
 }
