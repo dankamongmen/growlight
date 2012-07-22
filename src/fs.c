@@ -1,9 +1,12 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
+#include "mmap.h"
 #include "popen.h"
 #include "growlight.h"
 
@@ -144,4 +147,28 @@ int make_filesystem(device *d,const char *ptype){
 	}
 	fprintf(stderr,"Unsupported partition table type: %s\n",ptype);
 	return -1;
+}
+
+int parse_filesystems(const glightui *gui __attribute__ ((unused)),const char *fn){
+	off_t len,idx;
+	char *map;
+	int fd;
+
+	if((map = map_virt_file(fn,&fd,&len)) == MAP_FAILED){
+		return -1;
+	}
+	idx = 0;
+	while(idx < len){
+		if(strncmp(map + idx,"nodev",strlen("nodev")) == 0){
+			idx += strlen("nodev");
+		}
+		while(isspace(map[idx])){
+			++idx;
+		}
+		// FIXME extract filesystem name
+		++idx;
+	}
+	munmap_virt(map,len);
+	close(fd);
+	return 0;
 }

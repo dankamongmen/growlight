@@ -28,6 +28,7 @@
 #include <libdevmapper.h>
 #include <gnu/libc-version.h>
 
+#include "fs.h"
 #include "sg.h"
 #include "mbr.h"
 #include "zfs.h"
@@ -46,6 +47,7 @@
 #define SYSROOT "/sys/class/block/"
 #define SWAPS "/proc/swaps"
 #define MOUNTS	"/proc/mounts"
+#define FILESYSTEMS	"/proc/filesystems"
 #define DEVROOT "/dev"
 #define DEVBYID DEVROOT "/disk/by-id/"
 
@@ -1232,6 +1234,7 @@ struct event_marshal {
 	int ufd;		// udev_monitor fd
 	int mfd;		// /proc/mounts fd
 	int sfd;		// /proc/swaps fd
+	int ffd;		// /proc/filesystems fd
 };
 
 static void *
@@ -1277,6 +1280,11 @@ event_posix_thread(void *unsafe){
 				lock_growlight();
 				diag("Reparsing %s...\n",SWAPS);
 				parse_swaps(gui,SWAPS);
+				unlock_growlight();
+			}else if(events[r].data.fd == em->ffd){
+				lock_growlight();
+				diag("Reparsing %s...\n",FILESYSTEMS);
+				parse_filesystems(gui,FILESYSTEMS);
 				unlock_growlight();
 			}else{
 				diag("Unknown fd %d saw event\n",events[r].data.fd);
@@ -1331,11 +1339,29 @@ event_thread(int fd,int ufd){
 		free(em);
 		return -1;
 	}
+	if((em->ffd = open(FILESYSTEMS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+		close(em->sfd);
+		close(em->mfd);
+		close(em->efd);
+		free(em);
+		return -1;
+	}
 	// /proc/* always returns readable. On change they return EPOLLERR.
 	ev.events = EPOLLRDHUP;
+	ev.data.fd = em->ffd;
+	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->ffd,&ev)){
+		diag("Couldn't add %d to epoll (%s?)\n",em->ffd,strerror(errno));
+		close(em->ffd);
+		close(em->sfd);
+		close(em->mfd);
+		close(em->efd);
+		free(em);
+		return -1;
+	}
 	ev.data.fd = em->sfd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->sfd,&ev)){
 		diag("Couldn't add %d to epoll (%s?)\n",em->sfd,strerror(errno));
+		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
 		close(em->efd);
@@ -1345,6 +1371,7 @@ event_thread(int fd,int ufd){
 	ev.data.fd = em->mfd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->mfd,&ev)){
 		diag("Couldn't add %d to epoll (%s?)\n",em->mfd,strerror(errno));
+		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
 		close(em->efd);
@@ -1353,6 +1380,7 @@ event_thread(int fd,int ufd){
 	}
 	if( (r = pthread_create(&eventtid,NULL,event_posix_thread,em)) ){
 		diag("Couldn't create event thread (%s?)\n",strerror(r));
+		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
 		close(em->efd);
