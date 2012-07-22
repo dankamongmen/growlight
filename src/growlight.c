@@ -1521,6 +1521,9 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if(watch_dir(fd,DEVBYID,lookup_id)){
 		diag("Couldn't monitor %s; won't have WWNs\n",DEVBYID);
 	}
+	if(parse_filesystems(gui,FILESYSTEMS)){
+		goto err;
+	}
 	if(parse_mounts(gui,MOUNTS)){
 		goto err;
 	}

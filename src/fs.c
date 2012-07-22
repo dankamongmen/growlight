@@ -159,14 +159,31 @@ int parse_filesystems(const glightui *gui __attribute__ ((unused)),const char *f
 	}
 	idx = 0;
 	while(idx < len){
-		if(strncmp(map + idx,"nodev",strlen("nodev")) == 0){
-			idx += strlen("nodev");
-		}
-		while(isspace(map[idx])){
+		off_t fsstart;
+		int virt = 0;
+
+		while(idx < len && isspace(map[idx])){
 			++idx;
 		}
-		// FIXME extract filesystem name
-		++idx;
+		if(len - idx >= (off_t)strlen("nodev")){
+			if(strncmp(map + idx,"nodev",strlen("nodev")) == 0){
+				idx += strlen("nodev");
+				virt = 1;
+			}
+		}
+		while(idx < len && isspace(map[idx])){
+			++idx;
+		}
+		fsstart = idx;
+		while(idx < len && !isspace(map[idx])){
+			++idx;
+		}
+		if(fsstart < len){
+			verbf("Registered %sfilesystem support: %*.*s\n",
+					virt ? "virtual " : "",
+					(int)(idx - fsstart),
+					(int)(idx - fsstart),map + fsstart);
+		}
 	}
 	munmap_virt(map,len);
 	close(fd);
