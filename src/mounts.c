@@ -139,7 +139,8 @@ int parse_mounts(const glightui *gui,const char *fn){
 			goto err;
 		}
 		idx += r;
-		if(virtual_mnttype_p(fs)){
+		if(*fs != '/'){
+			verbf("Not looking up %s\n",fs);
 			continue;
 		}
 		if(statvfs(mnt,&vfs)){

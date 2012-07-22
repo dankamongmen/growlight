@@ -145,26 +145,3 @@ int make_filesystem(device *d,const char *ptype){
 	fprintf(stderr,"Unsupported partition table type: %s\n",ptype);
 	return -1;
 }
-
-int virtual_mnttype_p(const char *mt){
-	const char *vfs[] = {
-		"debugfs",
-		"nfsd",
-		"rootfs",
-		"tmpfs",
-		"proc",
-		"sysfs",
-		"fusectl",
-		"rpc_pipefs",
-		"devpts",
-		"binfmt_misc",
-		NULL
-	},**v;
-
-	for(v = vfs ; *v ; ++v){
-		if(strcmp(mt,*v) == 0){
-			return 1;
-		}
-	}
-	return 0;
-}

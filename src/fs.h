@@ -10,8 +10,6 @@ struct device;
 // Create the given type of filesystem on this device
 int make_filesystem(struct device *,const char *);
 
-int virtual_mnttype_p(const char *);
-
 #ifdef __cplusplus
 }
 #endif
