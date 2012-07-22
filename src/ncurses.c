@@ -1600,9 +1600,9 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 	}
 	assert(y >= rows + 3);
 	assert((x >= crightlen + START_COL * 2));
-	// Keep it one line up from the last display line, so that you get
-	// adapter summaries (unless you've got a bottom-partial).
-	assert( (psw = newwin(rows + 2,cols,y - (rows + 4),x - cols)) );
+	// Six up from the bottom, so it looks good with our logo in the
+	// installer, heh
+	assert( (psw = newwin(rows + 2,cols,y - (rows + 9),x - cols)) );
 	if(psw == NULL){
 		return ERR;
 	}
