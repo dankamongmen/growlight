@@ -15,6 +15,7 @@ extern "C" {
 #include "mounts.h"
 
 extern unsigned verbose;
+extern unsigned finalized;
 void diag(const char *,...) __attribute__ ((format (printf,1,2)));
 void verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 

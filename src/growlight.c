@@ -16,7 +16,6 @@
 #include <scsi/sg.h>
 #include <pci/pci.h>
 #include <pthread.h>
-#include <langinfo.h>
 #include <linux/fs.h>
 #include <sys/stat.h>
 #include <scsi/scsi.h>
@@ -51,6 +50,7 @@
 #define DEVBYID DEVROOT "/disk/by-id/"
 
 unsigned verbose = 0;
+unsigned finalized = 0;
 
 static unsigned usepci;
 static const glightui *gui;
@@ -1418,15 +1418,10 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	};
 	int fd,opt,longidx,udevfd;
 	char buf[BUFSIZ];
-	const char *enc;
 
 	gui = ui;
 	if(setlocale(LC_ALL,"") == NULL){
 		diag("Couldn't set locale (%s?)\n",strerror(errno));
-		goto err;
-	}
-	if((!(enc = nl_langinfo(CODESET))) || strcmp(enc,"UTF-8")){
-		diag("Locale isn't UTF-8, aborting\n");
 		goto err;
 	}
 	SSL_library_init();
@@ -1532,6 +1527,9 @@ int growlight_stop(void){
 	r |= stop_zfs_support();
 	close(sysfd); sysfd = -1;
 	close(devfd); devfd = -1;
+	if(growlight_target){
+		return (finalized && !r) ? 0 : -1;
+	}
 	return r;
 }
 

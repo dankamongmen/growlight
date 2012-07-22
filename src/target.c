@@ -276,6 +276,7 @@ int finalize_target(void){
 		close(fd);
 		return -1;
 	}
+	finalized = 1;
 	return 0;
 }
 
