@@ -47,12 +47,12 @@ dehumanize(const char *num){
 			break;
 		case '\0':
 			if(dec){
-				fprintf(stderr,"Couldn't convert dec: %s\n",num);
+				diag("Couldn't convert dec: %s\n",num);
 				ull = 0;
 			}
 			break;
 		default:
-			fprintf(stderr,"Couldn't convert number: %s\n",num);
+			diag("Couldn't convert number: %s\n",num);
 			ull = 0;
 	}
 	return ull;
@@ -62,6 +62,7 @@ static int
 zpoolcb(zpool_handle_t *zhp,void *arg){
 	char size[10],guid[21],ashift[5];
 	struct zpoolcb_t *cb = arg;
+	vdev_state_t health;
 	uint64_t version;
 	const char *name;
 	nvlist_t *conf;
@@ -71,45 +72,55 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	name = zpool_get_name(zhp);
 	conf = zpool_get_config(zhp,NULL);
 	if(!name || !conf){
-		fprintf(stderr,"name/config failed for zpool\n");
+		diag("name/config failed for zpool\n");
 		zpool_close(zhp);
 		return -1;
 	}
 	if(strlen(name) >= sizeof(d->name)){
-		fprintf(stderr,"zpool name too long: %s\n",name);
+		diag("zpool name too long: %s\n",name);
 		zpool_close(zhp);
 		return -1;
 	}
 	++cb->pools;
 	if(nvlist_lookup_uint64(conf,ZPOOL_CONFIG_VERSION,&version)){
-		fprintf(stderr,"Couldn't get %s zpool version\n",name);
+		diag("Couldn't get %s zpool version\n",name);
 		zpool_close(zhp);
 		return -1;
 	}
 	if(version > SPA_VERSION){
-		fprintf(stderr,"%s zpool version too new (%lu > %llu)\n",
+		diag("%s zpool version too new (%lu > %llu)\n",
 				name,version,SPA_VERSION);
 		zpool_close(zhp);
 		return -1;
 	}
 	state = zpool_get_state(zhp);
-	if(zpool_get_prop(zhp,ZPOOL_PROP_SIZE,size,sizeof(size),NULL)){
-		fprintf(stderr,"Couldn't get size for %s\n",name);
+	if(zpool_get_prop(zhp,ZPOOL_PROP_HEALTH,health,sizeof(health),NULL)){
+		diag("Couldn't get health for %s\n",name);
 		zpool_close(zhp);
 		return -1;
 	}
+	if(health != VDEV_STATE_FAULTED){
+		if(zpool_get_prop(zhp,ZPOOL_PROP_SIZE,size,sizeof(size),NULL)){
+			diag("Couldn't get size for %s\n",name);
+			zpool_close(zhp);
+			return -1;
+		}
+	}else{
+		diag("Assuming zero size for faulted zpool %s\n",name);
+		size = 0;
+	}
 	if(zpool_get_prop(zhp,ZPOOL_PROP_ASHIFT,ashift,sizeof(ashift),NULL)){
-		fprintf(stderr,"Couldn't get GUID for %s\n",name);
+		diag("Couldn't get GUID for %s\n",name);
 		zpool_close(zhp);
 		return -1;
 	}
 	if(zpool_get_prop(zhp,ZPOOL_PROP_GUID,guid,sizeof(guid),NULL)){
-		fprintf(stderr,"Couldn't get GUID for %s\n",name);
+		diag("Couldn't get GUID for %s\n",name);
 		zpool_close(zhp);
 		return -1;
 	}
 	if((d = malloc(sizeof(*d))) == NULL){
-		fprintf(stderr,"Couldn't allocate device (%s?)\n",strerror(errno));
+		diag("Couldn't allocate device (%s?)\n",strerror(errno));
 		zpool_close(zhp);
 		return -1;
 	}
@@ -147,25 +158,25 @@ zfscb(zfs_handle_t *zhf,void *arg){
 	zname = zfs_get_name(zhf);
 	ztype = zfs_get_type(zhf);
 	if(!zname || !ztype){
-		fprintf(stderr,"Couldn't get ZFS name/type\n");
+		diag("Couldn't get ZFS name/type\n");
 		return -1;
 	}
 	if((d = lookup_device(zname)) == NULL){
-		fprintf(stderr,"Coudln't look up zpool named %s\n",zname);
+		diag("Coudln't look up zpool named %s\n",zname);
 		return -1;
 	}
 	if((version = zfs_prop_get_int(zhf,ZFS_PROP_VERSION)) < 0){
-		fprintf(stderr,"Couldn't get dataset version for %s\n",zname);
+		diag("Couldn't get dataset version for %s\n",zname);
 		return -1;
 	}
 	totalsize = 0;
 	if(zfs_prop_get(zhf,ZFS_PROP_AVAILABLE,sbuf,sizeof(sbuf),NULL,NULL,0,0)){
-		fprintf(stderr,"Couldn't get available size for %s\n",zname);
+		diag("Couldn't get available size for %s\n",zname);
 		return -1;
 	}
 	totalsize += dehumanize(sbuf);
 	if(zfs_prop_get(zhf,ZFS_PROP_USED,sbuf,sizeof(sbuf),NULL,NULL,0,0)){
-		fprintf(stderr,"Couldn't get used size for %s\n",zname);
+		diag("Couldn't get used size for %s\n",zname);
 		return 0;
 	}
 	totalsize += dehumanize(sbuf);
@@ -173,7 +184,7 @@ zfscb(zfs_handle_t *zhf,void *arg){
 	// mount point (which indeed might not exist). No need to look it up.
 	// FIXME check for existing mnttype?
 	if((mnttype = strdup("zfs")) == NULL || (label = strdup(zname)) == NULL){
-		fprintf(stderr,"Couldn't dup string\n");
+		diag("Couldn't dup string\n");
 		free(mnttype);
 		return -1;
 	}
@@ -198,7 +209,7 @@ int scan_zpools(const glightui *gui){
 		return 0; // ZFS wasn't successfully initialized
 	}
 	if(zprop_get_list(zfs,props,&pools,ZFS_TYPE_POOL)){
-		fprintf(stderr,"Coudln't list ZFS pools\n");
+		diag("Coudln't list ZFS pools\n");
 		return -1;
 	}
 	// FIXME do what with it?
@@ -206,11 +217,11 @@ int scan_zpools(const glightui *gui){
 	memset(&cb,0,sizeof(cb));
 	cb.gui = gui;
 	if(zpool_iter(zht,zpoolcb,&cb)){
-		fprintf(stderr,"Couldn't iterate over zpools\n");
+		diag("Couldn't iterate over zpools\n");
 		return -1;
 	}
 	if(zfs_iter_root(zht,zfscb,&cb)){
-		fprintf(stderr,"Couldn't iterate over root datasets\n");
+		diag("Couldn't iterate over root datasets\n");
 		return -1;
 	}
 	verbf("Found %u ZFS zpool%s\n",cb.pools,cb.pools == 1 ? "" : "s");
@@ -219,13 +230,13 @@ int scan_zpools(const glightui *gui){
 
 int init_zfs_support(const glightui *gui){
 	if((zht = libzfs_init()) == NULL){
-		fprintf(stderr,"Warning: couldn't initialize ZFS\n");
+		diag("Warning: couldn't initialize ZFS\n");
 		return 0;
 	}
 	libzfs_print_on_error(zht,verbose ? true : false);
 	zpool_set_history_str(PACKAGE, 0, NULL, history);
 	if(zpool_stage_history(zht,history)){
-		fprintf(stderr,"ZFS history didn't match!\n");
+		diag("ZFS history didn't match!\n");
 		return -1;
 	}
 	if(scan_zpools(gui)){
