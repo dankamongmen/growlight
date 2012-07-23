@@ -60,9 +60,8 @@ dehumanize(const char *num){
 
 static int
 zpoolcb(zpool_handle_t *zhp,void *arg){
-	char size[10],guid[21],ashift[5];
+	char size[10],guid[21],ashift[5],health[20];
 	struct zpoolcb_t *cb = arg;
-	vdev_state_t health;
 	uint64_t version;
 	const char *name;
 	nvlist_t *conf;
@@ -99,23 +98,24 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		zpool_close(zhp);
 		return -1;
 	}
-	if(health != VDEV_STATE_FAULTED){
+	if(strcmp(health,"FAULTED")){ // FIXME really?!?!
 		if(zpool_get_prop(zhp,ZPOOL_PROP_SIZE,size,sizeof(size),NULL)){
-			diag("Couldn't get size for %s\n",name);
+			diag("Couldn't get size for zpool '%s'\n",name);
+			zpool_close(zhp);
+			return -1;
+		}
+		if(zpool_get_prop(zhp,ZPOOL_PROP_ASHIFT,ashift,sizeof(ashift),NULL)){
+			diag("Couldn't get ashift for zpool '%s'\n",name);
 			zpool_close(zhp);
 			return -1;
 		}
 	}else{
-		diag("Assuming zero size for faulted zpool %s\n",name);
-		size = 0;
-	}
-	if(zpool_get_prop(zhp,ZPOOL_PROP_ASHIFT,ashift,sizeof(ashift),NULL)){
-		diag("Couldn't get GUID for %s\n",name);
-		zpool_close(zhp);
-		return -1;
+		verbf("Assuming zero size for faulted zpool '%s'\n",name);
+		strcpy(ashift,"0");
+		strcpy(size,"0");
 	}
 	if(zpool_get_prop(zhp,ZPOOL_PROP_GUID,guid,sizeof(guid),NULL)){
-		diag("Couldn't get GUID for %s\n",name);
+		diag("Couldn't get GUID for zpool '%s'\n",name);
 		zpool_close(zhp);
 		return -1;
 	}

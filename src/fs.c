@@ -12,8 +12,6 @@
 
 static int
 ext4_mkfs(const char *dev){
-	char cmd[PATH_MAX];
-
 	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
 	// same for stripe_width FIXME
 	// need -F for non-partition or block special FIXME
@@ -22,11 +20,7 @@ ext4_mkfs(const char *dev){
 	// allow a UUID to be supplied FIXME
 	// set creator OS FIXME
 	// allow -c (badblock check) FIXME
-	if(snprintf(cmd,sizeof(cmd),"mkfs -t ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L SprezzaExt4 -O dir_index,extent,^uninit_bg %s",dev) >= (int)sizeof(cmd)){
-		fprintf(stderr,"Error building command line for %s\n",dev);
-		return -1;
-	}
-	if(popen_drain(cmd)){
+	if(vspopen_drain("mkfs -t ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L SprezzaExt4 -O dir_index,extent,^uninit_bg %s",dev)){
 		return -1;
 	}
 	return 0;
@@ -105,17 +99,17 @@ int make_filesystem(device *d,const char *ptype){
 	const struct fs *pt;
 
 	if(d->target){
-		fprintf(stderr,"Won't create fs on target mount %s (%s)\n",
+		diag("Won't create fs on target mount %s (%s)\n",
 				d->name,d->target->path);
 		return -1;
 	}
 	if(d->mnt){
-		fprintf(stderr,"Won't create fs on active mount %s (%s)\n",
+		diag("Won't create fs on active mount %s (%s)\n",
 				d->name,d->mnt);
 		return -1;
 	}
 	if(d->swapprio >= SWAP_MAXPRIO){
-		fprintf(stderr,"Won't create fs on active mount %s (%s)\n",
+		diag("Won't create fs on active mount %s (%s)\n",
 				d->name,d->mnt);
 		return -1;
 	}
@@ -124,11 +118,11 @@ int make_filesystem(device *d,const char *ptype){
 			char dbuf[PATH_MAX],*mnttype;
 
 			if(snprintf(dbuf,sizeof(dbuf),"/dev/%s",d->name) >= (int)sizeof(dbuf)){
-				fprintf(stderr,"Bad name: %s\n",d->name);
+				diag("Bad name: %s\n",d->name);
 				return -1;
 			}
 			if(pt->mkfs == NULL){
-				fprintf(stderr,"Don't know how to make %s\n",ptype);
+				diag("Don't know how to make %s\n",ptype);
 				return -1;
 			}
 			if((mnttype = strdup(ptype)) == NULL){
@@ -145,7 +139,7 @@ int make_filesystem(device *d,const char *ptype){
 			return 0;
 		}
 	}
-	fprintf(stderr,"Unsupported partition table type: %s\n",ptype);
+	diag("Unsupported partition table type: %s\n",ptype);
 	return -1;
 }
 
