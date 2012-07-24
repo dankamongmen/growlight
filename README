@@ -17,7 +17,6 @@ Dependencies:
  - OpenSSL (tested with Debian's 1.0.1)
  - mkswap(8) from util-linux
  - badblocks(8), mkfs.ext4(8), mkfs.ext3(8), mkfs.ext2(8) from e2fsprogs
- - sgdisk(8) from gdisk
 
 Build-only dependencies:
 
