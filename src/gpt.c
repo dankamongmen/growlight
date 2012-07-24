@@ -209,6 +209,80 @@ int zap_gpt(device *d){
 
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size){
+	unsigned lbas = size / LBA_SIZE;
+	ssize_t s = LBA_SIZE - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % LBA_SIZE);
+	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / LBA_SIZE);
+	off_t backuplba = lbas - 1 - gptlbas;
+	int pgsize = getpagesize();
+	gpt_header *ghead;
+	size_t mapsize;
+	ssize_t r;
+	void *map;
+	off_t off;
+	int fd;
+
+	assert(pgsize && pgsize % LBA_SIZE == 0);
+	if(d->layout != LAYOUT_NONE){
+		diag("Won't zap partition table on non-disk %s\n",d->name);
+		return -1;
+	}
+	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"gpt")){
+		diag("No GPT on disk %s\n",d->name);
+		return -1;
+	}
+	assert(size % LBA_SIZE == 0);
+	// The first copy goes into LBA 1.
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	off = (LBA_SIZE % pgsize == 0) ? LBA_SIZE : 0;
+	if(off == 0){
+		mapsize = LBA_SIZE;
+	}else{
+		mapsize = 0;
+	}
+	mapsize += gptlbas * LBA_SIZE;
+	mapsize = ((mapsize / pgsize) + (mapsize % pgsize)) * pgsize;
+	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,off);
+	if(map == MAP_FAILED){
+		close(fd);
+		return -1;
+	}
+	ghead = (gpt_header *)((char *)map + off);
+	if(ghead->partcount >= MINIMUM_GPT_ENTRIES){
+		diag("GPT partition table full (%u/%u)\n",ghead->partcount,MINIMUM_GPT_ENTRIES);
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	assert(name);
+	// FIXME
+	if((r = lseek(fd,backuplba * LBA_SIZE,SEEK_SET)) < 0 || r != backuplba * LBA_SIZE){
+		diag("Error seeking to %ju on %s (%s?)\n",
+				backuplba * LBA_SIZE,d->name,strerror(errno));
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	if(munmap(map,mapsize)){
+		int e = errno;
+
+		diag("Error munmapping %s (%s?)\n",d->name,strerror(errno));
+		close(fd);
+		errno = e;
+		return -1;
+	}
+	// FIXME now update the backup
+	if(close(fd)){
+		int e = errno;
+
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
+		errno = e;
+		return -1;
+	}
+	return 0;
+	/*
 	uintmax_t sectors;
 	char cmd[BUFSIZ];
 	unsigned partno;
@@ -218,8 +292,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		diag("GPT partitions ought be named!\n");
 		return -1;
 	}
-	// FIXME sgdisk uses the old 512 value, not the appropriate-for-device size
-	sectors = size / 512;
+	sectors = size / LBA_SIZE;
 	partno = 1;
 	for(p = d->parts ; p ; p = p->next){
 		if(partno == p->partdev.pnumber){
@@ -246,4 +319,5 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	return 0;
+	*/
 }
