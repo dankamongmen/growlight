@@ -11,14 +11,6 @@
 #include "growlight.h"
 
 static int
-gpt_make_table(device *d){
-	if(vspopen_drain("parted /dev/%s mklabel gpt",d->name)){
-		return -1;
-	}
-	return 0;
-}
-
-static int
 dos_make_table(device *d){
 	if(vspopen_drain("parted /dev/%s mklabel msdos",d->name)){
 		return -1;
@@ -99,7 +91,7 @@ static const struct ptable {
 } ptables[] = {
 	{
 		.name = "gpt",
-		.make = gpt_make_table,
+		.make = new_gpt,
 		.zap = zap_gpt,
 		.add = gpt_add_part,
 	},
