@@ -121,7 +121,7 @@ int get_sysfs_uint(int dirfd,const char *node,unsigned long *b){
 	buf[r - 1] = '\0';
 	*b = strtoul(buf,&end,0);
 	if(*end){
-		fprintf(stderr,"Malformed sysfs uint: %s\n",buf);
+		diag("Malformed sysfs uint: %s\n",buf);
 		return -1;
 	}
 	return 0;
