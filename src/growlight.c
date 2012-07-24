@@ -54,11 +54,12 @@
 unsigned verbose = 0;
 unsigned finalized = 0;
 
+int sysfd = -1; // Hold a reference to SYSROOT, for openat() etc
+int devfd = -1; // Hold a reference to DEVROOT
+
 static unsigned usepci;
 static const glightui *gui;
 static struct pci_access *pciacc;
-static int sysfd = -1; // Hold a reference to SYSROOT
-static int devfd = -1; // Hold a reference to DEVROOT
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 static unsigned thrcount;

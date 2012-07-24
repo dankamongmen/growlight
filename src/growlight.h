@@ -21,6 +21,8 @@ extern unsigned finalized;
 void diag(const char *,...) __attribute__ ((format (printf,1,2)));
 void verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
+extern int sysfd,devfd;
+
 #define FSLABELSIZ 17
 
 	// This isn't really suitable for use as a library to programs beyond
