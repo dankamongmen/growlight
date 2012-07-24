@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <iconv.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -215,6 +216,25 @@ int zap_gpt(device *d){
 	return 0;
 }
 
+static int
+gpt_name(const wchar_t *name,uint16_t *name16le){
+	size_t len,olen = 36;
+	iconv_t icv;
+
+	if((icv = iconv_open("WCHAR_T","UTF16-LE")) == (iconv_t)-1){
+		return -1;
+	}
+	len = sizeof(*name) * (wcslen(name) + 1);
+	if(iconv(icv,(char **)&name,&len,(char **)&name16le,&olen) == (size_t)-1){
+		iconv_close(icv);
+		return -1;
+	}
+	if(iconv_close(icv)){
+		return -1;
+	}
+	return 0;
+}
+
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	unsigned lbas = size / LBA_SIZE;
@@ -275,7 +295,12 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	// FIXME need to ensure they're not used by existing partitions!
 	gpe->first_lba = ghead->first_usable;
 	gpe->last_lba = ghead->last_usable;
-	// FIXME need convert name to UTF-16LE and set name
+	if(gpt_name(name,gpe->name)){
+		diag("Couldn't convert %ls for %s\n",name,d->name);
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
 	++ghead->partcount;
 	// FIXME update CRC
 	assert(name);
