@@ -354,6 +354,13 @@ print_partition(const device *p,int descend){
 	return r;
 }
 
+// Yellow - hard disk
+// Cyan -- SSD
+// Magena -- virtual
+// White -- removable
+// Blue - Partition
+// Green - filesystem
+
 static int
 print_drive(const device *d,int descend){
 	char buf[PREFIXSTRLEN + 1];
@@ -362,7 +369,9 @@ print_drive(const device *d,int descend){
 
 	switch(d->layout){
 	case LAYOUT_NONE:{
-		if(d->blkdev.realdev){
+		if(d->blkdev.removable){
+			use_terminfo_color(COLOR_WHITE,0); // optical/usb
+		}else if(d->blkdev.realdev){
 			if(d->blkdev.rotate){
 				use_terminfo_color(COLOR_YELLOW,0); // disk
 			}else{

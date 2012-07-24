@@ -202,6 +202,7 @@ enum {
 	PBORDER_COLOR,
 	PHEADING_COLOR,
 	SUBDISPLAY_COLOR,
+	OPTICAL_COLOR,
 	ROTATE_COLOR,
 	VIRTUAL_COLOR,
 	SSD_COLOR,
@@ -374,6 +375,7 @@ setup_colors(void){
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(OPTICAL_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(SSD_COLOR,COLOR_CYAN,-1) == OK);
@@ -655,7 +657,13 @@ print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 	switch(bo->d->layout){
 case LAYOUT_NONE:
 	if(bo->d->blkdev.realdev){
-		if(bo->d->blkdev.rotate){
+		if(bo->d->blkdev.removable){
+			if(selected){
+				assert(wattrset(rb->win,A_REVERSE|OPTICAL_COLOR) == OK);
+			}else{
+				assert(wattrset(rb->win,OPTICAL_COLOR) == OK);
+			}
+		}else if(bo->d->blkdev.rotate){
 			if(selected){
 				assert(wattrset(rb->win,A_REVERSE|ROTATE_COLOR) == OK);
 			}else{
