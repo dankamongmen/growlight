@@ -1,7 +1,9 @@
+#include <assert.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 #include "gpt.h"
 #include "growlight.h"
@@ -69,48 +71,57 @@ static const unsigned char zero_sector[LBA_SIZE];
 // equal to 0 to perform the latter.
 static int
 write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
-	off_t backuplba;
-	unsigned secs;
-	ssize_t s;
+	ssize_t s = lbasize - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % lbasize);
+	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
+	off_t backuplba = lbas - 1 - gptlbas;
+	int pgsize = getpagesize();
+	size_t mapsize;
+	void *map;
+	off_t off;
 
-	s = lbasize - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % lbasize);
-	backuplba = lbas - (2 + !!s + MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
-	if(lseek(fd,lbasize,SEEK_SET) != lbasize){
+	assert(pgsize && pgsize % lbasize == 0);
+	// The first copy goes into LBA 1.
+	off = (lbasize % pgsize == 0) ? lbasize : 0;
+	if(off == 0){
+		mapsize = lbasize;
+	}else{
+		mapsize = 0;
+	}
+	mapsize += gptlbas * lbasize;
+	mapsize = ((mapsize / pgsize) + (mapsize % pgsize)) * pgsize;
+	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,off);
+	if(map == MAP_FAILED){
 		return -1;
 	}
 	if(!realdata){
-		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
-			return -1;
-		}
+		memset((char *)map + off,0,gptlbas * lbasize);
 	}else{
 		// FIXME
 	}
-	for(secs = 0 ; secs < MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize ; ++secs){
-		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
-			return -1;
-		}
-	}
-	if(s && write(fd,zero_sector,s) != s){
+	if(munmap(map,mapsize)){
 		return -1;
 	}
-	if(lseek(fd,lbasize * backuplba,SEEK_SET) != lbasize * backuplba){
+	if(backuplba * lbasize % pgsize){
+		mapsize = pgsize - (backuplba * lbasize % pgsize);
+		off = mapsize;
+	}else{
+		off = 0;
+		mapsize = 0;
+	}
+	mapsize += gptlbas * lbasize;
+	mapsize = ((mapsize / pgsize) + (mapsize % pgsize)) * pgsize;
+	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,backuplba * lbasize - off);
+	if(map == MAP_FAILED){
 		return -1;
 	}
 	if(!realdata){
-		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
-			return -1;
-		}
+		memset((char *)map + off,0,gptlbas * lbasize);
 	}else{
 		// FIXME
 	}
-	for(secs = 0 ; secs < MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize ; ++secs){
-		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
-			return -1;
-		}
-	}
-	if(s && write(fd,zero_sector,s) != s){
+	if(munmap(map,mapsize)){
 		return -1;
-	} // we are now one past the last byte of the device
+	}
 	return 0;
 }
 
