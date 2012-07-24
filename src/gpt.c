@@ -260,7 +260,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	// FIXME
 	if((r = lseek(fd,backuplba * LBA_SIZE,SEEK_SET)) < 0 || r != backuplba * LBA_SIZE){
 		diag("Error seeking to %ju on %s (%s?)\n",
-				backuplba * LBA_SIZE,d->name,strerror(errno));
+				(uintmax_t)backuplba * LBA_SIZE,d->name,strerror(errno));
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
