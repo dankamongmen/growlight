@@ -22,7 +22,7 @@ sanitize_cmd(const char *cmd){
 		wchar_t w;
 
 		if((conv = mbrtowc(&w,cmd,left,&ps)) == (size_t)-1){
-			fprintf(stderr,"Error converting multibyte: %s\n",cmd);
+			diag("Error converting multibyte: %s\n",cmd);
 			free(san);
 		}
 		left -= conv;
@@ -63,7 +63,7 @@ int popen_drain(const char *cmd){
 		return -1;
 	}
 	if((fd = popen(safecmd,"re")) == NULL){
-		fprintf(stderr,"Couldn't run %s (%s?)\n",safecmd,strerror(errno));
+		diag("Couldn't run %s (%s?)\n",safecmd,strerror(errno));
 		free(safecmd);
 		return -1;
 	}
@@ -71,12 +71,12 @@ int popen_drain(const char *cmd){
 		printf("%s",buf);
 	}
 	if(!feof(fd)){
-		fprintf(stderr,"Error reading from '%s' (%s?)\n",cmd,strerror(errno));
+		diag("Error reading from '%s' (%s?)\n",cmd,strerror(errno));
 		fclose(fd);
 		return -1;
 	}
 	if(fclose(fd)){
-		fprintf(stderr,"Error running '%s'\n",cmd);
+		diag("Error running '%s'\n",cmd);
 		return -1;
 	}
 	return 0;
@@ -108,7 +108,7 @@ int vspopen_drain(const char *fmt,...){
 	va_start(va,fmt);
 	if(vsnprintf(buf,sizeof(buf),fmt,va) >= (int)sizeof(buf)){
 		va_end(va);
-		fprintf(stderr,"Bad command: %s ...\n",fmt);
+		diag("Bad command: %s ...\n",fmt);
 		return -1;
 	}
 	va_end(va);
