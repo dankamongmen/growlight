@@ -13,6 +13,7 @@
 #define LBA_SIZE 512u
 #define MBR_OFFSET 440u
 
+static const unsigned char ZERO_MBR[LBA_SIZE - MBR_OFFSET];
 static const unsigned char GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
  "\x00\x00\x00\x00\x00\x00"	// 6 bytes of zeros
  "\x80"				// bootable (violation of GPT spec, but some
@@ -59,8 +60,6 @@ typedef struct __attribute__ ((packed)) gpt_entry {
 } gpt_entry;
 
 #define MINIMUM_GPT_ENTRIES 128
-
-static const unsigned char zero_sector[LBA_SIZE];
 
 // Write out a GPT and its backup on the device represented by fd, using
 // lbasize-byte LBA. The device ought have lbas lbasize-byte sectors. We will
@@ -190,8 +189,8 @@ int zap_gpt(device *d){
 		close(fd);
 		return -1;
 	}
-	if((r = write(fd,zero_sector,sizeof(GPT_PROTECTIVE_MBR))) < 0 ||
-			r < (ssize_t)sizeof(GPT_PROTECTIVE_MBR)){
+	if((r = write(fd,ZERO_MBR,sizeof(ZERO_MBR))) < 0 ||
+			r < (ssize_t)sizeof(ZERO_MBR)){
 		diag("Couldn't zero MBR on %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
 		return -1;
