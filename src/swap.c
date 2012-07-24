@@ -14,21 +14,21 @@ int mkswap(device *d){
 	char cmd[PATH_MAX];
 
 	if(d->target){
-		fprintf(stderr,"Won't create swap on target mount %s (%s)\n",
+		diag("Won't create swap on target mount %s (%s)\n",
 				d->name,d->target->path);
 		return -1;
 	}
 	if(d->mnt){
-		fprintf(stderr,"Won't create swap on active mount %s (%s)\n",
+		diag("Won't create swap on active mount %s (%s)\n",
 				d->name,d->mnt);
 		return -1;
 	}
 	if(d->swapprio >= SWAP_MAXPRIO){
-		fprintf(stderr,"Already swapping on %s\n",d->name);
+		diag("Already swapping on %s\n",d->name);
 		return -1;
 	}
 	if(snprintf(cmd,sizeof(cmd),"mkswap -L SprezzaSwap /dev/%s",d->name) >= (int)sizeof(cmd)){
-		fprintf(stderr,"Error building command line for %s\n",d->name);
+		diag("Error building command line for %s\n",d->name);
 		return -1;
 	}
 	if(popen_drain(cmd)){
@@ -49,7 +49,7 @@ int swapondev(device *d){
 		return -1;
 	}
 	if(swapon(fn,0)){
-		fprintf(stderr,"Couldn't swap on %s (%s?)\n",fn,strerror(errno));
+		diag("Couldn't swap on %s (%s?)\n",fn,strerror(errno));
 		free(mt);
 		return -1;
 	}
@@ -65,7 +65,7 @@ int swapoffdev(device *d){
 
 	snprintf(fn,sizeof(fn),"/dev/%s",d->name);
 	if(swapoff(fn)){
-		fprintf(stderr,"Couldn't stop swapping on %s (%s?)\n",fn,strerror(errno));
+		diag("Couldn't stop swapping on %s (%s?)\n",fn,strerror(errno));
 		return -1;
 	}
 	d->swapprio = SWAP_INACTIVE;
