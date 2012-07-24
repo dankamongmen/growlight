@@ -189,9 +189,6 @@ ought be fixed.</para>
 			<refentrytitle>sfdisk</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
-			<refentrytitle>sgdisk</refentrytitle>
-			<manvolnum>8</manvolnum>
-		</citerefentry>, <citerefentry>
 			<refentrytitle>swapoff</refentrytitle>
 			<manvolnum>2</manvolnum>
 		</citerefentry>, <citerefentry>
