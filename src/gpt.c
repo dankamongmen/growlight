@@ -58,6 +58,51 @@ typedef struct __attribute__ ((packed)) gpt_entry {
 
 #define MINIMUM_GPT_ENTRIES 128
 
+static const unsigned char zero_sector[LBA_SIZE];
+
+// Write out a GPT and its backup on the device represented by fd, using
+// lbasize-byte LBA. The device ought have lbas lbasize-byte sectors. We will
+// write to the second-from-the-first, and the final, groups of sectors. lbas
+// must be greater than or equal to 1 + 2 * (1 + ceil(16k / lbasize).
+static int
+write_gpt(int fd,ssize_t lbasize,unsigned long lbas){
+	off_t backuplba;
+	unsigned secs;
+	ssize_t s;
+
+	s = lbasize - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % lbasize);
+	backuplba = lbas - (2 + !!s + MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
+	if(lseek(fd,lbasize,SEEK_SET) != lbasize){
+		return -1;
+	}
+	if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
+		return -1;
+	}
+	for(secs = 0 ; secs < MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize ; ++secs){
+		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
+			return -1;
+		}
+	}
+	if(s && write(fd,zero_sector,s) != s){
+		return -1;
+	}
+	if(lseek(fd,lbasize * backuplba,SEEK_SET) != lbasize * backuplba){
+		return -1;
+	}
+	if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
+		return -1;
+	}
+	for(secs = 0 ; secs < MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize ; ++secs){
+		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
+			return -1;
+		}
+	}
+	if(s && write(fd,zero_sector,s) != s){
+		return -1;
+	} // we are now one past the last byte of the device
+	return 0;
+}
+
 int new_gpt(device *d){
 	ssize_t r;
 	int fd;
@@ -90,8 +135,11 @@ int new_gpt(device *d){
 		close(fd);
 		return -1;
 	}
-	// FIXME GPT header in second
-	// 16k (32 512-byte sectors) minimum of GPT info (supports 128 partitions)
+	if(write_gpt(fd,LBA_SIZE,d->size / LBA_SIZE)){
+		diag("Couldn't write GPT on %s (%s?)\n",d->name,strerror(errno));
+		close(fd);
+		return -1;
+	}
 	if(close(fd)){
 		diag("Error closing %d for %s (%s?)\n",fd,d->name,strerror(errno));
 		return -1;
