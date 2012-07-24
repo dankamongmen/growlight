@@ -273,6 +273,10 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	int fd;
 
 	assert(pgsize && pgsize % LBA_SIZE == 0);
+	if(!name){
+		diag("GPT partitions ought be named!\n");
+		return -1;
+	}
 	if(d->layout != LAYOUT_NONE){
 		diag("Won't zap partition table on non-disk %s\n",d->name);
 		return -1;
@@ -349,14 +353,9 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	return 0;
 	/*
 	uintmax_t sectors;
-	char cmd[BUFSIZ];
 	unsigned partno;
 	const device *p;
 
-	if(!name){
-		diag("GPT partitions ought be named!\n");
-		return -1;
-	}
 	sectors = size / LBA_SIZE;
 	partno = 1;
 	for(p = d->parts ; p ; p = p->next){
@@ -374,13 +373,6 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		}
 	}
 	if(vspopen_drain("sgdisk --new=%u:0:%ju /dev/%s",partno,sectors,d->name)){
-		return -1;
-	}
-	if(snprintf(cmd,sizeof(cmd),"sgdisk --change-name=%u:%ls /dev/%s",partno,name,d->name) >= (int)sizeof(cmd)){
-		diag("Bad names: %d / %ls\n",d->partdev.pnumber,name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
 		return -1;
 	}
 	return 0;
