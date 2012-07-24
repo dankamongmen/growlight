@@ -2100,7 +2100,7 @@ remove_ptable(void){
 		locked_diag("Not a partitionable block device");
 		return;
 	}
-	wipe_ptable(b->d);
+	wipe_ptable(b->d,NULL);
 }
 
 static void

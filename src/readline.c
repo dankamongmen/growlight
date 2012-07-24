@@ -924,7 +924,7 @@ blockdev(wchar_t * const *args,const char *arghelp){
 			usage(args,arghelp);
 			return -1;
 		}
-		return wipe_ptable(d);
+		return wipe_ptable(d,NULL);
 	}else if(wcscmp(args[1],L"wipebiosboot") == 0){
 		if(args[3]){
 			usage(args,arghelp);
