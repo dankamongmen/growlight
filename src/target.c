@@ -35,7 +35,7 @@ create_target(const char *path,const char *dev,const char *ops){
 		}
 	}
 	if(!t){
-		fprintf(stderr,"Failure creating fs on %s\n",dev);
+		diag("Failure creating fs on %s\n",dev);
 	}
 	return t;
 }
@@ -56,27 +56,27 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 	mntentry *m;
 
 	if(get_target() == NULL){
-		fprintf(stderr,"No target is defined\n");
+		diag("No target is defined\n");
 		return -1;
 	}
 	if(d->mnt){
-		fprintf(stderr,"%s is already actively mounted at %s\n",d->name,d->mnt);
+		diag("%s is already actively mounted at %s\n",d->name,d->mnt);
 		return -1;
 	}
 	if(d->target){
-		fprintf(stderr,"%s is already mapped to %s\n",d->name,d->target->path);
+		diag("%s is already mapped to %s\n",d->name,d->target->path);
 		return -1;
 	}
 	if(d->swapprio >= SWAP_MAXPRIO){
-		fprintf(stderr,"%s is used as swap\n",d->name);
+		diag("%s is used as swap\n",d->name);
 		return -1;
 	}
 	if(snprintf(devname,sizeof(devname),"/dev/%s",d->name) >= (int)sizeof(devname)){
-		fprintf(stderr,"Bad device name: %s\n",d->name);
+		diag("Bad device name: %s\n",d->name);
 		return -1;
 	}
 	if(snprintf(pathext,sizeof(pathext),"%s/%s",get_target(),path) >= (int)(sizeof(devname) - strlen("/etc/fstab"))){
-		fprintf(stderr,"Bad mount point: %s\n",path);
+		diag("Bad mount point: %s\n",path);
 		return -1;
 	}
 	if((fs = strdup(cfs)) == NULL){
@@ -84,24 +84,24 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 	}
 	if(targfd < 0){
 		if(strcmp(path,"/")){
-			fprintf(stderr,"Need a root ('/') before mapping %s\n",path);
+			diag("Need a root ('/') before mapping %s\n",path);
 			free(fs);
 			return -1;
 		}
 		if(mount(devname,pathext,fs,MS_NOATIME,NULL)){
-			fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,pathext,fs);
+			diag("Couldn't mount %s at %s for %s\n",devname,pathext,fs);
 			free(fs);
 			return -1;
 		}
 		// we know we have enough space from the check of snprintf()...
 		if((targfd = open(pathext,O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0){
-			fprintf(stderr,"Couldn't open %s (%s?)\n",path,strerror(errno));
+			diag("Couldn't open %s (%s?)\n",path,strerror(errno));
 			free(fs);
 			return -1;
 		}
 		strcat(pathext,"/etc");
 		if(mkdir(pathext,0777) && errno != EEXIST){
-			fprintf(stderr,"Couldn't mkdir %s (%s?)\n",pathext,strerror(errno));
+			diag("Couldn't mkdir %s (%s?)\n",pathext,strerror(errno));
 			close(targfd);
 			targfd = -1;
 			umount2(devname,UMOUNT_NOFOLLOW);
@@ -122,7 +122,7 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 	// no need to check for preexisting mount at this point -- the mount(2)
 	// will fail if one's there.
 	if(mount(devname,path,fs,MS_NOATIME,NULL)){
-		fprintf(stderr,"Couldn't mount %s at %s for %s\n",devname,path,fs);
+		diag("Couldn't mount %s at %s for %s\n",devname,path,fs);
 		free(fs);
 		return -1;
 	}
@@ -174,13 +174,13 @@ use_new_target(const char *path){
 		}
 	}
 	if(!match && submatch){
-		fprintf(stderr,"Not using target %s with submount %s\n",path,submatch->mnt);
+		diag("Not using target %s with submount %s\n",path,submatch->mnt);
 		return -1;
 	}
 	if(!match){
 		return 0;
 	}
-	fprintf(stderr,"Not using already-mounted target %s\n",path);
+	diag("Not using already-mounted target %s\n",path);
 	// FIXME import matching device as map see bug 110
 	if(!submatch){
 		return 0;
@@ -194,11 +194,11 @@ int set_target(const char *path){
 
 	if(path){
 		if(growlight_target){
-			fprintf(stderr,"A target is already defined: %s\n",growlight_target);
+			diag("A target is already defined: %s\n",growlight_target);
 			return -1;
 		}
 		if(realpath(path,real_target) == NULL){
-			fprintf(stderr,"Couldn't resolve %s (%s?)\n",path,strerror(errno));
+			diag("Couldn't resolve %s (%s?)\n",path,strerror(errno));
 			return -1;
 		}
 		if(use_new_target(real_target)){
@@ -208,7 +208,7 @@ int set_target(const char *path){
 		return 0;
 	}
 	if(!growlight_target){
-		fprintf(stderr,"No target is defined\n");
+		diag("No target is defined\n");
 		return -1;
 	}
 	for(c = get_controllers() ; c ; c = c->next){
@@ -218,9 +218,9 @@ int set_target(const char *path){
 		for(d = c->blockdevs ; d ; d = d->next){
 			if(d->target){
 				if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
-					fprintf(stderr,"Path too long: %s/%s\n",growlight_target,d->target->path);
+					diag("Path too long: %s/%s\n",growlight_target,d->target->path);
 				}else if(umount2(buf,UMOUNT_NOFOLLOW)){
-					fprintf(stderr,"Couldn't unmount %s (%s?)\n",buf,strerror(errno));
+					diag("Couldn't unmount %s (%s?)\n",buf,strerror(errno));
 				}
 				free_mntentry(d->target);
 				d->target = NULL;
@@ -228,9 +228,9 @@ int set_target(const char *path){
 			for(p = d->parts ; p ; p = p->next){
 				if(p->target){
 					if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
-						fprintf(stderr,"Path too long: %s/%s\n",growlight_target,d->target->path);
+						diag("Path too long: %s/%s\n",growlight_target,d->target->path);
 					}else if(umount2(buf,UMOUNT_NOFOLLOW)){
-						fprintf(stderr,"Couldn't unmount %s (%s?)\n",buf,strerror(errno));
+						diag("Couldn't unmount %s (%s?)\n",buf,strerror(errno));
 					}
 					free_mntentry(d->target);
 					d->target = NULL;
@@ -249,30 +249,30 @@ int finalize_target(void){
 	int fd;
 
 	if(!growlight_target){
-		fprintf(stderr,"No target is defined\n");
+		diag("No target is defined\n");
 		return -1;
 	}
 	if(targfd < 0){
-		fprintf(stderr,"No target mappings are defined\n");
+		diag("No target mappings are defined\n");
 		return -1;
 	}
 	if((fd = openat(targfd,"etc/fstab",O_WRONLY|O_CLOEXEC|O_CREAT,
 					S_IROTH | S_IRGRP | S_IWGRP | S_IRUSR | S_IWUSR)) < 0){
-		fprintf(stderr,"Couldn't open etc/fstab in target root (%s?)\n",strerror(errno));
+		diag("Couldn't open etc/fstab in target root (%s?)\n",strerror(errno));
 		return -1;
 	}
 	if((fp = fdopen(fd,"w")) == NULL){
-		fprintf(stderr,"Couldn't get FILE * from %d (%s?)\n",fd,strerror(errno));
+		diag("Couldn't get FILE * from %d (%s?)\n",fd,strerror(errno));
 		close(fd);
 		return -1;
 	}
 	if(dump_targets(fp)){
-		fprintf(stderr,"Couldn't write targets to %s/etc/fstab (%s?)\n",growlight_target,strerror(errno));
+		diag("Couldn't write targets to %s/etc/fstab (%s?)\n",growlight_target,strerror(errno));
 		close(fd);
 		return -1;
 	}
 	if(fclose(fp)){
-		fprintf(stderr,"Couldn't close FILE * from %d (%s?)\n",fd,strerror(errno));
+		diag("Couldn't close FILE * from %d (%s?)\n",fd,strerror(errno));
 		close(fd);
 		return -1;
 	}
