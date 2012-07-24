@@ -7,6 +7,7 @@
 #include <stdarg.h>
 
 #include "popen.h"
+#include "growlight.h"
 
 static char *
 sanitize_cmd(const char *cmd){
