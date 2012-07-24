@@ -24,51 +24,6 @@ dos_zap_table(device *d){
 }
 
 static int
-gpt_add_part(device *d,const wchar_t *name,uintmax_t size){
-	uintmax_t sectors;
-	char cmd[BUFSIZ];
-	unsigned partno;
-	const device *p;
-
-	if(!name){
-		diag("GPT partitions ought be named!\n");
-		return -1;
-	}
-	// FIXME sgdisk uses the old 512 value, not the appropriate-for-device size
-	sectors = size / 512;
-	partno = 1;
-	for(p = d->parts ; p ; p = p->next){
-		if(partno == p->partdev.pnumber){
-			const device *pcheck;
-
-			do{
-				++partno;
-				for(pcheck = d->parts ; pcheck != p ; pcheck = pcheck->next){
-					if(partno == pcheck->partdev.pnumber){
-						break;
-					}
-				}
-			}while(p != pcheck);
-		}
-	}
-	if(snprintf(cmd,sizeof(cmd),"sgdisk --new=%u:0:%ju /dev/%s",partno,sectors,d->name) >= (int)sizeof(cmd)){
-		diag("Bad name: %s\n",d->name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
-		return -1;
-	}
-	if(snprintf(cmd,sizeof(cmd),"sgdisk --change-name=%u:%ls /dev/%s",partno,name,d->name) >= (int)sizeof(cmd)){
-		diag("Bad names: %d / %ls\n",d->partdev.pnumber,name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
-		return -1;
-	}
-	return 0;
-}
-
-static int
 dos_add_part(device *d,const wchar_t *name,uintmax_t size){
 	if(name){
 		diag("Names are not supported for MBR partitions!\n");
@@ -93,7 +48,7 @@ static const struct ptable {
 		.name = "gpt",
 		.make = new_gpt,
 		.zap = zap_gpt,
-		.add = gpt_add_part,
+		.add = add_gpt,
 	},
 	{
 		.name = "dos",
