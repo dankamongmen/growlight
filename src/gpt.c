@@ -61,6 +61,26 @@ typedef struct __attribute__ ((packed)) gpt_entry {
 
 #define MINIMUM_GPT_ENTRIES 128
 
+static int
+update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
+			unsigned backuplba,unsigned lbasize){
+	ssize_t r;
+
+	if((r = lseek(fd,backuplba * lbasize,SEEK_SET)) < 0 || r != (ssize_t)(backuplba * lbasize)){
+		diag("Error seeking to %ju on %d (%s?)\n",
+				(uintmax_t)backuplba * lbasize,
+				fd,strerror(errno));
+		return -1;
+	}
+	if(write(fd,ghead,gptlbas * lbasize) != gptlbas * lbasize){
+		diag("Error writing %juB on %d (%s?)\n",
+				(uintmax_t)gptlbas * lbasize,
+				fd,strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 // Write out a GPT and its backup on the device represented by fd, using
 // lbasize-byte LBA. The device ought have lbas lbasize-byte sectors. We will
 // write to the second-from-the-first, and the final, groups of sectors. lbas
@@ -74,6 +94,7 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
 	off_t backuplba = lbas - 1 - gptlbas;
 	int pgsize = getpagesize();
+	gpt_header *ghead;
 	size_t mapsize;
 	void *map;
 	off_t off;
@@ -92,31 +113,15 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	if(map == MAP_FAILED){
 		return -1;
 	}
+	ghead = (gpt_header *)((char *)map + off);
 	if(!realdata){
-		memset((char *)map + off,0,gptlbas * lbasize);
+		memset(ghead,0,gptlbas * lbasize);
 	}else{
 		// FIXME
 	}
-	if(munmap(map,mapsize)){
+	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize)){
+		munmap(map,mapsize);
 		return -1;
-	}
-	if(backuplba * lbasize % pgsize){
-		mapsize = pgsize - (backuplba * lbasize % pgsize);
-		off = mapsize;
-	}else{
-		off = 0;
-		mapsize = 0;
-	}
-	mapsize += gptlbas * lbasize;
-	mapsize = ((mapsize / pgsize) + (mapsize % pgsize)) * pgsize;
-	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,backuplba * lbasize - off);
-	if(map == MAP_FAILED){
-		return -1;
-	}
-	if(!realdata){
-		memset((char *)map + off,0,gptlbas * lbasize);
-	}else{
-		// FIXME
 	}
 	if(munmap(map,mapsize)){
 		return -1;
@@ -216,7 +221,6 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	int pgsize = getpagesize();
 	gpt_header *ghead;
 	size_t mapsize;
-	ssize_t r;
 	void *map;
 	off_t off;
 	int fd;
@@ -258,9 +262,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	}
 	assert(name);
 	// FIXME
-	if((r = lseek(fd,backuplba * LBA_SIZE,SEEK_SET)) < 0 || r != (ssize_t)backuplba * LBA_SIZE){
-		diag("Error seeking to %ju on %s (%s?)\n",
-				(uintmax_t)backuplba * LBA_SIZE,d->name,strerror(errno));
+	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE)){
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
@@ -273,7 +275,6 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		errno = e;
 		return -1;
 	}
-	// FIXME now update the backup
 	if(close(fd)){
 		int e = errno;
 
