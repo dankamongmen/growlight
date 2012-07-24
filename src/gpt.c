@@ -4,6 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
 
 #include "gpt.h"
 #include "growlight.h"
@@ -118,6 +120,7 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 		memset(ghead,0,gptlbas * lbasize);
 	}else{
 		// FIXME
+		// FIXME update CRC
 	}
 	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize)){
 		munmap(map,mapsize);
@@ -220,6 +223,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	off_t backuplba = lbas - 1 - gptlbas;
 	int pgsize = getpagesize();
 	gpt_header *ghead;
+	gpt_entry *gpe;
 	size_t mapsize;
 	void *map;
 	off_t off;
@@ -260,8 +264,21 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		close(fd);
 		return -1;
 	}
+	gpe = (gpt_entry *)((char *)ghead + LBA_SIZE) + ghead->partcount;
+	// FIXME set type_guid
+	if(RAND_bytes(gpe->part_guid,GUIDSIZE) != 1){
+		diag("%s",ERR_error_string(ERR_get_error(),NULL));
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	// FIXME need to ensure they're not used by existing partitions!
+	gpe->first_lba = ghead->first_usable;
+	gpe->last_lba = ghead->last_usable;
+	// FIXME need convert name to UTF-16LE and set name
+	++ghead->partcount;
+	// FIXME update CRC
 	assert(name);
-	// FIXME
 	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE)){
 		munmap(map,mapsize);
 		close(fd);
