@@ -64,8 +64,11 @@ static const unsigned char zero_sector[LBA_SIZE];
 // lbasize-byte LBA. The device ought have lbas lbasize-byte sectors. We will
 // write to the second-from-the-first, and the final, groups of sectors. lbas
 // must be greater than or equal to 1 + 2 * (1 + ceil(16k / lbasize).
+//
+// We can either zero it all out, or create a new empty GPT. Set realdata not
+// equal to 0 to perform the latter.
 static int
-write_gpt(int fd,ssize_t lbasize,unsigned long lbas){
+write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	off_t backuplba;
 	unsigned secs;
 	ssize_t s;
@@ -75,8 +78,12 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas){
 	if(lseek(fd,lbasize,SEEK_SET) != lbasize){
 		return -1;
 	}
-	if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
-		return -1;
+	if(!realdata){
+		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
+			return -1;
+		}
+	}else{
+		// FIXME
 	}
 	for(secs = 0 ; secs < MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize ; ++secs){
 		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
@@ -89,8 +96,12 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas){
 	if(lseek(fd,lbasize * backuplba,SEEK_SET) != lbasize * backuplba){
 		return -1;
 	}
-	if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
-		return -1;
+	if(!realdata){
+		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
+			return -1;
+		}
+	}else{
+		// FIXME
 	}
 	for(secs = 0 ; secs < MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize ; ++secs){
 		if(write(fd,zero_sector,sizeof(zero_sector)) != lbasize){
@@ -135,7 +146,7 @@ int new_gpt(device *d){
 		close(fd);
 		return -1;
 	}
-	if(write_gpt(fd,LBA_SIZE,d->size / LBA_SIZE)){
+	if(write_gpt(fd,LBA_SIZE,d->size / LBA_SIZE,1)){
 		diag("Couldn't write GPT on %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
 		return -1;
@@ -148,6 +159,9 @@ int new_gpt(device *d){
 }
 
 int zap_gpt(device *d){
+	ssize_t r;
+	int fd;
+
 	if(d->layout != LAYOUT_NONE){
 		diag("Won't zap partition table on non-disk %s\n",d->name);
 		return -1;
@@ -156,6 +170,29 @@ int zap_gpt(device *d){
 		diag("No GPT on disk %s\n",d->name);
 		return -1;
 	}
-	// FIXME
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	if(lseek(fd,MBR_OFFSET,SEEK_SET) != MBR_OFFSET){
+		diag("Couldn't seek to %u on %s (%s?)\n",MBR_OFFSET,d->name,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if((r = write(fd,zero_sector,sizeof(GPT_PROTECTIVE_MBR))) < 0 ||
+			r < (ssize_t)sizeof(GPT_PROTECTIVE_MBR)){
+		diag("Couldn't zero MBR on %s (%s?)\n",d->name,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if(write_gpt(fd,LBA_SIZE,d->size / LBA_SIZE,0)){
+		diag("Couldn't write GPT on %s (%s?)\n",d->name,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if(close(fd)){
+		diag("Error closing %d for %s (%s?)\n",fd,d->name,strerror(errno));
+		return -1;
+	}
 	return 0;
 }
