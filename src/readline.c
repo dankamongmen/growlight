@@ -1603,8 +1603,6 @@ version(wchar_t * const *args,const char *arghelp){
 	ret |= popen_drain("mkswap --version");
 	printf("\n");
 	ret |= popen_drain("grub-mkdevicemap --version");
-	printf("\n");
-	ret |= popen_drain("sgdisk --version");
 	if(print_zfs_version(stdout) < 0){
 		ret |= -1;
 	}
