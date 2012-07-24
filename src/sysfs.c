@@ -8,6 +8,7 @@
 #include <linux/kdev_t.h>
 
 #include "sysfs.h"
+#include "growlight.h"
 
 // FIXME use libudev or at least mmap.c for this crap
 // FIXME sysfs is UTF-8 not ASCII!
