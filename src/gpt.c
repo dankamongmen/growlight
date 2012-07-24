@@ -84,6 +84,29 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
 	return 0;
 }
 
+static uint32_t
+calc_crc32(const void *data,size_t bytes){
+	uint32_t csum = 0;
+	size_t z;
+
+	assert(bytes % 4 == 0);
+	for(z = 0 ; z < bytes / 4 ; ++z){
+		csum += ((const uint32_t *)data)[z];
+	}
+	// FIXME compute checksum correctly
+	return ~csum;
+}
+
+static void
+update_crc(gpt_header *head,size_t lbasize){
+	const gpt_entry *gpes = (const gpt_entry *)((char *)head + lbasize);
+	size_t hs = head->headsize; // FIXME little-endian; swap on BE machines
+
+	head->partcrc = calc_crc32(gpes,head->partcount * head->partsize);
+	head->crc = 0;
+	head->crc = calc_crc32(head,hs);
+}
+
 // Write out a GPT and its backup on the device represented by fd, using
 // lbasize-byte LBA. The device ought have lbas lbasize-byte sectors. We will
 // write to the second-from-the-first, and the final, groups of sectors. lbas
@@ -121,8 +144,8 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 		memset(ghead,0,gptlbas * lbasize);
 	}else{
 		// FIXME
-		// FIXME update CRC
 	}
+	update_crc(ghead,lbasize);
 	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize)){
 		munmap(map,mapsize);
 		return -1;
@@ -285,7 +308,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	gpe = (gpt_entry *)((char *)ghead + LBA_SIZE) + ghead->partcount;
-	// FIXME set type_guid
+	memset(gpe->type_guid,0,GUIDSIZE); // all 0's is "GPT unused"
 	if(RAND_bytes(gpe->part_guid,GUIDSIZE) != 1){
 		diag("%s",ERR_error_string(ERR_get_error(),NULL));
 		munmap(map,mapsize);
@@ -302,8 +325,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	++ghead->partcount;
-	// FIXME update CRC
-	assert(name);
+	update_crc(ghead,LBA_SIZE);
 	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE)){
 		munmap(map,mapsize);
 		close(fd);
