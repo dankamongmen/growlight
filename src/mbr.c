@@ -22,7 +22,7 @@ int mbrsha1(int fd,void *buf){
 
 	if(lseek(fd,0,SEEK_SET)){
 		int e = errno;
-		fprintf(stderr,"Couldn't seek to first byte of %d (%s?)\n",fd,strerror(errno));
+		diag("Couldn't seek to first byte of %d (%s?)\n",fd,strerror(errno));
 		errno = e;
 		return -1;
 	}
@@ -31,7 +31,7 @@ int mbrsha1(int fd,void *buf){
 		return -1;
 	}
 	if(SHA1(mbr,sizeof(mbr),buf) == NULL){
-		fprintf(stderr,"Couldn't perform SHA1 for %d (%s)\n",fd,ERR_lib_error_string(ERR_get_error()));
+		diag("Couldn't perform SHA1 for %d (%s)\n",fd,ERR_lib_error_string(ERR_get_error()));
 		return -1;
 	}
 	return 0;
@@ -52,33 +52,33 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	int fd;
 
 	if(wipeend > sizeof(buf) || wipe >= wipeend){
-		fprintf(stderr,"Can't wipe %zu/%zu/%zu\n",wipe,wipeend,sizeof(buf));
+		diag("Can't wipe %zu/%zu/%zu\n",wipe,wipeend,sizeof(buf));
 		return -1;
 	}
 	if(d->layout != LAYOUT_NONE){
-		fprintf(stderr,"Will only wipe BIOS state for block devices\n");
+		diag("Will only wipe BIOS state for block devices\n");
 		return -1;
 	}
 	if(snprintf(dbuf,sizeof(dbuf),"/dev/%s",d->name) >= (int)sizeof(dbuf)){
-		fprintf(stderr,"Bad device name: %s\n",d->name);
+		diag("Bad device name: %s\n",d->name);
 		return -1;
 	}
 	if((fd = open(dbuf,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
 		int e = errno;
-		fprintf(stderr,"Couldn't open %s (%s?)\n",dbuf,strerror(errno));
+		diag("Couldn't open %s (%s?)\n",dbuf,strerror(errno));
 		errno = e;
 		return -1;
 	}
 	if((ls = lseek(fd,wipe,SEEK_SET)) < 0 || ls != (off_t)wipe){
 		int e = errno;
-		fprintf(stderr,"Couldn't seek to byte %zu of %s (%s?)\n",wipe,dbuf,strerror(errno));
+		diag("Couldn't seek to byte %zu of %s (%s?)\n",wipe,dbuf,strerror(errno));
 		close(fd);
 		errno = e;
 		return -1;
 	}
 	if((w = write(fd,buf,wipeend - wipe)) < 0 || w < (int)(wipeend - wipe)){
 		int e = errno;
-		fprintf(stderr,"Couldn't write to first sector of %s (%s?)\n",dbuf,strerror(errno));
+		diag("Couldn't write to first sector of %s (%s?)\n",dbuf,strerror(errno));
 		close(fd);
 		errno = e;
 		return -1;
@@ -91,7 +91,7 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	}
 	if(close(fd)){
 		int e = errno;
-		fprintf(stderr,"Couldn't close %s (%s?)\n",dbuf,strerror(errno));
+		diag("Couldn't close %s (%s?)\n",dbuf,strerror(errno));
 		errno = e;
 		return -1;
 	}
