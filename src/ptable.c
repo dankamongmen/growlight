@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "mbr.h"
+#include "gpt.h"
 #include "wchar.h"
 #include "popen.h"
 #include "ptable.h"
@@ -11,27 +12,7 @@
 
 static int
 gpt_make_table(device *d){
-	char cmd[BUFSIZ];
-
-	if(snprintf(cmd,sizeof(cmd),"parted /dev/%s mklabel gpt",d->name) >= (int)sizeof(cmd)){
-		fprintf(stderr,"Bad name: %s\n",d->name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
-		return -1;
-	}
-	return 0;
-}
-
-static int
-gpt_zap_table(device *d){
-	char cmd[BUFSIZ];
-
-	if(snprintf(cmd,sizeof(cmd),"sgdisk --zap-all /dev/%s",d->name) >= (int)sizeof(cmd)){
-		fprintf(stderr,"Bad name: %s\n",d->name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
+	if(vspopen_drain("parted /dev/%s mklabel gpt",d->name)){
 		return -1;
 	}
 	return 0;
@@ -39,13 +20,7 @@ gpt_zap_table(device *d){
 
 static int
 dos_make_table(device *d){
-	char cmd[BUFSIZ];
-
-	if(snprintf(cmd,sizeof(cmd),"parted /dev/%s mklabel msdos",d->name) >= (int)sizeof(cmd)){
-		fprintf(stderr,"Bad name: %s\n",d->name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
+	if(vspopen_drain("parted /dev/%s mklabel msdos",d->name)){
 		return -1;
 	}
 	return 0;
@@ -125,7 +100,7 @@ static const struct ptable {
 	{
 		.name = "gpt",
 		.make = gpt_make_table,
-		.zap = gpt_zap_table,
+		.zap = zap_gpt,
 		.add = gpt_add_part,
 	},
 	{

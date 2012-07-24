@@ -29,7 +29,8 @@ common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 	src/target.c src/target.h src/sg.c src/sg.h src/ptable.c src/ptable.h \
 	src/swap.c src/swap.h src/fs.c src/fs.h src/popen.c src/popen.h \
 	src/health.c src/health.h src/udev.c src/udev.h \
-	src/smart.c src/smart.h src/zfs.c src/zfs.h src/secure.c src/secure.h
+	src/smart.c src/smart.h src/zfs.c src/zfs.h src/secure.c src/secure.h \
+	src/gpt.c
 
 growlight_tty_SOURCES=$(common_SOURCES)
 growlight_tty_SOURCES+=src/readline.c

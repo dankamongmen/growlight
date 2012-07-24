@@ -7,9 +7,11 @@ extern "C" {
 
 #include <time.h>
 #include <wchar.h>
+#include <stdio.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <string.h>
 #include <sys/types.h>
 
 #include "mounts.h"
