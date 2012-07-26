@@ -45,12 +45,15 @@ int explore_md_sysfs(device *d,int dirfd){
 			return -1;
 		}
 		r = readlinkat(dirfd,buf,lbuf,sizeof(lbuf));
-		if(r < 0 || r >= (int)sizeof(lbuf)){
+		if((r < 0 && errno != ENOENT) || r >= (int)sizeof(lbuf)){
 			int e = errno;
 
 			fprintf(stderr,"Couldn't look up slave %s (%s?)\n",buf,strerror(errno));
 			errno = e;
 			return -1;
+		}else if(r < 0 && errno == ENOENT){
+			// missing/faulted device -- represent somehow?
+			continue;
 		}
 		lbuf[r] = '\0';
 		if(strncmp(lbuf,"dev-",4)){
