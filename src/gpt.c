@@ -71,26 +71,6 @@ typedef struct __attribute__ ((packed)) gpt_entry {
 
 #define MINIMUM_GPT_ENTRIES 128
 
-static int
-update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
-			unsigned backuplba,unsigned lbasize){
-	ssize_t r;
-
-	if((r = lseek(fd,backuplba * lbasize,SEEK_SET)) < 0 || r != (ssize_t)(backuplba * lbasize)){
-		diag("Error seeking to %ju on %d (%s?)\n",
-				(uintmax_t)backuplba * lbasize,
-				fd,strerror(errno));
-		return -1;
-	}
-	if((r = write(fd,ghead,gptlbas * lbasize)) < 0 || r != (ssize_t)(gptlbas * lbasize)){
-		diag("Error writing %juB on %d (%s?)\n",
-				(uintmax_t)gptlbas * lbasize,
-				fd,strerror(errno));
-		return -1;
-	}
-	return 0;
-}
-
 static void
 update_crc(gpt_header *head,size_t lbasize){
 	const gpt_entry *gpes = (const gpt_entry *)((char *)head + lbasize);
@@ -99,6 +79,43 @@ update_crc(gpt_header *head,size_t lbasize){
 	head->partcrc = crc32(gpes,head->partcount * head->partsize);
 	head->crc = 0;
 	head->crc = crc32(head,hs);
+}
+
+static int
+update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
+			unsigned backuplba,unsigned lbasize,
+			unsigned pgsize){
+	const off_t absdevoff = backuplba * lbasize;
+	const size_t mapoff = absdevoff % pgsize;
+	gpt_header *gh;
+	size_t mapsize;
+	void *map;
+
+	mapsize = pgsize * ((mapoff + gptlbas * lbasize) / pgsize +
+			!!((mapoff + gptlbas * lbasize) % pgsize));
+	if((map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,
+				absdevoff - mapoff)) == MAP_FAILED){
+		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
+		return -1;
+	}
+	gh = (gpt_header *)((char *)map + mapoff);
+	memcpy(gh,ghead,gptlbas * lbasize);
+	gh->lba = gh->backuplba;
+	gh->partlba = gh->lba + 1;
+	if(lbasize > sizeof(*gh)){
+		memset((char *)gh + sizeof(*gh),0,lbasize - sizeof(*gh));
+	}
+	update_crc(gh,lbasize);
+	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
+		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
+		munmap(map,mapsize);
+		return -1;
+	}
+	if(munmap(map,mapsize)){
+		diag("Error unmapping %d (%s?)\n",fd,strerror(errno));
+		return -1;
+	}
+	return 0;
 }
 
 static int
@@ -176,7 +193,7 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 		munmap(map,mapsize);
 		return -1;
 	}
-	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize)){
+	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize,pgsize)){
 		munmap(map,mapsize);
 		return -1;
 	}
@@ -372,7 +389,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	update_crc(ghead,LBA_SIZE);
-	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE)){
+	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE,pgsize)){
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
