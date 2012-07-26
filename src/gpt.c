@@ -40,15 +40,19 @@ typedef struct __attribute__ ((packed)) gpt_header {
 	uint32_t revision;		// Through UEFI 2.3.1: 00 00 01 00
 	uint32_t headsize;		// Header size in little endian,
 					// excludes padding: 5c 00 00 00 == 92
+// byte 0x10
 	uint32_t crc;			// crc32, 0 through headsize
 	uint32_t reserved;		// must be 0
 	uint64_t lba;			// location of this header
+// byte 0x20
 	uint64_t backuplba;		// location of backup header
 	uint64_t first_usable;		// first usable lba
+// byte 0x30
 	uint64_t last_usable;		// last usable lba
 	unsigned char disk_guid[GUIDSIZE];
 	uint64_t partlba;		// partition entries lba for this copy
-	uint32_t partcount;		// number of partition entries
+// byte 0x50
+	uint32_t partcount;		// supported partition entry count
 	uint32_t partsize;		// size of partition entries
 	uint32_t partcrc;		// crc32 of partition array
 } gpt_header;
@@ -113,7 +117,7 @@ initialize_gpt(gpt_header *gh,size_t lbasize,unsigned backuplba,unsigned firstus
 		return -1;
 	}
 	gh->partlba = gh->lba + 1;
-	gh->partcount = 0;
+	gh->partcount = MINIMUM_GPT_ENTRIES;
 	gh->partsize = sizeof(gpt_entry);
 	// ->partcrc is set by update_crc()
 	if(lbasize > sizeof(*gh)){
@@ -133,7 +137,7 @@ static int
 write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	ssize_t s = lbasize - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % lbasize);
 	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
-	off_t backuplba = lbas - 1 - gptlbas;
+	off_t backuplba = lbas - gptlbas;
 	int pgsize = getpagesize();
 	gpt_header *ghead;
 	size_t mapsize;
@@ -161,7 +165,7 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 		memset(ghead,0,gptlbas * lbasize);
 	}else{
 		// FIXME unsure that firstusable calculation is correct
-		if(initialize_gpt(ghead,lbasize,backuplba,1 + gptlbas * lbasize / lbasize)){
+		if(initialize_gpt(ghead,lbasize,backuplba,gptlbas)){
 			munmap(map,mapsize);
 			return -1;
 		}
@@ -212,7 +216,7 @@ int new_gpt(device *d){
 		close(fd);
 		return -1;
 	}
-	memset((char *)map + MBR_OFFSET,0,MBR_SIZE);
+	memcpy((char *)map + MBR_OFFSET,GPT_PROTECTIVE_MBR,MBR_SIZE);
 	if(munmap(map,mapsize)){
 		diag("Couldn't unmap MBR for %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
@@ -238,7 +242,6 @@ int zap_gpt(device *d){
 	void *map;
 	int fd;
 
-	fprintf(stderr,"ARGH!\n");
 	if(d->layout != LAYOUT_NONE){
 		diag("Won't zap partition table on non-disk %s\n",d->name);
 		return -1;
@@ -344,6 +347,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	ghead = (gpt_header *)((char *)map + off);
+	// FIXME must walk the partition table entries and find unused
 	if(ghead->partcount >= MINIMUM_GPT_ENTRIES){
 		diag("GPT partition table full (%u/%u)\n",ghead->partcount,MINIMUM_GPT_ENTRIES);
 		munmap(map,mapsize);
@@ -367,7 +371,6 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		close(fd);
 		return -1;
 	}
-	++ghead->partcount;
 	update_crc(ghead,LBA_SIZE);
 	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE)){
 		munmap(map,mapsize);
