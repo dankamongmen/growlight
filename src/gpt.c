@@ -45,7 +45,8 @@ typedef struct __attribute__ ((packed)) gpt_header {
 	uint32_t reserved;		// must be 0
 	uint64_t lba;			// location of this header
 // byte 0x20
-	uint64_t backuplba;		// location of backup header
+	uint64_t backuplba;		// location of backup header (should be
+					//	last sector of disk)
 	uint64_t first_usable;		// first usable lba
 // byte 0x30
 	uint64_t last_usable;		// last usable lba
@@ -98,17 +99,15 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
 		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
 		return -1;
 	}
-	gh = (gpt_header *)((char *)map + mapoff);
+	gh = (gpt_header *)((char *)map + lbasize * (gptlbas - 1) + mapoff);
 	if(realdata){
-		memcpy(gh,ghead,gptlbas * lbasize);
+		memcpy(map,(char *)ghead + lbasize,(gptlbas - 1) * lbasize);
+		memcpy(gh,ghead,lbasize);
 		gh->lba = gh->backuplba;
-		gh->partlba = gh->lba + 1;
-		if(lbasize > sizeof(*gh)){
-			memset((char *)gh + sizeof(*gh),0,lbasize - sizeof(*gh));
-		}
+		gh->partlba = gh->lba - (gptlbas - 1);
 		update_crc(gh,lbasize);
 	}else{
-		memset(gh,0,gptlbas * lbasize);
+		memset(map + mapoff,0,gptlbas * lbasize);
 	}
 	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
 		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
@@ -132,7 +131,7 @@ initialize_gpt(gpt_header *gh,size_t lbasize,unsigned backuplba,unsigned firstus
 	// ->crc is set by update_crc()
 	gh->backuplba = backuplba;
 	gh->first_usable = firstusable;
-	gh->last_usable = backuplba - 1;
+	gh->last_usable = backuplba - (firstusable - 1);
 	if(RAND_bytes(gh->disk_guid,GUIDSIZE) != 1){
 		diag("%s",ERR_error_string(ERR_get_error(),NULL));
 		return -1;
@@ -158,7 +157,7 @@ static int
 write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	ssize_t s = lbasize - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % lbasize);
 	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
-	off_t backuplba = lbas - gptlbas;
+	off_t backuplba = lbas - 1;
 	int pgsize = getpagesize();
 	gpt_header *ghead;
 	size_t mapsize;
@@ -185,7 +184,6 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	if(!realdata){
 		memset(ghead,0,gptlbas * lbasize);
 	}else{
-		// FIXME unsure that firstusable calculation is correct
 		if(initialize_gpt(ghead,lbasize,backuplba,gptlbas)){
 			munmap(map,mapsize);
 			return -1;
@@ -313,7 +311,6 @@ gpt_name(const wchar_t *name,uint16_t *name16le){
 		return -1;
 	}
 	len = wcslen(name);
-	fprintf(stderr,"NAME: %ls %zu\n",name,len);
 	if(iconv(icv,(char **)&name,&len,(char **)&name16le,&olen) == (size_t)-1 && errno){
 		diag("Error converting name (%s? %zu/%zu left)\n",strerror(errno),len,olen);
 		iconv_close(icv);
