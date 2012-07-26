@@ -123,11 +123,8 @@ int wipe_ptable(device *d,const char *ptype){
 			diag("No partition table detected on %s\n",d->name);
 			return -1;
 		}
-	}else if( (pt = ptype) ){
-		if(strcmp(d->blkdev.pttable,ptype)){
-			diag("Wiping %s table despite %s detection on %s\n",
-					ptype,d->blkdev.pttable,d->name);
-		}
+	}else if(ptype && strcmp(pt,ptype)){
+		diag("Wiping %s table despite %s detection on %s\n",ptype,pt,d->name);
 	}
 	for(ptp = ptables ; ptp->name ; ++ptp){
 		if(strcmp(ptp->name,pt) == 0){

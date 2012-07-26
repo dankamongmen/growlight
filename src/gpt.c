@@ -231,6 +231,7 @@ int zap_gpt(device *d){
 	void *map;
 	int fd;
 
+	fprintf(stderr,"ARGH!\n");
 	if(d->layout != LAYOUT_NONE){
 		diag("Won't zap partition table on non-disk %s\n",d->name);
 		return -1;
