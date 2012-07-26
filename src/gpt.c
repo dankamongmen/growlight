@@ -214,7 +214,7 @@ int zap_gpt(device *d){
 		diag("No GPT on disk %s\n",d->name);
 		return -1;
 	}
-	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC/*|O_DIRECT*/)) < 0){
 		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
@@ -233,6 +233,9 @@ int zap_gpt(device *d){
 		diag("Couldn't write GPT on %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
 		return -1;
+	}
+	if(fsync(fd)){
+		diag("Warning: error syncing %d for %s (%s?)\n",fd,d->name,strerror(errno));
 	}
 	if(close(fd)){
 		diag("Error closing %d for %s (%s?)\n",fd,d->name,strerror(errno));
