@@ -1636,7 +1636,7 @@ int rescan_blockdev(device *d){
 			sync();
 			return 0;
 		}
-		diag("Error calling BLKRRPART on %s (%s?), retrying in 5s...\n",buf,strerror(errno));
+		diag("Error calling BLKRRPART on "DEVROOT"/%s (%s?), retrying in 5s...\n",d->name,strerror(errno));
 		sleep(5);
 	}
 	close(fd);
