@@ -687,7 +687,7 @@ case LAYOUT_NONE:
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
-				qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
+				qprefix(bo->d->size,1,buf,sizeof(buf),0),
 				bo->d->physsec,
 				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
 				bo->d->wwn ? bo->d->wwn : "n/a",
@@ -704,7 +704,7 @@ case LAYOUT_MDADM:
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
-				qprefix(bo->d->logsec * bo->d->size,1,buf,sizeof(buf),0),
+				qprefix(bo->d->size,1,buf,sizeof(buf),0),
 				bo->d->physsec,
 				"n/a",
 				bo->d->wwn ? bo->d->wwn : "n/a",
@@ -755,7 +755,7 @@ case LAYOUT_ZPOOL:
 						" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
 						p->name,
 						p->partdev.uuid ? p->partdev.uuid : "",
-						qprefix(p->logsec * p->size,1,buf,sizeof(buf),0),
+						qprefix(p->size,1,buf,sizeof(buf),0),
 						partrole_str(p->partdev.partrole,p->partdev.flags),
 						pname);
 			getyx(rb->win,y,x);

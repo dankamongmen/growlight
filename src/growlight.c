@@ -909,9 +909,11 @@ create_new_device_inner(const char *name,int recurse){
 
 				verbf("\tLogical sector size: %uB Physical sector size: %uB\n",
 						d->logsec,d->physsec);
+				d->size *= d->logsec;
 				for(p = d->parts ; p ; p = p->next){
 					p->logsec = d->logsec;
 					p->physsec = d->physsec;
+					p->size *= p->logsec;
 				}
 			}
 			blkid_free_probe(pr);

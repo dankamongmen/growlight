@@ -338,7 +338,7 @@ print_partition(const device *p,int descend){
 	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %-4.4s %ls\n",
 			p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
-			qprefix(p->size * p->logsec,1,buf,sizeof(buf),0),
+			qprefix(p->size,1,buf,sizeof(buf),0),
 				partrole_str(p->partdev.partrole,p->partdev.flags),
 				p->partdev.pname ? p->partdev.pname : L"n/a");
 	if(rr < 0){
@@ -384,7 +384,7 @@ print_drive(const device *d,int descend){
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
-			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec,
 			d->blkdev.removable ? 'R' : d->blkdev.smart ? 'S' :
 				d->blkdev.realdev ? '.' : 'V',
@@ -402,7 +402,7 @@ print_drive(const device *d,int descend){
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
-			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec, 'M', '.', '.', '.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
@@ -500,7 +500,7 @@ print_mdadm(const device *d,int prefix,int descend){
 			prefix,prefix,"",
 			d->name,
 			d->uuid ? d->uuid : "n/a",
-			qprefix(d->logsec * d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec, "n/a",
 			d->mddev.disks,d->mddev.level
 			);

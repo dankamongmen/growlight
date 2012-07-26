@@ -165,7 +165,8 @@ int new_gpt(device *d){
 		return -1;
 	}
 	if(d->size % LBA_SIZE){
-		diag("Won't create GPT on %juB disk %s\n",d->size,d->name);
+		diag("Won't create GPT on (%ju %% %u == %juB) disk %s\n",
+			d->size,LBA_SIZE,d->size % LBA_SIZE,d->name);
 		return -1;
 	}
 	if(d->size < LBA_SIZE + 2 * (LBA_SIZE + MINIMUM_GPT_ENTRIES * sizeof(gpt_entry))){
