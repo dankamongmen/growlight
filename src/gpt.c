@@ -177,6 +177,10 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 		}
 	}
 	update_crc(ghead,lbasize);
+	if(msync(ghead,sizeof(*ghead),MS_SYNC|MS_INVALIDATE)){
+		munmap(map,mapsize);
+		return -1;
+	}
 	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize)){
 		munmap(map,mapsize);
 		return -1;
