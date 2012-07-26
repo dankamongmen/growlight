@@ -84,7 +84,7 @@ update_crc(gpt_header *head,size_t lbasize){
 static int
 update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
 			unsigned backuplba,unsigned lbasize,
-			unsigned pgsize){
+			unsigned pgsize,int realdata){
 	const off_t absdevoff = backuplba * lbasize;
 	const size_t mapoff = absdevoff % pgsize;
 	gpt_header *gh;
@@ -99,13 +99,17 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
 		return -1;
 	}
 	gh = (gpt_header *)((char *)map + mapoff);
-	memcpy(gh,ghead,gptlbas * lbasize);
-	gh->lba = gh->backuplba;
-	gh->partlba = gh->lba + 1;
-	if(lbasize > sizeof(*gh)){
-		memset((char *)gh + sizeof(*gh),0,lbasize - sizeof(*gh));
+	if(realdata){
+		memcpy(gh,ghead,gptlbas * lbasize);
+		gh->lba = gh->backuplba;
+		gh->partlba = gh->lba + 1;
+		if(lbasize > sizeof(*gh)){
+			memset((char *)gh + sizeof(*gh),0,lbasize - sizeof(*gh));
+		}
+		update_crc(gh,lbasize);
+	}else{
+		memset(gh,0,gptlbas * lbasize);
 	}
-	update_crc(gh,lbasize);
 	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
 		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
 		munmap(map,mapsize);
@@ -186,14 +190,14 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 			munmap(map,mapsize);
 			return -1;
 		}
+		update_crc(ghead,lbasize);
 	}
-	update_crc(ghead,lbasize);
 	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
 		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
 		munmap(map,mapsize);
 		return -1;
 	}
-	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize,pgsize)){
+	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize,pgsize,realdata)){
 		munmap(map,mapsize);
 		return -1;
 	}
@@ -303,11 +307,15 @@ gpt_name(const wchar_t *name,uint16_t *name16le){
 	size_t len,olen = 36;
 	iconv_t icv;
 
-	if((icv = iconv_open("WCHAR_T","UTF16-LE")) == (iconv_t)-1){
+	errno = 0;
+	if((icv = iconv_open("WCHAR_T","UTF16LE")) == (iconv_t)-1 && errno){
+		diag("Can't convert WCHAR_T to UTF16LE (%s?)\n",strerror(errno));
 		return -1;
 	}
-	len = sizeof(*name) * (wcslen(name) + 1);
-	if(iconv(icv,(char **)&name,&len,(char **)&name16le,&olen) == (size_t)-1){
+	len = wcslen(name);
+	fprintf(stderr,"NAME: %ls %zu\n",name,len);
+	if(iconv(icv,(char **)&name,&len,(char **)&name16le,&olen) == (size_t)-1 && errno){
+		diag("Error converting name (%s? %zu/%zu left)\n",strerror(errno),len,olen);
 		iconv_close(icv);
 		return -1;
 	}
@@ -337,14 +345,17 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	if(d->layout != LAYOUT_NONE){
-		diag("Won't zap partition table on non-disk %s\n",d->name);
+		diag("Won't add partition table on non-disk %s\n",d->name);
 		return -1;
 	}
 	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"gpt")){
 		diag("No GPT on disk %s\n",d->name);
 		return -1;
 	}
-	assert(size % LBA_SIZE == 0);
+	if(size % d->logsec){
+		diag("Size %ju is not a mulitple of sector %u\n",size,d->logsec);
+		return -1;
+	}
 	// The first copy goes into LBA 1.
 	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
 		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
@@ -389,7 +400,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	update_crc(ghead,LBA_SIZE);
-	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE,pgsize)){
+	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE,pgsize,1)){
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
