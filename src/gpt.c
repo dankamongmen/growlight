@@ -77,7 +77,7 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
 				fd,strerror(errno));
 		return -1;
 	}
-	if(write(fd,ghead,gptlbas * lbasize) != gptlbas * lbasize){
+	if((r = write(fd,ghead,gptlbas * lbasize)) < 0 || r != (ssize_t)(gptlbas * lbasize)){
 		diag("Error writing %juB on %d (%s?)\n",
 				(uintmax_t)gptlbas * lbasize,
 				fd,strerror(errno));
