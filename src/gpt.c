@@ -100,7 +100,7 @@ update_crc(gpt_header *head,size_t lbasize){
 static int
 initialize_gpt(gpt_header *gh,size_t lbasize,unsigned backuplba,unsigned firstusable){
 	memcpy(&gh->signature,gpt_signature,sizeof(gh->signature));
-	gh->revision = 0x100u;
+	gh->revision = 0x10000u;
 	gh->headsize = sizeof(*gh);
 	gh->reserved = 0;
 	gh->lba = 1;
@@ -140,18 +140,20 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	void *map;
 	off_t off;
 
-	assert(pgsize && pgsize % lbasize == 0);
-	// The first copy goes into LBA 1.
-	off = (lbasize % pgsize == 0) ? lbasize : 0;
-	if(off == 0){
+	assert(pgsize > 0 && pgsize % lbasize == 0);
+	// The first copy goes into LBA 1. Calculate offset into map due to
+	// lbasize possibly (probably) not equalling the page size.
+	if((off = lbasize % pgsize) == 0){
 		mapsize = lbasize;
 	}else{
 		mapsize = 0;
 	}
 	mapsize += gptlbas * lbasize;
-	mapsize = ((mapsize / pgsize) + (mapsize % pgsize)) * pgsize;
-	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,off);
+	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
+	assert(mapsize % pgsize == 0);
+	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
 	if(map == MAP_FAILED){
+		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
 		return -1;
 	}
 	ghead = (gpt_header *)((char *)map + off);
@@ -165,7 +167,8 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 		}
 	}
 	update_crc(ghead,lbasize);
-	if(msync(ghead,sizeof(*ghead),MS_SYNC|MS_INVALIDATE)){
+	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
+		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
 		munmap(map,mapsize);
 		return -1;
 	}
@@ -174,6 +177,7 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 		return -1;
 	}
 	if(munmap(map,mapsize)){
+		diag("Error unmapping %d (%s?)\n",fd,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -218,6 +222,9 @@ int new_gpt(device *d){
 		diag("Couldn't write GPT on %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
 		return -1;
+	}
+	if(fsync(fd)){
+		diag("Warning: error syncing %d for %s (%s?)\n",fd,d->name,strerror(errno));
 	}
 	if(close(fd)){
 		diag("Error closing %d for %s (%s?)\n",fd,d->name,strerror(errno));
