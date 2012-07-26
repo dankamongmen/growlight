@@ -15,8 +15,8 @@
 
 #define LBA_SIZE 512u
 #define MBR_OFFSET 440u
+#define MBR_SIZE (LBA_SIZE - MBR_OFFSET)
 
-static const unsigned char ZERO_MBR[LBA_SIZE - MBR_OFFSET];
 static const unsigned char GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
  "\x00\x00\x00\x00\x00\x00"	// 6 bytes of zeros
  "\x80"				// bootable (violation of GPT spec, but some
@@ -157,7 +157,8 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 }
 
 int new_gpt(device *d){
-	ssize_t r;
+	size_t mapsize;
+	void *map;
 	int fd;
 
 	if(d->layout != LAYOUT_NONE){
@@ -178,15 +179,15 @@ int new_gpt(device *d){
 		return -1;
 	}
 	// protective MBR in first LBA
-	if(lseek(fd,MBR_OFFSET,SEEK_SET) != MBR_OFFSET){
-		diag("Couldn't seek to %u on %s (%s?)\n",MBR_OFFSET,d->name,strerror(errno));
+	mapsize = getpagesize(); // FIXME check for insanity
+	if((map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0)) == MAP_FAILED){
+		diag("Couldn't map %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
 		return -1;
 	}
-	if((r = write(fd,GPT_PROTECTIVE_MBR,sizeof(GPT_PROTECTIVE_MBR))) < 0 ||
-			r != (ssize_t)sizeof(GPT_PROTECTIVE_MBR)){
-		diag("Couldn't write %zuB protective MBR on %s (%s?)\n",
-			sizeof(GPT_PROTECTIVE_MBR),d->name,strerror(errno));
+	memset((char *)map + MBR_OFFSET,0,MBR_SIZE);
+	if(munmap(map,mapsize)){
+		diag("Couldn't unmap MBR for %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -203,7 +204,8 @@ int new_gpt(device *d){
 }
 
 int zap_gpt(device *d){
-	ssize_t r;
+	size_t mapsize;
+	void *map;
 	int fd;
 
 	if(d->layout != LAYOUT_NONE){
@@ -214,18 +216,19 @@ int zap_gpt(device *d){
 		diag("No GPT on disk %s\n",d->name);
 		return -1;
 	}
-	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC/*|O_DIRECT*/)) < 0){
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
 		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
-	if(lseek(fd,MBR_OFFSET,SEEK_SET) != MBR_OFFSET){
-		diag("Couldn't seek to %u on %s (%s?)\n",MBR_OFFSET,d->name,strerror(errno));
+	mapsize = getpagesize(); // FIXME check for insanity
+	if((map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0)) == MAP_FAILED){
+		diag("Couldn't map %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
 		return -1;
 	}
-	if((r = write(fd,ZERO_MBR,sizeof(ZERO_MBR))) < 0 ||
-			r < (ssize_t)sizeof(ZERO_MBR)){
-		diag("Couldn't zero MBR on %s (%s?)\n",d->name,strerror(errno));
+	memset((char *)map + MBR_OFFSET,0,MBR_SIZE);
+	if(munmap(map,mapsize)){
+		diag("Couldn't unmap MBR for %s (%s?)\n",d->name,strerror(errno));
 		close(fd);
 		return -1;
 	}
