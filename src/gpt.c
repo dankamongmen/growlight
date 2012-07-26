@@ -183,8 +183,9 @@ int new_gpt(device *d){
 		return -1;
 	}
 	if((r = write(fd,GPT_PROTECTIVE_MBR,sizeof(GPT_PROTECTIVE_MBR))) < 0 ||
-			r < (ssize_t)sizeof(GPT_PROTECTIVE_MBR)){
-		diag("Couldn't write protective MBR on %s (%s?)\n",d->name,strerror(errno));
+			r != (ssize_t)sizeof(GPT_PROTECTIVE_MBR)){
+		diag("Couldn't write %zuB protective MBR on %s (%s?)\n",
+			sizeof(GPT_PROTECTIVE_MBR),d->name,strerror(errno));
 		close(fd);
 		return -1;
 	}
