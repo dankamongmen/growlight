@@ -9,6 +9,7 @@
 #include <openssl/rand.h>
 
 #include "gpt.h"
+#include "crc32.h"
 #include "growlight.h"
 
 #define GUIDSIZE 16 // 128 bits
@@ -86,27 +87,14 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
 	return 0;
 }
 
-static uint32_t
-calc_crc32(const void *data,size_t bytes){
-	uint32_t csum = 0;
-	size_t z;
-
-	assert(bytes % 4 == 0);
-	for(z = 0 ; z < bytes / 4 ; ++z){
-		csum += ((const uint32_t *)data)[z];
-	}
-	// FIXME compute checksum correctly
-	return ~csum;
-}
-
 static void
 update_crc(gpt_header *head,size_t lbasize){
 	const gpt_entry *gpes = (const gpt_entry *)((char *)head + lbasize);
 	size_t hs = head->headsize; // FIXME little-endian; swap on BE machines
 
-	head->partcrc = calc_crc32(gpes,head->partcount * head->partsize);
+	head->partcrc = crc32(gpes,head->partcount * head->partsize);
 	head->crc = 0;
-	head->crc = calc_crc32(head,hs);
+	head->crc = crc32(head,hs);
 }
 
 static int
