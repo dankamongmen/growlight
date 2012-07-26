@@ -31,6 +31,8 @@ static const unsigned char GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  "\x55\xaa";			// MBR signature
 
+static const unsigned char gpt_signature[8] = "\x45\x46\x49\x20\x50\x41\x52\x54";
+
 // One LBA block, padded with zeroes at the end. 92 bytes.
 typedef struct __attribute__ ((packed)) gpt_header {
 	uint64_t signature;		// "EFI PART", 45 46 49 20 50 41 52 54
@@ -107,6 +109,31 @@ update_crc(gpt_header *head,size_t lbasize){
 	head->crc = calc_crc32(head,hs);
 }
 
+static int
+initialize_gpt(gpt_header *gh,size_t lbasize,unsigned backuplba,unsigned firstusable){
+	memcpy(&gh->signature,gpt_signature,sizeof(gh->signature));
+	gh->revision = 0x100u;
+	gh->headsize = sizeof(*gh);
+	gh->reserved = 0;
+	gh->lba = 1;
+	// ->crc is set by update_crc()
+	gh->backuplba = backuplba;
+	gh->first_usable = firstusable;
+	gh->last_usable = backuplba - 1;
+	if(RAND_bytes(gh->disk_guid,GUIDSIZE) != 1){
+		diag("%s",ERR_error_string(ERR_get_error(),NULL));
+		return -1;
+	}
+	gh->partlba = gh->lba + 1;
+	gh->partcount = 0;
+	gh->partsize = sizeof(gpt_entry);
+	// ->partcrc is set by update_crc()
+	if(lbasize > sizeof(*gh)){
+		memset((char *)gh + sizeof(*gh),0,lbasize - sizeof(*gh));
+	}
+	return 0;
+}
+
 // Write out a GPT and its backup on the device represented by fd, using
 // lbasize-byte LBA. The device ought have lbas lbasize-byte sectors. We will
 // write to the second-from-the-first, and the final, groups of sectors. lbas
@@ -143,7 +170,11 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	if(!realdata){
 		memset(ghead,0,gptlbas * lbasize);
 	}else{
-		// FIXME
+		// FIXME unsure that firstusable calculation is correct
+		if(initialize_gpt(ghead,lbasize,backuplba,1 + gptlbas * lbasize / lbasize)){
+			munmap(map,mapsize);
+			return -1;
+		}
 	}
 	update_crc(ghead,lbasize);
 	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize)){
