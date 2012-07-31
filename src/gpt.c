@@ -73,10 +73,11 @@ typedef struct __attribute__ ((packed)) gpt_entry {
 #define MINIMUM_GPT_ENTRIES 128
 
 static void
-update_crc(gpt_header *head,size_t lbasize){
-	const gpt_entry *gpes = (const gpt_entry *)((char *)head + lbasize);
+update_crc(gpt_header *head,const gpt_entry *gpes){
 	size_t hs = head->headsize; // FIXME little-endian; swap on BE machines
 
+	assert(head->partcount == MINIMUM_GPT_ENTRIES);
+	assert(head->partsize == sizeof(struct gpt_entry));
 	head->partcrc = crc32(gpes,head->partcount * head->partsize);
 	head->crc = 0;
 	head->crc = crc32(head,hs);
@@ -105,7 +106,7 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
 		memcpy(gh,ghead,lbasize);
 		gh->lba = gh->backuplba;
 		gh->partlba = gh->lba - (gptlbas - 1);
-		update_crc(gh,lbasize);
+		update_crc(gh,(const gpt_entry *)((char *)gh - lbasize * (gptlbas - 1)));
 	}else{
 		memset(map + mapoff,0,gptlbas * lbasize);
 	}
@@ -168,9 +169,9 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 	// The first copy goes into LBA 1. Calculate offset into map due to
 	// lbasize possibly (probably) not equalling the page size.
 	if((off = lbasize % pgsize) == 0){
-		mapsize = lbasize;
-	}else{
 		mapsize = 0;
+	}else{
+		mapsize = lbasize;
 	}
 	mapsize += gptlbas * lbasize;
 	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
@@ -188,7 +189,7 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 			munmap(map,mapsize);
 			return -1;
 		}
-		update_crc(ghead,lbasize);
+		update_crc(ghead,(const gpt_entry *)((char *)ghead + lbasize));
 	}
 	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
 		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
@@ -396,7 +397,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		close(fd);
 		return -1;
 	}
-	update_crc(ghead,LBA_SIZE);
+	update_crc(ghead,gpe);
 	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE,pgsize,1)){
 		munmap(map,mapsize);
 		close(fd);

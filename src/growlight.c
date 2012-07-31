@@ -1629,18 +1629,25 @@ int rescan_blockdev(device *d){
 	sync();
 	// The ioctl can fail for a number of reasons, usually because the
 	// work's still being done. Give it a try or two.
-	for(t = 0 ; t < 3 ; ++t){
+	for(t = 0 ; t < 2 ; ++t){
 		if(ioctl(fd,BLKRRPART,NULL) == 0){
-			close(fd);
-			diag("Updated kernel partition table\n");
-			sync();
-			return 0;
+			goto success;
 		}
 		diag("Error calling BLKRRPART on "DEVROOT"/%s (%s?), retrying in 5s...\n",d->name,strerror(errno));
 		sleep(5);
 	}
+	if(ioctl(fd,BLKRRPART,NULL) == 0){
+		goto success;
+	}
+	diag("Couldn't send BLKRRPART (%s?), aborting\n",strerror(errno));
 	close(fd);
 	return -1;
+
+success:
+	close(fd);
+	diag("Updated kernel partition table\n");
+	sync();
+	return 0;
 }
 
 int lock_growlight(void){
@@ -1706,12 +1713,14 @@ int rescan_device(const char *name){
 
 			// FIXME need to update mount/swap/target tables!
 			if(strcmp(name,(*lnk)->name) == 0){
-				// FIXME this method will leave us with broken
-				// partition links
-				device *d = *lnk;
-				*lnk = d->next;
-				free_device(d);
-				return 0;
+				// FIXME this method might leave us with broken
+				// partition links...?
+				//if(rescan(*lnk)){
+					device *d = *lnk;
+					*lnk = d->next;
+					free_device(d);
+					return 0;
+				//}
 			}
 			for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
 				if(strcmp(name,(*plnk)->name) == 0){

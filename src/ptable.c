@@ -164,7 +164,6 @@ int add_partition(device *d,const wchar_t *name,size_t size){
 }
 
 int wipe_partition(device *d){
-	char cmd[PATH_MAX];
 	device *p;
 
 	if(d->layout != LAYOUT_PARTITION){
@@ -172,11 +171,7 @@ int wipe_partition(device *d){
 		return -1;
 	}
 	p = d->partdev.parent;
-	if(snprintf(cmd,sizeof(cmd),"gdisk /dev/%s --delete=%u",p->name,d->partdev.pnumber) >= (int)sizeof(cmd)){
-		diag("Bad names: %s / %s\n",p->name,d->name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
+	if(vspopen_drain("gdisk /dev/%s --delete=%u",p->name,d->partdev.pnumber)){
 		return -1;
 	}
 	if(rescan_blockdev(p)){
