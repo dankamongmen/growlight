@@ -17,6 +17,7 @@ int add_gpt(struct device *,const wchar_t *,uintmax_t,unsigned long long);
 
 // Pass the partition
 int name_gpt(struct device *,const wchar_t *);
+int uuid_gpt(struct device *,const void *);
 
 #ifdef __cplusplus
 }

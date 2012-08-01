@@ -406,27 +406,6 @@ unmap_gpt(device *d,void *map,size_t mapsize,int fd,size_t lbasize){
 	return 0;
 }
 
-int name_gpt(device *d,const wchar_t *name){
-	gpt_entry *gpe;
-	size_t mapsize;
-	void *map;
-	int fd;
-
-	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
-		return -1;
-	}
-	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
-	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}
-	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
-		return -1;
-	}
-	return 0;
-}
-
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
 	int pgsize = getpagesize();
@@ -502,6 +481,44 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	// FIXME need to ensure they're not used by existing partitions!
 	gpe[z].first_lba = ghead->first_usable;
 	gpe[z].last_lba = ghead->last_usable;
+	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		return -1;
+	}
+	return 0;
+}
+
+int name_gpt(device *d,const wchar_t *name){
+	gpt_entry *gpe;
+	size_t mapsize;
+	void *map;
+	int fd;
+
+	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return -1;
+	}
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		return -1;
+	}
+	return 0;
+}
+
+int uuid_gpt(device *d,const void *uuid){
+	gpt_entry *gpe;
+	size_t mapsize;
+	void *map;
+	int fd;
+
+	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return -1;
+	}
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	memcpy(gpe[d->partdev.pnumber].name,uuid,GUIDSIZE);
 	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}

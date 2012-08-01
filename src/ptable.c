@@ -48,6 +48,7 @@ static const struct ptable {
 	int (*zap)(device *);
 	int (*add)(device *,const wchar_t *,uintmax_t,unsigned long long);
 	int (*pname)(device *,const wchar_t *);
+	int (*uuid)(device *,const void *);
 } ptables[] = {
 	{
 		.name = "gpt",
@@ -55,6 +56,7 @@ static const struct ptable {
 		.zap = zap_gpt,
 		.add = add_gpt,
 		.pname = name_gpt,
+		.uuid = uuid_gpt,
 	},
 	{
 		.name = "dos",
@@ -62,6 +64,7 @@ static const struct ptable {
 		.zap = dos_zap_table,
 		.add = dos_add_part,
 		.pname = NULL,
+		.uuid = NULL,
 	},
 	{ .name = NULL, }
 };
@@ -212,6 +215,29 @@ int name_partition(device *d,const wchar_t *name){
 			}
 			free(d->partdev.pname);
 			d->partdev.pname = dup;
+			return 0;
+		}
+	}
+	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
+	return -1;
+}
+
+int uuid_partition(device *d,const void *uuid){
+	const struct ptable *pt;
+
+	if(d->layout != LAYOUT_PARTITION){
+		diag("Will only set UUID of real partitions\n");
+		return -1;
+	}
+	for(pt = ptables ; pt->name ; ++pt){
+		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+			if(!pt->uuid){
+				diag("Partition UUIDs not supported on %s\n",d->partdev.parent->blkdev.pttable);
+				return -1;
+			}
+			if(pt->uuid(d,uuid)){
+				return -1;
+			}
 			return 0;
 		}
 	}

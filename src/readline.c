@@ -1146,6 +1146,15 @@ partition(wchar_t * const *args,const char *arghelp){
 				return -1;
 			}
 			return 0;
+		}else if(wcscmp(args[1],L"setuuid") == 0){
+			if(!args[3] || args[4]){
+				usage(args,arghelp);
+				return -1;
+			}
+			if(uuid_partition(d,args[3])){
+				return -1;
+			}
+			return 0;
 		}
 		usage(args,arghelp);
 		return -1;
