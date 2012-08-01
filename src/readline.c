@@ -1826,9 +1826,14 @@ help(wchar_t * const *args,const char *arghelp){
 	return 0;
 }
 
+#define RL_START "\001" // RL_PROMPT_START_IGNORE
+#define RL_END "\002"	// RL_PROMPT_END_IGNORE
+
 static int
 tty_ui(void){
-	char prompt[80] = "\033[0;35m[\033[0;36m" PACKAGE "\033[0;35m]\033[1;32m(0)> \033[1;37m";
+	char prompt[80] = RL_START "\033[0;35m" RL_END "[" RL_START "\033[0;36m" RL_END
+				PACKAGE RL_START "\033[0;35m" RL_END "]" RL_START "\033[1;32m"
+				RL_END "(0)> " RL_START "\033[1;37m" RL_END;
 	char *l;
 
 	while( (l = readline(prompt)) ){
