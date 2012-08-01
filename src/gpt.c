@@ -25,7 +25,7 @@ static const unsigned char GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
  "\x00\x00\x00"			// CHS of first absolute sector
  "\xee"				// Protective partition type
  "\xff\xff\xff"			// CHS of last absolute sector
- "\x00\x00\x00\x00"		// LBA of first absolute sector
+ "\x01\x00\x00\x00"		// LBA of first absolute sector
  "\xff\xff\xff\xff"		// Sectors in partition
  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
