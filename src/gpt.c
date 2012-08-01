@@ -334,11 +334,16 @@ gpt_name(const wchar_t *name,uint16_t *name16le){
 
 // Map the primary GPT header, its table, and the MBR boot sector.
 static void *
-map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize,unsigned pgsize){
+map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize){
+	const int pgsize = getpagesize();
 	const unsigned gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(struct gpt_entry) / lbasize);
 	uint64_t off;
 	void *map;
 
+	if(pgsize < 0){
+		diag("Bad pgsize for GPT: %d\n",pgsize);
+		return MAP_FAILED;
+	}
 	if(MINIMUM_GPT_ENTRIES * sizeof(struct gpt_entry) % lbasize){
 		diag("Bad lbasize for GPT: %zu\n",lbasize);
 		return MAP_FAILED;
@@ -365,25 +370,17 @@ map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize,unsigned pgsize){
 	return map;
 }
 
-int name_gpt(device *d,const wchar_t *name){
-	const uint64_t lbas = d->partdev.parent->size / LBA_SIZE;
-	const uint64_t gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / LBA_SIZE);
-	int pgsize = getpagesize();
-	gpt_header *gpt;
-	gpt_entry *gpe;
-	size_t mapsize;
-	void *map;
-	int fd;
+// Pass the return from map_gpt(), ie the MBR boot sector + primary GPT
+static int
+unmap_gpt(device *d,void *map,size_t mapsize,int fd,size_t lbasize){
+	const uint64_t lbas = d->partdev.parent->size / lbasize;
+	const uint64_t gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
+	gpt_header *gpt = (gpt_header *)((char *)map + lbasize);
+	gpt_entry *gpe = (gpt_entry *)((char *)map + 2 * lbasize);
+	const int pgsize = getpagesize();
 
-	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE,pgsize)) == MAP_FAILED){
-		return -1;
-	}
-	gpt = (gpt_header *)((char *)map + LBA_SIZE);
-	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
-	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
+	if(pgsize < 0){
+		diag("Warning: bad pgsize for GPT: %d\n",pgsize);
 	}
 	update_crc(gpt,gpe);
 	if(update_backup(fd,gpt,gptlbas,lbas,LBA_SIZE,pgsize,1)){
@@ -404,6 +401,27 @@ int name_gpt(device *d,const wchar_t *name){
 
 		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
 		errno = e;
+		return -1;
+	}
+	return 0;
+}
+
+int name_gpt(device *d,const wchar_t *name){
+	gpt_entry *gpe;
+	size_t mapsize;
+	void *map;
+	int fd;
+
+	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return -1;
+	}
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
 	return 0;
