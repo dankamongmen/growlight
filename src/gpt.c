@@ -84,29 +84,36 @@ update_crc(gpt_header *head,const gpt_entry *gpes){
 }
 
 static int
-update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
-			unsigned backuplba,unsigned lbasize,
-			unsigned pgsize,int realdata){
-	const off_t absdevoff = backuplba * lbasize;
+update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,uint64_t lbas,
+			unsigned lbasize,unsigned pgsize,int realdata){
+	// Cannot look to ghead->backuplba, because we might be zeroing things
+	// out, and have already lost it in the primary.
+	const uint64_t backuplba = lbas - 1;
+	const off_t absdevoff = (backuplba - (gptlbas - 1)) * lbasize;
 	const size_t mapoff = absdevoff % pgsize;
 	gpt_header *gh;
 	size_t mapsize;
 	void *map;
 
-	mapsize = pgsize * ((mapoff + gptlbas * lbasize) / pgsize +
-			!!((mapoff + gptlbas * lbasize) % pgsize));
+	mapsize = lbasize * gptlbas + mapoff;
+	mapsize = pgsize * (mapsize / pgsize + !!mapoff);
 	if((map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,
 				absdevoff - mapoff)) == MAP_FAILED){
 		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
 		return -1;
 	}
-	gh = (gpt_header *)((char *)map + lbasize * (gptlbas - 1) + mapoff);
 	if(realdata){
-		memcpy(map,(char *)ghead + lbasize,(gptlbas - 1) * lbasize);
+		// Copy the partition table entries -- all but the first of the
+		// primary header's sectors to all but the last of the backup
+		// header's sectors.
+		memcpy((char *)map + mapoff,(char *)ghead + lbasize,
+			(gptlbas - 1) * lbasize);
+		// Copy the header, always a single LBA sector
+		gh = (gpt_header *)((char *)map + lbasize * (gptlbas - 1) + mapoff);
 		memcpy(gh,ghead,lbasize);
 		gh->lba = gh->backuplba;
 		gh->partlba = gh->lba - (gptlbas - 1);
-		update_crc(gh,(const gpt_entry *)((char *)gh - lbasize * (gptlbas - 1)));
+		update_crc(gh,(const gpt_entry *)((char *)map + mapoff));
 	}else{
 		memset(map + mapoff,0,gptlbas * lbasize);
 	}
@@ -123,7 +130,7 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,
 }
 
 static int
-initialize_gpt(gpt_header *gh,size_t lbasize,unsigned backuplba,unsigned firstusable){
+initialize_gpt(gpt_header *gh,size_t lbasize,uint64_t backuplba,uint64_t firstusable){
 	memcpy(&gh->signature,gpt_signature,sizeof(gh->signature));
 	gh->revision = 0x10000u;
 	gh->headsize = sizeof(*gh);
@@ -155,10 +162,10 @@ initialize_gpt(gpt_header *gh,size_t lbasize,unsigned backuplba,unsigned firstus
 // We can either zero it all out, or create a new empty GPT. Set realdata not
 // equal to 0 to perform the latter.
 static int
-write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
+write_gpt(int fd,ssize_t lbasize,uint64_t lbas,unsigned realdata){
 	ssize_t s = lbasize - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % lbasize);
 	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
-	off_t backuplba = lbas - 1;
+	uint64_t backuplba = lbas - 1;
 	int pgsize = getpagesize();
 	gpt_header *ghead;
 	size_t mapsize;
@@ -196,7 +203,7 @@ write_gpt(int fd,ssize_t lbasize,unsigned long lbas,unsigned realdata){
 		munmap(map,mapsize);
 		return -1;
 	}
-	if(update_backup(fd,ghead,gptlbas,backuplba,lbasize,pgsize,realdata)){
+	if(update_backup(fd,ghead,gptlbas,lbas,lbasize,pgsize,realdata)){
 		munmap(map,mapsize);
 		return -1;
 	}
@@ -325,14 +332,14 @@ gpt_name(const wchar_t *name,uint16_t *name16le){
 
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size){
-	unsigned lbas = size / LBA_SIZE;
+	const uint64_t lbas = size / LBA_SIZE;
 	ssize_t s = LBA_SIZE - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % LBA_SIZE);
 	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / LBA_SIZE);
-	off_t backuplba = lbas - 1 - gptlbas;
 	int pgsize = getpagesize();
 	gpt_header *ghead;
 	gpt_entry *gpe;
 	size_t mapsize;
+	unsigned z;
 	void *map;
 	off_t off;
 	int fd;
@@ -376,7 +383,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	ghead = (gpt_header *)((char *)map + off);
 	gpe = (gpt_entry *)((char *)ghead + LBA_SIZE) + ghead->partcount;
 	for(z = 0 ; z < ghead->partcount ; ++gpe, ++z){
-		static const uint8_t guid[GUIDSIZE] = 0;
+		static const uint8_t guid[GUIDSIZE];
 
 		// If there's any non-zero bits in either the type or partiton
 		// GUID, assume it's being used.
@@ -413,7 +420,13 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	gpe->first_lba = ghead->first_usable;
 	gpe->last_lba = ghead->last_usable;
 	update_crc(ghead,gpe);
-	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE,pgsize,1)){
+	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
+		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	if(update_backup(fd,ghead,gptlbas,lbas - 1,LBA_SIZE,pgsize,1)){
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
@@ -434,30 +447,4 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	return 0;
-	/*
-	uintmax_t sectors;
-	unsigned partno;
-	const device *p;
-
-	sectors = size / LBA_SIZE;
-	partno = 1;
-	for(p = d->parts ; p ; p = p->next){
-		if(partno == p->partdev.pnumber){
-			const device *pcheck;
-
-			do{
-				++partno;
-				for(pcheck = d->parts ; pcheck != p ; pcheck = pcheck->next){
-					if(partno == pcheck->partdev.pnumber){
-						break;
-					}
-				}
-			}while(p != pcheck);
-		}
-	}
-	if(vspopen_drain("sgdisk --new=%u:0:%ju /dev/%s",partno,sectors,d->name)){
-		return -1;
-	}
-	return 0;
-	*/
 }
