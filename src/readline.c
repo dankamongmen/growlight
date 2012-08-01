@@ -977,7 +977,7 @@ print_partition_attributes(void){
 
 static int
 print_partition_types(void){
-	printf("GPT codes:\n");
+	printf("GPT types:\n");
 	printf(" 0700 Microsoft basic data  0c01 Microsoft reserved    2700 Windows RE\n"
 		" 4200 Windows LDM data      4201 Windows LDM metadata  7501 IBM GPFS            \n"
 		" 7f00 ChromeOS kernel       7f01 ChromeOS root         7f02 ChromeOS reserved   \n"
@@ -998,7 +998,7 @@ print_partition_types(void){
 		" bf0b Solaris Reserved 5    c001 HP-UX data            c002 HP-UX service       \n"
 		" ef00 EFI System            ef01 MBR partition scheme  ef02 BIOS boot partition \n"
 		" fd00 Linux RAID\n");
-	printf("MBR flags:\n");
+	printf("MBR types:\n");
 	printf(" 0  Empty           1e  Hidd FAT16 LBA  80  Minix <1.4a     bf  Solaris         \n"
 		" 1  FAT12           24  NEC DOS         81  Minix >1.4b     c1  DRDOS/2 FAT12   \n"
 		" 2  XENIX root      39  Plan 9          82  Linux swap      c4  DRDOS/2 smFAT16 \n"
@@ -1014,15 +1014,15 @@ print_partition_types(void){
 		" c  FAT32 LBA       52  CP/M            9f  BSD/OS          eb  BeOS fs         \n"
 		" e  FAT16 LBA       53  OnTrackDM6 Aux3 a0  Thinkpad hib    ee  GPT             \n"
 		" f  Extended LBA    54  OnTrack DM6     a5  FreeBSD         ef  EFI FAT         \n"
-		"10  OPUS            55  EZ Drive        a6  OpenBSD         f0  Lnx/PA-RISC bt  \n"
-		"11  Hidden FAT12    56  Golden Bow      a7  NeXTSTEP        f1  SpeedStor       \n"
-		"12  Compaq diag     5c  Priam Edisk     a8  Darwin UFS      f2  DOS secondary   \n"
-		"14  Hidd Sm FAT16   61  SpeedStor       a9  NetBSD          f4  SpeedStor       \n"
-		"16  Hidd FAT16      63  GNU HURD/SysV   ab  Darwin boot     fd  Lnx RAID auto   \n"
-		"17  Hidd HPFS/NTFS  64  Netware 286     b7  BSDI fs         fe  LANstep         \n"
-		"18  AST SmartSleep  65  Netware 386     b8  BSDI swap       ff  XENIX BBT       \n"
-		"1b  Hidd FAT32      70  DiskSec MltBoot bb  Boot Wizard Hid \n"
-		"1c  Hidd FAT32 LBA  75  PC/IX           be  Solaris boot    \n");
+		" 10 OPUS            55  EZ Drive        a6  OpenBSD         f0  Lnx/PA-RISC bt  \n"
+		" 11 Hidden FAT12    56  Golden Bow      a7  NeXTSTEP        f1  SpeedStor       \n"
+		" 12 Compaq diag     5c  Priam Edisk     a8  Darwin UFS      f2  DOS secondary   \n"
+		" 14 Hidd Sm FAT16   61  SpeedStor       a9  NetBSD          f4  SpeedStor       \n"
+		" 16 Hidd FAT16      63  GNU HURD/SysV   ab  Darwin boot     fd  Lnx RAID auto   \n"
+		" 17 Hidd HPFS/NTFS  64  Netware 286     b7  BSDI fs         fe  LANstep         \n"
+		" 18 AST SmartSleep  65  Netware 386     b8  BSDI swap       ff  XENIX BBT       \n"
+		" 1b Hidd FAT32      70  DiskSec MltBoot bb  Boot Wizard Hid \n"
+		" 1c Hidd FAT32 LBA  75  PC/IX           be  Solaris boot    \n");
 	return 0;
 }
 
