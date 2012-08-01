@@ -206,20 +206,25 @@ int add_partition(device *d,const wchar_t *name,size_t size,unsigned long long c
 }
 
 int wipe_partition(device *d){
-	device *p;
+	const struct ptable *pt;
 
 	if(d->layout != LAYOUT_PARTITION){
-		diag("Will only remove actual partitions\n");
+		diag("Will only remove real partitions\n");
 		return -1;
 	}
-	p = d->partdev.parent;
-	if(vspopen_drain("gdisk /dev/%s --delete=%u",p->name,d->partdev.pnumber)){
-		return -1;
+	for(pt = ptables ; pt->name ; ++pt){
+		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
+			if(pt->zap(d)){
+				return -1;
+			}
+			if(rescan_blockdev(d)){
+				return -1;
+			}
+			return 0;
+		}
 	}
-	if(rescan_blockdev(p)){
-		return -1;
-	}
-	return 0;
+	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
+	return -1;
 }
 
 int name_partition(device *d,const wchar_t *name){
@@ -230,7 +235,7 @@ int name_partition(device *d,const wchar_t *name){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
 			wchar_t *dup;
 
 			if(!pt->pname){
@@ -262,7 +267,7 @@ int uuid_partition(device *d,const void *uuid){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
 			if(!pt->uuid){
 				diag("Partition UUIDs not supported on %s\n",d->partdev.parent->blkdev.pttable);
 				return -1;
@@ -302,7 +307,7 @@ int partition_set_flag(device *d,uint64_t flag,unsigned state){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
 			if(!pt->flag){
 				diag("Partition flags not supported on %s\n",d->partdev.parent->blkdev.pttable);
 				return -1;
@@ -325,7 +330,7 @@ int partition_set_code(device *d,unsigned long long code){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
 			if(!pt->code){
 				diag("Partition code not supported on %s\n",d->partdev.parent->blkdev.pttable);
 				return -1;
