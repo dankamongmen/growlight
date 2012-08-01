@@ -354,36 +354,57 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		diag("Size %ju is not a mulitple of sector %u\n",size,d->logsec);
 		return -1;
 	}
-	// The first copy goes into LBA 1.
 	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
 		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
-	off = (LBA_SIZE % pgsize == 0) ? LBA_SIZE : 0;
-	if(off == 0){
-		mapsize = LBA_SIZE;
-	}else{
+	// The first copy goes into LBA 1. Calculate offset into map due to
+	// lbasize possibly (probably) not equalling the page size.
+	if((off = LBA_SIZE % pgsize) == 0){
 		mapsize = 0;
+	}else{
+		mapsize = LBA_SIZE;
 	}
 	mapsize += gptlbas * LBA_SIZE;
-	mapsize = ((mapsize / pgsize) + (mapsize % pgsize)) * pgsize;
-	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,off);
+	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
+	assert(mapsize % pgsize == 0);
+	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
 	if(map == MAP_FAILED){
 		close(fd);
 		return -1;
 	}
 	ghead = (gpt_header *)((char *)map + off);
-	// FIXME must walk the partition table entries and find unused
-	if(ghead->partcount >= MINIMUM_GPT_ENTRIES){
-		diag("GPT partition table full (%u/%u)\n",ghead->partcount,MINIMUM_GPT_ENTRIES);
+	gpe = (gpt_entry *)((char *)ghead + LBA_SIZE) + ghead->partcount;
+	for(z = 0 ; z < ghead->partcount ; ++gpe, ++z){
+		static const uint8_t guid[GUIDSIZE] = 0;
+
+		// If there's any non-zero bits in either the type or partiton
+		// GUID, assume it's being used.
+		if(memcmp(gpe->type_guid,guid,GUIDSIZE)){
+			continue;
+		}
+		if(memcmp(gpe->part_guid,guid,GUIDSIZE)){
+			continue;
+		}
+		break;
+	}
+	if(z == ghead->partcount){
+		diag("No space for a new partition in %s\n",d->name);
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
 	}
-	gpe = (gpt_entry *)((char *)ghead + LBA_SIZE) + ghead->partcount;
 	memset(gpe->type_guid,0,GUIDSIZE); // all 0's is "GPT unused"
+	if(gpt_name(name,gpe->name)){
+		diag("Couldn't convert %ls for %s\n",name,d->name);
+		memset(gpe,0,sizeof(*gpe));
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
 	if(RAND_bytes(gpe->part_guid,GUIDSIZE) != 1){
 		diag("%s",ERR_error_string(ERR_get_error(),NULL));
+		memset(gpe,0,sizeof(*gpe));
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
@@ -391,12 +412,6 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	// FIXME need to ensure they're not used by existing partitions!
 	gpe->first_lba = ghead->first_usable;
 	gpe->last_lba = ghead->last_usable;
-	if(gpt_name(name,gpe->name)){
-		diag("Couldn't convert %ls for %s\n",name,d->name);
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}
 	update_crc(ghead,gpe);
 	if(update_backup(fd,ghead,gptlbas,backuplba,LBA_SIZE,pgsize,1)){
 		munmap(map,mapsize);
