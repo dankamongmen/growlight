@@ -312,7 +312,7 @@ int zap_gpt(device *d){
 
 static int
 gpt_name(const wchar_t *name,uint16_t *name16le){
-	size_t len,olen = 36;
+	size_t len,olen = 36 * sizeof(*name16le);
 	iconv_t icv;
 
 	errno = 0;
