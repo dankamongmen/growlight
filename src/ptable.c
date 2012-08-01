@@ -42,6 +42,21 @@ dos_add_part(device *d,const wchar_t *name,uintmax_t size,unsigned long long cod
 	return -1;
 }
 
+static int
+dos_set_flag(device *d,uint64_t flag,unsigned state __attribute__ ((unused))){
+	if(d->partdev.partrole != PARTROLE_PRIMARY){
+		diag("Flags are only set on primary partitions\n");
+		return -1;
+	}
+	if(flag != 0x80){
+		diag("Invalid flag for BIOS/MBR: 0x%016jx\n",(uintmax_t)flag);
+		return -1;
+	}
+	// FIXME set it!
+	diag("Sorry, this is not yet implemented FIXME\n");
+	return -1;
+}
+
 static const struct ptable {
 	const char *name;
 	int (*make)(device *);
@@ -49,6 +64,7 @@ static const struct ptable {
 	int (*add)(device *,const wchar_t *,uintmax_t,unsigned long long);
 	int (*pname)(device *,const wchar_t *);
 	int (*uuid)(device *,const void *);
+	int (*flag)(device *,uint64_t,unsigned);
 } ptables[] = {
 	{
 		.name = "gpt",
@@ -57,6 +73,7 @@ static const struct ptable {
 		.add = add_gpt,
 		.pname = name_gpt,
 		.uuid = uuid_gpt,
+		.flag = flag_gpt,
 	},
 	{
 		.name = "dos",
@@ -65,6 +82,7 @@ static const struct ptable {
 		.add = dos_add_part,
 		.pname = NULL,
 		.uuid = NULL,
+		.flag = dos_set_flag,
 	},
 	{ .name = NULL, }
 };
@@ -263,34 +281,26 @@ int check_partition(device *d){
 }
 
 int partition_set_flag(device *d,uint64_t flag,unsigned state){
-	char cmd[BUFSIZ];
-	device *par;
+	const struct ptable *pt;
 
 	if(d->layout != LAYOUT_PARTITION){
-		diag("Will only set flags on actual partitions\n");
+		diag("Will only set UUID of real partitions\n");
 		return -1;
 	}
-	par = d->partdev.parent;
-	if(d->partdev.partrole == PARTROLE_PRIMARY){
-		if(flag != 0x80){
-			diag("Invalid flag for BIOS/MBR: 0x%016jx\n",(uintmax_t)flag);
-			return -1;
+	for(pt = ptables ; pt->name ; ++pt){
+		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+			if(!pt->flag){
+				diag("Partition flags not supported on %s\n",d->partdev.parent->blkdev.pttable);
+				return -1;
+			}
+			if(pt->flag(d,flag,state)){
+				return -1;
+			}
+			return 0;
 		}
-		// FIXME set it!
-	}else if(d->partdev.partrole != PARTROLE_GPT){
-		diag("Cannot set flags on %s; bad partition type\n",d->name);
-		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"sgdisk -A %u:%s:%jx /dev/%s",
-				d->partdev.pnumber,state ? "set" : "clear",
-				(uintmax_t)flag,par->name) >= (int)sizeof(cmd)){
-		diag("Bad name: %s\n",par->name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
-		return -1;
-	}
-	return 0;
+	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
+	return -1;
 }
 
 int partition_set_code(device *d,unsigned code){
