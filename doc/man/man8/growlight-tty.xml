@@ -252,6 +252,9 @@ detailed information about the block device.</para>
 			<term>partition setname partition name</term>
 		</varlistentry>
 		<varlistentry>
+			<term>partition settype [ partition type ]</term>
+		</varlistentry>
+		<varlistentry>
 			<term>partition setflag [ partition on|off flag ]</term>
 		</varlistentry>
 		<varlistentry>
@@ -263,9 +266,11 @@ be listed. "del" attempts to convert a partition to unallocated space. "add"
 attempts to carve a partition of size bytes and having name as its label from
 the specified block device's free space. "setuuid" attempts to set the partition
 GUID (<emphasis>not</emphasis> the Type UUID) to uuid. "setname" attempts to
-set the partition label to name. With no arguments, "setflag" lists the
-partition flags supported by this system. Otherwise, it attempts to set or unset
-the specified flag on the specified partition.</para>
+set the partition label to name. With no arguments, "settype" lists the types
+supported by various partitioning schemes. Otherwise, it attempts to set the
+specified type on the specified partition. With no arguments, "setflag" lists
+the partition flags supported by this system. Otherwise, it attempts to set or
+unset the specified flag on the specified partition.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>

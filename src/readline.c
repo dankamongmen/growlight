@@ -1743,6 +1743,8 @@ static const struct fxn {
 			"                 | [ \"add\" blockdev name size ]\n"
 			"                 | [ \"setuuid\" partition uuid ]\n"
 			"                 | [ \"setname\" partition name ]\n"
+			"                 | [ \"settype\" [ partition type ] ]\n"
+			"                    | no arguments to list supported types\n"
 			"                 | [ \"setflag\" [ partition \"on\"|\"off\" flag ] ]\n"
 			"                    | no arguments to list supported flags\n"
 			"                 | [ -v ] no arguments to list all partitions"),
