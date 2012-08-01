@@ -113,6 +113,7 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,uint64_t lbas,
 		gh = (gpt_header *)((char *)map + lbasize * (gptlbas - 1) + mapoff);
 		memcpy(gh,ghead,lbasize);
 		gh->lba = gh->backuplba;
+		gh->backuplba = 1;
 		gh->partlba = gh->lba - (gptlbas - 1);
 		update_crc(gh,(const gpt_entry *)((char *)map + mapoff));
 	}else{
