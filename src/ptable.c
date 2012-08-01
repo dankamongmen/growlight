@@ -181,30 +181,23 @@ int wipe_partition(device *d){
 }
 
 int name_partition(device *d,const wchar_t *name){
-	char cmd[BUFSIZ];
 	wchar_t *dup;
-	device *par;
 
 	if(d->layout != LAYOUT_PARTITION){
 		diag("Will only name actual partitions\n");
 		return -1;
 	}
-	par = d->partdev.parent;
 	if(d->partdev.partrole != PARTROLE_GPT && d->partdev.partrole != PARTROLE_EPS
 			/*&& d->partdev.partrole != PARTROLE_PC98
 			&& d->partdev.partrole != PARTROLE_MAC*/){
 		diag("Cannot name %s; bad partition table type\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"sgdisk /dev/%s --change-name=%u:%ls",par->name,d->partdev.pnumber,name) >= (int)sizeof(cmd)){
-		diag("Bad names: %s / %u / %ls\n",par->name,d->partdev.pnumber,name);
-		return -1;
-	}
 	if((dup = wcsdup(name)) == NULL){
 		diag("Bad name: %ls\n",name);
 		return -1;
 	}
-	if(popen_drain(cmd)){
+	if(name_gpt(d,name)){
 		free(dup);
 		return -1;
 	}

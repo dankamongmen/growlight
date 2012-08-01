@@ -332,6 +332,73 @@ gpt_name(const wchar_t *name,uint16_t *name16le){
 	return 0;
 }
 
+// Map the primary GPT header, its table, and the MBR boot sector.
+static void *
+map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize,unsigned pgsize){
+	const unsigned gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(struct gpt_entry) / lbasize);
+	uint64_t off;
+	void *map;
+
+	if(MINIMUM_GPT_ENTRIES * sizeof(struct gpt_entry) % lbasize){
+		diag("Bad lbasize for GPT: %zu\n",lbasize);
+		return MAP_FAILED;
+	}
+	if((*fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
+		return MAP_FAILED;
+	}
+	// The first copy goes into LBA 1. Calculate offset into map due to
+	// lbasize possibly (probably) not equalling the page size.
+	if((off = lbasize % pgsize) == 0){
+		*mapsize = 0;
+	}else{
+		*mapsize = lbasize;
+	}
+	*mapsize += gptlbas * lbasize;
+	*mapsize = ((*mapsize / pgsize) + !!(*mapsize % pgsize)) * pgsize;
+	assert(*mapsize % pgsize == 0);
+	map = mmap(NULL,*mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,*fd,0);
+	if(map == MAP_FAILED){
+		close(*fd);
+		return map;
+	}
+	return map;
+}
+
+int name_gpt(device *d,const wchar_t *name){
+	int pgsize = getpagesize();
+	gpt_entry *gpe;
+	size_t mapsize;
+	void *map;
+	int fd;
+
+	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE,pgsize)) == MAP_FAILED){
+		return -1;
+	}
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	if(munmap(map,mapsize)){
+		int e = errno;
+
+		diag("Error munmapping %s (%s?)\n",d->name,strerror(errno));
+		close(fd);
+		errno = e;
+		return -1;
+	}
+	if(close(fd)){
+		int e = errno;
+
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
+		errno = e;
+		return -1;
+	}
+	return 0;
+}
+
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 	const uint64_t lbas = d->size / LBA_SIZE;
