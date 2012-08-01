@@ -366,7 +366,10 @@ map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize,unsigned pgsize){
 }
 
 int name_gpt(device *d,const wchar_t *name){
+	const uint64_t lbas = d->partdev.parent->size / LBA_SIZE;
+	const uint64_t gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / LBA_SIZE);
 	int pgsize = getpagesize();
+	gpt_header *gpt;
 	gpt_entry *gpe;
 	size_t mapsize;
 	void *map;
@@ -375,8 +378,15 @@ int name_gpt(device *d,const wchar_t *name){
 	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE,pgsize)) == MAP_FAILED){
 		return -1;
 	}
+	gpt = (gpt_header *)((char *)map + LBA_SIZE);
 	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
 	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	update_crc(gpt,gpe);
+	if(update_backup(fd,gpt,gptlbas,lbas,LBA_SIZE,pgsize,1)){
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
