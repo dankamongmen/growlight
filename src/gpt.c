@@ -381,16 +381,16 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	ghead = (gpt_header *)((char *)map + off);
-	gpe = (gpt_entry *)((char *)ghead + LBA_SIZE) + ghead->partcount;
-	for(z = 0 ; z < ghead->partcount ; ++gpe, ++z){
+	gpe = (gpt_entry *)((char *)ghead + LBA_SIZE);
+	for(z = 0 ; z < ghead->partcount ; ++z){
 		static const uint8_t guid[GUIDSIZE];
 
 		// If there's any non-zero bits in either the type or partiton
 		// GUID, assume it's being used.
-		if(memcmp(gpe->type_guid,guid,GUIDSIZE)){
+		if(memcmp(gpe[z].type_guid,guid,GUIDSIZE)){
 			continue;
 		}
-		if(memcmp(gpe->part_guid,guid,GUIDSIZE)){
+		if(memcmp(gpe[z].part_guid,guid,GUIDSIZE)){
 			continue;
 		}
 		break;
@@ -401,24 +401,24 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		close(fd);
 		return -1;
 	}
-	memset(gpe->type_guid,0,GUIDSIZE); // all 0's is "GPT unused"
-	if(gpt_name(name,gpe->name)){
+	memset(gpe[z].type_guid,0,GUIDSIZE); // all 0's is "GPT unused"
+	if(gpt_name(name,gpe[z].name)){
 		diag("Couldn't convert %ls for %s\n",name,d->name);
-		memset(gpe,0,sizeof(*gpe));
+		memset(gpe + z,0,sizeof(*gpe));
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
 	}
-	if(RAND_bytes(gpe->part_guid,GUIDSIZE) != 1){
+	if(RAND_bytes(gpe[z].part_guid,GUIDSIZE) != 1){
 		diag("%s",ERR_error_string(ERR_get_error(),NULL));
-		memset(gpe,0,sizeof(*gpe));
+		memset(gpe + z,0,sizeof(*gpe));
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
 	}
 	// FIXME need to ensure they're not used by existing partitions!
-	gpe->first_lba = ghead->first_usable;
-	gpe->last_lba = ghead->last_usable;
+	gpe[z].first_lba = ghead->first_usable;
+	gpe[z].last_lba = ghead->last_usable;
 	update_crc(ghead,gpe);
 	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
 		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
