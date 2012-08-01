@@ -25,7 +25,7 @@ int name_partition(struct device *,const wchar_t *);
 int uuid_partition(struct device *,const void *);
 int check_partition(struct device *);
 int partition_set_flag(struct device *,uint64_t,unsigned);
-int partition_set_code(struct device *,unsigned);
+int partition_set_code(struct device *,unsigned long long);
 
 #ifdef __cplusplus
 }

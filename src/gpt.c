@@ -131,6 +131,12 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,uint64_t lbas,
 	return 0;
 }
 
+static void
+set_type_guid(unsigned char *type_guid,unsigned long long code){
+	memset(type_guid,0,GUIDSIZE); // all 0's is "GPT unused"
+	memcpy(type_guid,&code,sizeof(code)); // FIXME need map it
+}
+
 static int
 initialize_gpt(gpt_header *gh,size_t lbasize,uint64_t backuplba,uint64_t firstusable){
 	memcpy(&gh->signature,gpt_signature,sizeof(gh->signature));
@@ -462,8 +468,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 		close(fd);
 		return -1;
 	}
-	memset(gpe[z].type_guid,0,GUIDSIZE); // all 0's is "GPT unused"
-	memcpy(gpe[z].type_guid,&code,sizeof(code)); // FIXME need map it
+	set_type_guid(gpe[z].type_guid,code);
 	if(gpt_name(name,gpe[z].name)){
 		diag("Couldn't convert %ls for %s\n",name,d->name);
 		memset(gpe + z,0,sizeof(*gpe));
@@ -540,6 +545,23 @@ int flag_gpt(device *d,uint64_t flag,unsigned status){
 	}else{
 		gpe[d->partdev.pnumber].flags &= ~flag;
 	}
+	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		return -1;
+	}
+	return 0;
+}
+
+int code_gpt(device *d,unsigned long long code){
+	gpt_entry *gpe;
+	size_t mapsize;
+	void *map;
+	int fd;
+
+	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return -1;
+	}
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	set_type_guid(gpe[d->partdev.pnumber].type_guid,code);
 	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}

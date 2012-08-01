@@ -57,6 +57,17 @@ dos_set_flag(device *d,uint64_t flag,unsigned state __attribute__ ((unused))){
 	return -1;
 }
 
+static int
+dos_set_code(device *d,unsigned long long code){
+	if(code > 0xff){
+		diag("Invalid type for BIOS/MBR: 0x%016jx\n",(uintmax_t)code);
+		return -1;
+	}
+	// FIXME set it!
+	diag("Sorry, this is not yet implemented for %s FIXME\n",d->name);
+	return -1;
+}
+
 static const struct ptable {
 	const char *name;
 	int (*make)(device *);
@@ -65,6 +76,7 @@ static const struct ptable {
 	int (*pname)(device *,const wchar_t *);
 	int (*uuid)(device *,const void *);
 	int (*flag)(device *,uint64_t,unsigned);
+	int (*code)(device *,unsigned long long);
 } ptables[] = {
 	{
 		.name = "gpt",
@@ -74,6 +86,7 @@ static const struct ptable {
 		.pname = name_gpt,
 		.uuid = uuid_gpt,
 		.flag = flag_gpt,
+		.code = code_gpt,
 	},
 	{
 		.name = "dos",
@@ -83,6 +96,7 @@ static const struct ptable {
 		.pname = NULL,
 		.uuid = NULL,
 		.flag = dos_set_flag,
+		.code = dos_set_code,
 	},
 	{ .name = NULL, }
 };
@@ -303,32 +317,25 @@ int partition_set_flag(device *d,uint64_t flag,unsigned state){
 	return -1;
 }
 
-int partition_set_code(device *d,unsigned code){
-	char cmd[BUFSIZ];
-	device *par;
+int partition_set_code(device *d,unsigned long long code){
+	const struct ptable *pt;
 
 	if(d->layout != LAYOUT_PARTITION){
-		diag("Will only set code on actual partitions\n");
+		diag("Will only set type of real partitions\n");
 		return -1;
 	}
-	par = d->partdev.parent;
-	if(d->partdev.partrole == PARTROLE_PRIMARY){
-		if(code > 0xff){
-			diag("Invalid type for BIOS/MBR: %08u\n",code);
-			return -1;
+	for(pt = ptables ; pt->name ; ++pt){
+		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+			if(!pt->code){
+				diag("Partition code not supported on %s\n",d->partdev.parent->blkdev.pttable);
+				return -1;
+			}
+			if(pt->code(d,code)){
+				return -1;
+			}
+			return 0;
 		}
-		// FIXME set it!
-	}else if(d->partdev.partrole != PARTROLE_GPT){
-		diag("Cannot set code on %s; bad partition type\n",d->name);
-		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"sgdisk -t %u:%04x /dev/%s",
-			d->partdev.pnumber,code,par->name) >= (int)sizeof(cmd)){
-		diag("Bad name: %s\n",par->name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
-		return -1;
-	}
-	return 0;
+	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
+	return -1;
 }
