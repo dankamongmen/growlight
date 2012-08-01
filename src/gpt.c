@@ -89,7 +89,7 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,uint64_t lbas,
 	// Cannot look to ghead->backuplba, because we might be zeroing things
 	// out, and have already lost it in the primary.
 	const uint64_t backuplba = lbas - 1;
-	const off_t absdevoff = (backuplba - (gptlbas - 1)) * lbasize;
+	const uint64_t absdevoff = (backuplba - (gptlbas - 1)) * lbasize;
 	const size_t mapoff = absdevoff % pgsize;
 	gpt_header *gh;
 	size_t mapsize;
@@ -102,6 +102,7 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,uint64_t lbas,
 		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
 		return -1;
 	}
+	verbf("Mapped %zub at %p:%zu devoff %ju\n",mapsize,map,mapoff,(uintmax_t)(absdevoff - mapoff));
 	if(realdata){
 		// Copy the partition table entries -- all but the first of the
 		// primary header's sectors to all but the last of the backup
@@ -203,7 +204,7 @@ write_gpt(int fd,ssize_t lbasize,uint64_t lbas,unsigned realdata){
 		munmap(map,mapsize);
 		return -1;
 	}
-	if(update_backup(fd,ghead,gptlbas,lbas,lbasize,pgsize,realdata)){
+	if(update_backup(fd,ghead,gptlbas - 1,lbas,lbasize,pgsize,realdata)){
 		munmap(map,mapsize);
 		return -1;
 	}
@@ -332,7 +333,7 @@ gpt_name(const wchar_t *name,uint16_t *name16le){
 
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size){
-	const uint64_t lbas = size / LBA_SIZE;
+	const uint64_t lbas = d->size / LBA_SIZE;
 	ssize_t s = LBA_SIZE - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % LBA_SIZE);
 	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / LBA_SIZE);
 	int pgsize = getpagesize();
@@ -426,7 +427,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		close(fd);
 		return -1;
 	}
-	if(update_backup(fd,ghead,gptlbas,lbas - 1,LBA_SIZE,pgsize,1)){
+	if(update_backup(fd,ghead,gptlbas - 1,lbas,LBA_SIZE,pgsize,1)){
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
