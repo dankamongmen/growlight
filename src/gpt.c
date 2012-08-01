@@ -429,16 +429,12 @@ int name_gpt(device *d,const wchar_t *name){
 
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
-	const uint64_t lbas = d->size / LBA_SIZE;
-	ssize_t s = LBA_SIZE - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % LBA_SIZE);
-	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / LBA_SIZE);
 	int pgsize = getpagesize();
 	gpt_header *ghead;
 	gpt_entry *gpe;
 	size_t mapsize;
 	unsigned z;
 	void *map;
-	off_t off;
 	int fd;
 
 	assert(pgsize && pgsize % LBA_SIZE == 0);
@@ -458,27 +454,16 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 		diag("Size %ju is not a mulitple of sector %u\n",size,d->logsec);
 		return -1;
 	}
-	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
-		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
+	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
 		return -1;
 	}
-	// The first copy goes into LBA 1. Calculate offset into map due to
-	// lbasize possibly (probably) not equalling the page size.
-	if((off = LBA_SIZE % pgsize) == 0){
-		mapsize = 0;
-	}else{
-		mapsize = LBA_SIZE;
-	}
-	mapsize += gptlbas * LBA_SIZE;
-	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
-	assert(mapsize % pgsize == 0);
-	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-	if(map == MAP_FAILED){
+	ghead = (gpt_header *)((char *)map + LBA_SIZE);
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
+		munmap(map,mapsize);
 		close(fd);
 		return -1;
 	}
-	ghead = (gpt_header *)((char *)map + off);
-	gpe = (gpt_entry *)((char *)ghead + LBA_SIZE);
 	for(z = 0 ; z < ghead->partcount ; ++z){
 		static const uint8_t guid[GUIDSIZE];
 
@@ -517,31 +502,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	// FIXME need to ensure they're not used by existing partitions!
 	gpe[z].first_lba = ghead->first_usable;
 	gpe[z].last_lba = ghead->last_usable;
-	update_crc(ghead,gpe);
-	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
-		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}
-	if(update_backup(fd,ghead,gptlbas - 1,lbas,LBA_SIZE,pgsize,1)){
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}
-	if(munmap(map,mapsize)){
-		int e = errno;
-
-		diag("Error munmapping %s (%s?)\n",d->name,strerror(errno));
-		close(fd);
-		errno = e;
-		return -1;
-	}
-	if(close(fd)){
-		int e = errno;
-
-		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
-		errno = e;
+	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
 	return 0;
