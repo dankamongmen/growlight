@@ -24,13 +24,17 @@ dos_zap_table(device *d){
 }
 
 static int
-dos_add_part(device *d,const wchar_t *name,uintmax_t size){
+dos_add_part(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
 	if(name){
 		diag("Names are not supported for MBR partitions!\n");
 		return -1;
 	}
 	if(size > 2ull * 1000ull * 1000ull * 1000ull * 1000ull){
 		diag("MBR partitions may not exceed 2TB\n");
+		return -1;
+	}
+	if(code > 0xff){
+		diag("Illegal code for DOS/BIOS/MBR: %llu\n",code);
 		return -1;
 	}
 	// FIXME
@@ -42,19 +46,22 @@ static const struct ptable {
 	const char *name;
 	int (*make)(device *);
 	int (*zap)(device *);
-	int (*add)(device *,const wchar_t *,uintmax_t);
+	int (*add)(device *,const wchar_t *,uintmax_t,unsigned long long);
+	int (*pname)(device *,const wchar_t *);
 } ptables[] = {
 	{
 		.name = "gpt",
 		.make = new_gpt,
 		.zap = zap_gpt,
 		.add = add_gpt,
+		.pname = name_gpt,
 	},
 	{
 		.name = "dos",
 		.make = dos_make_table,
 		.zap = dos_zap_table,
 		.add = dos_add_part,
+		.pname = NULL,
 	},
 	{ .name = NULL, }
 };
@@ -141,7 +148,7 @@ int wipe_ptable(device *d,const char *ptype){
 	return -1;
 }
 
-int add_partition(device *d,const wchar_t *name,size_t size){
+int add_partition(device *d,const wchar_t *name,size_t size,unsigned long long code){
 	const struct ptable *pt;
 
 	if(d->layout != LAYOUT_NONE){
@@ -150,7 +157,7 @@ int add_partition(device *d,const wchar_t *name,size_t size){
 	}
 	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,d->blkdev.pttable) == 0){
-			if(pt->add(d,name,size)){
+			if(pt->add(d,name,size,code)){
 				return -1;
 			}
 			if(rescan_blockdev(d)){
@@ -181,29 +188,35 @@ int wipe_partition(device *d){
 }
 
 int name_partition(device *d,const wchar_t *name){
-	wchar_t *dup;
+	const struct ptable *pt;
 
 	if(d->layout != LAYOUT_PARTITION){
-		diag("Will only name actual partitions\n");
+		diag("Will only name real partitions\n");
 		return -1;
 	}
-	if(d->partdev.partrole != PARTROLE_GPT && d->partdev.partrole != PARTROLE_EPS
-			/*&& d->partdev.partrole != PARTROLE_PC98
-			&& d->partdev.partrole != PARTROLE_MAC*/){
-		diag("Cannot name %s; bad partition table type\n",d->name);
-		return -1;
+	for(pt = ptables ; pt->name ; ++pt){
+		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+			wchar_t *dup;
+
+			if(!pt->pname){
+				diag("Partition naming not supported on %s\n",d->partdev.parent->blkdev.pttable);
+				return -1;
+			}
+			if((dup = wcsdup(name)) == NULL){
+				diag("Bad name: %ls\n",name);
+				return -1;
+			}
+			if(pt->pname(d,name)){
+				free(dup);
+				return -1;
+			}
+			free(d->partdev.pname);
+			d->partdev.pname = dup;
+			return 0;
+		}
 	}
-	if((dup = wcsdup(name)) == NULL){
-		diag("Bad name: %ls\n",name);
-		return -1;
-	}
-	if(name_gpt(d,name)){
-		free(dup);
-		return -1;
-	}
-	free(d->partdev.pname);
-	d->partdev.pname = dup;
-	return 0;
+	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
+	return -1;
 }
 
 int check_partition(device *d){

@@ -243,7 +243,7 @@ detailed information about the block device.</para>
 			<term>partition del partition</term>
 		</varlistentry>
 		<varlistentry>
-			<term>partition add blockdev name size</term>
+			<term>partition add blockdev name size type</term>
 		</varlistentry>
 		<varlistentry>
 			<term>partition setuuid partition uuid</term>
@@ -263,7 +263,7 @@ detailed information about the block device.</para>
 <para>Passed no arguments, <emphasis role="bold">partition</emphasis> concisely lists all
 detected partitions. Passed "-v", data present on a given partition will also
 be listed. "del" attempts to convert a partition to unallocated space. "add"
-attempts to carve a partition of size bytes and having name as its label from
+attempts to carve a partition of the specified size, type and name from
 the specified block device's free space. "setuuid" attempts to set the partition
 GUID (<emphasis>not</emphasis> the Type UUID) to uuid. "setname" attempts to
 set the partition label to name. With no arguments, "settype" lists the types

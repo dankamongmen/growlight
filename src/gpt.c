@@ -428,7 +428,7 @@ int name_gpt(device *d,const wchar_t *name){
 }
 
 #include "popen.h"
-int add_gpt(device *d,const wchar_t *name,uintmax_t size){
+int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
 	const uint64_t lbas = d->size / LBA_SIZE;
 	ssize_t s = LBA_SIZE - (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) % LBA_SIZE);
 	const size_t gptlbas = 1 + !!s + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / LBA_SIZE);
@@ -499,6 +499,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size){
 		return -1;
 	}
 	memset(gpe[z].type_guid,0,GUIDSIZE); // all 0's is "GPT unused"
+	memcpy(gpe[z].type_guid,&code,sizeof(code)); // FIXME need map it
 	if(gpt_name(name,gpe[z].name)){
 		diag("Couldn't convert %ls for %s\n",name,d->name);
 		memset(gpe + z,0,sizeof(*gpe));

@@ -19,7 +19,7 @@ int make_partition_table(struct device *,const char *);
 // type is specified, the detected type, if it exists, is used.
 int wipe_ptable(struct device *,const char *);
 
-int add_partition(struct device *,const wchar_t *,size_t);
+int add_partition(struct device *,const wchar_t *,size_t,unsigned long long);
 int wipe_partition(struct device *);
 int name_partition(struct device *,const wchar_t *);
 int check_partition(struct device *);

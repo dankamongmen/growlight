@@ -1109,10 +1109,10 @@ partition(wchar_t * const *args,const char *arghelp){
 			return -1;
 		}
 		if(wcscmp(args[1],L"add") == 0){
-			unsigned long long ull;
+			unsigned long long ull,code;
 
-			// target dev == 2, 3 == name, 4 == size
-			if(!args[3] || !args[4] || args[5]){
+			// target dev == 2, 3 == name, 4 == size, 5 == type
+			if(!args[3] || !args[4] || !args[5] || args[6]){
 				usage(args,arghelp);
 				return -1;
 			}
@@ -1120,7 +1120,11 @@ partition(wchar_t * const *args,const char *arghelp){
 				usage(args,arghelp);
 				return -1;
 			}
-			if(add_partition(d,args[3],ull)){
+			if(wstrtoull(args[5],&code)){
+				usage(args,arghelp);
+				return -1;
+			}
+			if(add_partition(d,args[3],ull,code)){
 				return -1;
 			}
 			return 0;
@@ -1740,7 +1744,7 @@ static const struct fxn {
 			"                 | [ \"detail\" blockdev ]\n"
 			"                 | [ -v ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
-			"                 | [ \"add\" blockdev name size ]\n"
+			"                 | [ \"add\" blockdev name size type ]\n"
 			"                 | [ \"setuuid\" partition uuid ]\n"
 			"                 | [ \"setname\" partition name ]\n"
 			"                 | [ \"settype\" [ partition type ] ]\n"
