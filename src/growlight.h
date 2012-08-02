@@ -23,7 +23,8 @@ void verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
 extern int sysfd,devfd;
 
-#define FSLABELSIZ 17
+#define GUIDSIZE 16	// 128 opaque bits
+#define FSLABELSIZ 17	// 16 chars + null terminator
 
 	// This isn't really suitable for use as a library to programs beyond
 	// growlight. Not yet, in any case.

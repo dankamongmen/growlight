@@ -12,8 +12,6 @@
 #include "crc32.h"
 #include "growlight.h"
 
-#define GUIDSIZE 16 // 128 bits
-
 #define LBA_SIZE 512u
 #define MBR_OFFSET 440u
 #define MBR_SIZE (LBA_SIZE - MBR_OFFSET)

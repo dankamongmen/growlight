@@ -15,6 +15,7 @@
 #include "swap.h"
 #include "sysfs.h"
 #include "popen.h"
+#include "ptypes.h"
 #include "config.h"
 #include "mounts.h"
 #include "target.h"
@@ -977,52 +978,13 @@ print_partition_attributes(void){
 
 static int
 print_partition_types(void){
-	printf("GPT types:\n");
-	printf(" 0700 Microsoft basic data  0c01 Microsoft reserved    2700 Windows RE\n"
-		" 4200 Windows LDM data      4201 Windows LDM metadata  7501 IBM GPFS            \n"
-		" 7f00 ChromeOS kernel       7f01 ChromeOS root         7f02 ChromeOS reserved   \n"
-		" 8200 Linux swap            8300 Linux filesystem      8301 Linux reserved      \n"
-		" 8e00 Linux LVM             a500 FreeBSD disklabel     a501 FreeBSD boot        \n"
-		" a502 FreeBSD swap          a503 FreeBSD UFS           a504 FreeBSD ZFS         \n"
-		" a505 FreeBSD Vinum/RAID    a580 Midnight BSD data     a581 Midnight BSD boot   \n"
-		" a582 Midnight BSD swap     a583 Midnight BSD UFS      a584 Midnight BSD ZFS    \n"
-		" a585 Midnight BSD Vinum    a800 Apple UFS             a901 NetBSD swap         \n"
-		" a902 NetBSD FFS            a903 NetBSD LFS            a904 NetBSD concatenated \n"
-		" a905 NetBSD encrypted      a906 NetBSD RAID           ab00 Apple boot          \n"
-		" af00 Apple HFS/HFS+        af01 Apple RAID            af02 Apple RAID offline  \n"
-		" af03 Apple label           af04 AppleTV recovery      af05 Apple Core Storage  \n"
-		" be00 Solaris boot          bf00 Solaris root          bf01 Solaris /usr & Mac Z\n"
-		" bf02 Solaris swap          bf03 Solaris backup        bf04 Solaris /var        \n"
-		" bf05 Solaris /home         bf06 Solaris alternate se  bf07 Solaris Reserved 1  \n"
-		" bf08 Solaris Reserved 2    bf09 Solaris Reserved 3    bf0a Solaris Reserved 4  \n"
-		" bf0b Solaris Reserved 5    c001 HP-UX data            c002 HP-UX service       \n"
-		" ef00 EFI System            ef01 MBR partition scheme  ef02 BIOS boot partition \n"
-		" fd00 Linux RAID\n");
-	printf("MBR types:\n");
-	printf(" 0  Empty           1e  Hidd FAT16 LBA  80  Minix <1.4a     bf  Solaris         \n"
-		" 1  FAT12           24  NEC DOS         81  Minix >1.4b     c1  DRDOS/2 FAT12   \n"
-		" 2  XENIX root      39  Plan 9          82  Linux swap      c4  DRDOS/2 smFAT16 \n"
-		" 3  XENIX usr       3c  PMagic recovery 83  Linux           c6  DRDOS/2 FAT16   \n"
-		" 4  Small FAT16     40  Venix 80286     84  OS/2 hidden C:  c7  Syrinx          \n"
-		" 5  Extended        41  PPC PReP Boot   85  Linux extended  da  Non-FS data     \n"
-		" 6  FAT16           42  SFS             86  NTFS volume set db  CP/M / CTOS     \n"
-		" 7  HPFS/NTFS       4d  QNX4.x          87  NTFS volume set de  Dell Utility    \n"
-		" 8  AIX             4e  QNX4.x 2nd part 88  Linux plaintext df  BootIt          \n"
-		" 9  AIX bootable    4f  QNX4.x 3rd part 8e  Linux LVM       e1  DOS access      \n"
-		" a  OS/2 boot mgr   50  OnTrack DM      93  Amoeba          e3  DOS R/O         \n"
-		" b  FAT32           51  OnTrackDM6 Aux1 94  Amoeba BBT      e4  SpeedStor       \n"
-		" c  FAT32 LBA       52  CP/M            9f  BSD/OS          eb  BeOS fs         \n"
-		" e  FAT16 LBA       53  OnTrackDM6 Aux3 a0  Thinkpad hib    ee  GPT             \n"
-		" f  Extended LBA    54  OnTrack DM6     a5  FreeBSD         ef  EFI FAT         \n"
-		" 10 OPUS            55  EZ Drive        a6  OpenBSD         f0  Lnx/PA-RISC bt  \n"
-		" 11 Hidden FAT12    56  Golden Bow      a7  NeXTSTEP        f1  SpeedStor       \n"
-		" 12 Compaq diag     5c  Priam Edisk     a8  Darwin UFS      f2  DOS secondary   \n"
-		" 14 Hidd Sm FAT16   61  SpeedStor       a9  NetBSD          f4  SpeedStor       \n"
-		" 16 Hidd FAT16      63  GNU HURD/SysV   ab  Darwin boot     fd  Lnx RAID auto   \n"
-		" 17 Hidd HPFS/NTFS  64  Netware 286     b7  BSDI fs         fe  LANstep         \n"
-		" 18 AST SmartSleep  65  Netware 386     b8  BSDI swap       ff  XENIX BBT       \n"
-		" 1b Hidd FAT32      70  DiskSec MltBoot bb  Boot Wizard Hid \n"
-		" 1c Hidd FAT32 LBA  75  PC/IX           be  Solaris boot    \n");
+	const ptype *pt;
+
+	for(pt = ptypes ; pt->name ; ++pt){
+		if(printf("%04x %s\n",pt->code,pt->name) < 0){
+			return -1;
+		}
+	}
 	return 0;
 }
 
@@ -1078,7 +1040,9 @@ partition(wchar_t * const *args,const char *arghelp){
 			unsigned long long ull;
 
 			if(!args[2]){
-				print_partition_types();
+				if(print_partition_types() < 0){
+					return -1;
+				}
 				return 0;
 			}
 			if((d = lookup_wdevice(args[2])) == NULL){
