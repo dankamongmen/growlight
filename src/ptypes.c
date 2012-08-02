@@ -6,67 +6,67 @@ const ptype ptypes[] = {
 	{
 		.code = 0x0700,
 		.name = "Microsoft basic data",
-		.gpt_guid = EBD0A0A2-B9E5-4433-87C0-68B6B72699C7,
+		.gpt_guid = "\xEB\xD0\xA0\xA2\xB9\xE5\x44\x33\x87\xC0\x68\xB6\xB7\x26\x99\xC7",
 		.mbr_code = 0,
 	}, {
 		.code = 0x0c01,
 		.name = "Microsoft reserved",
-		.gpt_guid = E3C9E316-0B5C-4DB8-817D-F92DF00215AE,
+		.gpt_guid = "\xE3\xC9\xE3\x16\x0B\x5C\x4D\xB8\x81\x7D\xF9\x2D\xF0\x02\x15\xAE",
 		.mbr_code = 0,
 	}, {
 		.code = 0x2700,
 		.name = "Windows Recovery Environment",
-		.gpt_guid = DE94BBA4-06D1-4D40-A16A-BFD50179D6AC,
+		.gpt_guid = "\xDE\x94\xBB\xA4\x06\xD1\x4D\x40\xA1\x6A\xBF\xD5\x01\x79\xD6\xAC",
 		.mbr_code = 0,
 	}, {
 		.code = 0x4200,
 		.name = "Windows Logical Disk Manager data",
-		.gpt_guid = AF9B60A0-1431-4F62-BC68-3311714A69AD,
+		.gpt_guid = "\xAF\x9B\x60\xA0\x14\x31\x4F\x62\xBC\x68\x33\x11\x71\x4A\x69\xAD",
 		.mbr_code = 0,
 	}, {
 		.code = 0x4201,
 		.name = "Windows Logical Disk Manager metadata",
-		.gpt_guid = 5808C8AA-7E8F-42E0-85D2-E1E90434CFB3,
+		.gpt_guid = "\x58\x08\xC8\xAA\x7E\x8F\x42\xE0\x85\xD2\xE1\xE9\x04\x34\xCF\xB3",
 		.mbr_code = 0,
 	}, {
 		.code = 0x7501,
 		.name = "IBM General Parallel File System",
-		.gpt_guid = 37AFFC90-EF7D-4E96-91C3-2D7AE055B174,
+		.gpt_guid = "\x37\xAF\xFC\x90\xEF\x7D\x4E\x96\x91\xC3\x2D\x7A\xE0\x55\xB1\x74",
 		.mbr_code = 0,
 	}, {
 		.code = 0x7f00,
 		.name = "ChromeOS kernel",
-		.gpt_guid = FE3A2A5D-4F32-41A7-B725-ACCC3285A309,
+		.gpt_guid = "\xFE\x3A\x2A\x5D\x4F\x32\x41\xA7\xB7\x25\xAC\xCC\x32\x85\xA3\x09",
 		.mbr_code = 0,
 	}, {
 		.code = 0x7f01,
 		.name = "ChromeOS root",
-		.gpt_guid = 3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC,
+		.gpt_guid = "\x3C\xB8\xE2\x02\x3B\x7E\x47\xDD\x8A\x3C\x7F\xF2\xA1\x3C\xFC\xEC",
 		.mbr_code = 0,
 	}, {
 		.code = 0x7f02,
 		.name = "ChromeOS reserved",
-		.gpt_guid = 2E0A753D-9E48-43B0-8337-B15192CB1B5E,
+		.gpt_guid = "\x2E\x0A\x75\x3D\x9E\x48\x43\xB0\x83\x37\xB1\x51\x92\xCB\x1B\x5E",
 		.mbr_code = 0,
 	}, {
 		.code = 0x8200,
 		.name = "Linux swap",
-		.gpt_guid = 0657FD6D-A4AB-43C4-84E5-0933C84B4F4F,
+		.gpt_guid = "\x06\x57\xFD\x6D\xA4\xAB\x43\xC4\x84\xE5\x09\x33\xC8\x4B\x4F\x4F",
 		.mbr_code = 0,
 	}, {
 		.code = 0x8300,
 		.name = "Linux filesystem",
-		.gpt_guid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4,
+		.gpt_guid = "\x0F\xC6\x3D\xAF\x84\x83\x47\x72\x8E\x79\x3D\x69\xD8\x47\x7D\xE4",
 		.mbr_code = 0,
 	}, {
 		.code = 0x8301,
 		.name = "Linux reserved",
-		.gpt_guid = 8DA63339-0007-60C0-C436-083AC8230908,
+		.gpt_guid = "\x8D\xA6\x33\x39\x00\x07\x60\xC0\xC4\x36\x08\x3A\xC8\x23\x09\x08",
 		.mbr_code = 0,
 	}, {
 		.code = 0x8e00,
 		.name = "Linux Logical Volume Manager",
-		.gpt_guid = E6D6D379-F507-44C2-A23C-238F2A3DF928,
+		.gpt_guid = "\xE6\xD6\xD3\x79\xF5\x07\x44\xC2\xA2\x3C\x23\x8F\x2A\x3D\xF9\x28",
 		.mbr_code = 0,
 	}, /*{
 		.code = 0xa500,
@@ -77,56 +77,89 @@ const ptype ptypes[] = {
 	},*/ {
 		.code = 0xa501,
 		.name = "FreeBSD boot",
-		.gpt_guid = 83BD6B9D-7F41-11DC-BE0B-001560B84F0F,
+		.gpt_guid = "\x83\xBD\x6B\x9D\x7F\x41\x11\xDC\xBE\x0B\x00\x15\x60\xB8\x4F\x0F",
 		.mbr_code = 0,
 	}, {
 		.code = 0xa502,
 		.name = "FreeBSD swap",
-		.gpt_guid = 516E7CB5-6ECF-11D6-8FF8-00022D09712B,
+		.gpt_guid = "\x51\x6E\x7C\xB5\x6E\xCF\x11\xD6\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
 		.mbr_code = 0,
 	}, {
 		.code = 0xa503,
 		.name = "FreeBSD UFS",
-		.gpt_guid = 516E7CB6-6ECF-11D6-8FF8-00022D09712B,
+		.gpt_guid = "\x51\x6E\x7C\xB6\x6E\xCF\x11\xD6\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
 		.mbr_code = 0,
 	}, {
 		.code = 0xa504,
 		.name = "FreeBSD ZFS",
-		.gpt_guid = 516E7CBA-6ECF-11D6-8FF8-00022D09712B,
+		.gpt_guid = "\x51\x6E\x7C\xBA\x6E\xCF\x11\xD6\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
 		.mbr_code = 0,
 	}, {
 		.code = 0xa505,
 		.name = "FreeBSD Vinum/RAID",
-		.gpt_guid = 516E7CB8-6ECF-11D6-8FF8-00022D09712B,
+		.gpt_guid = "\x51\x6E\x7C\xB8\x6E\xCF\x11\xD6\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
 		.mbr_code = 0,
 	}, {
 		.code = 0xef00,
 		.name = "EFI System Partition",
-		.gpt_guid = C12A7328-F81F-11D2-BA4B-00A0C93EC93B,
+		.gpt_guid = "\xC1\x2A\x73\x28\xF8\x1F\x11\xD2\xBA\x4B\x00\xA0\xC9\x3E\xC9\x3B",
 		.mbr_code = 0,
 	}, {
 		.code = 0xef01,
 		.name = "MBR partition scheme",
-		.gpt_guid = 024DEE41-33E7-11D3-9D69-0008C781F39F,
+		.gpt_guid = "\x02\x4D\xEE\x41\x33\xE7\x11\xD3\x9D\x69\x00\x08\xC7\x81\xF3\x9F",
 		.mbr_code = 0,
 	}, {
 		.code = 0xef02,
 		.name = "BIOS boot partition",
-		.gpt_guid = 21686148-6449-6E6F-744E-656564454649,
+		.gpt_guid = "\x21\x68\x61\x48\x64\x49\x6E\x6F\x74\x4E\x65\x65\x64\x45\x46\x49",
 		.mbr_code = 0,
 	}, {
 		.code = 0xfd00,
 		.name = "Linux MDRAID",
-		.gpt_guid = A19D880F-05FC-4D3B-A006-743F0F84911E,
+		.gpt_guid = "\xA1\x9D\x88\x0F\x05\xFC\x4D\x3B\xA0\x06\x74\x3F\x0F\x84\x91\x1E",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa580,
+		.name = "Midnight BSD data",
+		.gpt_guid = "\x85\xd5\xe4\x5a\x23\x7c\x11\xe1\xb4\xb3\xe8\x9a\x8f\x7f\xc3\xa7",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa581,
+		.name = "Midnight BSD boot",
+		.gpt_guid = "\x85\xd5\xe4\x5e\x23\x7c\x11\xe1\xb4\xb3\xe8\x9a\x8f\x7f\xc3\xa7",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa582,
+		.name = "Midnight BSD swap",
+		.gpt_guid = "\x85\xd5\xe4\x5b\x23\x7c\x11\xe1\xb4\xb3\xe8\x9a\x8f\x7f\xc3\xa7",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa583,
+		.name = "Midnight BSD UFS",
+		.gpt_guid = "\x03\x94\xef\x8b\x23\x7e\x11\xe1\xb4\xb3\xe8\x9a\x8f\x7f\xc3\xa7",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa584,
+		.name = "Midnight BSD ZFS",
+		.gpt_guid = "\x85\xd5\xe4\x5d\x23\x7c\x11\xe1\xb4\xb3\xe8\x9a\x8f\x7f\xc3\xa7",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa585,
+		.name = "Midnight BSD Vinum/RAID",
+		.gpt_guid = "\x85\xd5\xe4\x5c\x23\x7c\x11\xe1\xb4\xb3\xe8\x9a\x8f\x7f\xc3\xa7",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa800,
+		.name = "Apple UFS",
+		.gpt_guid = "\x55\x46\x53\x00\x00\x00\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
 		.mbr_code = 0,
 	},
 };
 
 /*
 	printf("GPT types:\n");
-		" a505 FreeBSD Vinum/RAID    a580 Midnight BSD data     a581 Midnight BSD boot   \n"
-		" a582 Midnight BSD swap     a583 Midnight BSD UFS      a584 Midnight BSD ZFS    \n"
-		" a585 Midnight BSD Vinum    a800 Apple UFS             a901 NetBSD swap         \n"
+		" a901 NetBSD swap         \n"
 		" a902 NetBSD FFS            a903 NetBSD LFS            a904 NetBSD concatenated \n"
 		" a905 NetBSD encrypted      a906 NetBSD RAID           ab00 Apple boot          \n"
 		" af00 Apple HFS/HFS+        af01 Apple RAID            af02 Apple RAID offline  \n"
