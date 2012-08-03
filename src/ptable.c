@@ -76,6 +76,7 @@ static const struct ptable {
 	int (*make)(device *);
 	int (*zap)(device *);
 	int (*add)(device *,const wchar_t *,uintmax_t,unsigned long long);
+	int (*del)(device *);
 	int (*pname)(device *,const wchar_t *);
 	int (*uuid)(device *,const void *);
 	int (*flag)(device *,uint64_t,unsigned);
@@ -86,6 +87,7 @@ static const struct ptable {
 		.make = new_gpt,
 		.zap = zap_gpt,
 		.add = add_gpt,
+		.del = NULL,
 		.pname = name_gpt,
 		.uuid = uuid_gpt,
 		.flag = flag_gpt,
@@ -96,6 +98,7 @@ static const struct ptable {
 		.make = dos_make_table,
 		.zap = dos_zap_table,
 		.add = dos_add_part,
+		.del = NULL,
 		.pname = NULL,
 		.uuid = NULL,
 		.flag = dos_set_flag,
@@ -213,6 +216,7 @@ int add_partition(device *d,const wchar_t *name,size_t size,unsigned long long c
 }
 
 int wipe_partition(device *d){
+	const char *ptype = d->partdev.parent->blkdev.pttable;
 	const struct ptable *pt;
 
 	if(d->layout != LAYOUT_PARTITION){
@@ -220,8 +224,12 @@ int wipe_partition(device *d){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
-			if(pt->zap(d)){
+		if(strcmp(pt->name,ptype) == 0){
+			if(pt->del == NULL){
+				diag("Partition deletion not supported on %s\n",ptype);
+				return -1;
+			}
+			if(pt->del(d)){
 				return -1;
 			}
 			if(rescan_blockdev(d)){

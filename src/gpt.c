@@ -410,12 +410,14 @@ unmap_gpt(device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
 
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
+	uint64_t flba,llba,flarge,llarge,nextgap;
+	static const uint8_t zguid[GUIDSIZE];
 	unsigned char tguid[GUIDSIZE];
 	int pgsize = getpagesize();
+	unsigned z,x,maxent;
 	gpt_header *ghead;
 	gpt_entry *gpe;
 	size_t mapsize;
-	unsigned z;
 	void *map;
 	int fd;
 
@@ -445,24 +447,74 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	}
 	ghead = (gpt_header *)((char *)map + LBA_SIZE);
 	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	// First, we find the next available partition number. We also get the
+	// maximum used index, to bound the space-discovery loop below.
+	maxent = 0;
+	z = ghead->partcount;
 	for(z = 0 ; z < ghead->partcount ; ++z){
-		static const uint8_t guid[GUIDSIZE] = { 0 };
-
 		// If there's any non-zero bits in either the type or partiton
 		// GUID, assume it's being used.
-		if(memcmp(gpe[z].type_guid,guid,GUIDSIZE)){
+		if(memcmp(gpe[z].type_guid,zguid,GUIDSIZE)){
 			continue;
 		}
-		if(memcmp(gpe[z].part_guid,guid,GUIDSIZE)){
+		if(memcmp(gpe[z].part_guid,zguid,GUIDSIZE)){
 			continue;
 		}
-		break;
+		if(x == ghead->partcount){
+			x = z;
+		}
+		maxent = z;
 	}
-	if(z == ghead->partcount){
-		diag("No space for a new partition in %s\n",d->name);
+	if(x == ghead->partcount){
+		diag("No entry for a new partition in %s\n",d->name);
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
+	}
+	// X is the first available partition number. For historical reasons,
+	// we henceforth call it z.
+	z = x;
+	// For now, we only support using the largest free space for the new
+	// partition. We'll want to add more control FIXME.
+	flba = ghead->first_usable;
+	llba = ghead->last_usable;
+	flarge = llarge = 0;
+	// FIXME quadratic algorithm. ought do linear time with single sweep
+	// over partitions followed by single sweep over gap set. instead, we
+	// search for all successive regions ("greedy search" that always picks
+	// the lower rather than the larger, allowing successive searches)
+	// nextgap is not always actually a gap, but we're certain there's no
+	// gap between llba and nextgap
+	while(flba < ghead->last_usable){
+		nextgap = llba + 1;
+		for(x = 0 ; x <= maxent ; ++x){
+			// Don't check unused partition entries
+			if(memcmp(gpe[x].type_guid,zguid,GUIDSIZE) == 0 &&
+				memcmp(gpe[x].part_guid,zguid,GUIDSIZE) == 0){
+				continue;
+			}
+			if(gpe[x].first_lba <= flba && gpe[x].last_lba >= flba){
+				flba = gpe[x].last_lba + 1; // shrink gap on left
+			}else if(gpe[x].first_lba >= flba && gpe[x].last_lba <= llba){
+				llba = gpe[x].first_lba - 1; // take left side
+				nextgap = gpe[x].last_lba + 1;
+			}else if(gpe[x].first_lba <= llba){
+				llba = gpe[x].first_lba - 1; // shrink gap on right
+				nextgap = gpe[x].last_lba + 1; // loss of info
+			}
+			if(llba <= flba){
+				diag("No room for a new partition in %s\n",d->name);
+				munmap(map,mapsize);
+				close(fd);
+				return -1;
+			}
+			if(llba - flba > llarge - flarge){
+				llarge = llba;
+				flarge = flba;
+			}
+		}
+		flba = llba + 1;
+		llba = nextgap;
 	}
 	memcpy(gpe[z].type_guid,tguid,sizeof(tguid));
 	if(gpt_name(name,gpe[z].name,sizeof(gpe[z].name))){
@@ -479,9 +531,8 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 		close(fd);
 		return -1;
 	}
-	// FIXME need to ensure they're not used by existing partitions!
-	gpe[z].first_lba = ghead->first_usable;
-	gpe[z].last_lba = ghead->last_usable;
+	gpe[z].first_lba = flba;
+	gpe[z].last_lba = llba;
 	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
