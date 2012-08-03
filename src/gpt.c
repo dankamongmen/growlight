@@ -10,6 +10,7 @@
 
 #include "gpt.h"
 #include "crc32.h"
+#include "ptypes.h"
 #include "growlight.h"
 
 #define LBA_SIZE 512u
@@ -127,12 +128,6 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,uint64_t lbas,
 		return -1;
 	}
 	return 0;
-}
-
-static void
-set_type_guid(unsigned char *type_guid,unsigned long long code){
-	memset(type_guid,0,GUIDSIZE); // all 0's is "GPT unused"
-	memcpy(type_guid,&code,sizeof(code)); // FIXME need map it
 }
 
 static int
@@ -412,6 +407,7 @@ unmap_gpt(device *d,void *map,size_t mapsize,int fd,size_t lbasize){
 
 #include "popen.h"
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
+	unsigned char tguid[GUIDSIZE];
 	int pgsize = getpagesize();
 	gpt_header *ghead;
 	gpt_entry *gpe;
@@ -435,6 +431,10 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	}
 	if(size % d->logsec){
 		diag("Size %ju is not a mulitple of sector %u\n",size,d->logsec);
+		return -1;
+	}
+	if(get_gpt_guid(code,tguid)){
+		diag("Not a valid GPT typecode: %llu\n",code);
 		return -1;
 	}
 	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
@@ -466,7 +466,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 		close(fd);
 		return -1;
 	}
-	set_type_guid(gpe[z].type_guid,code);
+	memcpy(gpe[z].type_guid,tguid,sizeof(tguid));
 	if(gpt_name(name,gpe[z].name)){
 		diag("Couldn't convert %ls for %s\n",name,d->name);
 		memset(gpe + z,0,sizeof(*gpe));
@@ -550,16 +550,27 @@ int flag_gpt(device *d,uint64_t flag,unsigned status){
 }
 
 int code_gpt(device *d,unsigned long long code){
+	unsigned g = d->partdev.pnumber;
+	unsigned char tguid[GUIDSIZE];
 	gpt_entry *gpe;
 	size_t mapsize;
 	void *map;
 	int fd;
 
+	if(get_gpt_guid(code,tguid)){
+		diag("Not a valid GPT typecode: %llu\n",code);
+		return -1;
+	}
 	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
 		return -1;
 	}
 	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
-	set_type_guid(gpe[d->partdev.pnumber].type_guid,code);
+	if(gpe[g].first_lba == 0 && gpe[g].last_lba == 0){
+		diag("Not a valid GPT partition: %s\n",d->name);
+		unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE);
+		return -1;
+	}
+	memcpy(gpe[g].type_guid,tguid,sizeof(tguid));
 	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
