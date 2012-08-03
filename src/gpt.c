@@ -414,7 +414,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	static const uint8_t zguid[GUIDSIZE];
 	unsigned char tguid[GUIDSIZE];
 	int pgsize = getpagesize();
-	unsigned z,x,maxent;
+	unsigned z,x,maxent,salign;
 	gpt_header *ghead;
 	gpt_entry *gpe;
 	size_t mapsize;
@@ -422,6 +422,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	int fd;
 
 	assert(pgsize && pgsize % LBA_SIZE == 0);
+	salign = d->logsec ? d->physsec / d->logsec : 1;
 	if(!name){
 		diag("GPT partitions ought be named!\n");
 		return -1;
@@ -477,14 +478,14 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	// For now, we only support using the largest free space for the new
 	// partition. We'll want to add more control FIXME.
 	flba = ghead->first_usable;
-	llba = ghead->last_usable;
-	flarge = llarge = 0;
+	flarge = flba = salign * (flba / salign + !!(flba % salign));
+	llarge = llba = ghead->last_usable;
 	// FIXME quadratic algorithm. ought do linear time with single sweep
 	// over partitions followed by single sweep over gap set. instead, we
 	// search for all successive regions ("greedy search" that always picks
 	// the lower rather than the larger, allowing successive searches)
 	// nextgap is not always actually a gap, but we're certain there's no
-	// gap between llba and nextgap
+	// gap between llba and nextgap. this is all probably broken. terrible.
 	while(flba < ghead->last_usable){
 		nextgap = llba + 1;
 		for(x = 0 ; x <= maxent ; ++x){
@@ -503,19 +504,34 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 				nextgap = gpe[x].last_lba + 1; // loss of info
 			}
 			if(llba <= flba){
-				diag("No room for a new partition in %s\n",d->name);
-				munmap(map,mapsize);
-				close(fd);
-				return -1;
+				break;
 			}
-			if(llba - flba > llarge - flarge){
+			if(llba < llarge || llba - flba > llarge - flarge){
 				llarge = llba;
 				flarge = flba;
 			}
 		}
-		flba = llba + 1;
+		flba = salign * (llba / salign + !!(llba % salign));
 		llba = nextgap;
 	}
+	if(llarge == 0){
+		diag("No room for new partition in %s\n",d->name);
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}else if((llarge - flarge) * d->logsec < size){
+		diag("No room for new %juB partition in %s\n",size,d->name);
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}else if(size){
+		llarge = flarge + size / d->logsec - 1;
+	}
+	diag("First sector: %ju last sector: %ju count: %ju size: %ju\n",
+			(uintmax_t)flarge,
+			(uintmax_t)llarge,
+			(uintmax_t)(llarge - flarge),
+			(uintmax_t)((llarge - flarge) * d->logsec));
 	memcpy(gpe[z].type_guid,tguid,sizeof(tguid));
 	if(gpt_name(name,gpe[z].name,sizeof(gpe[z].name))){
 		diag("Couldn't convert %ls for %s\n",name,d->name);
@@ -531,8 +547,8 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 		close(fd);
 		return -1;
 	}
-	gpe[z].first_lba = flba;
-	gpe[z].last_lba = llba;
+	gpe[z].first_lba = flarge;
+	gpe[z].last_lba = llarge;
 	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
