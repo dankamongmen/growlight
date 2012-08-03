@@ -1718,12 +1718,8 @@ update_diags(struct panel_state *ps){
 
 static int
 display_diags(WINDOW *mainw,struct panel_state *ps){
-	int x,y;
-
-	getmaxyx(mainw,y,x);
-	assert(y);
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DIAGROWS,x - START_COL * 4,L"press 'l' to dismiss diagnostics")){
+	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'l' to dismiss diagnostics")){
 		goto err;
 	}
 	if(update_diags(ps)){
@@ -1748,7 +1744,7 @@ static const int DETAILROWS = 9;
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DETAILROWS,0,L"press 'v' to dismiss details")){
+	if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details")){
 		goto err;
 	}
 	if(current_adapter){
@@ -1853,7 +1849,7 @@ env_details(WINDOW *hw,int rows){
 static int
 display_enviroment(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,ENVROWS,0,L"press 'e' to dismiss display")){
+	if(new_display_panel(mainw,ps,ENVROWS,80,L"press 'e' to dismiss display")){
 		goto err;
 	}
 	if(env_details(panel_window(ps->p),ps->ysize)){
