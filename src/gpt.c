@@ -629,3 +629,22 @@ int code_gpt(device *d,unsigned long long code){
 	}
 	return 0;
 }
+
+int del_gpt(device *p){
+	unsigned g = p->partdev.pnumber;
+	gpt_entry *gpe;
+	size_t mapsize;
+	void *map;
+	int fd;
+
+	assert(p->layout == LAYOUT_PARTITION);
+	if((map = map_gpt(p->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return -1;
+	}
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	memset(&gpe[g],0,sizeof(*gpe));
+	if(unmap_gpt(p->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		return -1;
+	}
+	return 0;
+}

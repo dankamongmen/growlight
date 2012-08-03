@@ -87,7 +87,7 @@ static const struct ptable {
 		.make = new_gpt,
 		.zap = zap_gpt,
 		.add = add_gpt,
-		.del = NULL,
+		.del = del_gpt,
 		.pname = name_gpt,
 		.uuid = uuid_gpt,
 		.flag = flag_gpt,
