@@ -310,18 +310,20 @@ int zap_gpt(device *d){
 }
 
 static int
-gpt_name(const wchar_t *name,uint16_t *name16le){
-	size_t len,olen = 36 * sizeof(*name16le);
+gpt_name(const wchar_t *name,void *name16le,size_t olen){
 	iconv_t icv;
+	size_t len;
+	char *n16;
 
 	errno = 0;
 	if((icv = iconv_open("WCHAR_T","UTF16LE")) == (iconv_t)-1 && errno){
 		diag("Can't convert WCHAR_T to UTF16LE (%s?)\n",strerror(errno));
 		return -1;
 	}
+	n16 = name16le;
 	len = wcslen(name);
-	if(iconv(icv,(char **)&name,&len,(char **)&name16le,&olen) == (size_t)-1 && errno){
-		diag("Error converting name (%s? %zu/%zu left)\n",strerror(errno),len,olen);
+	if(iconv(icv,(char **)&name,&len,&n16,&olen) == (size_t)-1 && errno){
+		diag("Error converting name (%s? %zu, %zu left)\n",strerror(errno),len,olen);
 		iconv_close(icv);
 		return -1;
 	}
@@ -442,13 +444,8 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	}
 	ghead = (gpt_header *)((char *)map + LBA_SIZE);
 	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
-	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}
 	for(z = 0 ; z < ghead->partcount ; ++z){
-		static const uint8_t guid[GUIDSIZE];
+		static const uint8_t guid[GUIDSIZE] = { 0 };
 
 		// If there's any non-zero bits in either the type or partiton
 		// GUID, assume it's being used.
@@ -467,7 +464,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 		return -1;
 	}
 	memcpy(gpe[z].type_guid,tguid,sizeof(tguid));
-	if(gpt_name(name,gpe[z].name)){
+	if(gpt_name(name,gpe[z].name,sizeof(gpe[z].name))){
 		diag("Couldn't convert %ls for %s\n",name,d->name);
 		memset(gpe + z,0,sizeof(*gpe));
 		munmap(map,mapsize);
@@ -501,7 +498,7 @@ int name_gpt(device *d,const wchar_t *name){
 		return -1;
 	}
 	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
-	if(gpt_name(name,gpe[d->partdev.pnumber].name)){
+	if(gpt_name(name,gpe[d->partdev.pnumber].name,sizeof(gpe->name))){
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
