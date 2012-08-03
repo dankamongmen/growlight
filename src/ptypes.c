@@ -264,6 +264,11 @@ const ptype ptypes[] = {
 		.name = "HP/UX service partition",
 		.gpt_guid = "\xE2\xA1\xE7\x28\x32\xE3\x11\xD6\xA6\x82\x7B\x03\xA0\x00\x00\x00",
 		.mbr_code = 0,
+	}, {
+		.code = 0,
+		.name = NULL,
+		.gpt_guid = NULL,
+		.mbr_code = 0,
 	},
 };
 
