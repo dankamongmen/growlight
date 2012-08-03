@@ -52,7 +52,7 @@ const ptype ptypes[] = {
 		.code = 0x8200,
 		.name = "Linux swap",
 		.gpt_guid = "\x06\x57\xFD\x6D\xA4\xAB\x43\xC4\x84\xE5\x09\x33\xC8\x4B\x4F\x4F",
-		.mbr_code = 0,
+		.mbr_code = 0x82,
 	}, {
 		.code = 0x8300,
 		.name = "Linux filesystem",
@@ -67,7 +67,7 @@ const ptype ptypes[] = {
 		.code = 0x8e00,
 		.name = "Linux Logical Volume Manager",
 		.gpt_guid = "\xE6\xD6\xD3\x79\xF5\x07\x44\xC2\xA2\x3C\x23\x8F\x2A\x3D\xF9\x28",
-		.mbr_code = 0,
+		.mbr_code = 0x8e,
 	}, /*{
 		.code = 0xa500,
 		.name = "FreeBSD disklabel",
@@ -118,7 +118,7 @@ const ptype ptypes[] = {
 		.code = 0xfd00,
 		.name = "Linux MDRAID",
 		.gpt_guid = "\xA1\x9D\x88\x0F\x05\xFC\x4D\x3B\xA0\x06\x74\x3F\x0F\x84\x91\x1E",
-		.mbr_code = 0,
+		.mbr_code = 0xfd,
 	}, {
 		.code = 0xa580,
 		.name = "Midnight BSD data",
@@ -172,14 +172,14 @@ const ptype ptypes[] = {
 	printf("MBR types:\n");
 	printf(" 0  Empty           1e  Hidd FAT16 LBA  80  Minix <1.4a     bf  Solaris         \n"
 		" 1  FAT12           24  NEC DOS         81  Minix >1.4b     c1  DRDOS/2 FAT12   \n"
-		" 2  XENIX root      39  Plan 9          82  Linux swap      c4  DRDOS/2 smFAT16 \n"
+		" 2  XENIX root      39  Plan 9          c4  DRDOS/2 smFAT16 \n"
 		" 3  XENIX usr       3c  PMagic recovery 83  Linux           c6  DRDOS/2 FAT16   \n"
 		" 4  Small FAT16     40  Venix 80286     84  OS/2 hidden C:  c7  Syrinx          \n"
 		" 5  Extended        41  PPC PReP Boot   85  Linux extended  da  Non-FS data     \n"
 		" 6  FAT16           42  SFS             86  NTFS volume set db  CP/M / CTOS     \n"
 		" 7  HPFS/NTFS       4d  QNX4.x          87  NTFS volume set de  Dell Utility    \n"
 		" 8  AIX             4e  QNX4.x 2nd part 88  Linux plaintext df  BootIt          \n"
-		" 9  AIX bootable    4f  QNX4.x 3rd part 8e  Linux LVM       e1  DOS access      \n"
+		" 9  AIX bootable    4f  QNX4.x 3rd part e1  DOS access      \n"
 		" a  OS/2 boot mgr   50  OnTrack DM      93  Amoeba          e3  DOS R/O         \n"
 		" b  FAT32           51  OnTrackDM6 Aux1 94  Amoeba BBT      e4  SpeedStor       \n"
 		" c  FAT32 LBA       52  CP/M            9f  BSD/OS          eb  BeOS fs         \n"
@@ -189,7 +189,7 @@ const ptype ptypes[] = {
 		" 11 Hidden FAT12    56  Golden Bow      a7  NeXTSTEP        f1  SpeedStor       \n"
 		" 12 Compaq diag     5c  Priam Edisk     a8  Darwin UFS      f2  DOS secondary   \n"
 		" 14 Hidd Sm FAT16   61  SpeedStor       a9  NetBSD          f4  SpeedStor       \n"
-		" 16 Hidd FAT16      63  GNU HURD/SysV   ab  Darwin boot     fd  Lnx RAID auto   \n"
+		" 16 Hidd FAT16      63  GNU HURD/SysV   ab  Darwin boot    "
 		" 17 Hidd HPFS/NTFS  64  Netware 286     b7  BSDI fs         fe  LANstep         \n"
 		" 18 AST SmartSleep  65  Netware 386     b8  BSDI swap       ff  XENIX BBT       \n"
 		" 1b Hidd FAT32      70  DiskSec MltBoot bb  Boot Wizard Hid \n"
