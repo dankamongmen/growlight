@@ -360,6 +360,16 @@ bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
 	return genprefix(val,decimal,buf,bsize,omitdec,1024,'i');
 }
 
+static inline const char *
+guidstr(const void *guid,char *str){
+	const unsigned char *gc = guid;
+
+	sprintf(str,"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+			gc[0],gc[1],gc[2],gc[3],gc[4],gc[5],gc[6],gc[7],gc[8],
+			gc[9],gc[0xa],gc[0xb],gc[0xc],gc[0xd],gc[0xe],gc[0xf]);
+	return str;
+}
+
 // Uses the omphalos_ctx's ->diag function pointer. Acquires omphalos_ctx via
 // lookup on a TSD (omphalos_ctx_key).
 void diagnostic(const char *,...) __attribute__ ((format (printf,1,2)));
