@@ -267,7 +267,7 @@ const ptype ptypes[] = {
 	}, {
 		.code = 0,
 		.name = NULL,
-		.gpt_guid = NULL,
+		.gpt_guid = { 0 },
 		.mbr_code = 0,
 	},
 };

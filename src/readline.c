@@ -1119,12 +1119,12 @@ partition(wchar_t * const *args,const char *arghelp){
 			unsigned long long ull;
 			unsigned code;
 
-			// target dev == 2, 3 == name, 4 == size, 5 == type
+			// target dev == 2, 3 == size, 4 == name, 5 == type
 			if(!args[3] || !args[4] || !args[5] || args[6]){
 				usage(args,arghelp);
 				return -1;
 			}
-			if(wstrtoull(args[4],&ull)){
+			if(wstrtoull(args[3],&ull)){
 				usage(args,arghelp);
 				return -1;
 			}
@@ -1132,7 +1132,7 @@ partition(wchar_t * const *args,const char *arghelp){
 				usage(args,arghelp);
 				return -1;
 			}
-			if(add_partition(d,args[3],ull,code)){
+			if(add_partition(d,args[4],ull,code)){
 				return -1;
 			}
 			return 0;
@@ -1761,7 +1761,7 @@ static const struct fxn {
 			"                 | [ \"detail\" blockdev ]\n"
 			"                 | [ -v ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
-			"                 | [ \"add\" blockdev name size type ]\n"
+			"                 | [ \"add\" blockdev size name type ]\n"
 			"                 | [ \"setuuid\" partition uuid ]\n"
 			"                 | [ \"setname\" partition name ]\n"
 			"                 | [ \"settype\" [ partition type ] ]\n"
@@ -1834,14 +1834,16 @@ help(wchar_t * const *args,const char *arghelp){
 	return 0;
 }
 
-#define RL_START "\001" // RL_PROMPT_START_IGNORE
-#define RL_END "\002"	// RL_PROMPT_END_IGNORE
+#define RL_START "\x01" // RL_PROMPT_START_IGNORE
+#define RL_END "\x02"	// RL_PROMPT_END_IGNORE
 
 static int
 tty_ui(void){
-	char prompt[80] = RL_START "\033[0;35m" RL_END "[" RL_START "\033[0;36m" RL_END
-				PACKAGE RL_START "\033[0;35m" RL_END "]" RL_START "\033[1;32m"
-				RL_END "(0)> " RL_START "\033[1;37m" RL_END;
+	char prompt[80] = RL_START "\033[0;35m" RL_END
+				"[" RL_START "\033[0;36m" RL_END
+				PACKAGE RL_START "\033[0;35m" RL_END
+				"]" RL_START "\033[1;32m" RL_END
+				"(0)> " RL_START "\033[1;37m" RL_END;
 	char *l;
 
 	while( (l = readline(prompt)) ){
