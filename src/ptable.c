@@ -7,6 +7,7 @@
 #include "gpt.h"
 #include "wchar.h"
 #include "popen.h"
+#include "ptypes.h"
 #include "ptable.h"
 #include "growlight.h"
 
@@ -25,6 +26,8 @@ dos_zap_table(device *d){
 
 static int
 dos_add_part(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
+	unsigned mbrcode;
+
 	if(name){
 		diag("Names are not supported for MBR partitions!\n");
 		return -1;
@@ -33,7 +36,7 @@ dos_add_part(device *d,const wchar_t *name,uintmax_t size,unsigned long long cod
 		diag("MBR partitions may not exceed 2TB\n");
 		return -1;
 	}
-	if(code > 0xff){
+	if(get_mbr_code(code,&mbrcode)){
 		diag("Illegal code for DOS/BIOS/MBR: %llu\n",code);
 		return -1;
 	}
