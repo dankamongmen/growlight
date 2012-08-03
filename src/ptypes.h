@@ -17,6 +17,11 @@ typedef struct ptype {
 
 extern const ptype ptypes[];
 
+// Pass in the common code, get the scheme-specific identifier filled in.
+// Returns 0 for a valid code, or -1 if there's no ident for the scheme.
+int get_gpt_guid(unsigned,void *);
+int get_mbr_code(unsigned,unsigned *);
+
 #ifdef __cplusplus
 }
 #endif

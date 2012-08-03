@@ -195,3 +195,35 @@ const ptype ptypes[] = {
 		" 1b Hidd FAT32      70  DiskSec MltBoot bb  Boot Wizard Hid \n"
 		" 1c Hidd FAT32 LBA  75  PC/IX           be  Solaris boot    \n");
 	return 0;*/
+
+// Pass in the common code, get the scheme-specific identifier filled in.
+// Returns 0 for a valid code, or -1 if there's no ident for the scheme.
+int get_gpt_guid(unsigned code,void *guid){
+	const ptype *pt;
+
+	for(pt = ptypes ; pt->name ; ++pt){
+		if(pt->code == code){
+			if(pt->gpt_guid == NULL){
+				return -1;
+			}
+			memcpy(guid,pt->gpt_guid,GUIDSIZE);
+			return 0;
+		}
+	}
+	return -1;
+}
+
+int get_mbr_code(unsigned code,unsigned *mbr){
+	const ptype *pt;
+
+	for(pt = ptypes ; pt->name ; ++pt){
+		if(pt->code == code){
+			if(pt->mbr_code == 0){
+				return -1;
+			}
+			*mbr = pt->mbr_code;
+			return 0;
+		}
+	}
+	return -1;
+}
