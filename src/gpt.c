@@ -631,7 +631,7 @@ int code_gpt(device *d,unsigned long long code){
 }
 
 int del_gpt(device *p){
-	unsigned g = p->partdev.pnumber;
+	unsigned g = p->partdev.pnumber - 1;
 	gpt_entry *gpe;
 	size_t mapsize;
 	void *map;
