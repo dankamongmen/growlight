@@ -451,7 +451,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	// First, we find the next available partition number. We also get the
 	// maximum used index, to bound the space-discovery loop below.
 	maxent = 0;
-	z = ghead->partcount;
+	x = ghead->partcount;
 	for(z = 0 ; z < ghead->partcount ; ++z){
 		// If there's any non-zero bits in either the type or partiton
 		// GUID, assume it's being used.
