@@ -316,7 +316,7 @@ gpt_name(const wchar_t *name,void *name16le,size_t olen){
 	char *n16;
 
 	errno = 0;
-	if((icv = iconv_open("WCHAR_T","UTF16LE")) == (iconv_t)-1 && errno){
+	if((icv = iconv_open("UTF16LE","WCHAR_T")) == (iconv_t)-1 && errno){
 		diag("Can't convert WCHAR_T to UTF16LE (%s?)\n",strerror(errno));
 		return -1;
 	}
