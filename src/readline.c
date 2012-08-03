@@ -96,6 +96,37 @@ usage(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+wstrtoxu(const wchar_t *wstr,unsigned *ux){
+	unsigned long long ull;
+	char buf[BUFSIZ],*e;
+
+	if(snprintf(buf,sizeof(buf),"%ls",wstr) >= (int)sizeof(buf)){
+		fprintf(stderr,"Bad numeric value: %ls\n",wstr);
+		return -1;
+	}
+	if(buf[0] == '-'){
+		fprintf(stderr,"Negative number: %ls\n",wstr);
+		return -1;
+	}
+	errno = 0;
+	ull = strtoull(buf,&e,16);
+	if((ull == ULLONG_MAX && errno == ERANGE) || ull > UINT_MAX){
+		fprintf(stderr,"Number too large: %ls\n",wstr);
+		return -1;
+	}
+	if(e == buf){
+		fprintf(stderr,"Bad numeric value: %ls\n",wstr);
+		return -1;
+	}
+	if(*e){
+		fprintf(stderr,"Invalid number: %ls\n",wstr);
+		return -1;
+	}
+	*ux = ull;
+	return 0;
+}
+
+static int
 wstrtoull(const wchar_t *wstr,unsigned long long *ull){
 	char buf[BUFSIZ],*e;
 
@@ -1049,7 +1080,7 @@ partition(wchar_t * const *args,const char *arghelp){
 			}
 			return 0;
 		}else if(wcscmp(args[1],L"settype") == 0){
-			unsigned long long ull;
+			unsigned ull;
 
 			if(!args[2]){
 				if(print_partition_types() < 0){
@@ -1064,7 +1095,7 @@ partition(wchar_t * const *args,const char *arghelp){
 			if(!args[3] || args[4]){
 				usage(args,arghelp);
 				return -1;
-			}else if(wstrtoull(args[3],&ull)){
+			}else if(wstrtoxu(args[3],&ull)){
 				usage(args,arghelp);
 				return -1;
 			}else if(ull > 0xffff || ull == 0){
@@ -1085,7 +1116,8 @@ partition(wchar_t * const *args,const char *arghelp){
 			return -1;
 		}
 		if(wcscmp(args[1],L"add") == 0){
-			unsigned long long ull,code;
+			unsigned long long ull;
+			unsigned code;
 
 			// target dev == 2, 3 == name, 4 == size, 5 == type
 			if(!args[3] || !args[4] || !args[5] || args[6]){
@@ -1096,7 +1128,7 @@ partition(wchar_t * const *args,const char *arghelp){
 				usage(args,arghelp);
 				return -1;
 			}
-			if(wstrtoull(args[5],&code)){
+			if(wstrtoxu(args[5],&code)){
 				usage(args,arghelp);
 				return -1;
 			}
