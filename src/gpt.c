@@ -204,7 +204,7 @@ write_gpt(int fd,ssize_t lbasize,uint64_t lbas,unsigned realdata){
 		munmap(map,mapsize);
 		return -1;
 	}
-	if(update_backup(fd,ghead,gptlbas - 1,lbas,lbasize,pgsize,realdata)){
+	if(update_backup(fd,ghead,gptlbas,lbas,lbasize,pgsize,realdata)){
 		munmap(map,mapsize);
 		return -1;
 	}
@@ -373,13 +373,14 @@ map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize){
 
 // Pass the return from map_gpt(), ie the MBR boot sector + primary GPT
 static int
-unmap_gpt(device *d,void *map,size_t mapsize,int fd,size_t lbasize){
-	const uint64_t lbas = d->partdev.parent->size / lbasize;
+unmap_gpt(device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
 	const uint64_t gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
 	gpt_header *gpt = (gpt_header *)((char *)map + lbasize);
 	gpt_entry *gpe = (gpt_entry *)((char *)map + 2 * lbasize);
+	const uint64_t lbas = parent->size / lbasize;
 	const int pgsize = getpagesize();
 
+	assert(parent->layout == LAYOUT_NONE);
 	if(pgsize < 0){
 		diag("Warning: bad pgsize for GPT: %d\n",pgsize);
 	}
@@ -392,7 +393,7 @@ unmap_gpt(device *d,void *map,size_t mapsize,int fd,size_t lbasize){
 	if(munmap(map,mapsize)){
 		int e = errno;
 
-		diag("Error munmapping %s (%s?)\n",d->name,strerror(errno));
+		diag("Error munmapping %s (%s?)\n",parent->name,strerror(errno));
 		close(fd);
 		errno = e;
 		return -1;
@@ -400,7 +401,7 @@ unmap_gpt(device *d,void *map,size_t mapsize,int fd,size_t lbasize){
 	if(close(fd)){
 		int e = errno;
 
-		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
+		diag("Error closing %s (%s?)\n",parent->name,strerror(errno));
 		errno = e;
 		return -1;
 	}
@@ -481,7 +482,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	// FIXME need to ensure they're not used by existing partitions!
 	gpe[z].first_lba = ghead->first_usable;
 	gpe[z].last_lba = ghead->last_usable;
-	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
 	return 0;
