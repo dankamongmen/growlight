@@ -193,6 +193,10 @@ int add_partition(device *d,const wchar_t *name,size_t size,unsigned long long c
 		diag("Will only add partitions to real block devices\n");
 		return -1;
 	}
+	if(d->blkdev.pttable == NULL){
+		diag("No partition table on %s\n",d->name);
+		return -1;
+	}
 	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,d->blkdev.pttable) == 0){
 			if(pt->add(d,name,size,code)){
