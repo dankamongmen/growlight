@@ -154,21 +154,59 @@ const ptype ptypes[] = {
 		.name = "Apple UFS",
 		.gpt_guid = "\x55\x46\x53\x00\x00\x00\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
 		.mbr_code = 0,
+	}, {
+		.code = 0xa901,
+		.name = "NetBSD swap",
+		.gpt_guid = "\x49\xF4\x8D\x32\xB1\x0E\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa902,
+		.name = "NetBSD FFS",
+		.gpt_guid = "\x49\xF4\x8D\x5A\xB1\x0E\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa903,
+		.name = "NetBSD LFS",
+		.gpt_guid = "\x49\xF4\x8D\x82\xB1\x0E\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa904,
+		.name = "NetBSD concatenated",
+		.gpt_guid = "\x2D\xB5\x19\xC4\xB1\x0F\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa905,
+		.name = "NetBSD encrypted filesystem",
+		.gpt_guid = "\x2D\xB5\x19\xEC\xB1\x0F\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
+		.mbr_code = 0,
+	}, {
+		.code = 0xa906,
+		.name = "NetBSD RAID",
+		.gpt_guid = "\x49\xF4\x8D\xAA\xB1\x0E\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
+		.mbr_code = 0,
+	}, {
+		.code = 0xc001,
+		.name = "HP/UX data",
+		.gpt_guid = "\x75\x89\x4C\x1E\x3A\xEB\x11\xD3\xB7\xC1\x7B\x03\xA0\x00\x00\x00",
+		.mbr_code = 0,
+	}, {
+		.code = 0xc002,
+		.name = "HP/UX service partition",
+		.gpt_guid = "\xE2\xA1\xE7\x28\x32\xE3\x11\xD6\xA6\x82\x7B\x03\xA0\x00\x00\x00",
+		.mbr_code = 0,
 	},
 };
 
 /*
 	printf("GPT types:\n");
-		" a901 NetBSD swap         \n"
-		" a902 NetBSD FFS            a903 NetBSD LFS            a904 NetBSD concatenated \n"
-		" a905 NetBSD encrypted      a906 NetBSD RAID           ab00 Apple boot          \n"
+		" ab00 Apple boot          \n"
 		" af00 Apple HFS/HFS+        af01 Apple RAID            af02 Apple RAID offline  \n"
 		" af03 Apple label           af04 AppleTV recovery      af05 Apple Core Storage  \n"
 		" be00 Solaris boot          bf00 Solaris root          bf01 Solaris /usr & Mac Z\n"
 		" bf02 Solaris swap          bf03 Solaris backup        bf04 Solaris /var        \n"
 		" bf05 Solaris /home         bf06 Solaris alternate se  bf07 Solaris Reserved 1  \n"
 		" bf08 Solaris Reserved 2    bf09 Solaris Reserved 3    bf0a Solaris Reserved 4  \n"
-		" bf0b Solaris Reserved 5    c001 HP-UX data            c002 HP-UX service       \n"
+		" bf0b Solaris Reserved 5 
 	printf("MBR types:\n");
 	printf(" 0  Empty           1e  Hidd FAT16 LBA  80  Minix <1.4a     bf  Solaris         \n"
 		" 1  FAT12           24  NEC DOS         81  Minix >1.4b     c1  DRDOS/2 FAT12   \n"
