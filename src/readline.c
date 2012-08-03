@@ -981,7 +981,18 @@ print_partition_types(void){
 	const ptype *pt;
 
 	for(pt = ptypes ; pt->name ; ++pt){
-		if(printf("%04x %s\n",pt->code,pt->name) < 0){
+		if(printf("%04x %-37.37s",pt->code,pt->name) < 0){
+			return -1;
+		}
+		if(pt->gpt_guid){
+			char gstr[GUIDSTRLEN + 1];
+
+			guidstr(pt->gpt_guid,gstr);
+			if(printf(" %s",gstr) < 0){
+				return -1;
+			}
+		}
+		if(printf("\n") < 0){
 			return -1;
 		}
 	}

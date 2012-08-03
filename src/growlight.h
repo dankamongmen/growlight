@@ -24,6 +24,7 @@ void verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 extern int sysfd,devfd;
 
 #define GUIDSIZE 16	// 128 opaque bits
+#define GUIDSTRLEN 36	// 16 2-char hex pairs with 4 hyphens
 #define FSLABELSIZ 17	// 16 chars + null terminator
 
 	// This isn't really suitable for use as a library to programs beyond
