@@ -57,7 +57,7 @@ const ptype ptypes[] = {
 		.code = 0x8300,
 		.name = "Linux filesystem",
 		.gpt_guid = "\x0F\xC6\x3D\xAF\x84\x83\x47\x72\x8E\x79\x3D\x69\xD8\x47\x7D\xE4",
-		.mbr_code = 0,
+		.mbr_code = 0x83,
 	}, {
 		.code = 0x8301,
 		.name = "Linux reserved",
@@ -78,27 +78,27 @@ const ptype ptypes[] = {
 		.code = 0xa501,
 		.name = "FreeBSD boot",
 		.gpt_guid = "\x83\xBD\x6B\x9D\x7F\x41\x11\xDC\xBE\x0B\x00\x15\x60\xB8\x4F\x0F",
-		.mbr_code = 0,
+		.mbr_code = 0xa5,
 	}, {
 		.code = 0xa502,
 		.name = "FreeBSD swap",
 		.gpt_guid = "\x51\x6E\x7C\xB5\x6E\xCF\x11\xD6\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
-		.mbr_code = 0,
+		.mbr_code = 0xa5,
 	}, {
 		.code = 0xa503,
 		.name = "FreeBSD UFS",
 		.gpt_guid = "\x51\x6E\x7C\xB6\x6E\xCF\x11\xD6\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
-		.mbr_code = 0,
+		.mbr_code = 0xa5,
 	}, {
 		.code = 0xa504,
 		.name = "FreeBSD ZFS",
 		.gpt_guid = "\x51\x6E\x7C\xBA\x6E\xCF\x11\xD6\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
-		.mbr_code = 0,
+		.mbr_code = 0xa5,
 	}, {
 		.code = 0xa505,
 		.name = "FreeBSD Vinum/RAID",
 		.gpt_guid = "\x51\x6E\x7C\xB8\x6E\xCF\x11\xD6\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
-		.mbr_code = 0,
+		.mbr_code = 0xa5,
 	}, {
 		.code = 0xef00,
 		.name = "EFI System Partition",
@@ -153,37 +153,107 @@ const ptype ptypes[] = {
 		.code = 0xa800,
 		.name = "Apple UFS",
 		.gpt_guid = "\x55\x46\x53\x00\x00\x00\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
-		.mbr_code = 0,
+		.mbr_code = 0xa8,
 	}, {
 		.code = 0xa901,
 		.name = "NetBSD swap",
 		.gpt_guid = "\x49\xF4\x8D\x32\xB1\x0E\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
-		.mbr_code = 0,
+		.mbr_code = 0xa9,
 	}, {
 		.code = 0xa902,
 		.name = "NetBSD FFS",
 		.gpt_guid = "\x49\xF4\x8D\x5A\xB1\x0E\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
-		.mbr_code = 0,
+		.mbr_code = 0xa9,
 	}, {
 		.code = 0xa903,
 		.name = "NetBSD LFS",
 		.gpt_guid = "\x49\xF4\x8D\x82\xB1\x0E\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
-		.mbr_code = 0,
+		.mbr_code = 0xa9,
 	}, {
 		.code = 0xa904,
 		.name = "NetBSD concatenated",
 		.gpt_guid = "\x2D\xB5\x19\xC4\xB1\x0F\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
-		.mbr_code = 0,
+		.mbr_code = 0xa9,
 	}, {
 		.code = 0xa905,
 		.name = "NetBSD encrypted filesystem",
 		.gpt_guid = "\x2D\xB5\x19\xEC\xB1\x0F\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
-		.mbr_code = 0,
+		.mbr_code = 0xa9,
 	}, {
 		.code = 0xa906,
 		.name = "NetBSD RAID",
 		.gpt_guid = "\x49\xF4\x8D\xAA\xB1\x0E\x11\xDC\xB9\x9B\x00\x19\xD1\x87\x96\x48",
+		.mbr_code = 0xa9,
+	}, {
+		.code = 0xab00,
+		.name = "Apple boot",
+		.gpt_guid = "\x42\x6F\x6F\x74\x00\x00\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
+		.mbr_code = 0xab,
+	}, {
+		.code = 0xaf00,
+		.name = "Apple HFS/HFS+",
+		.gpt_guid = "\x48\x46\x53\x00\x00\x00\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
 		.mbr_code = 0,
+	}, {
+		.code = 0xaf01,
+		.name = "Apple RAID",
+		.gpt_guid = "\x52\x41\x49\x44\x00\x00\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
+		.mbr_code = 0,
+	}, {
+		.code = 0xaf02,
+		.name = "Apple RAID offline",
+		.gpt_guid = "\x52\x41\x49\x44\x5F\x4F\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
+		.mbr_code = 0,
+	}, {
+		.code = 0xaf03,
+		.name = "Apple label",
+		.gpt_guid = "\x4C\x61\x62\x65\x6C\x00\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
+		.mbr_code = 0,
+	}, {
+		.code = 0xaf04,
+		.name = "AppleTV recovery",
+		.gpt_guid = "\x52\x65\x63\x6F\x76\x65\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
+		.mbr_code = 0,
+	}, {
+		.code = 0xaf05,
+		.name = "Apple Core Storage",
+		.gpt_guid = "\x53\x74\x6F\x72\x61\x67\x11\xAA\xAA\x11\x00\x30\x65\x43\xEC\xAC",
+		.mbr_code = 0,
+	}, {
+		.code = 0xbe00,
+		.name = "Solaris boot",
+		.gpt_guid = "\x6A\x82\xCB\x45\x1D\xD2\x11\xB2\x99\xA6\x08\x00\x20\x73\x66\x31",
+		.mbr_code = 0xbe,
+	}, {
+		.code = 0xbf00,
+		.name = "Solaris root",
+		.gpt_guid = "\x6A\x85\xCF\x4D\x1D\xD2\x11\xB2\x99\xA6\x08\x00\x20\x73\x66\x31",
+		.mbr_code = 0xbf,
+	}, {
+		.code = 0xbf01,
+		.name = "Solaris /usr, Mac OS X ZFS",
+		.gpt_guid = "\x6A\x89\x8C\xC3\x1D\xD2\x11\xB2\x99\xA6\x08\x00\x20\x73\x66\x31",
+		.mbr_code = 0xbf,
+	}, {
+		.code = 0xbf02,
+		.name = "Solaris swap",
+		.gpt_guid = "\x6A\x87\xC4\x6F\x1D\xD2\x11\xB2\x99\xA6\x08\x00\x20\x73\x66\x31",
+		.mbr_code = 0xbf,
+	}, {
+		.code = 0xbf03,
+		.name = "Solaris backup",
+		.gpt_guid = "\x6A\x8B\x64\x2B\x1D\xD2\x11\xB2\x99\xA6\x08\x00\x20\x73\x66\x31",
+		.mbr_code = 0xbf,
+	}, {
+		.code = 0xbf04,
+		.name = "Solaris /var",
+		.gpt_guid = "\x6A\x8E\xF2\xE9\x1D\xD2\x11\xB2\x99\xA6\x08\x00\x20\x73\x66\x31",
+		.mbr_code = 0xbf,
+	}, {
+		.code = 0xbf05,
+		.name = "Solaris /home",
+		.gpt_guid = "\x6A\x90\xBA\x39\x1D\xD2\x11\xB2\x99\xA6\x08\x00\x20\x73\x66\x31",
+		.mbr_code = 0xbf,
 	}, {
 		.code = 0xc001,
 		.name = "HP/UX data",
@@ -198,20 +268,11 @@ const ptype ptypes[] = {
 };
 
 /*
-	printf("GPT types:\n");
-		" ab00 Apple boot          \n"
-		" af00 Apple HFS/HFS+        af01 Apple RAID            af02 Apple RAID offline  \n"
-		" af03 Apple label           af04 AppleTV recovery      af05 Apple Core Storage  \n"
-		" be00 Solaris boot          bf00 Solaris root          bf01 Solaris /usr & Mac Z\n"
-		" bf02 Solaris swap          bf03 Solaris backup        bf04 Solaris /var        \n"
-		" bf05 Solaris /home         bf06 Solaris alternate se  bf07 Solaris Reserved 1  \n"
-		" bf08 Solaris Reserved 2    bf09 Solaris Reserved 3    bf0a Solaris Reserved 4  \n"
-		" bf0b Solaris Reserved 5 
 	printf("MBR types:\n");
-	printf(" 0  Empty           1e  Hidd FAT16 LBA  80  Minix <1.4a     bf  Solaris         \n"
+	printf(" 0  Empty           1e  Hidd FAT16 LBA  80  Minix <1.4a     \n"
 		" 1  FAT12           24  NEC DOS         81  Minix >1.4b     c1  DRDOS/2 FAT12   \n"
 		" 2  XENIX root      39  Plan 9          c4  DRDOS/2 smFAT16 \n"
-		" 3  XENIX usr       3c  PMagic recovery 83  Linux           c6  DRDOS/2 FAT16   \n"
+		" 3  XENIX usr       3c  PMagic recovery c6  DRDOS/2 FAT16   \n"
 		" 4  Small FAT16     40  Venix 80286     84  OS/2 hidden C:  c7  Syrinx          \n"
 		" 5  Extended        41  PPC PReP Boot   85  Linux extended  da  Non-FS data     \n"
 		" 6  FAT16           42  SFS             86  NTFS volume set db  CP/M / CTOS     \n"
@@ -222,16 +283,16 @@ const ptype ptypes[] = {
 		" b  FAT32           51  OnTrackDM6 Aux1 94  Amoeba BBT      e4  SpeedStor       \n"
 		" c  FAT32 LBA       52  CP/M            9f  BSD/OS          eb  BeOS fs         \n"
 		" e  FAT16 LBA       53  OnTrackDM6 Aux3 a0  Thinkpad hib    ee  GPT             \n"
-		" f  Extended LBA    54  OnTrack DM6     a5  FreeBSD         ef  EFI FAT         \n"
+		" f  Extended LBA    54  OnTrack DM6     ef  EFI FAT         \n"
 		" 10 OPUS            55  EZ Drive        a6  OpenBSD         f0  Lnx/PA-RISC bt  \n"
 		" 11 Hidden FAT12    56  Golden Bow      a7  NeXTSTEP        f1  SpeedStor       \n"
-		" 12 Compaq diag     5c  Priam Edisk     a8  Darwin UFS      f2  DOS secondary   \n"
-		" 14 Hidd Sm FAT16   61  SpeedStor       a9  NetBSD          f4  SpeedStor       \n"
-		" 16 Hidd FAT16      63  GNU HURD/SysV   ab  Darwin boot    "
+		" 12 Compaq diag     5c  Priam Edisk     f2  DOS secondary   \n"
+		" 14 Hidd Sm FAT16   61  SpeedStor       f4  SpeedStor       \n"
+		" 16 Hidd FAT16      63  GNU HURD/SysV   "
 		" 17 Hidd HPFS/NTFS  64  Netware 286     b7  BSDI fs         fe  LANstep         \n"
 		" 18 AST SmartSleep  65  Netware 386     b8  BSDI swap       ff  XENIX BBT       \n"
 		" 1b Hidd FAT32      70  DiskSec MltBoot bb  Boot Wizard Hid \n"
-		" 1c Hidd FAT32 LBA  75  PC/IX           be  Solaris boot    \n");
+		" 1c Hidd FAT32 LBA  75  PC/IX           \n");
 	return 0;*/
 
 // Pass in the common code, get the scheme-specific identifier filled in.
