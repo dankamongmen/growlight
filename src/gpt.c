@@ -437,7 +437,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 		diag("Not a valid GPT typecode: %llu\n",code);
 		return -1;
 	}
-	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+	if((map = map_gpt(d,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
 		return -1;
 	}
 	ghead = (gpt_header *)((char *)map + LBA_SIZE);
@@ -496,6 +496,7 @@ int name_gpt(device *d,const wchar_t *name){
 	void *map;
 	int fd;
 
+	assert(d->layout == LAYOUT_PARTITION);
 	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
 		return -1;
 	}
@@ -517,6 +518,7 @@ int uuid_gpt(device *d,const void *uuid){
 	void *map;
 	int fd;
 
+	assert(d->layout == LAYOUT_PARTITION);
 	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
 		return -1;
 	}
@@ -534,6 +536,7 @@ int flag_gpt(device *d,uint64_t flag,unsigned status){
 	void *map;
 	int fd;
 
+	assert(d->layout == LAYOUT_PARTITION);
 	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
 		return -1;
 	}
@@ -557,6 +560,7 @@ int code_gpt(device *d,unsigned long long code){
 	void *map;
 	int fd;
 
+	assert(d->layout == LAYOUT_PARTITION);
 	if(get_gpt_guid(code,tguid)){
 		diag("Not a valid GPT typecode: %llu\n",code);
 		return -1;
