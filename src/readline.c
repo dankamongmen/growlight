@@ -830,6 +830,7 @@ blockdev_details(const device *d){
 		return -1;
 	}
 	printf("\n");
+	use_terminfo_color(COLOR_WHITE,1);
 	if(d->layout == LAYOUT_NONE){
 		if(d->blkdev.biossha1){
 			if(printf("\nBIOS boot SHA-1: ") < 0){
@@ -1779,7 +1780,7 @@ help(wchar_t * const *args,const char *arghelp){
 	const struct fxn *fxn;
 
 	if(args[1] == NULL){
-		use_terminfo_color(COLOR_GREEN,1);
+		use_terminfo_color(COLOR_WHITE,1);
 		printf("%-15.15s %s\n","Command","Arguments");
 		for(fxn = fxns ; fxn->cmd ; ++fxn){
 			printf("%-15.15ls %s\n",fxn->cmd,fxn->arghelp);
@@ -1787,7 +1788,7 @@ help(wchar_t * const *args,const char *arghelp){
 	}else if(args[2] == NULL){
 		for(fxn = fxns ; fxn->cmd ; ++fxn){
 			if(wcscmp(fxn->cmd,args[1]) == 0){
-				use_terminfo_color(COLOR_GREEN,1);
+				use_terminfo_color(COLOR_WHITE,1);
 				printf("%15.15ls %s\n",args[1],fxn->arghelp);
 				return 0;
 			}
