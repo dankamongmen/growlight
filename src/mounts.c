@@ -140,7 +140,7 @@ int parse_mounts(const glightui *gui,const char *fn){
 		}
 		idx += r;
 		if(*dev != '/'){
-			verbf("Not looking up %s at %s\n",fs,dev);
+			verbf("Not looking up %s at %s\n",fs,mnt);
 			continue;
 		}
 		if(statvfs(mnt,&vfs)){
