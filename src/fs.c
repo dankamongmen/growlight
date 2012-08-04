@@ -173,7 +173,7 @@ int parse_filesystems(const glightui *gui __attribute__ ((unused)),const char *f
 			++idx;
 		}
 		if(fsstart < len){
-			verbf("Registered %sfilesystem support: %*.*s\n",
+			verbf("%sfilesystem support: %*.*s\n",
 					virt ? "virtual " : "",
 					(int)(idx - fsstart),
 					(int)(idx - fsstart),map + fsstart);
