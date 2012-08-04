@@ -521,20 +521,11 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 			assert(wattroff(w,A_BOLD) == OK);
 		}
 		assert(waddstr(w,as->c->ident) != ERR);
-		/*
-		assert(wprintw(w," (%s",is->typestr) != ERR);
-		if(strlen(i->drv.driver)){
-			assert(waddch(w,' ') != ERR);
-			assert(waddstr(w,i->drv.driver) != ERR);
-			if(strlen(i->drv.version)){
-				assert(wprintw(w," %s",i->drv.version) != ERR);
-			}
-			if(strlen(i->drv.fw_version)){
-				assert(wprintw(w," fw %s",i->drv.fw_version) != ERR);
-			}
+		if(as->c->bandwidth){
+			char buf[PREFIXSTRLEN + 1];
+
+			wprintw(w," (%sbps)",qprefix(as->c->bandwidth,1,buf,sizeof(buf),1));
 		}
-		assert(waddch(w,')') != ERR);
-		*/
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
 		if(current){
 			assert(wattron(w,A_BOLD) == OK);

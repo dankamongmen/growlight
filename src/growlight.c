@@ -302,6 +302,16 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			if(data){
 				c->pcie.gen = data & PCI_EXP_LNKSTA_SPEED;
 				c->pcie.lanes_neg = (data & PCI_EXP_LNKSTA_WIDTH) >> 4u;
+				if(c->pcie.gen == 1){
+					c->bandwidth = 250u * 8u * 1000000ull;
+				}else if(c->pcie.gen == 2){
+					c->bandwidth = 500u * 8u * 1000000ull;
+				}else if(c->pcie.gen == 3){
+					c->bandwidth = 1000u * 8u * 1000000ull;
+				}else if(c->pcie.gen == 4){
+					c->bandwidth = 2000u * 8u * 1000000ull;
+				}
+				c->bandwidth *= c->pcie.lanes_neg;
 			}
 			pci_free_dev(pcidev);
 		}

@@ -224,6 +224,7 @@ typedef struct controller {
 			unsigned domain,bus,dev,func;
 		} pcie;
 	};
+	uintmax_t bandwidth;	// Bandwidth in bits per second. 0 -> unknown.
 	device *blockdevs;
 	struct controller *next;
 	dev_t devno;		// Don't expose this non-persistent datum

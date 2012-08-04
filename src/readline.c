@@ -578,10 +578,13 @@ print_controller(const controller *c,int descend){
 					c->ident,c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func);
 			}else{
-				r += rr = printf("[%s] PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)\n ",
+				char buf[PREFIXSTRLEN + 1];
+
+				r += rr = printf("[%s] PCI Express device %04x:%02x.%02x.%x (gen %s x%u, %sbps)\n ",
 					c->ident,c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func,
-					c->pcie.lanes_neg,pcie_gen(c->pcie.gen));
+					pcie_gen(c->pcie.gen),c->pcie.lanes_neg,
+					qprefix(c->bandwidth,1,buf,sizeof(buf),1));
 			}
 			break;
 		case BUS_VIRTUAL:
