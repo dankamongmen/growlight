@@ -6,7 +6,9 @@
 #include <locale.h>
 #include <pthread.h>
 
+#include "mbr.h"
 #include "config.h"
+#include "health.h"
 #include "ptable.h"
 #include "growlight.h"
 
@@ -1639,7 +1641,9 @@ static const wchar_t *helps[] = {
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'R'escan selection            re'S'et selection",
 	L"'m'ake partition table        'r'emove partition table",
+	L"'W'ipe master boot record     'B'ad blocks check",
 	L"'n'ew partition               'd'elete partition",
+	L"'s'et partition attributes    'M'ake new filesystem",
 	NULL
 };
 
@@ -2102,6 +2106,22 @@ new_partition(void){
 }
 
 static void
+set_partition_attrs(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Partition modification requires selection of a partition");
+		return;
+	}
+	if(b->d->layout != LAYOUT_PARTITION){
+		locked_diag("Selected object is not a partition");
+		return;
+	}
+	// FIXME pop up a form allowing attr set
+	// FIXME set that fucker
+}
+
+static void
 delete_partition(void){
 	blockobj *b;
 
@@ -2145,6 +2165,34 @@ reset_selection(void){
 	}
 	locked_diag("Resetting adapter %s",as->c->name);
 	reset_controller(as->c);
+}
+
+static void
+wipe_mbr(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("MBR wipe requires selection of a block device");
+		return;
+	}
+	wipe_dosmbr(b->d);
+}
+
+static void
+badblock_check(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Block check requires selection of a block device");
+		return;
+	}
+	badblock_scan(b->d,0); // FIXME allow destructive badblock check
+}
+
+static void
+new_filesystem(void){
+	// FIXME get current partition, empty space, or blockobj
+	// FIXME make that fucker
 }
 
 static void
@@ -2252,6 +2300,18 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
+			case 'W':{
+				pthread_mutex_lock(&bfl);
+				wipe_mbr();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'B':{
+				pthread_mutex_lock(&bfl);
+				badblock_check();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
 			case 'R':{
 				pthread_mutex_lock(&bfl);
 				rescan_selection();
@@ -2273,6 +2333,18 @@ handle_ncurses_input(WINDOW *w){
 			case 'd':{
 				pthread_mutex_lock(&bfl);
 				delete_partition();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 's':{
+				pthread_mutex_lock(&bfl);
+				set_partition_attrs();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'M':{
+				pthread_mutex_lock(&bfl);
+				new_filesystem();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
