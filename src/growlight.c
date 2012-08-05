@@ -737,10 +737,12 @@ parse_bus_topology(const char *fn){
 
 // Used by systems which don't properly populate sysfs (*cough* zfs *cough*)
 void add_new_virtual_blockdev(device *d){
-	d->c = &virtual_bus;
-	d->next = virtual_bus.blockdevs;
-	virtual_bus.blockdevs = d;
-	d->uistate = gui->block_event(d,d->uistate);
+	assert(lock_growlight() == 0);
+		d->c = &virtual_bus;
+		d->next = virtual_bus.blockdevs;
+		virtual_bus.blockdevs = d;
+		d->uistate = gui->block_event(d,d->uistate);
+	assert(unlock_growlight() == 0);
 }
 
 static device *
@@ -749,6 +751,7 @@ create_new_device_inner(const char *name,int recurse){
 	device *d;
 	int fd,r;
 
+	diag("Discovering %s...\n",name);
 	if(strlen(name) >= sizeof(d->name)){
 		diag("Bad name: %s\n",name);
 		return NULL;
@@ -826,16 +829,18 @@ create_new_device_inner(const char *name,int recurse){
 			}else if(d->c->transport == TRANSPORT_USB3){
 				d->blkdev.transport = SERIAL_USB3;
 			}
-			if((d->blkdev.biossha1 = malloc(20)) == NULL){
-				diag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
-				clobber_device(d);
-				return NULL;
-			}
-			if(mbrsha1(dfd,d->blkdev.biossha1)){
-				if(!d->blkdev.removable){
-					diag("Warning: Couldn't read MBR for %s\n",name);
+			if(!d->blkdev.removable){
+				if((d->blkdev.biossha1 = malloc(20)) == NULL){
+					diag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
+					clobber_device(d);
+					return NULL;
 				}
-				free(d->blkdev.biossha1);
+				if(mbrsha1(dfd,d->blkdev.biossha1)){
+					diag("Warning: Couldn't read MBR for %s\n",name);
+					free(d->blkdev.biossha1);
+					d->blkdev.biossha1 = NULL;
+				}
+			}else{
 				d->blkdev.biossha1 = NULL;
 			}
 			close(dfd);
@@ -938,6 +943,7 @@ create_new_device_inner(const char *name,int recurse){
 	d->next = d->c->blockdevs;
 	d->c->blockdevs = d;
 	d->uistate = gui->block_event(d,d->uistate);
+	diag("Done with %s!\n",name);
 	return d;
 }
 
