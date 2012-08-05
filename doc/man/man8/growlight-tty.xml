@@ -289,6 +289,9 @@ unset the specified flag on the specified partition.</para>
 			<term>fs setlabel blockdev label</term>
 		</varlistentry>
 		<varlistentry>
+			<term>fs loop file mountpoint mnttype options</term>
+		</varlistentry>
+		<varlistentry>
 			<term>fs mount blockdev mountpoint mnttype options</term>
 		</varlistentry>
 		<varlistentry>
@@ -308,7 +311,8 @@ supports UUIDs. "setlabel" will set the volume label of the filesystem on
 blockdev, assuming that filesystem supports volume labels. "mount" will attempt
 to mount the block device as a mnttype-type filesystem at mountpoint. This mount
 will not be added to either the host or target's /etc/fstab, and will thus not
-persist across reboots. "umount" will attempt to unmount the filesystem underlain
+persist across reboots. "loop" will attempt to mount the file as a mnttype-type
+filesystem at mountpoint using a loop device. "umount" will attempt to unmount the filesystem underlain
 by blockdev. "fsck" will check the filesystem for correctness.</para>
 			</listitem>
 		</varlistentry>
@@ -548,6 +552,9 @@ ought be fixed.</para>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>libblkid</refentrytitle>
 			<manvolnum>3</manvolnum>
+		</citerefentry>, <citerefentry>
+			<refentrytitle>losetup</refentrytitle>
+			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>lsblk</refentrytitle>
 			<manvolnum>8</manvolnum>
