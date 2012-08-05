@@ -1317,13 +1317,20 @@ fs(wchar_t * const *args,const char *arghelp){
 		return -1;
 	}
 	if(wcscmp(args[1],L"mkfs") == 0){
-		if(args[4]){
+		if(!args[3] || args[4]){
 			usage(args,arghelp);
 			return -1;
 		}
 		if(make_wfilesystem(d,args[3])){
 			return -1;
 		}
+		return 0;
+	}else if(wcscmp(args[1],L"wipefs") == 0){
+		if(args[3]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME
 		return 0;
 	}else if(wcscmp(args[1],L"fsck") == 0){
 		if(args[3]){
@@ -1342,6 +1349,34 @@ fs(wchar_t * const *args,const char *arghelp){
 		if(unmount(d)){
 			return -1;
 		}
+		return 0;
+	}else if(wcscmp(args[1],L"setuuid") == 0){
+		if(!args[3] || args[4]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME
+		return 0;
+	}else if(wcscmp(args[1],L"setlabel") == 0){
+		if(!args[3] || args[4]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME
+		return 0;
+	}else if(wcscmp(args[1],L"mount") == 0){
+		if(!args[3] || args[4]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME
+		return 0;
+	}else if(wcscmp(args[1],L"loop") == 0){
+		if(!args[3] || args[4]){
+			usage(args,arghelp);
+			return -1;
+		}
+		// FIXME
 		return 0;
 	}
 	usage(args,arghelp);
@@ -1778,6 +1813,7 @@ static const struct fxn {
 			"                 | [ \"wipefs\" fs ]\n"
 			"                 | [ \"setuuid\" fs uuid ]\n"
 			"                 | [ \"setlabel\" fs label ]\n"
+			"                 | [ \"loop\" file mountpoint type options ]\n"
 			"                 | [ \"mount\" blockdev mountpoint type options ]\n"
 			"                 | [ \"umount\" blockdev ]\n"
 			"                 | no arguments to list all filesystems"),
