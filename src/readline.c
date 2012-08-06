@@ -362,6 +362,23 @@ print_fs(const device *p,int descend){
 }
 
 static int
+print_empty(uint64_t fsect,uint64_t lsect,size_t sectsize){
+	char buf[PREFIXSTRLEN + 1];
+	int r = 0,rr;
+
+	if(sectsize == 0){
+		sectsize = 1;
+	}
+	use_terminfo_color(COLOR_BLUE,0);
+	r += rr = printf("Unused sectors %lu:%lu (%s)\n",fsect,lsect,
+			qprefix((lsect - fsect) * sectsize,1,buf,sizeof(buf),1));
+	if(rr < 0){
+		return -1;
+	}
+	return r;
+}
+
+static int
 print_partition(const device *p,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
@@ -396,6 +413,7 @@ print_partition(const device *p,int descend){
 static int
 print_drive(const device *d,int descend){
 	char buf[PREFIXSTRLEN + 1];
+	uint64_t sector;
 	const device *p;
 	int r = 0,rr;
 
@@ -469,10 +487,26 @@ print_drive(const device *d,int descend){
 	if(rr < 0){
 		return -1;
 	}
+	sector = 0;
 	for(p = d->parts ; p ; p = p->next){
+		if(sector != p->partdev.fsector){
+			r += rr = print_empty(sector,p->partdev.fsector - 1,d->logsec);
+			if(rr < 0){
+				return -1;
+			}
+		}
 		r += rr = print_partition(p,descend);
 		if(rr < 0){
 			return -1;
+		}
+		sector = p->partdev.lsector + 1;
+	}
+	if(d->size && d->logsec){
+		if(sector != d->size / d->logsec){
+			r += rr = print_empty(sector,d->size / d->logsec,d->logsec);
+			if(rr < 0){
+				return -1;
+			}
 		}
 	}
 	return r;
