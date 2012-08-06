@@ -302,6 +302,7 @@ transport_str(transport_e t){
 }
 
 #define PREFIXSTRLEN 7  // Does not include a '\0' (xxx.xxU)
+#define BPREFIXSTRLEN 8  // Does not include a '\0' (xxx.xxUi), i == prefix
 #define PREFIXFMT "%7s"
 
 // Takes an arbitrarily large number, and prints it into a fixed-size buffer by
@@ -353,11 +354,13 @@ genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
 	return buf;
 }
 
+// Mega, kilo, gigabytes
 static inline const char *
 qprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
 	return genprefix(val,decimal,buf,bsize,omitdec,1000,'\0');
 }
 
+// Mibi, kebi, gibibytes
 static inline const char *
 bprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,int omitdec){
 	return genprefix(val,decimal,buf,bsize,omitdec,1024,'i');
