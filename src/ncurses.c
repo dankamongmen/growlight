@@ -209,6 +209,9 @@ enum {
 	VIRTUAL_COLOR,
 	SSD_COLOR,
 	FS_COLOR,
+	EMPTY_COLOR,			// Empty sectors
+	MDADM_COLOR,
+	ZPOOL_COLOR,
 	PARTITION_COLOR,
 };
 
@@ -382,6 +385,9 @@ setup_colors(void){
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(SSD_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(MDADM_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(ZPOOL_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_BLUE,-1) == OK);
 	return 0;
 }
@@ -577,9 +583,9 @@ print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
 		return;
 	}
 	if(selected){
-		assert(wattrset(w,A_REVERSE|FS_COLOR) == OK);
+		assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
 	}else{
-		assert(wattrset(w,FS_COLOR) == OK);
+		assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
 	}
 	if(*line >= rows - !endp){
 		return;
@@ -641,9 +647,9 @@ static void
 print_empty(WINDOW *w,int *line,int rows,unsigned cols,
 			unsigned endp,int selected){
 	if(selected){
-		assert(wattrset(w,A_REVERSE|FS_COLOR) == OK);
+		assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 	}else{
-		assert(wattrset(w,FS_COLOR) == OK);
+		assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
 	}
 	if(*line >= rows - !endp){
 		return;
@@ -668,28 +674,28 @@ case LAYOUT_NONE:
 	if(bo->d->blkdev.realdev){
 		if(bo->d->blkdev.removable){
 			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|OPTICAL_COLOR) == OK);
+				assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 			}else{
-				assert(wattrset(rb->win,OPTICAL_COLOR) == OK);
+				assert(wattrset(rb->win,COLOR_PAIR(OPTICAL_COLOR)) == OK);
 			}
 		}else if(bo->d->blkdev.rotate){
 			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|ROTATE_COLOR) == OK);
+				assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(ROTATE_COLOR)) == OK);
 			}else{
-				assert(wattrset(rb->win,ROTATE_COLOR) == OK);
+				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
 			}
 		}else{
 			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|SSD_COLOR) == OK);
+				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(SSD_COLOR)) == OK);
 			}else{
-				assert(wattrset(rb->win,SSD_COLOR) == OK);
+				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
 			}
 		}
 	}else{
 		if(selected){
-			assert(wattrset(rb->win,A_REVERSE|VIRTUAL_COLOR) == OK);
+			assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(VIRTUAL_COLOR)) == OK);
 		}else{
-			assert(wattrset(rb->win,VIRTUAL_COLOR) == OK);
+			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
 		}
 	}
 	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
@@ -705,9 +711,9 @@ case LAYOUT_NONE:
 		break;
 case LAYOUT_MDADM:
 	if(selected){
-		assert(wattrset(rb->win,A_REVERSE|COLOR_MAGENTA) == OK);
+		assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
 	}else{
-		assert(wattrset(rb->win,COLOR_MAGENTA) == OK);
+		assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
 	}
 	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
@@ -724,9 +730,9 @@ case LAYOUT_PARTITION:
 		break;
 case LAYOUT_ZPOOL:
 	if(selected){
-		assert(wattrset(rb->win,A_REVERSE|COLOR_MAGENTA) == OK);
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	}else{
-		assert(wattrset(rb->win,COLOR_MAGENTA) == OK);
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	}
 	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
@@ -760,9 +766,9 @@ case LAYOUT_ZPOOL:
 				selected = line == rb->selline;
 			}
 			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|PARTITION_COLOR) == OK);
+				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
 			}else{
-				assert(wattrset(rb->win,PARTITION_COLOR) == OK);
+				assert(wattrset(rb->win,COLOR_PAIR(PARTITION_COLOR)) == OK);
 			}
 			wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
 			mvwprintw(rb->win,line,START_COL,
