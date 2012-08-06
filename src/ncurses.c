@@ -645,7 +645,11 @@ print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
 
 static void
 print_empty(WINDOW *w,int *line,int rows,unsigned cols,
-			unsigned endp,int selected){
+			unsigned endp,int selected,
+			uint64_t fsect,uint64_t lsect,
+			size_t sectsize){
+	char buf[BPREFIXSTRLEN + 1];
+
 	if(selected){
 		assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 	}else{
@@ -654,8 +658,12 @@ print_empty(WINDOW *w,int *line,int rows,unsigned cols,
 	if(*line >= rows - !endp){
 		return;
 	}
-	mvwprintw(w,*line,START_COL,"%-*.*s",cols - (START_COL * 4) - 1,
-		cols - (START_COL * 4) - 1, " Empty space");
+#define STR " Empty space "
+	mvwprintw(w,*line,START_COL,"%s%-*.*s",STR,
+			cols - (START_COL * 4) - __builtin_strlen(STR) + 2,
+			cols - (START_COL * 4) - __builtin_strlen(STR) + 2,
+			bprefix((lsect - fsect) * sectsize,1,buf,sizeof(buf),1));
+#undef STR
 	++*line;
 }
 
@@ -762,7 +770,9 @@ case LAYOUT_ZPOOL:
 			}
 			selected = line == rb->selline;
 			if(sector != p->partdev.fsector){
-				print_empty(rb->win,&line,rows,cols,endp,selected);
+				print_empty(rb->win,&line,rows,cols,endp,
+						selected,sector,
+						p->partdev.fsector - 1,bo->d->logsec);
 				selected = line == rb->selline;
 			}
 			if(selected){
@@ -789,7 +799,8 @@ case LAYOUT_ZPOOL:
 		}
 		if(bo->d->logsec){
 			if(sector != bo->d->size / bo->d->logsec){
-				print_empty(rb->win,&line,rows,cols,endp,selected);
+				print_empty(rb->win,&line,rows,cols,endp,
+						selected,sector,bo->d->size / bo->d->logsec,bo->d->logsec);
 			}
 		}
 	}
