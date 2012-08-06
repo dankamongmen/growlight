@@ -1695,16 +1695,9 @@ int unlock_growlight(void){
 	return r;
 }
 
-static device *
+static inline device *
 rescan(device *d){
-	device *tmp;
-
-	if( (tmp = create_new_device(d->name,0)) ){
-		tmp->target = d->target;
-		d->target = NULL;
-		free_device(d);
-	}
-	return tmp;
+	return create_new_device(d->name,0);
 }
 
 int reset_adapters(void){
@@ -1733,29 +1726,30 @@ int rescan_device(const char *name){
 	}while(s);
 	for(c = controllers ; c ; c = c->next){
 		for(lnk = &c->blockdevs ; *lnk ; lnk = &(*lnk)->next){
-			device **plnk;
+			//device **plnk;
 
-			// FIXME need to update mount/swap/target tables!
 			if(strcmp(name,(*lnk)->name) == 0){
+				device *d = *lnk;
+				*lnk = d->next;
+				clobber_device(d);
+				// FIXME update aggregates, also
 				if(rescan(*lnk) == NULL){
-					device *d = *lnk;
-					*lnk = d->next;
-					free_device(d);
 					return -1;
 				}
 				return 0;
 			}
-			for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
+			/*for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
 				if(strcmp(name,(*plnk)->name) == 0){
+					// FIXME update aggregates!
+					device *p = *plnk;
+					*plnk = p->next;
+					clobber_device(p);
 					if(rescan(*plnk) == NULL){
-						device *p = *plnk;
-						*plnk = p->next;
-						free_device(p);
 						return -1;
 					}
 					return 0;
 				}
-			}
+			}*/
 		}
 	}
 	if(create_new_device(name,0) == NULL){
