@@ -371,7 +371,7 @@ print_empty(uint64_t fsect,uint64_t lsect,size_t sectsize){
 		sectsize = 1;
 	}
 	use_terminfo_color(COLOR_GREEN,0);
-	r += rr = printf("Unused sectors %lu:%lu (%s)\n",fsect,lsect,
+	r += rr = printf("Unused sectors %ju:%ju (%s)\n",(uintmax_t)fsect,(uintmax_t)lsect,
 			bprefix((lsect - fsect) * sectsize,1,buf,sizeof(buf),1));
 	if(rr < 0){
 		return -1;
