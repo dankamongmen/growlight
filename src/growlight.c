@@ -1695,19 +1695,16 @@ int unlock_growlight(void){
 	return r;
 }
 
-static int
+static device *
 rescan(device *d){
 	device *tmp;
 
-	if((tmp = create_new_device(d->name,0)) == NULL){
-		return -1;
+	if( (tmp = create_new_device(d->name,0)) ){
+		tmp->target = d->target;
+		d->target = NULL;
+		free_device(d);
 	}
-	tmp->target = d->target;
-	d->target = NULL;
-	free_device(d);
-	*d = *tmp;
-	free(tmp);
-	return 0;
+	return tmp;
 }
 
 int reset_adapters(void){
@@ -1740,23 +1737,21 @@ int rescan_device(const char *name){
 
 			// FIXME need to update mount/swap/target tables!
 			if(strcmp(name,(*lnk)->name) == 0){
-				// FIXME this method might leave us with broken
-				// partition links...?
-				if(rescan(*lnk)){
+				if(rescan(*lnk) == NULL){
 					device *d = *lnk;
 					*lnk = d->next;
 					free_device(d);
-					return 0;
+					return -1;
 				}
 				return 0;
 			}
 			for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
 				if(strcmp(name,(*plnk)->name) == 0){
-					if(rescan(*plnk)){
+					if(rescan(*plnk) == NULL){
 						device *p = *plnk;
 						*plnk = p->next;
 						free_device(p);
-						return 0;
+						return -1;
 					}
 					return 0;
 				}
