@@ -421,7 +421,8 @@ free_devtable(devtable *dt){
 }
 
 static device *
-add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz){
+add_partition(device *d,const char *name,dev_t devno,unsigned pnum,
+				uint64_t fsect,uintmax_t sz){
 	device *p;
 
 	if(strlen(name) >= sizeof(p->name)){
@@ -445,6 +446,7 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,uintmax_t sz)
 				break;
 			}
 		}
+		p->partdev.fsector = fsect;
 		p->partdev.pnumber = pnum;
 		p->partdev.parent = d;
 		p->devno = devno;
@@ -554,6 +556,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 					}
 				}else if(sysfs_exist_p(subfd,"partition")){
 					unsigned long sz,pnum;
+					uint64_t fsect;
 
 					if(sysfs_devno(subfd,&devno)){
 						close(subfd);
@@ -565,12 +568,17 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 						pnum = 0;
 					}
 					verbf("\tPartition %lu at %s\n",pnum,dire->d_name);
+					if(get_sysfs_uint(subfd,"start",&fsect)){
+						diag("Couldn't determine first sector for %s (%s?)\n",
+								dire->d_name,strerror(errno));
+						sz = 0;
+					}
 					if(get_sysfs_uint(subfd,"size",&sz)){
 						diag("Couldn't determine size for %s (%s?)\n",
 								dire->d_name,strerror(errno));
 						sz = 0;
 					}
-					if(add_partition(d,dire->d_name,devno,pnum,sz) == NULL){
+					if(add_partition(d,dire->d_name,devno,pnum,fsect,sz) == NULL){
 						close(subfd);
 						return -1;
 					}
@@ -928,6 +936,7 @@ create_new_device_inner(const char *name,int recurse){
 				for(p = d->parts ; p ; p = p->next){
 					p->logsec = d->logsec;
 					p->physsec = d->physsec;
+					p->partdev.lsector = p->partdev.fsector + p->size - 1;
 					p->size *= p->logsec;
 				}
 			}
