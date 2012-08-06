@@ -6,47 +6,47 @@ const ptype ptypes[] = {
 	{
 		.code = 0x0005,
 		.name = "MBR Extended",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0x5,
 	}, {
 		.code = 0x0006,
 		.name = "FAT16",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0x06,
 	}, {
 		.code = 0x0008,
 		.name = "AIX",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0x08,
 	}, {
 		.code = 0x0009,
 		.name = "AIX Bootable",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0x09,
 	}, {
 		.code = 0x000b,
 		.name = "FAT32",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0x0b,
 	}, {
 		.code = 0x000c,
 		.name = "FAT32 LBA",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0x0c,
 	}, {
 		.code = 0x000e,
 		.name = "FAT16 LBA",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0x0e,
 	}, {
 		.code = 0x00a6,
 		.name = "OpenBSD",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0xa6,
 	}, {
 		.code = 0x00ee,
 		.name = "MBR Protective",
-		.gpt_guid = NULL,
+		.gpt_guid = {0},
 		.mbr_code = 0xee,
 	}, {
 		.code = 0x0700,
@@ -352,7 +352,9 @@ int get_gpt_guid(unsigned code,void *guid){
 
 	for(pt = ptypes ; pt->name ; ++pt){
 		if(pt->code == code){
-			if(pt->gpt_guid == NULL){
+			static const uint8_t zguid[GUIDSIZE] = {0};
+
+			if(memcmp(pt->gpt_guid,zguid,sizeof(zguid)) == 0){
 				return -1;
 			}
 			memcpy(guid,pt->gpt_guid,GUIDSIZE);

@@ -11,8 +11,8 @@ extern "C" {
 typedef struct ptype {
 	uint16_t code;			// [fg]disk/parted code (2 bytes)
 	const char *name;		// Human-readable name
-	uint8_t gpt_guid[GUIDSIZE];	// GPT Type GUID (16 bytes)
-	uint8_t mbr_code;		// MBR code (1 byte)
+	uint8_t gpt_guid[GUIDSIZE];	// GPT Type GUID (16 bytes) or 0s
+	uint8_t mbr_code;		// MBR code (1 byte) or 0
 } ptype;
 
 extern const ptype ptypes[];

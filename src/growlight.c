@@ -1737,7 +1737,7 @@ int rescan_device(const char *name){
 					free_device(d);
 					return 0;
 				}
-				return;
+				return 0;
 			}
 			for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
 				if(strcmp(name,(*plnk)->name) == 0){
@@ -1747,7 +1747,7 @@ int rescan_device(const char *name){
 						free_device(p);
 						return 0;
 					}
-					return;
+					return 0;
 				}
 			}
 		}

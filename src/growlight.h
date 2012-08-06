@@ -138,16 +138,16 @@ typedef struct device {
 			char *mdname;
 			transport_e transport;
 		} mddev;
-		struct {
-			// The *partition* UUID, not the filesystem/disk's.
+		struct { // Partitions are kept in on-disk order
+			// The *partition* UUID, not the filesystem's or disk's
 			char *uuid;
 			wchar_t *pname;		// Partition name, if it has
-						//  one (GPT has a UTF-16 name).
+						//  one (GPT has a UTF-16 name)
 			unsigned pnumber;	// Partition number
 			// The BIOS+MBR partition record (including the first
 			// byte, the 'boot flag') and GPT attributes.
 			unsigned long long flags;
-			enum {
+			enum { // FIXME use types from ptypes.h
 				PARTROLE_UNKNOWN,
 				PARTROLE_PRIMARY,	// BIOS+MBR
 				PARTROLE_EXTENDED,
@@ -158,6 +158,7 @@ typedef struct device {
 				PARTROLE_PC98,
 			} partrole;
 			struct device *parent;
+			uint64_t fsector,lsector;	// Inclusive, logical
 		} partdev;
 		struct {
 			transport_e transport;
