@@ -52,7 +52,7 @@ typedef struct blockobj {
 	struct blockobj *next,*prev;
 	device *d;
 	unsigned lns;			// number of lines obj would take up
-	unsigned parts;			// number of parts last we checked
+	unsigned parts;			// number of parts/empties last we checked
 	unsigned fs;			// number of filesystems...
 	unsigned mounts;		// number of mounts...
 	struct partobj *pobjs;
@@ -2453,6 +2453,7 @@ adapter_callback(controller *a, void *state){
 static void
 update_blockobj(adapterstate *as,blockobj *b,const device *d){
 	unsigned fs,mounts,parts;
+	uintmax_t sector;
 	const device *p;
 
 	fs = mounts = parts = 0;
@@ -2468,7 +2469,11 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 	if(d->swapprio != SWAP_INVALID){
 		++fs;
 	}
+	sector = 0;
 	for(p = d->parts ; p ; p = p->next){
+		if(sector != p->partdev.fsector){
+			++parts;
+		}
 		++parts;
 		if(p->mnttype){
 			++fs;
@@ -2481,6 +2486,12 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 		}
 		if(p->swapprio != SWAP_INVALID){
 			++fs;
+		}
+		sector = p->partdev.lsector + 1;
+	}
+	if(d->logsec){
+		if(sector != d->size / d->logsec){
+			++parts;
 		}
 	}
 	as->mounts += (mounts - b->mounts);
