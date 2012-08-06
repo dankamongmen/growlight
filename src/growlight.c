@@ -559,8 +559,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 						return -1;
 					}
 				}else if(sysfs_exist_p(subfd,"partition")){
-					unsigned long sz,pnum;
-					uint64_t fsect;
+					unsigned long sz,pnum,fsect;
 
 					if(sysfs_devno(subfd,&devno)){
 						close(subfd);
