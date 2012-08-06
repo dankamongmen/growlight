@@ -363,15 +363,16 @@ print_fs(const device *p,int descend){
 
 static int
 print_empty(uint64_t fsect,uint64_t lsect,size_t sectsize){
-	char buf[PREFIXSTRLEN + 1];
+	char buf[BPREFIXSTRLEN + 1];
 	int r = 0,rr;
 
+	//assert(fsect <= lsect);
 	if(sectsize == 0){
 		sectsize = 1;
 	}
 	use_terminfo_color(COLOR_BLUE,0);
 	r += rr = printf("Unused sectors %lu:%lu (%s)\n",fsect,lsect,
-			qprefix((lsect - fsect) * sectsize,1,buf,sizeof(buf),1));
+			bprefix((lsect - fsect) * sectsize,1,buf,sizeof(buf),1));
 	if(rr < 0){
 		return -1;
 	}
@@ -486,6 +487,9 @@ print_drive(const device *d,int descend){
 	r += rr = print_fs(d,descend);
 	if(rr < 0){
 		return -1;
+	}
+	if(rr > 0){
+		return r;
 	}
 	sector = 0;
 	for(p = d->parts ; p ; p = p->next){
