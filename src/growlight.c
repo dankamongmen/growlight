@@ -1731,12 +1731,13 @@ int rescan_device(const char *name){
 			if(strcmp(name,(*lnk)->name) == 0){
 				// FIXME this method might leave us with broken
 				// partition links...?
-				//if(rescan(*lnk)){
+				if(rescan(*lnk)){
 					device *d = *lnk;
 					*lnk = d->next;
 					free_device(d);
 					return 0;
-				//}
+				}
+				return;
 			}
 			for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
 				if(strcmp(name,(*plnk)->name) == 0){
@@ -1746,6 +1747,7 @@ int rescan_device(const char *name){
 						free_device(p);
 						return 0;
 					}
+					return;
 				}
 			}
 		}
