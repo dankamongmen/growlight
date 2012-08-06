@@ -4,6 +4,51 @@
 
 const ptype ptypes[] = {
 	{
+		.code = 0x0005,
+		.name = "MBR Extended",
+		.gpt_guid = NULL,
+		.mbr_code = 0x5,
+	}, {
+		.code = 0x0006,
+		.name = "FAT16",
+		.gpt_guid = NULL,
+		.mbr_code = 0x06,
+	}, {
+		.code = 0x0008,
+		.name = "AIX",
+		.gpt_guid = NULL,
+		.mbr_code = 0x08,
+	}, {
+		.code = 0x0009,
+		.name = "AIX Bootable",
+		.gpt_guid = NULL,
+		.mbr_code = 0x09,
+	}, {
+		.code = 0x000b,
+		.name = "FAT32",
+		.gpt_guid = NULL,
+		.mbr_code = 0x0b,
+	}, {
+		.code = 0x000c,
+		.name = "FAT32 LBA",
+		.gpt_guid = NULL,
+		.mbr_code = 0x0c,
+	}, {
+		.code = 0x000e,
+		.name = "FAT16 LBA",
+		.gpt_guid = NULL,
+		.mbr_code = 0x0e,
+	}, {
+		.code = 0x00a6,
+		.name = "OpenBSD",
+		.gpt_guid = NULL,
+		.mbr_code = 0xa6,
+	}, {
+		.code = 0x00ee,
+		.name = "MBR Protective",
+		.gpt_guid = NULL,
+		.mbr_code = 0xee,
+	}, {
 		.code = 0x0700,
 		.name = "Microsoft basic data",
 		.gpt_guid = "\xA2\xA0\xD0\xEB\xE5\xB9\x33\x44\x87\xC0\x68\xB6\xB7\x26\x99\xC7",
@@ -279,17 +324,17 @@ const ptype ptypes[] = {
 		" 2  XENIX root      39  Plan 9          c4  DRDOS/2 smFAT16 \n"
 		" 3  XENIX usr       3c  PMagic recovery c6  DRDOS/2 FAT16   \n"
 		" 4  Small FAT16     40  Venix 80286     84  OS/2 hidden C:  c7  Syrinx          \n"
-		" 5  Extended        41  PPC PReP Boot   85  Linux extended  da  Non-FS data     \n"
-		" 6  FAT16           42  SFS             86  NTFS volume set db  CP/M / CTOS     \n"
+		" 41  PPC PReP Boot   85  Linux extended  da  Non-FS data     \n"
+		" 42  SFS             86  NTFS volume set db  CP/M / CTOS     \n"
 		" 7  HPFS/NTFS       4d  QNX4.x          87  NTFS volume set de  Dell Utility    \n"
-		" 8  AIX             4e  QNX4.x 2nd part 88  Linux plaintext df  BootIt          \n"
-		" 9  AIX bootable    4f  QNX4.x 3rd part e1  DOS access      \n"
+		" 4e  QNX4.x 2nd part 88  Linux plaintext df  BootIt          \n"
+		" 4f  QNX4.x 3rd part e1  DOS access      \n"
 		" a  OS/2 boot mgr   50  OnTrack DM      93  Amoeba          e3  DOS R/O         \n"
-		" b  FAT32           51  OnTrackDM6 Aux1 94  Amoeba BBT      e4  SpeedStor       \n"
-		" c  FAT32 LBA       52  CP/M            9f  BSD/OS          eb  BeOS fs         \n"
-		" e  FAT16 LBA       53  OnTrackDM6 Aux3 a0  Thinkpad hib    ee  GPT             \n"
+		" 51  OnTrackDM6 Aux1 94  Amoeba BBT      e4  SpeedStor       \n"
+		" 52  CP/M            9f  BSD/OS          eb  BeOS fs         \n"
+		" 53  OnTrackDM6 Aux3 a0  Thinkpad hib    \n"
 		" f  Extended LBA    54  OnTrack DM6     ef  EFI FAT         \n"
-		" 10 OPUS            55  EZ Drive        a6  OpenBSD         f0  Lnx/PA-RISC bt  \n"
+		" 10 OPUS            55  EZ Drive        f0  Lnx/PA-RISC bt  \n"
 		" 11 Hidden FAT12    56  Golden Bow      a7  NeXTSTEP        f1  SpeedStor       \n"
 		" 12 Compaq diag     5c  Priam Edisk     f2  DOS secondary   \n"
 		" 14 Hidd Sm FAT16   61  SpeedStor       f4  SpeedStor       \n"
