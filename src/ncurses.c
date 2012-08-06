@@ -638,6 +638,22 @@ print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
 }
 
 static void
+print_empty(WINDOW *w,int *line,int rows,unsigned cols,
+			unsigned endp,int selected){
+	if(selected){
+		assert(wattrset(w,A_REVERSE|FS_COLOR) == OK);
+	}else{
+		assert(wattrset(w,FS_COLOR) == OK);
+	}
+	if(*line >= rows - !endp){
+		return;
+	}
+	mvwprintw(w,*line,START_COL,"%-*.*s",cols - (START_COL * 4) - 1,
+		cols - (START_COL * 4) - 1, " Empty space");
+	++*line;
+}
+
+static void
 print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
 		int line,int rows,unsigned cols,unsigned endp){
 	int selected;
@@ -727,6 +743,7 @@ case LAYOUT_ZPOOL:
 	++line;
 	selected = line == rb->selline;
 	if(as->expansion >= EXPANSION_PARTS){
+		uintmax_t sector = 0;
 		const device *p;
 
 		print_fs(as->expansion,bo->d,rb->win,&line,rows,cols,endp,selected);
@@ -738,6 +755,10 @@ case LAYOUT_ZPOOL:
 				return;
 			}
 			selected = line == rb->selline;
+			if(sector != p->partdev.fsector){
+				print_empty(rb->win,&line,rows,cols,endp,selected);
+				selected = line == rb->selline;
+			}
 			if(selected){
 				assert(wattrset(rb->win,A_REVERSE|PARTITION_COLOR) == OK);
 			}else{
@@ -758,6 +779,12 @@ case LAYOUT_ZPOOL:
 			++line;
 			selected = line == rb->selline;
 			print_fs(as->expansion,p,rb->win,&line,rows,cols,endp,selected);
+			sector = p->partdev.lsector + 1;
+		}
+		if(bo->d->logsec){
+			if(sector != bo->d->size / bo->d->logsec){
+				print_empty(rb->win,&line,rows,cols,endp,selected);
+			}
 		}
 	}
 }
