@@ -433,6 +433,10 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,
 		diag("Can't work with partition number %u\n",pnum);
 		return NULL;
 	}
+	if(!sz){
+		diag("Can't work with 0-sector partition\n");
+		return NULL;
+	}
 	if( (p = malloc(sizeof(*p))) ){
 		device **pre;
 
@@ -440,13 +444,13 @@ add_partition(device *d,const char *name,dev_t devno,unsigned pnum,
 		p->layout = LAYOUT_PARTITION;
 		p->swapprio = SWAP_INVALID;
 		strcpy(p->name,name);
-		// FIXME ought sort by disk order not partition number
 		for(pre = &d->parts ; *pre ; pre = &(*pre)->next){
-			if((*pre)->partdev.pnumber >= pnum){
+			if((*pre)->partdev.fsector >= fsect){
 				break;
 			}
 		}
 		p->partdev.fsector = fsect;
+		p->partdev.lsector = fsect + sz - 1;
 		p->partdev.pnumber = pnum;
 		p->partdev.parent = d;
 		p->devno = devno;
@@ -936,7 +940,6 @@ create_new_device_inner(const char *name,int recurse){
 				for(p = d->parts ; p ; p = p->next){
 					p->logsec = d->logsec;
 					p->physsec = d->physsec;
-					p->partdev.lsector = p->partdev.fsector + p->size - 1;
 					p->size *= p->logsec;
 				}
 			}
