@@ -1160,30 +1160,27 @@ push_adapters_above(reelbox *pusher,int rows,int cols,int delta){
 static int
 resize_adapter(reelbox *rb){
 	const controller *i,*curi = get_current_adapter();
-	int rows,cols,subrows,subcols;
+	int rows,cols,subrows;
 	adapterstate *is;
 
-	assert(rb && rb->as);
 	i = rb->as->c;
-	assert(i);
 	if(panel_hidden(rb->panel)){ // resize upon becoming visible
 		return OK;
 	}
 	is = rb->as;
 	getmaxyx(stdscr,rows,cols);
 	const int nlines = adapter_lines_bounded(is,rows);
-	getmaxyx(rb->win,subrows,subcols);
-	assert(subcols); // FIXME
+	subrows = getmaxy(rb->win);
 	if(nlines < subrows){ // Shrink the adapter
-		assert(werase(rb->win) == OK);
+		werase(rb->win);
 		// Without screen_update(), the werase() doesn't take effect,
 		// even if wclear() is used.
 		screen_update();
-		assert(wresize(rb->win,nlines,PAD_COLS(cols)) != ERR);
-		assert(replace_panel(rb->panel,rb->win) != ERR);
+		wresize(rb->win,nlines,PAD_COLS(cols));
+		replace_panel(rb->panel,rb->win);
 		if(rb->scrline < current_adapter->scrline){
 			rb->scrline += subrows - nlines;
-			assert(move_panel(rb->panel,rb->scrline,1) != ERR);
+			move_panel(rb->panel,rb->scrline,1);
 			pull_adapters_down(rb,rows,cols,subrows - nlines);
 		}else{
 			pull_adapters_up(rb,rows,cols,subrows - nlines);
@@ -1216,10 +1213,10 @@ resize_adapter(reelbox *rb){
 			delta = -delta;
 			rb->scrline += delta;
 			push_adapters_above(rb,rows,cols,delta);
-			assert(move_panel(rb->panel,rb->scrline,1) != ERR);
+			move_panel(rb->panel,rb->scrline,1);
 		}
-		assert(wresize(rb->win,nlines,PAD_COLS(cols)) != ERR);
-		assert(replace_panel(rb->panel,rb->win) != ERR);
+		wresize(rb->win,nlines,PAD_COLS(cols));
+		replace_panel(rb->panel,rb->win);
 	}else{ // we're not the current adapter
 		int delta;
 
