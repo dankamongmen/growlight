@@ -1672,7 +1672,7 @@ int rescan_blockdev(device *d){
 
 success:
 	close(fd);
-	diag("Updated kernel partition table\n");
+	diag("Updated kernel partition table for %s\n",d->name);
 	sync();
 	return 0;
 }
@@ -1696,8 +1696,8 @@ int unlock_growlight(void){
 }
 
 static inline device *
-rescan(device *d){
-	return create_new_device(d->name,0);
+rescan(const char *name){
+	return create_new_device(name,0);
 }
 
 int reset_adapters(void){
@@ -1726,30 +1726,16 @@ int rescan_device(const char *name){
 	}while(s);
 	for(c = controllers ; c ; c = c->next){
 		for(lnk = &c->blockdevs ; *lnk ; lnk = &(*lnk)->next){
-			//device **plnk;
-
 			if(strcmp(name,(*lnk)->name) == 0){
 				device *d = *lnk;
 				*lnk = d->next;
 				clobber_device(d);
 				// FIXME update aggregates, also
-				if(rescan(*lnk) == NULL){
+				if(rescan(name) == NULL){
 					return -1;
 				}
 				return 0;
 			}
-			/*for(plnk = &(*lnk)->parts ; *plnk ; plnk = &(*plnk)->next){
-				if(strcmp(name,(*plnk)->name) == 0){
-					// FIXME update aggregates!
-					device *p = *plnk;
-					*plnk = p->next;
-					clobber_device(p);
-					if(rescan(*plnk) == NULL){
-						return -1;
-					}
-					return 0;
-				}
-			}*/
 		}
 	}
 	if(create_new_device(name,0) == NULL){
