@@ -1650,7 +1650,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 // minus two for the top/bottom screen border, minus one for mandatory
 // window top padding).
 static const wchar_t *helps[] = {
-	L"(q)uit			ctrl+'L': redraw the screen",
+	L"(q)uit                        ctrl+'L': redraw the screen",
 	L"'e': view environment details 'h': toggle this help display",
 	L"'v': view selection details   'l': view recent diagnostics",
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
