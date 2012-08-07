@@ -72,17 +72,14 @@ typedef struct adapterstate {
 	unsigned mounts,fs,parts,devs;
 	enum {
 		EXPANSION_NONE,
-		EXPANSION_DEVS,
-		EXPANSION_PARTS,
-		EXPANSION_FS,
-		EXPANSION_MOUNTS,
+		EXPANSION_FULL,
 	} expansion;
 	struct adapterstate *next,*prev;
 	blockobj *bobjs;
 	reelbox *rb;
 } adapterstate;
 
-#define EXPANSION_MAX EXPANSION_MOUNTS
+#define EXPANSION_MAX EXPANSION_FULL
 
 static char statusmsg[73];
 static unsigned count_adapters;
@@ -118,35 +115,24 @@ static int
 lines_for_adapter(const struct adapterstate *as){
 	int l = 2;
 
-	switch(as->expansion){ // Intentional fallthrus
-		case EXPANSION_MOUNTS:
-			l += as->mounts;
-		case EXPANSION_FS:
-			l += as->fs;
-		case EXPANSION_PARTS:
-			l += as->parts;
-		case EXPANSION_DEVS:
-			l += as->devs;
-		case EXPANSION_NONE:
-			return l;
+	if(as->expansion != EXPANSION_NONE){
+		l += as->mounts;
+		l += as->fs;
+		l += as->parts;
+		l += as->devs;
 	}
-	assert(0);
-	return -1;
+	return l;
 }
 
 static int
 device_lines(int expa,const blockobj *bo){
 	int l = 0;
 
-	switch(expa){ // Intentional fallthroughs
-		case EXPANSION_MOUNTS:
-			l += bo->mounts;
-		case EXPANSION_FS:
-			l += bo->fs;
-		case EXPANSION_PARTS:
-			l += bo->parts;
-		case EXPANSION_DEVS:
-			++l;
+	if(expa != EXPANSION_NONE){
+		l += bo->mounts;
+		l += bo->fs;
+		l += bo->parts;
+		++l;
 	}
 	return l;
 }
@@ -541,8 +527,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 		assert(wprintw(w,"]") != ERR);
 		assert(wmove(w,0,cols - 4) != ERR);
 		assert(wattron(w,A_BOLD) == OK);
-		assert(waddwstr(w,as->expansion == EXPANSION_MAX ? L"[-]" :
-					as->expansion == 0 ? L"[+]" : L"[±]") != ERR);
+		waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
 		assert(wattron(w,attrs) != ERR);
 		assert(wattroff(w,A_REVERSE) != ERR);
 	}
@@ -575,13 +560,10 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 }
 
 static void
-print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
-			unsigned cols,unsigned endp,int selected){
+print_fs(const device *d,WINDOW *w,int *line,int rows,unsigned cols,
+					unsigned endp,int selected){
 	char buf[PREFIXSTRLEN + 1];
 
-	if(expansion < EXPANSION_FS){
-		return;
-	}
 	if(selected){
 		assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
 	}else{
@@ -613,9 +595,6 @@ print_fs(int expansion,const device *d,WINDOW *w,int *line,int rows,
 		if(++*line >= rows - !endp){
 			return;
 		}
-	}
-	if(expansion < EXPANSION_MOUNTS){
-		return;
 	}
 	if(d->mnt){
 		char buf[cols + 1];
@@ -668,10 +647,12 @@ print_empty(WINDOW *w,int *line,int rows,unsigned cols,
 }
 
 static void
-print_dev(const reelbox *rb,const adapterstate *as,const blockobj *bo,
-		int line,int rows,unsigned cols,unsigned endp){
-	int selected;
+print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
+					unsigned cols,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
+	uintmax_t sector = 0;
+	const device *p;
+	int selected;
 
 	if(line >= rows - !endp){
 		return;
@@ -756,52 +737,47 @@ case LAYOUT_ZPOOL:
 	}
 	++line;
 	selected = line == rb->selline;
-	if(as->expansion >= EXPANSION_PARTS){
-		uintmax_t sector = 0;
-		const device *p;
+	print_fs(bo->d,rb->win,&line,rows,cols,endp,selected);
+	for(p = bo->d->parts ; p ; p = p->next){
+		char pname[cols];
+		unsigned x,y __attribute__ ((unused));
 
-		print_fs(as->expansion,bo->d,rb->win,&line,rows,cols,endp,selected);
-		for(p = bo->d->parts ; p ; p = p->next){
-			char pname[cols];
-			unsigned x,y __attribute__ ((unused));
-
-			if(line >= rows - !endp){
-				return;
-			}
-			selected = line == rb->selline;
-			if(sector != p->partdev.fsector){
-				print_empty(rb->win,&line,rows,cols,endp,
-						selected,sector,
-						p->partdev.fsector - 1,bo->d->logsec);
-				selected = line == rb->selline;
-			}
-			if(selected){
-				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
-			}else{
-				assert(wattrset(rb->win,COLOR_PAIR(PARTITION_COLOR)) == OK);
-			}
-			wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
-			mvwprintw(rb->win,line,START_COL,
-						" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
-						p->name,
-						p->partdev.uuid ? p->partdev.uuid : "",
-						qprefix(p->size,1,buf,sizeof(buf),0),
-						partrole_str(p->partdev.partrole,p->partdev.flags),
-						pname);
-			getyx(rb->win,y,x);
-			if(x != cols){
-				assert(wprintw(rb->win,"%-*.*s",cols - x - 1,cols - x - 1,"") != ERR);
-			}
-			++line;
-			selected = line == rb->selline;
-			print_fs(as->expansion,p,rb->win,&line,rows,cols,endp,selected);
-			sector = p->partdev.lsector + 1;
+		if(line >= rows - !endp){
+			return;
 		}
-		if(bo->d->logsec){
-			if(sector != bo->d->size / bo->d->logsec){
-				print_empty(rb->win,&line,rows,cols,endp,
-						selected,sector,bo->d->size / bo->d->logsec,bo->d->logsec);
-			}
+		selected = line == rb->selline;
+		if(sector != p->partdev.fsector){
+			print_empty(rb->win,&line,rows,cols,endp,
+					selected,sector,
+					p->partdev.fsector - 1,bo->d->logsec);
+			selected = line == rb->selline;
+		}
+		if(selected){
+			assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+		}else{
+			assert(wattrset(rb->win,COLOR_PAIR(PARTITION_COLOR)) == OK);
+		}
+		wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
+		mvwprintw(rb->win,line,START_COL,
+					" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
+					p->name,
+					p->partdev.uuid ? p->partdev.uuid : "",
+					qprefix(p->size,1,buf,sizeof(buf),0),
+					partrole_str(p->partdev.partrole,p->partdev.flags),
+					pname);
+		getyx(rb->win,y,x);
+		if(x != cols){
+			assert(wprintw(rb->win,"%-*.*s",cols - x - 1,cols - x - 1,"") != ERR);
+		}
+		++line;
+		selected = line == rb->selline;
+		print_fs(p,rb->win,&line,rows,cols,endp,selected);
+		sector = p->partdev.lsector + 1;
+	}
+	if(bo->d->logsec){
+		if(sector != bo->d->size / bo->d->logsec){
+			print_empty(rb->win,&line,rows,cols,endp,
+					selected,sector,bo->d->size / bo->d->logsec,bo->d->logsec);
 		}
 	}
 }
@@ -817,14 +793,14 @@ print_adapter_devs(const adapterstate *as,int rows,int cols,
 	if((rb = as->rb) == NULL){
 		return;
 	}
-	if(as->expansion < EXPANSION_DEVS){
+	if(as->expansion == EXPANSION_NONE){
 		return;
 	}
 	// First, print the selected device (if there is one), and those above
 	cur = rb->selected;
 	line = rb->selline;
 	while(cur && line + (long)device_lines(as->expansion,cur) >= !!topp){
-		print_dev(rb,as,cur,line,rows,cols,endp);
+		print_dev(rb,cur,line,rows,cols,endp);
 		// here we traverse, then account...
 		if( (cur = cur->prev) ){
 			line -= device_lines(as->expansion,cur);
@@ -834,7 +810,7 @@ print_adapter_devs(const adapterstate *as,int rows,int cols,
 		(long)device_lines(as->expansion,rb->selected)) : -(long)topp + 1;
 	cur = (rb->selected ? rb->selected->next : as->bobjs);
 	while(cur && line < rows){
-		print_dev(rb,as,cur,line,rows,cols,endp);
+		print_dev(rb,cur,line,rows,cols,endp);
 		// here, we account before we traverse. this is correct.
 		line += device_lines(as->expansion,cur);
 		cur = cur->next;
@@ -1939,15 +1915,9 @@ node_lines(int e,const blockobj *l){
 		return 0;
 	}
 	lns = 1;
-	if(e > EXPANSION_DEVS){
-		lns += l->parts;
-		if(e > EXPANSION_PARTS){
-			lns += l->fs;
-			if(e > EXPANSION_FS){
-				lns += l->mounts;
-			}
-		}
-	}
+	lns += l->parts;
+	lns += l->fs;
+	lns += l->mounts;
 	return lns;
 }
 
@@ -2039,7 +2009,7 @@ expand_adapter_locked(void){
 		return 0;
 	}
 	is = current_adapter->as;
-	if(is->expansion == EXPANSION_MAX){
+	if(is->expansion == EXPANSION_FULL){
 		return 0;
 	}
 	++is->expansion;
@@ -2060,7 +2030,7 @@ collapse_adapter_locked(void){
 		return 0;
 	}
 	is = current_adapter->as;
-	if(is->expansion == 0){
+	if(is->expansion == EXPANSION_NONE){
 		return 0;
 	}
 	--is->expansion;
