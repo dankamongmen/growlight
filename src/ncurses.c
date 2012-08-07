@@ -55,7 +55,6 @@ typedef struct blockobj {
 	unsigned parts;			// number of parts/empties last we checked
 	unsigned fs;			// number of filesystems...
 	unsigned mounts;		// number of mounts...
-	struct partobj *pobjs;
 } blockobj;
 
 typedef struct reelbox {
@@ -65,6 +64,7 @@ typedef struct reelbox {
 	struct adapterstate *as;
 	int scrline,selline;
 	blockobj *selected;
+	struct partobj *pselected;
 } reelbox;
 
 typedef struct adapterstate {
@@ -1661,6 +1661,8 @@ static const wchar_t *helps[] = {
 	L"'W'ipe master boot record     'B'ad blocks check",
 	L"'n'ew partition               'd'elete partition",
 	L"'s'et partition attributes    'M'ake new filesystem",
+	L"'f'sck filesystem             'w'ipe filesystem",
+	L"set 'U'UID                    set 'L'abel/name",
 	NULL
 };
 
