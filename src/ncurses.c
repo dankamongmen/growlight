@@ -646,6 +646,54 @@ print_empty(WINDOW *w,int *line,int rows,unsigned cols,
 }*/
 
 static void
+print_blockbar(WINDOW *w,const device *d,int y __attribute__ ((unused)),
+		int sx __attribute__ ((unused)),
+		int ex __attribute__ ((unused)),int selected){
+	uintmax_t sector = 0;
+	const device *p;
+
+	// Print the contents of the block device
+	// FIXME raw drives!
+	//print_fs(bo->d,rb->win,&line,rows,cols,endp,selected);
+	for(p = d->parts ; p ; p = p->next){
+		//char pname[ex - sx + 1];
+
+		if(sector != p->partdev.fsector){
+			waddch(w,L'E');
+			/*
+			print_empty(rb->win,&line,rows,cols,endp,
+					selected,sector,
+					p->partdev.fsector - 1,bo->d->logsec);
+			*/
+		}
+		if(selected){
+			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+		}else{
+			assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
+		}
+		//wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
+			waddch(w,L'P');
+		/*mvwprintw(rb->win,line,START_COL,
+					" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
+					p->name,
+					p->partdev.uuid ? p->partdev.uuid : "",
+					qprefix(p->size,1,buf,sizeof(buf),0),
+					partrole_str(p->partdev.partrole,p->partdev.flags),
+					pname);
+		print_fs(p,rb->win,&line,rows,cols,endp,selected);
+		*/
+		sector = p->partdev.lsector + 1;
+	}
+	if(d->logsec){
+		if(sector != d->size / d->logsec){
+			waddch(w,L'E');
+			/*print_empty(win,&line,rows,cols,endp,
+					selected,sector,d->size / d->logsec,d->logsec);*/
+		}
+	}
+}
+
+static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 					unsigned cols,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
@@ -768,6 +816,10 @@ case LAYOUT_ZPOOL:
 		return;
 	}
 	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
+
+	print_blockbar(rb->win,bo->d,line,START_COL + 10 + 2,
+				cols - START_COL,selected);
+
 	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
 	if(++line >= rows - !endp){
 		return;
@@ -776,53 +828,6 @@ case LAYOUT_ZPOOL:
 	mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
 	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
 	++line;
-	/*
-	uintmax_t sector = 0;
-	const device *p;
-	print_fs(bo->d,rb->win,&line,rows,cols,endp,selected);
-	for(p = bo->d->parts ; p ; p = p->next){
-		char pname[cols];
-		unsigned x,y __attribute__ ((unused));
-
-		if(line >= rows - !endp){
-			return;
-		}
-		selected = line == rb->selline;
-		if(sector != p->partdev.fsector){
-			print_empty(rb->win,&line,rows,cols,endp,
-					selected,sector,
-					p->partdev.fsector - 1,bo->d->logsec);
-			selected = line == rb->selline;
-		}
-		if(selected){
-			assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
-		}else{
-			assert(wattrset(rb->win,COLOR_PAIR(PARTITION_COLOR)) == OK);
-		}
-		wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
-		mvwprintw(rb->win,line,START_COL,
-					" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
-					p->name,
-					p->partdev.uuid ? p->partdev.uuid : "",
-					qprefix(p->size,1,buf,sizeof(buf),0),
-					partrole_str(p->partdev.partrole,p->partdev.flags),
-					pname);
-		getyx(rb->win,y,x);
-		if(x != cols){
-			assert(wprintw(rb->win,"%-*.*s",cols - x - 1,cols - x - 1,"") != ERR);
-		}
-		++line;
-		selected = line == rb->selline;
-		print_fs(p,rb->win,&line,rows,cols,endp,selected);
-		sector = p->partdev.lsector + 1;
-	}
-	if(bo->d->logsec){
-		if(sector != bo->d->size / bo->d->logsec){
-			print_empty(rb->win,&line,rows,cols,endp,
-					selected,sector,bo->d->size / bo->d->logsec,bo->d->logsec);
-		}
-	}
-	*/
 }
 
 static void
