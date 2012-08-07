@@ -69,6 +69,7 @@ typedef struct reelbox {
 
 typedef struct adapterstate {
 	controller *c;
+	unsigned devdisps;
 	unsigned mounts,fs,parts,devs;
 	enum {
 		EXPANSION_NONE,
@@ -116,9 +117,7 @@ lines_for_adapter(const struct adapterstate *as){
 	int l = 2;
 
 	if(as->expansion != EXPANSION_NONE){
-		l += as->mounts;
-		l += as->fs;
-		l += as->parts;
+		l += as->devdisps * 2;
 		l += as->devs;
 	}
 	return l;
@@ -129,9 +128,9 @@ device_lines(int expa,const blockobj *bo){
 	int l = 0;
 
 	if(expa != EXPANSION_NONE){
-		l += bo->mounts;
-		l += bo->fs;
-		l += bo->parts;
+		if(bo->d->size){
+			l += 2;
+		}
 		++l;
 	}
 	return l;
@@ -366,7 +365,7 @@ setup_colors(void){
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
-	assert(init_pair(OPTICAL_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(SSD_COLOR,COLOR_CYAN,-1) == OK);
@@ -559,7 +558,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 	}
 }
 
-static void
+/*static void
 print_fs(const device *d,WINDOW *w,int *line,int rows,unsigned cols,
 					unsigned endp,int selected){
 	char buf[PREFIXSTRLEN + 1];
@@ -644,14 +643,12 @@ print_empty(WINDOW *w,int *line,int rows,unsigned cols,
 			bprefix((lsect - fsect) * sectsize,1,buf,sizeof(buf),1));
 #undef STR
 	++*line;
-}
+}*/
 
 static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 					unsigned cols,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
-	uintmax_t sector = 0;
-	const device *p;
 	int selected;
 
 	if(line >= rows - !endp){
@@ -663,9 +660,9 @@ case LAYOUT_NONE:
 	if(bo->d->blkdev.realdev){
 		if(bo->d->blkdev.removable){
 			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 			}else{
-				assert(wattrset(rb->win,COLOR_PAIR(OPTICAL_COLOR)) == OK);
+				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 			}
 		}else if(bo->d->blkdev.rotate){
 			if(selected){
@@ -700,9 +697,9 @@ case LAYOUT_NONE:
 		break;
 case LAYOUT_MDADM:
 	if(selected){
-		assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
 	}else{
-		assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
 	}
 	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
@@ -737,6 +734,13 @@ case LAYOUT_ZPOOL:
 	}
 	++line;
 	selected = line == rb->selline;
+	if(bo->d->size == 0){
+		return;
+	}
+	line += 2;
+	/*
+	uintmax_t sector = 0;
+	const device *p;
 	print_fs(bo->d,rb->win,&line,rows,cols,endp,selected);
 	for(p = bo->d->parts ; p ; p = p->next){
 		char pname[cols];
@@ -780,6 +784,7 @@ case LAYOUT_ZPOOL:
 					selected,sector,bo->d->size / bo->d->logsec,bo->d->logsec);
 		}
 	}
+	*/
 }
 
 static void
@@ -1918,9 +1923,9 @@ node_lines(int e,const blockobj *l){
 		return 0;
 	}
 	lns = 1;
-	lns += l->parts;
-	lns += l->fs;
-	lns += l->mounts;
+	if(l->d->size){
+		lns += 2;
+	}
 	return lns;
 }
 
@@ -2532,12 +2537,6 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 			++parts;
 		}
 	}
-	as->mounts += (mounts - b->mounts);
-	as->parts += (parts - b->parts);
-	as->fs += (fs - b->fs);
-	b->fs = fs;
-	b->mounts = mounts;
-	b->parts = parts;
 	b->lns = node_lines(as->expansion,b);
 }
 
@@ -2570,6 +2569,9 @@ block_callback(device *d,void *v){
 				b->prev = NULL;
 				as->bobjs->prev = b;
 				as->bobjs = b;
+			}
+			if(d->size){
+				++as->devdisps;
 			}
 			++as->devs;
 		}
