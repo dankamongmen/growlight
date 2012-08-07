@@ -1650,19 +1650,20 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 // minus two for the top/bottom screen border, minus one for mandatory
 // window top padding).
 static const wchar_t *helps[] = {
-	L"'q': quit			ctrl+'L': redraw the screen",
+	L"(q)uit			ctrl+'L': redraw the screen",
 	L"'e': view environment details 'h': toggle this help display",
 	L"'v': view selection details   'l': view recent diagnostics",
 	L"'k'/'↑': previous selection   'j'/'↓': next selection",
-	L"'-'/'←': collapse selection   '+'/'→': expand selection",
+	L"'-'/'←': collapse adapter     '+'/'→': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
-	L"'R'escan selection            re'S'et selection",
-	L"'m'ake partition table        'r'emove partition table",
-	L"'W'ipe master boot record     'B'ad blocks check",
-	L"'n'ew partition               'd'elete partition",
-	L"'s'et partition attributes    'M'ake new filesystem",
-	L"'f'sck filesystem             'w'ipe filesystem",
-	L"set 'U'UID                    set 'L'abel/name",
+	L"(R)escan selection            re(S)et selection",
+	L"(m)ake partition table        (r)emove partition table",
+	L"(W)ipe master boot record     (B)ad blocks check",
+	L"(n)ew partition               (d)elete partition",
+	L"(s)et partition attributes    (M)ake new filesystem",
+	L"(f)sck filesystem             (w)ipe filesystem",
+	L"set (U)UID                    set (L)abel/name",
+	L"m(o)unt filesystem            (u)nmount filesystem",
 	NULL
 };
 
@@ -2209,6 +2210,18 @@ new_filesystem(void){
 }
 
 static void
+mount_filesystem(void){
+	// FIXME get current partition, empty space, or blockobj
+	// FIXME make that fucker
+}
+
+static void
+umount_filesystem(void){
+	// FIXME get current partition, empty space, or blockobj
+	// FIXME make that fucker
+}
+
+static void
 handle_ncurses_input(WINDOW *w){
 	int ch;
 
@@ -2358,6 +2371,18 @@ handle_ncurses_input(WINDOW *w){
 			case 'M':{
 				pthread_mutex_lock(&bfl);
 				new_filesystem();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'o':{
+				pthread_mutex_lock(&bfl);
+				mount_filesystem();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'u':{
+				pthread_mutex_lock(&bfl);
+				umount_filesystem();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
