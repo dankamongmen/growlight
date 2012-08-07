@@ -680,7 +680,7 @@ case LAYOUT_NONE:
 			}else{
 				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
 			}
-			rolestr = "ssd";
+			rolestr = "solidstate";
 		}
 	}else{
 		if(selected){
@@ -747,9 +747,13 @@ case LAYOUT_ZPOOL:
 		return;
 	}
 
+	mvwprintw(rb->win,line,START_COL,"%11.11s",bo->d->name);
+	mvwprintw(rb->win,line - 1,START_COL,"%11.11s","");
 	// Print summary below device name, in the same color
-	if(rolestr){
-		mvwprintw(rb->win,line,START_COL,"%s",rolestr);	
+	if(line + 1 < rows - !endp){
+		if(rolestr){
+			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
+		}
 	}
 
 	if(selected){
@@ -757,19 +761,19 @@ case LAYOUT_ZPOOL:
 	}else{
 		assert(wattrset(rb->win,COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}
-	mvwaddch(rb->win,line,START_COL + 10,ACS_ULCORNER);
-	mvwhline(rb->win,line,START_COL + 1 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
+	mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
 	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
 	if(++line >= rows - !endp){
 		return;
 	}
-	mvwaddch(rb->win,line,START_COL + 10,ACS_VLINE);
+	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
 	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
 	if(++line >= rows - !endp){
 		return;
 	}
-	mvwaddch(rb->win,line,START_COL + 10,ACS_LLCORNER);
-	mvwhline(rb->win,line,START_COL + 1 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_LLCORNER);
+	mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
 	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
 	++line;
 	/*
