@@ -117,7 +117,7 @@ lines_for_adapter(const struct adapterstate *as){
 	int l = 2;
 
 	if(as->expansion != EXPANSION_NONE){
-		l += as->devdisps * 2;
+		l += as->devdisps * 3;
 		l += as->devs;
 	}
 	return l;
@@ -129,7 +129,7 @@ device_lines(int expa,const blockobj *bo){
 
 	if(expa != EXPANSION_NONE){
 		if(bo->d->size){
-			l += 2;
+			l += 3;
 		}
 		++l;
 	}
@@ -649,11 +649,13 @@ static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 					unsigned cols,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
+	const char *rolestr;
 	int selected;
 
 	if(line >= rows - !endp){
 		return;
 	}
+	rolestr = NULL;
 	selected = line == rb->selline;
 	switch(bo->d->layout){
 case LAYOUT_NONE:
@@ -664,18 +666,21 @@ case LAYOUT_NONE:
 			}else{
 				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 			}
+			rolestr = "removable";
 		}else if(bo->d->blkdev.rotate){
 			if(selected){
 				assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(ROTATE_COLOR)) == OK);
 			}else{
 				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
 			}
+			rolestr = "ferromag";
 		}else{
 			if(selected){
 				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(SSD_COLOR)) == OK);
 			}else{
 				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
 			}
+			rolestr = "ssd";
 		}
 	}else{
 		if(selected){
@@ -683,8 +688,9 @@ case LAYOUT_NONE:
 		}else{
 			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
 		}
+		rolestr = "virtual";
 	}
-	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -693,15 +699,16 @@ case LAYOUT_NONE:
 				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
-				cols - 77,cols - 77,"");
+				cols - 78,cols - 78,"");
 		break;
 case LAYOUT_MDADM:
+	rolestr = "mdraid";
 	if(selected){
 		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
 	}
-	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -710,17 +717,18 @@ case LAYOUT_MDADM:
 				"n/a",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->mddev.transport),
-				cols - 77,cols - 77,"");
+				cols - 78,cols - 78,"");
 		break;
 case LAYOUT_PARTITION:
 		break;
 case LAYOUT_ZPOOL:
+	rolestr = "zpool";
 	if(selected){
 		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	}
-	mvwprintw(rb->win,line,START_COL,"%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				(uintmax_t)bo->d->zpool.zpoolver,
@@ -729,15 +737,41 @@ case LAYOUT_ZPOOL:
 				"spa",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->zpool.transport),
-				cols - 77,cols - 77,"");
+				cols - 78,cols - 78,"");
 		break;
 	}
-	++line;
-	selected = line == rb->selline;
+	if(++line >= rows - !endp){
+		return;
+	}
 	if(bo->d->size == 0){
 		return;
 	}
-	line += 2;
+
+	// Print summary below device name, in the same color
+	if(rolestr){
+		mvwprintw(rb->win,line,START_COL,"%s",rolestr);	
+	}
+
+	if(selected){
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+	}else{
+		assert(wattrset(rb->win,COLOR_PAIR(PARTITION_COLOR)) == OK);
+	}
+	mvwaddch(rb->win,line,START_COL + 10,ACS_ULCORNER);
+	mvwhline(rb->win,line,START_COL + 1 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
+	if(++line >= rows - !endp){
+		return;
+	}
+	mvwaddch(rb->win,line,START_COL + 10,ACS_VLINE);
+	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
+	if(++line >= rows - !endp){
+		return;
+	}
+	mvwaddch(rb->win,line,START_COL + 10,ACS_LLCORNER);
+	mvwhline(rb->win,line,START_COL + 1 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
+	++line;
 	/*
 	uintmax_t sector = 0;
 	const device *p;
