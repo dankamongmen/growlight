@@ -645,11 +645,21 @@ print_empty(WINDOW *w,int *line,int rows,unsigned cols,
 	++*line;
 }*/
 
+static inline unsigned
+sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos){
+	unsigned u = ((sec * d->logsec) / (float)d->size) * (ex - sx - 1) + sx;
+		       
+	if(u > ++*sectpos){
+		*sectpos = u;
+	};
+	return *sectpos;
+}
+
 static void
-print_blockbar(WINDOW *w,const device *d,int y __attribute__ ((unused)),
-		int sx __attribute__ ((unused)),
-		int ex __attribute__ ((unused)),int selected){
+print_blockbar(WINDOW *w,const device *d,int y,
+		int sx,int ex,int selected){
 	uintmax_t sector = 0;
+	unsigned off = 0;
 	const device *p;
 
 	// Print the contents of the block device
@@ -659,7 +669,7 @@ print_blockbar(WINDOW *w,const device *d,int y __attribute__ ((unused)),
 		//char pname[ex - sx + 1];
 
 		if(sector != p->partdev.fsector){
-			waddch(w,L'E');
+			mvwaddch(w,y,sectpos(d,p->partdev.fsector - 1,sx,ex,&off),L'E');
 			/*
 			print_empty(rb->win,&line,rows,cols,endp,
 					selected,sector,
@@ -672,7 +682,7 @@ print_blockbar(WINDOW *w,const device *d,int y __attribute__ ((unused)),
 			assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
 		}
 		//wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
-			waddch(w,L'P');
+		mvwaddch(w,y,sectpos(d,p->partdev.fsector - 1,sx,ex,&off),L'P');
 		/*mvwprintw(rb->win,line,START_COL,
 					" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
 					p->name,
@@ -684,9 +694,9 @@ print_blockbar(WINDOW *w,const device *d,int y __attribute__ ((unused)),
 		*/
 		sector = p->partdev.lsector + 1;
 	}
-	if(d->logsec){
+	if(d->logsec && d->size){
 		if(sector != d->size / d->logsec){
-			waddch(w,L'E');
+			mvwaddch(w,y,sectpos(d,d->size / d->logsec - 1,sx,ex,&off),L'E');
 			/*print_empty(win,&line,rows,cols,endp,
 					selected,sector,d->size / d->logsec,d->logsec);*/
 		}
