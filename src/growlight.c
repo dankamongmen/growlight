@@ -762,7 +762,6 @@ create_new_device_inner(const char *name,int recurse){
 	device *d;
 	int fd,r;
 
-	diag("Discovering %s...\n",name);
 	if(strlen(name) >= sizeof(d->name)){
 		diag("Bad name: %s\n",name);
 		return NULL;
@@ -954,7 +953,6 @@ create_new_device_inner(const char *name,int recurse){
 	d->next = d->c->blockdevs;
 	d->c->blockdevs = d;
 	d->uistate = gui->block_event(d,d->uistate);
-	diag("Done with %s!\n",name);
 	return d;
 }
 
