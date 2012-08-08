@@ -656,65 +656,59 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 static void
 print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 	uintmax_t sector = 0;
-	unsigned off = 0;
+	unsigned off = 0,ch;
 	const device *p;
 
+	int PNUMFIXME = '0';
 	// Print the contents of the block device
-	// FIXME raw drives!
-	//print_fs(bo->d,rb->win,&line,rows,cols,endp,selected);
+	// FIXME handle raw drives! they are not entirely empty!
 	for(p = d->parts ; p ; p = p->next){
-		unsigned ch;
-		//char pname[ex - sx + 1];
-
 		if(sector != p->partdev.fsector){
 			if(selected){
 				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}else{
 				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}
-			mvwaddch(w,y,sectpos(d,p->partdev.fsector - 1,sx,ex,&off),L'E');
-			/*
-			print_empty(rb->win,&line,rows,cols,endp,
-					selected,sector,
-					p->partdev.fsector - 1,bo->d->logsec);
-			*/
+			mvwaddch(w,y,sectpos(d,sector,sx,ex,&off),'E');
+			ch = ((p->partdev.fsector - 1 - sector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
+			while(ch--){
+				if(++off >= (unsigned)ex){
+					break;
+				}
+				mvwaddch(w,y,off,L'E');
+			}
 		}
 		if(selected){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
 		}else{
 			assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
 		}
-		//wcstombs(pname,p->partdev.pname ? p->partdev.pname : L"n/a",sizeof(pname));
-		mvwaddch(w,y,sectpos(d,p->partdev.fsector - 1,sx,ex,&off),ACS_BLOCK);
+		mvwaddch(w,y,sectpos(d,p->partdev.fsector - 1,sx,ex,&off),PNUMFIXME);
 		ch = ((p->partdev.lsector - p->partdev.fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
 		while(ch--){
 			if(++off >= (unsigned)ex){
 				break;
 			}
-			mvwaddch(w,y,off,ACS_BLOCK);
+			mvwaddch(w,y,off,PNUMFIXME);
 		}
-		/*mvwprintw(rb->win,line,START_COL,
-					" %-10.10s %-36.36s " PREFIXFMT " %-5.5s %-13.13s",
-					p->name,
-					p->partdev.uuid ? p->partdev.uuid : "",
-					qprefix(p->size,1,buf,sizeof(buf),0),
-					partrole_str(p->partdev.partrole,p->partdev.flags),
-					pname);
-		print_fs(p,rb->win,&line,rows,cols,endp,selected);
-		*/
 		sector = p->partdev.lsector + 1;
+		++PNUMFIXME;
 	}
 	if(d->logsec && d->size){
 		if(sector != d->size / d->logsec){
-
 			if(selected){
 				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}else{
 				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}
-			mvwaddch(w,y,sectpos(d,d->size / d->logsec - 1,sx,ex,&off),L'E');
-			/*print_empty(win,&line,rows,cols,endp,
-					selected,sector,d->size / d->logsec,d->logsec);*/
+			mvwaddch(w,y,sectpos(d,sector,sx,ex,&off),'E');
+			ch = ((d->size / d->logsec - 1 - sector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
+			while(ch--){
+				if(++off >= (unsigned)ex){
+					break;
+				}
+				mvwaddch(w,y,off,'E');
+			}
 		}
 	}
 	if(selected){
@@ -847,7 +841,6 @@ case LAYOUT_ZPOOL:
 		return;
 	}
 	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
-	mvwhline(rb->win,line,START_COL + 2 + 10,ACS_BLOCK,cols - START_COL * 2 - 2 - 10);
 
 	print_blockbar(rb->win,bo->d,line,START_COL + 10 + 2,
 				cols - START_COL,selected);
