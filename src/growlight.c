@@ -507,6 +507,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 		}
 		return 1;
 	}
+	// FIXME move all this crap into the loop below
 	if(sysfs_exist_p(fd,"loop")){
 		if((d->model = get_sysfs_string(fd,"loop/backing_file")) == NULL){
 			diag("Couldn't get backing file: %s\n",name);
@@ -537,6 +538,8 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 				d->revision ? d->revision : "n/a",
 				d->blkdev.serial ? d->blkdev.serial : "n/a");
 		close(sdevfd);
+		// sysfs returns 1 for loop, mdadm, some other things...annoying :/ this
+		// does not apply to the physical/logical sector sizes (see below)
 		if(get_sysfs_bool(fd,"queue/rotational",&b)){
 			diag("Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
 		}else{
@@ -547,7 +550,18 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 		int subfd;
 
 		if(dire->d_type == DT_DIR){
-			if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+			if(strcmp(dire->d_name,"queue") == 0){
+				if(get_sysfs_uint(fd,"queue/physical_block_size",&ul)){
+					diag("Couldn't get physical sector for %s (%s?)\n",name,strerror(errno));
+				}else{
+					d->physsec = ul;
+				}
+				if(get_sysfs_uint(fd,"queue/logical_block_size",&ul)){
+					diag("Couldn't get logical sector for %s (%s?)\n",name,strerror(errno));
+				}else{
+					d->logsec = ul;
+				}
+			}else if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
 				dev_t devno;
 
 				// Check for "md" to determine if it's an MDADM device
@@ -929,18 +943,6 @@ create_new_device_inner(const char *name,int recurse){
 					clobber_device(p);
 				}
 			}
-			if(d->logsec || d->physsec){
-				device *p;
-
-				verbf("\tLogical sector size: %uB Physical sector size: %uB\n",
-						d->logsec,d->physsec);
-				d->size *= d->logsec;
-				for(p = d->parts ; p ; p = p->next){
-					p->logsec = d->logsec;
-					p->physsec = d->physsec;
-					p->size *= p->logsec;
-				}
-			}
 			blkid_free_probe(pr);
 		}else if(!d->blkdev.removable || errno != ENOMEDIUM){
 			diag("Couldn't probe %s (%s?)\n",name,strerror(errno));
@@ -948,6 +950,18 @@ create_new_device_inner(const char *name,int recurse){
 			return NULL;
 		}else{
 			verbf("\tDevice is unloaded/inaccessible\n");
+		}
+	}
+	if(d->logsec || d->physsec){
+		device *p;
+
+		verbf("\tLogical sector size: %uB Physical sector size: %uB\n",
+				d->logsec,d->physsec);
+		d->size *= d->logsec;
+		for(p = d->parts ; p ; p = p->next){
+			p->logsec = d->logsec;
+			p->physsec = d->physsec;
+			p->size *= p->logsec;
 		}
 	}
 	d->next = d->c->blockdevs;
