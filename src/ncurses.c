@@ -51,10 +51,6 @@ struct partobj;
 typedef struct blockobj {
 	struct blockobj *next,*prev;
 	device *d;
-	unsigned lns;			// number of lines obj would take up
-	unsigned parts;			// number of parts/empties last we checked
-	unsigned fs;			// number of filesystems...
-	unsigned mounts;		// number of mounts...
 } blockobj;
 
 typedef struct reelbox {
@@ -69,8 +65,7 @@ typedef struct reelbox {
 
 typedef struct adapterstate {
 	controller *c;
-	unsigned devdisps;
-	unsigned mounts,fs,parts,devs;
+	unsigned devdisps,devs;
 	enum {
 		EXPANSION_NONE,
 		EXPANSION_FULL,
@@ -2014,7 +2009,7 @@ node_lines(int e,const blockobj *l){
 	return lns;
 }
 
-// Recompute ->lns values for all nodes, and return the number of lines of
+// Recompute lns values for all nodes, and return the number of lines of
 // output available before and after the current selection. If there is no
 // current selection, the return value ought not be ascribed meaning. O(N) on
 // the number of drives, not just those visible -- unacceptable! FIXME
@@ -2027,14 +2022,16 @@ recompute_lines(adapterstate *is,int *before,int *after){
 	*before = -1;
 	newsel = 1;
 	for(l = is->bobjs ; l ; l = l->next){
-		l->lns = node_lines(is->expansion,l);
+		unsigned lns;
+
+		lns = node_lines(is->expansion,l);
 		if(l == is->rb->selected){
 			*before = newsel;
-			*after = l->lns ? l->lns - 1 : 0;
+			*after = lns ? lns - 1 : 0;
 		}else if(*after >= 0){
-			*after += l->lns;
+			*after += lns;
 		}else{
-			newsel += l->lns;
+			newsel += lns;
 		}
 	}
 }
@@ -2613,7 +2610,7 @@ adapter_callback(controller *a, void *state){
 }
 
 static void
-update_blockobj(adapterstate *as,blockobj *b,const device *d){
+update_blockobj(const device *d){
 	unsigned fs,mounts,parts;
 	uintmax_t sector;
 	const device *p;
@@ -2656,17 +2653,16 @@ update_blockobj(adapterstate *as,blockobj *b,const device *d){
 			++parts;
 		}
 	}
-	b->lns = node_lines(as->expansion,b);
 }
 
 static blockobj *
-create_blockobj(adapterstate *as,device *d){
+create_blockobj(device *d){
 	blockobj *b;
 
 	if( (b = malloc(sizeof(*b))) ){
 		memset(b,0,sizeof(*b));
 		b->d = d;
-		update_blockobj(as,b,d);
+		update_blockobj(d);
 	}
 	return b;
 }
@@ -2679,7 +2675,7 @@ block_callback(device *d,void *v){
 	pthread_mutex_lock(&bfl);
 	as = d->c->uistate;
 	if((b = v) == NULL){
-		if( (b = create_blockobj(as,d)) ){
+		if( (b = create_blockobj(d)) ){
 			if(as->devs == 0){
 				b->prev = b->next = NULL;
 				as->bobjs = b;
@@ -2695,7 +2691,7 @@ block_callback(device *d,void *v){
 			++as->devs;
 		}
 	}else{
-		update_blockobj(as,b,d);
+		update_blockobj(d);
 	}
 	if(as->rb){
 		resize_adapter(as->rb);
@@ -2733,9 +2729,9 @@ block_free(void *cv,void *bv){
 	if(as->bobjs == bo){
 		as->bobjs = bo->next;
 	}
-	as->mounts -= bo->mounts;
-	as->parts -= bo->parts;
-	as->fs -= bo->fs;
+	if(bo->d->size){
+		--as->devdisps;
+	}
 	--as->devs;
 	free(bo);
 	if(as->rb){
