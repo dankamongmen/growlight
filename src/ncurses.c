@@ -1741,9 +1741,10 @@ static const wchar_t *helps[] = {
 	L"(W)ipe master boot record     (B)ad blocks check",
 	L"(n)ew partition               (d)elete partition",
 	L"(s)et partition attributes    (M)ake new filesystem",
-	L"(f)sck filesystem             (w)ipe filesystem",
+	L"(F)sck filesystem             (w)ipe filesystem",
 	L"set (U)UID                    set (L)abel/name",
 	L"m(o)unt filesystem            (u)nmount filesystem",
+	L"(b)ind to aggregate           (f)ree from aggregate",
 	NULL
 };
 
@@ -1814,7 +1815,7 @@ update_diags(struct panel_state *ps){
 static int
 display_diags(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'l' to dismiss diagnostics")){
+	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press '?' to dismiss diagnostics")){
 		goto err;
 	}
 	if(update_diags(ps)){
@@ -2162,6 +2163,28 @@ get_selected_blockobj(void){
 }
 
 static void
+enslave_disk(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("A block device must be selected");
+		return;
+	}
+	// FIXME enslave it
+}
+
+static void
+liberate_disk(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("A block device must be selected");
+		return;
+	}
+	// FIXME liberate it
+}
+
+static void
 make_ptable(void){
 	blockobj *b;
 
@@ -2314,7 +2337,7 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
-			case 'l':{
+			case '?':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&diags,display_diags);
 				screen_update();
@@ -2463,6 +2486,18 @@ handle_ncurses_input(WINDOW *w){
 			case 'u':{
 				pthread_mutex_lock(&bfl);
 				umount_filesystem();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'b':{
+				pthread_mutex_lock(&bfl);
+				enslave_disk();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'f':{
+				pthread_mutex_lock(&bfl);
+				liberate_disk();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
