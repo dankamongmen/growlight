@@ -2710,7 +2710,12 @@ block_callback(device *d,void *v){
 		update_blockobj(d);
 	}
 	if(as->rb){
+		int old,oldrows;
+
+		old = as->rb->selline;
+		oldrows = getmaxy(as->rb->win);
 		resize_adapter(as->rb);
+		recompute_selection(as,old,oldrows,getmaxy(as->rb->win));
 		redraw_adapter(as->rb);
 		screen_update();
 	}
@@ -2751,7 +2756,12 @@ block_free(void *cv,void *bv){
 	--as->devs;
 	free(bo);
 	if(as->rb){
+		int old,oldrows;
+
+		old = as->rb->selline;
+		oldrows = getmaxy(rb->win);
 		resize_adapter(as->rb);
+		recompute_selection(as,old,oldrows,getmaxy(rb->win));
 		redraw_adapter(as->rb);
 		screen_update();
 	}
