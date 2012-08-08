@@ -1824,7 +1824,7 @@ update_diags(struct panel_state *ps){
 static int
 display_diags(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press '?' to dismiss diagnostics")){
+	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'l' to dismiss diagnostics")){
 		goto err;
 	}
 	if(update_diags(ps)){
@@ -2346,7 +2346,7 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
-			case '?':{
+			case 'l':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&diags,display_diags);
 				screen_update();
