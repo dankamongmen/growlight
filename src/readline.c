@@ -454,7 +454,7 @@ print_drive(const device *d,int descend){
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'M', '.', '.', '.',
+			d->physsec, 'V', 'M', '.', '.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->mddev.transport)
@@ -467,7 +467,7 @@ print_drive(const device *d,int descend){
 			d->model ? d->model : "n/a",
 			(uintmax_t)d->zpool.zpoolver,
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'Z', '.', '.', '.',
+			d->physsec, 'V', 'Z', '.', '.',
 			"spa",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->zpool.transport)
