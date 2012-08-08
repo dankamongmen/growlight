@@ -653,15 +653,31 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 	return *sectpos;
 }
 
+// Print the contents of the block device in a horizontal bar of arbitrary size
 static void
 print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
+	unsigned off = sx - 1,ch;
 	uintmax_t sector = 0;
-	unsigned off = 0,ch;
 	const device *p;
 
 	int PNUMFIXME = '0';
-	// Print the contents of the block device
-	// FIXME handle raw drives! they are not entirely empty!
+	if(d->mnttype){
+		char pre[PREFIXSTRLEN + 1];
+
+		if(selected){
+			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
+		}else{
+			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
+		}
+		mvwprintw(w,y,sx,"%*.*s",ex - sx - 1,ex - sx - 1,"");
+		mvwprintw(w,y,sx,PREFIXFMT "%s%s%s filesystem%s%s",
+				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
+				d->mntsize ? " " : "",
+				d->label ? "" : "unlabeled ", d->mnttype,
+				d->label ? " named " : "",
+				d->label ? d->label : "");
+		return;
+	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
 			if(selected){
@@ -681,7 +697,7 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 		if(selected){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
 		}else{
-			assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
+			assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 		}
 		mvwaddch(w,y,sectpos(d,p->partdev.fsector - 1,sx,ex,&off),PNUMFIXME);
 		ch = ((p->partdev.lsector - p->partdev.fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
@@ -710,11 +726,6 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 				mvwaddch(w,y,off,'E');
 			}
 		}
-	}
-	if(selected){
-		assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
-	}else{
-		assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}
 }
 
@@ -832,7 +843,7 @@ case LAYOUT_ZPOOL:
 	if(selected){
 		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}else{
-		assert(wattrset(rb->win,COLOR_PAIR(PARTITION_COLOR)) == OK);
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}
 	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
 	mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
@@ -845,6 +856,11 @@ case LAYOUT_ZPOOL:
 	print_blockbar(rb->win,bo->d,line,START_COL + 10 + 2,
 				cols - START_COL,selected);
 
+	if(selected){
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+	}else{
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+	}
 	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
 	if(++line >= rows - !endp){
 		return;

@@ -957,7 +957,7 @@ create_new_device_inner(const char *name,int recurse){
 
 		verbf("\tLogical sector size: %uB Physical sector size: %uB\n",
 				d->logsec,d->physsec);
-		d->size *= d->logsec;
+		d->size *= 512; // global across sysfs, applies for instance to optical
 		for(p = d->parts ; p ; p = p->next){
 			p->logsec = d->logsec;
 			p->physsec = d->physsec;
