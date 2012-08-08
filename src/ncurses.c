@@ -769,6 +769,7 @@ case LAYOUT_NONE:
 		}
 		rolestr = "virtual";
 	}
+	if(line >= 1){
 	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
@@ -779,6 +780,7 @@ case LAYOUT_NONE:
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
 				cols - 78,cols - 78,"");
+	}
 		break;
 case LAYOUT_MDADM:
 	rolestr = "mdraid";
@@ -787,6 +789,7 @@ case LAYOUT_MDADM:
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
 	}
+	if(line >= 1){
 	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
@@ -797,6 +800,7 @@ case LAYOUT_MDADM:
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->mddev.transport),
 				cols - 78,cols - 78,"");
+	}
 		break;
 case LAYOUT_PARTITION:
 		break;
@@ -807,6 +811,7 @@ case LAYOUT_ZPOOL:
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	}
+	if(line >= 1){
 	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
@@ -819,6 +824,7 @@ case LAYOUT_ZPOOL:
 				cols - 78,cols - 78,"");
 		break;
 	}
+	}
 	if(++line >= rows - !endp){
 		return;
 	}
@@ -826,10 +832,14 @@ case LAYOUT_ZPOOL:
 		return;
 	}
 
-	mvwprintw(rb->win,line,START_COL,"%11.11s",bo->d->name);
-	mvwprintw(rb->win,line - 1,START_COL,"%11.11s","");
+	if(line >= 1){
+		mvwprintw(rb->win,line,START_COL,"%11.11s",bo->d->name);
+		if(line - 1 >= 1){
+			mvwprintw(rb->win,line - 1,START_COL,"%11.11s","");
+		}
+	}
 	// Print summary below device name, in the same color
-	if(line + 1 < rows - !endp){
+	if(line + 1 < rows - !endp && line + 1 >= 1){
 		if(rolestr){
 			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
 		}
@@ -840,29 +850,35 @@ case LAYOUT_ZPOOL:
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}
-	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
-	mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
-	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
+	if(line >= 1){
+		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
+		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
+	}
 	if(++line >= rows - !endp){
 		return;
 	}
-	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
-
-	print_blockbar(rb->win,bo->d,line,START_COL + 10 + 2,
-				cols - START_COL,selected);
-
+	if(line >= 1){
+		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
+		print_blockbar(rb->win,bo->d,line,START_COL + 10 + 2,
+					cols - START_COL,selected);
+	}
 	if(selected){
 		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}
-	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
+	if(line >= 1){
+		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
+	}
 	if(++line >= rows - !endp){
 		return;
 	}
-	mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_LLCORNER);
-	mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
-	mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
+	if(line >= 1){
+		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_LLCORNER);
+		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
+	}
 	++line;
 }
 
