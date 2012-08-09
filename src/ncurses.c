@@ -501,7 +501,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 		if(current){
 			assert(wattron(w,A_BOLD) == OK);
 		}
-		assert(mvwprintw(w,0,3,"[") != ERR);
+		assert(mvwprintw(w,0,5,"[") != ERR);
 		assert(wcolor_set(w,hcolor,NULL) == OK);
 		if(current){
 			assert(wattron(w,A_BOLD) == OK);
