@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/swap.h>
+#include <sys/mman.h>
 #include <openssl/sha.h>
 #include <openssl/err.h>
 
@@ -47,10 +48,13 @@ static inline int
 wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	static char buf[MBR_SIZE];
 	char dbuf[PATH_MAX];
-	ssize_t w;
-	off_t ls;
-	int fd;
+	int fd,pgsize;
+	void *map;
 
+	if((pgsize = getpagesize()) < 0){
+		diag("Couldn't get page size\n");
+		return -1;
+	}
 	if(wipeend > sizeof(buf) || wipe >= wipeend){
 		diag("Can't wipe %zu/%zu/%zu\n",wipe,wipeend,sizeof(buf));
 		return -1;
@@ -69,16 +73,18 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 		errno = e;
 		return -1;
 	}
-	if((ls = lseek(fd,wipe,SEEK_SET)) < 0 || ls != (off_t)wipe){
+	map = mmap(NULL,pgsize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_LOCKED,fd,0);
+	if(map == MAP_FAILED){
 		int e = errno;
-		diag("Couldn't seek to byte %zu of %s (%s?)\n",wipe,dbuf,strerror(errno));
+		diag("Couldn't map %d from %d on %s (%s?)\n",pgsize,fd,dbuf,strerror(errno));
 		close(fd);
 		errno = e;
 		return -1;
 	}
-	if((w = write(fd,buf,wipeend - wipe)) < 0 || w < (int)(wipeend - wipe)){
+	memcpy((char *)map + wipe,buf,wipeend - wipe);
+	if(munmap(map,pgsize)){
 		int e = errno;
-		diag("Couldn't write to first sector of %s (%s?)\n",dbuf,strerror(errno));
+		diag("Couldn't unmap %d from %d on %s (%s?)\n",pgsize,fd,dbuf,strerror(errno));
 		close(fd);
 		errno = e;
 		return -1;
@@ -98,7 +104,6 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	if(zerombrp(d->blkdev.biossha1)){
 		d->blkdev.biosboot = 0;
 	}
-	sync();
 	// FIXME we still have valid filesystems, but no longer have valid
 	//   partition table entries for them (iff we were using MBR). add
 	//   "recovery"? gparted can supposedly find lost filesystems....

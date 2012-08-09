@@ -726,7 +726,7 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 
 static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
-					unsigned cols,unsigned endp){
+			unsigned cols,unsigned topp,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
 	const char *rolestr;
 	int selected;
@@ -769,7 +769,7 @@ case LAYOUT_NONE:
 		}
 		rolestr = "virtual";
 	}
-	if(line >= 1){
+	if(line + topp >= 1){
 	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
@@ -789,7 +789,7 @@ case LAYOUT_MDADM:
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
 	}
-	if(line >= 1){
+	if(line + topp >= 1){
 	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
@@ -811,7 +811,7 @@ case LAYOUT_ZPOOL:
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	}
-	if(line >= 1){
+	if(line + topp >= 1){
 	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
@@ -832,14 +832,14 @@ case LAYOUT_ZPOOL:
 		return;
 	}
 
-	if(line >= 1){
+	if(line + topp >= 1){
 		mvwprintw(rb->win,line,START_COL,"%11.11s",bo->d->name);
 		if(line - 1 >= 1){
 			mvwprintw(rb->win,line - 1,START_COL,"%11.11s","");
 		}
 	}
 	// Print summary below device name, in the same color
-	if(line + 1 < rows - !endp && line + 1 >= 1){
+	if(line + 1 < rows - !endp && line + topp + 1 >= 1){
 		if(rolestr){
 			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
 		}
@@ -850,7 +850,7 @@ case LAYOUT_ZPOOL:
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}
-	if(line >= 1){
+	if(line + topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
 		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
 		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
@@ -858,7 +858,7 @@ case LAYOUT_ZPOOL:
 	if(++line >= rows - !endp){
 		return;
 	}
-	if(line >= 1){
+	if(line + topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
 		print_blockbar(rb->win,bo->d,line,START_COL + 10 + 2,
 					cols - START_COL,selected);
@@ -868,13 +868,13 @@ case LAYOUT_ZPOOL:
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}
-	if(line >= 1){
+	if(line + topp >= 1){
 		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
 	}
 	if(++line >= rows - !endp){
 		return;
 	}
-	if(line >= 1){
+	if(line + topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_LLCORNER);
 		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
 		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
@@ -900,7 +900,7 @@ print_adapter_devs(const adapterstate *as,int rows,int cols,
 	cur = rb->selected;
 	line = rb->selline;
 	while(cur && line + (long)device_lines(as->expansion,cur) >= !!topp){
-		print_dev(rb,cur,line,rows,cols,endp);
+		print_dev(rb,cur,line,rows,cols,topp,endp);
 		// here we traverse, then account...
 		if( (cur = cur->prev) ){
 			line -= device_lines(as->expansion,cur);
@@ -910,7 +910,7 @@ print_adapter_devs(const adapterstate *as,int rows,int cols,
 		(long)device_lines(as->expansion,rb->selected)) : -(long)topp + 1;
 	cur = (rb->selected ? rb->selected->next : as->bobjs);
 	while(cur && line < rows){
-		print_dev(rb,cur,line,rows,cols,endp);
+		print_dev(rb,cur,line,rows,cols,topp,endp);
 		// here, we account before we traverse. this is correct.
 		line += device_lines(as->expansion,cur);
 		cur = cur->next;
@@ -1855,7 +1855,7 @@ err:
 	return ERR;
 }
 
-static const int DETAILROWS = 9;
+static const int DETAILROWS = 2;
 
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
@@ -1965,7 +1965,7 @@ env_details(WINDOW *hw,int rows){
 static int
 display_enviroment(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,ENVROWS,80,L"press 'e' to dismiss display")){
+	if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display")){
 		goto err;
 	}
 	if(env_details(panel_window(ps->p),ps->ysize)){
