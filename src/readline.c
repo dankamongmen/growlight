@@ -904,6 +904,7 @@ blockdev_details(const device *d){
 	printf("\n");
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("Logical sector size: %u Physical: %u\n",d->logsec,d->physsec);
+	printf("I/O scheduler: %s\n",d->sched ? d->sched : "N/A");
 	if(d->layout == LAYOUT_NONE){
 		if(d->blkdev.biossha1){
 			if(printf("\nBIOS boot SHA-1: ") < 0){

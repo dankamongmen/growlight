@@ -375,6 +375,7 @@ free_device(device *d){
 			d->parts = p->next;
 			free_device(p);
 		}
+		free(d->sched);
 		free(d->mntops);
 		free(d->mnttype);
 		free(d->uuid);
@@ -546,6 +547,9 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 			d->blkdev.rotate = !!b;
 		}
 	}
+	if((d->sched = get_sysfs_string(fd,"queue/scheduler")) == NULL){
+		diag("Couldn't determine scheduler for %s (%s?)\n",name,strerror(errno));
+	}
 	while(errno = 0, (dire = readdir(dir)) ){
 		int subfd;
 
@@ -565,6 +569,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 				dev_t devno;
 
 				// Check for "md" to determine if it's an MDADM device
+				// FIXME but we already set ->blkdev elements!
 				if(strcmp(dire->d_name,"md") == 0){
 					d->layout = LAYOUT_MDADM;
 					memset(&d->mddev,0,sizeof(d->mddev));

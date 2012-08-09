@@ -116,6 +116,7 @@ typedef struct device {
 	char *uuid;			// *Filesystem* UUID
 	char *label;			// *Filesystem* label
 	struct controller *c;
+	char *sched;			// I/O scheduler (can be NULL)
 	union {
 		struct {
 			transport_e transport;
