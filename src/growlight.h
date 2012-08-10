@@ -127,6 +127,7 @@ typedef struct device {
 			unsigned biosboot: 1;	// Non-zero bytes in MBR code area
 			unsigned smart: 1;	// SMART support
 			unsigned rwverify: 1;	// Read-Write-Verify
+			unsigned unloaded: 1;	// No media loaded
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)

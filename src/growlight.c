@@ -949,12 +949,13 @@ create_new_device_inner(const char *name,int recurse){
 				}
 			}
 			blkid_free_probe(pr);
-		}else if(!d->blkdev.removable || errno != ENOMEDIUM){
+		}else if((d->layout != LAYOUT_NONE || !d->blkdev.removable) || errno != ENOMEDIUM){
 			diag("Couldn't probe %s (%s?)\n",name,strerror(errno));
 			clobber_device(d);
 			return NULL;
 		}else{
 			verbf("\tDevice is unloaded/inaccessible\n");
+			d->blkdev.unloaded = 1;
 		}
 	}
 	if(d->logsec || d->physsec){

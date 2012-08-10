@@ -431,7 +431,7 @@ print_drive(const device *d,int descend){
 		}else{
 			use_terminfo_color(COLOR_MAGENTA,1); // virtual
 		}
-		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-4.4s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
@@ -439,6 +439,7 @@ print_drive(const device *d,int descend){
 			d->physsec,
 			d->blkdev.removable ? 'R' : d->blkdev.smart ? 'S' :
 				d->blkdev.realdev ? '.' : 'V',
+			d->blkdev.unloaded ? 'U' : '.',
 			d->blkdev.rotate ? 'O' : '.',
 			d->blkdev.wcache ? 'W' : '.',
 			d->blkdev.biosboot ? 'B' : '.',
@@ -449,12 +450,12 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_MDADM:{
 		use_terminfo_color(COLOR_YELLOW,1);
-		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-4.4s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'M', '.', '.',
+			d->physsec, 'V', 'M', '.', '.', '.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->mddev.transport)
@@ -462,12 +463,12 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_ZPOOL:{
 		use_terminfo_color(COLOR_RED,1);
-		r += rr = printf("%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %c%c%c%c  %-6.6s%-16.16s %-4.4s\n",
+		r += rr = printf("%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			(uintmax_t)d->zpool.zpoolver,
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'Z', '.', '.',
+			d->physsec, 'V', 'Z', '.', '.', '.',
 			"spa",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->zpool.transport)
@@ -888,7 +889,8 @@ blockdev_dump(int descend){
 		}
 	}
 	use_terminfo_color(COLOR_WHITE,1);
-	printf("\n\tFlags:\t(R)emovable, (V)irtual, (M)dadm, (Z)pool, r(O)tational,\n"
+	printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual,\n"
+		       "\t\t(M)dadm, (Z)pool, (D)M, r(O)tational,\n"
 			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
 	return 0;
 }
