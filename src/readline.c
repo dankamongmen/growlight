@@ -247,7 +247,7 @@ prepare_wmount(device *d,const wchar_t *path,const wchar_t *fs,const wchar_t *op
  if(!args[1] || !args[2] || args[3]){ usage(args,arghelp); return -1 ; }
 
 static int help(wchar_t * const *,const char *);
-static int print_mdadm(const device *,int,int);
+static int print_dev_mplex(const device *,int,int);
 
 static int
 print_target(const device *d,const mntentry *m){
@@ -461,6 +461,19 @@ print_drive(const device *d,int descend){
 			transport_str(d->mddev.transport)
 			);
 		break;
+	}case LAYOUT_DM:{
+		use_terminfo_color(COLOR_YELLOW,1);
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
+			d->name,
+			d->model ? d->model : "n/a",
+			d->revision ? d->revision : "n/a",
+			qprefix(d->size,1,buf,sizeof(buf),0),
+			d->physsec, 'V', 'M', '.', '.', '.',
+			"n/a",
+			d->wwn ? d->wwn : "n/a",
+			transport_str(d->dmdev.transport)
+			);
+		break;
 	}case LAYOUT_ZPOOL:{
 		use_terminfo_color(COLOR_RED,1);
 		r += rr = printf("%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
@@ -542,19 +555,50 @@ print_zpool(const device *d,int descend){
 }
 
 static int
-print_dev_mplex(const device *d,int prefix,int descend){
-	switch(d->layout){
-		case LAYOUT_NONE:
-			return print_drive(d,descend);
-		case LAYOUT_PARTITION:
-			return print_partition(d,descend);
-		case LAYOUT_MDADM:
-			return print_mdadm(d,prefix,descend);
-		case LAYOUT_ZPOOL:
-			return print_zpool(d,descend);
-		default:
-			return -1;
+print_dm(const device *d,int prefix,int descend){
+	char buf[PREFIXSTRLEN + 1];
+	const mdslave *md;
+	int r = 0,rr;
+
+	if(d->layout != LAYOUT_DM){
+		return 0;
 	}
+	use_terminfo_color(COLOR_YELLOW,1);
+	r += rr = printf("%-*.*s%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
+			prefix,prefix,"",
+			d->name,
+			d->uuid ? d->uuid : "n/a",
+			qprefix(d->size,1,buf,sizeof(buf),0),
+			d->physsec, "n/a",
+			d->dmdev.disks,d->dmdev.level
+			);
+	if(rr < 0){
+		return -1;
+	}
+	if(!descend){
+		return r;
+	}
+	for(md = d->dmdev.slaves ; md ; md = md->next){
+		r += rr = print_dev_mplex(md->component,1,descend);
+		if(rr < 0){
+			return -1;
+		}
+		if(strcmp(md->name,md->component->name)){
+			const device *p;
+
+			for(p = md->component->parts ; p ; p = p->next){
+				if(strcmp(md->name,p->name)){
+					continue;
+				}
+				r += rr = print_partition(p,descend);
+				if(rr < 0){
+					return -1;
+				}
+			}
+		}
+
+	}
+	return r;
 }
 
 static int
@@ -602,6 +646,24 @@ print_mdadm(const device *d,int prefix,int descend){
 
 	}
 	return r;
+}
+
+static int
+print_dev_mplex(const device *d,int prefix,int descend){
+	switch(d->layout){
+		case LAYOUT_NONE:
+			return print_drive(d,descend);
+		case LAYOUT_PARTITION:
+			return print_partition(d,descend);
+		case LAYOUT_MDADM:
+			return print_mdadm(d,prefix,descend);
+		case LAYOUT_DM:
+			return print_dm(d,prefix,descend);
+		case LAYOUT_ZPOOL:
+			return print_zpool(d,descend);
+		default:
+			return -1;
+	}
 }
 
 static int
@@ -833,6 +895,10 @@ mdadm(wchar_t * const *args,const char *arghelp){
 				if(print_mdadm(d,0,descend) < 0){
 					return -1;
 				}
+			}else if(d->layout == LAYOUT_DM){
+				if(print_dm(d,0,descend) < 0){
+					return -1;
+				}
 			}
 		}
 	}
@@ -939,6 +1005,10 @@ blockdev_details(const device *d){
 		}
 	}else if(d->layout == LAYOUT_MDADM){
 		if(snprintf(buf,sizeof(buf),"mdadm --detail /dev/%s\n",d->name) >= (int)sizeof(buf)){
+			return -1;
+		}
+	}else if(d->layout == LAYOUT_DM){
+		if(snprintf(buf,sizeof(buf),"dmsetup info /dev/%s\n",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
 	}else if(d->layout == LAYOUT_ZPOOL){

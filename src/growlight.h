@@ -132,7 +132,7 @@ typedef struct device {
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)
 		} blkdev;
-		struct {
+		struct { // mdadm (MDRAID)
 			unsigned long disks;	// RAID disks in md
 			char *level;		// RAID level
 			mdslave *slaves;	// RAID components
@@ -140,6 +140,14 @@ typedef struct device {
 			char *mdname;
 			transport_e transport;
 		} mddev;
+		struct { // Device Manager
+			unsigned long disks;	// RAID disks in md
+			char *level;		// RAID level
+			mdslave *slaves;	// RAID components
+			char *uuid;
+			char *dmname;
+			transport_e transport;
+		} dmdev;
 		struct { // Partitions are kept in on-disk order
 			// The *partition* UUID, not the filesystem's or disk's
 			char *uuid;
@@ -173,6 +181,7 @@ typedef struct device {
 	enum {
 		LAYOUT_NONE,
 		LAYOUT_MDADM,
+		LAYOUT_DM,
 		LAYOUT_PARTITION,
 		LAYOUT_ZPOOL,
 	} layout;

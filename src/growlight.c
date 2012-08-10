@@ -363,6 +363,18 @@ free_device(device *d){
 				free(d->mddev.uuid);
 				free(d->mddev.mdname);
 				break;
+			}case LAYOUT_DM:{
+				mdslave *md;
+
+				while( (md = d->dmdev.slaves) ){
+					d->dmdev.slaves = md->next;
+					free(md->name);
+					free(md);
+				}
+				free(d->dmdev.level);
+				free(d->dmdev.uuid);
+				free(d->dmdev.dmname);
+				break;
 			}case LAYOUT_PARTITION:{
 				free(d->partdev.pname);
 				free(d->partdev.uuid);

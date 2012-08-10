@@ -802,6 +802,26 @@ case LAYOUT_MDADM:
 				cols - 78,cols - 78,"");
 	}
 		break;
+case LAYOUT_DM:
+	rolestr = "dm";
+	if(selected){
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
+	}else{
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
+	}
+	if(line + topp >= 1){
+	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+				bo->d->name,
+				bo->d->model ? bo->d->model : "n/a",
+				bo->d->revision ? bo->d->revision : "n/a",
+				qprefix(bo->d->size,1,buf,sizeof(buf),0),
+				bo->d->physsec,
+				"n/a",
+				bo->d->wwn ? bo->d->wwn : "n/a",
+				transport_str(bo->d->dmdev.transport),
+				cols - 78,cols - 78,"");
+	}
+		break;
 case LAYOUT_PARTITION:
 		break;
 case LAYOUT_ZPOOL:
