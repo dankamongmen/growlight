@@ -918,7 +918,6 @@ create_new_device_inner(const char *name,int recurse){
 					blkid_free_probe(pr);
 					return NULL;
 				}
-				d->blkdev.last_usable = lookup_last_usable_sector(d);
 				for(p = d->parts ; p ; p = p->next){
 					blkid_partition part;
 
@@ -990,6 +989,9 @@ create_new_device_inner(const char *name,int recurse){
 			p->logsec = d->logsec;
 			p->physsec = d->physsec;
 			p->size *= p->logsec;
+		}
+		if(d->layout == LAYOUT_NONE){
+			d->blkdev.last_usable = lookup_last_usable_sector(d);
 		}
 	}
 	d->next = d->c->blockdevs;
