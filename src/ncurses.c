@@ -51,6 +51,15 @@ struct partobj;
 typedef struct blockobj {
 	struct blockobj *next,*prev;
 	device *d;
+	// Zones refer to sets of contiguously allocated or unallocated sectors
+	// on a block object. Each partition is a zone. Each empty space
+	// between partitions is a zone. Empty space at the beginning or end of
+	// the disk is a zone. The entire disk is one zone if it has not yet
+	// been partitioned. When a blockobj is selected, one of its zones is
+	// always selected. The first time a blockobj is selected, zone 0 is
+	// selected. The selected zone is preserved across de- and reselection
+	// of the block device. Zones are indexed by 0, obviously.
+	unsigned zone;
 } blockobj;
 
 typedef struct reelbox {
@@ -1133,7 +1142,7 @@ update_details(WINDOW *hw){
 	char buf[PREFIXSTRLEN + 1];
 	const blockobj *b;
 	const device *d;
-	int cols,rows;
+	int cols,rows,n;
 
 	if(c == NULL){
 		return 0;
@@ -1144,6 +1153,9 @@ update_details(WINDOW *hw){
 	}
 	if(rows == 0){
 		return 0;
+	}
+	for(n = 1 ; n < rows - 1 ; ++n){
+		mvwhline(hw,n,START_COL,' ',cols - 2);
 	}
 	assert(wattrset(hw,SUBDISPLAY_ATTR) != ERR);
 	assert(mvwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name) != ERR);
@@ -1157,9 +1169,6 @@ update_details(WINDOW *hw){
 					c->fwver ? c->fwver : "Unknown",
 					c->biosver ? c->biosver : "Unknown") != ERR);
 	}
-	mvwhline(hw,3,START_COL,' ',cols - 2);
-	mvwhline(hw,4,START_COL,' ',cols - 2);
-	mvwhline(hw,5,START_COL,' ',cols - 2);
 	if((b = current_adapter->selected) == NULL){
 		return 0;
 	}
@@ -1180,6 +1189,7 @@ update_details(WINDOW *hw){
 					d->logsec,d->physsec);
 	}
 	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
+	mvwprintw(hw,6,START_COL,"ZONE %u",b->zone);
 	return 0;
 }
 
@@ -1625,6 +1635,20 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 }
 
 static void
+use_prev_zone(blockobj *b){
+	if(b->zone == 0){
+		return;
+	}
+	--b->zone;
+}
+
+static void
+use_next_zone(blockobj *b){
+	// FIXME don't go past the last one
+	++b->zone;
+}
+
+static void
 use_prev_controller(WINDOW *w,struct panel_state *ps){
 	reelbox *oldrb,*rb;
 	int rows,cols;
@@ -1805,7 +1829,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 }
 
 // When this text is being displayed, the help window is the active window.
-// Thus we refer to other window commands as "viewing", while 'h' here is
+// Thus we refer to other window commands as "viewing", while 'H' here is
 // described as "toggling". When other windows come up, they list their
 // own command as "toggling." We want to avoid having to scroll the help
 // synopsis, so keep it under 22 lines (25 lines on an ANSI standard terminal,
@@ -1813,20 +1837,21 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 // window top padding).
 static const wchar_t *helps[] = {
 	L"(q)uit                        ctrl+'L': redraw the screen",
-	L"'e': view environment details 'h': toggle this help display",
-	L"'v': view selection details   'l': view recent diagnostics",
-	L"'k'/'↑': previous selection   'j'/'↓': next selection",
-	L"'-'/'←': collapse adapter     '+'/'→': expand adapter",
+	L"'e': view environment details 'H': toggle this help display",
+	L"'v': view selection details   'D': view recent diagnostics",
+	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
+	L"'h'/'←': navigate left        'l'/'→': navigate right",
+	L"'-': collapse adapter         '+': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
-	L"(R)escan selection            re(S)et selection",
-	L"(m)ake partition table        (r)emove partition table",
-	L"(W)ipe master boot record     (B)ad blocks check",
-	L"(n)ew partition               (d)elete partition",
-	L"(s)et partition attributes    (M)ake new filesystem",
-	L"(F)sck filesystem             (w)ipe filesystem",
-	L"set (U)UID                    set (L)abel/name",
-	L"m(o)unt filesystem            (u)nmount filesystem",
-	L"(b)ind to aggregate           (f)ree from aggregate",
+	L"'R': rescan selection         'S': reset selection",
+	L"'m': make partition table     'r': remove partition table",
+	L"'W': wipe master boot record  'B': bad blocks check",
+	L"'n': new partition            'd': delete partition",
+	L"'s': set partition attributes 'M': make new filesystem",
+	L"'F': fsck filesystem          'w': wipe filesystem",
+	L"'U': set UUID                 'L': set label/name",
+	L"'o': mount filesystem         'u': unmount filesystem",
+	L"'b': bind to aggregate        'f': free from aggregate",
 	NULL
 };
 
@@ -1897,7 +1922,7 @@ update_diags(struct panel_state *ps){
 static int
 display_diags(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'l' to dismiss diagnostics")){
+	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics")){
 		goto err;
 	}
 	if(update_diags(ps)){
@@ -1917,7 +1942,7 @@ err:
 	return ERR;
 }
 
-static const int DETAILROWS = 5; // FIXME make it dynamic based on selections
+static const int DETAILROWS = 6; // FIXME make it dynamic based on selections
 
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
@@ -1950,7 +1975,7 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 	const int helpcols = max_helpstr_len(helps) + 4; // spacing + borders
 
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'h' to dismiss help")){
+	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help")){
 		goto err;
 	}
 	if(helpstrs(panel_window(ps->p),1,ps->ysize)){
@@ -2414,14 +2439,14 @@ handle_ncurses_input(WINDOW *w){
 
 	while((ch = getch()) != 'q' && ch != 'Q'){
 		switch(ch){
-			case 'h':{
+			case 'H':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&help,display_help);
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
-			case 'l':{
+			case 'D':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&diags,display_diags);
 				screen_update();
@@ -2462,15 +2487,35 @@ handle_ncurses_input(WINDOW *w){
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
-			case '+': case KEY_RIGHT:
+			case '+':
 				pthread_mutex_lock(&bfl);
 				expand_adapter_locked();
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
-			case '-': case KEY_LEFT:{
+			case '-':{
 				pthread_mutex_lock(&bfl);
 				collapse_adapter_locked();
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case KEY_RIGHT: case 'l':{
+				pthread_mutex_lock(&bfl);
+				if(selection_active()){
+					use_next_zone(current_adapter->selected);
+				}
+				update_details_cond(panel_window(details.p));
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case KEY_LEFT: case 'h':{
+				pthread_mutex_lock(&bfl);
+				if(selection_active()){
+					use_prev_zone(current_adapter->selected);
+				}
+				update_details_cond(panel_window(details.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -2590,7 +2635,7 @@ handle_ncurses_input(WINDOW *w){
 				break;
 			}
 			default:{
-				const char *hstr = !help.p ? " ('h' for help)" : "";
+				const char *hstr = !help.p ? " ('H' for help)" : "";
 				// diag() locks/unlocks, and calls screen_update()
 				if(isprint(ch)){
 					diag("unknown command '%c'%s",ch,hstr);
