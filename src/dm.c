@@ -13,17 +13,17 @@ int explore_dm_sysfs(device *d,int dirfd){
 	// These files will be empty on incomplete arrays like the md0 that
 	// sometimes pops up.
 	if(get_sysfs_uint(dirfd,"raid_disks",&d->mddev.disks)){
-		verbf("Warning: no 'raid_disks' content in mdadm device %s\n",d->name);
+		verbf("Warning: no 'raid_disks' content in dm device %s\n",d->name);
 		d->mddev.disks = 0;
 	}
 	if((d->mddev.level = get_sysfs_string(dirfd,"level")) == NULL){
-		verbf("Warning: no 'level' content in mdadm device %s\n",d->name);
+		verbf("Warning: no 'level' content in dm device %s\n",d->name);
 	}
 	if((d->revision = get_sysfs_string(dirfd,"metadata_version")) == NULL){
-		verbf("Warning: no 'level' content in mdadm device %s\n",d->name);
+		verbf("Warning: no 'level' content in dm device %s\n",d->name);
 		d->mddev.level = 0;
 	}
-	if((d->model = strdup("Linux mdadm")) == NULL){
+	if((d->model = strdup("Linux devmapper")) == NULL){
 		return -1;
 	}
 	enqm = &d->mddev.slaves;
