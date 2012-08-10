@@ -1152,11 +1152,11 @@ update_details(WINDOW *hw){
 	}
 	if(c->bus == BUS_VIRTUAL){
 		assert(mvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available") != ERR);
-		return 0;
+	}else{
+		assert(mvwprintw(hw,2,START_COL,"Firmware: %s BIOS: %s",
+					c->fwver ? c->fwver : "Unknown",
+					c->biosver ? c->biosver : "Unknown") != ERR);
 	}
-	assert(mvwprintw(hw,2,START_COL,"Firmware: %s BIOS: %s",
-				c->fwver ? c->fwver : "Unknown",
-				c->biosver ? c->biosver : "Unknown") != ERR);
 	mvwhline(hw,3,START_COL,' ',cols - 2);
 	mvwhline(hw,4,START_COL,' ',cols - 2);
 	mvwhline(hw,5,START_COL,' ',cols - 2);
@@ -1166,9 +1166,10 @@ update_details(WINDOW *hw){
 	d = b->d;
 	if(d->layout == LAYOUT_NONE){
 		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) S/N: %s",d->name,
-					d->model,d->revision,
+					d->model ? d->model : "n/a",
+					d->revision ? d->revision : "n/a",
 					qprefix(d->size,1,buf,sizeof(buf),0),
-					d->blkdev.serial);
+					d->blkdev.serial ? d->blkdev.serial : "n/a");
 		mvwprintw(hw,4,START_COL,"Logical/physical sectors: %zuB/%zuB Transport: %s",
 					d->logsec,d->physsec,transport_str(d->blkdev.transport));
 	}else{
