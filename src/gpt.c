@@ -321,7 +321,7 @@ gpt_name(const wchar_t *name,void *name16le,size_t olen){
 		return -1;
 	}
 	n16 = name16le;
-	len = wcslen(name);
+	len = wcslen(name) * sizeof(*name);
 	if(iconv(icv,(char **)&name,&len,&n16,&olen) == (size_t)-1 && errno){
 		diag("Error converting name (%s? %zu, %zu left)\n",strerror(errno),len,olen);
 		iconv_close(icv);
