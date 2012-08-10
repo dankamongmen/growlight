@@ -81,7 +81,7 @@ static const struct ptable {
 	int (*make)(device *);
 	int (*zap)(device *);
 	int (*add)(device *,const wchar_t *,uintmax_t,unsigned long long);
-	int (*del)(device *);
+	int (*del)(const device *);
 	int (*pname)(device *,const wchar_t *);
 	int (*uuid)(device *,const void *);
 	int (*flag)(device *,uint64_t,unsigned);
@@ -223,7 +223,7 @@ int add_partition(device *d,const wchar_t *name,size_t size,unsigned long long c
 	return -1;
 }
 
-int wipe_partition(device *d){
+int wipe_partition(const device *d){
 	const char *ptype = d->partdev.parent->blkdev.pttable;
 	const struct ptable *pt;
 

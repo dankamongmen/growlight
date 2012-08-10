@@ -1679,7 +1679,7 @@ int benchmark_blockdev(const device *d){
 	return 0;
 }
 
-int rescan_blockdev(device *d){
+int rescan_blockdev(const device *d){
 	char buf[PATH_MAX];
 	unsigned t;
 	int fd;

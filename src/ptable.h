@@ -20,7 +20,7 @@ int make_partition_table(struct device *,const char *);
 int wipe_ptable(struct device *,const char *);
 
 int add_partition(struct device *,const wchar_t *,size_t,unsigned long long);
-int wipe_partition(struct device *);
+int wipe_partition(const struct device *);
 int name_partition(struct device *,const wchar_t *);
 int uuid_partition(struct device *,const void *);
 int check_partition(struct device *);

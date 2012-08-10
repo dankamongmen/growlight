@@ -16,7 +16,7 @@ int zap_gpt(struct device *);
 int add_gpt(struct device *,const wchar_t *,uintmax_t,unsigned long long);
 
 // Pass the partition
-int del_gpt(struct device *);
+int del_gpt(const struct device *);
 int name_gpt(struct device *,const wchar_t *);
 int uuid_gpt(struct device *,const void *);
 int flag_gpt(struct device *,uint64_t,unsigned);

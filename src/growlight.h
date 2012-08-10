@@ -272,7 +272,7 @@ int make_partition_table(device *,const char *);
 int reset_controller(controller *);
 int rescan_controller(controller *);
 
-int rescan_blockdev(device *);
+int rescan_blockdev(const device *);
 int benchmark_blockdev(const device *);
 
 // Very coarse locking
