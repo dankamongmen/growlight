@@ -333,6 +333,43 @@ gpt_name(const wchar_t *name,void *name16le,size_t olen){
 	return 0;
 }
 
+static void *
+const_map_gpt(const device *d,size_t *mapsize,int *fd,size_t lbasize){
+	const int pgsize = getpagesize();
+	const unsigned gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(struct gpt_entry) / lbasize);
+	uint64_t off;
+	void *map;
+
+	if(pgsize < 0){
+		diag("Bad pgsize for GPT: %d\n",pgsize);
+		return MAP_FAILED;
+	}
+	if(MINIMUM_GPT_ENTRIES * sizeof(struct gpt_entry) % lbasize){
+		diag("Bad lbasize for GPT: %zu\n",lbasize);
+		return MAP_FAILED;
+	}
+	if((*fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC|O_DIRECT)) < 0){
+		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
+		return MAP_FAILED;
+	}
+	// The first copy goes into LBA 1. Calculate offset into map due to
+	// lbasize possibly (probably) not equalling the page size.
+	if((off = lbasize % pgsize) == 0){
+		*mapsize = 0;
+	}else{
+		*mapsize = lbasize;
+	}
+	*mapsize += gptlbas * lbasize;
+	*mapsize = ((*mapsize / pgsize) + !!(*mapsize % pgsize)) * pgsize;
+	assert(*mapsize % pgsize == 0);
+	map = mmap(NULL,*mapsize,PROT_READ,MAP_SHARED,*fd,0);
+	if(map == MAP_FAILED){
+		close(*fd);
+		return map;
+	}
+	return map;
+}
+
 // Map the primary GPT header, its table, and the MBR boot sector.
 static void *
 map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize){
@@ -373,7 +410,29 @@ map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize){
 
 // Pass the return from map_gpt(), ie the MBR boot sector + primary GPT
 static int
-unmap_gpt(device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
+const_unmap_gpt(const device *parent,void *map,size_t mapsize,int fd){
+	assert(parent->layout == LAYOUT_NONE);
+	if(munmap(map,mapsize)){
+		int e = errno;
+
+		diag("Error munmapping %s (%s?)\n",parent->name,strerror(errno));
+		close(fd);
+		errno = e;
+		return -1;
+	}
+	if(close(fd)){
+		int e = errno;
+
+		diag("Error closing %s (%s?)\n",parent->name,strerror(errno));
+		errno = e;
+		return -1;
+	}
+	return 0;
+}
+
+// Pass the return from map_gpt(), ie the MBR boot sector + primary GPT
+static int
+unmap_gpt(const device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
 	const uint64_t gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(gpt_entry) / lbasize);
 	gpt_header *gpt = (gpt_header *)((char *)map + lbasize);
 	gpt_entry *gpe = (gpt_entry *)((char *)map + 2 * lbasize);
@@ -663,4 +722,23 @@ int del_gpt(device *p){
 		return -1;
 	}
 	return 0;
+}
+
+uintmax_t last_gpt(const device *d){
+	gpt_header *ghead;
+	size_t mapsize;
+	uintmax_t r;
+	void *map;
+	int fd;
+
+	assert(d->layout == LAYOUT_NONE);
+	if((map = const_map_gpt(d,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return 0;
+	}
+	ghead = (gpt_header *)((char *)map + LBA_SIZE);
+	r = ghead->last_usable;
+	if(const_unmap_gpt(d,map,mapsize,fd)){
+		return 0;
+	}
+	return r;
 }

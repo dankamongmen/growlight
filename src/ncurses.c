@@ -59,7 +59,7 @@ typedef struct blockobj {
 	// always selected. The first time a blockobj is selected, zone 0 is
 	// selected. The selected zone is preserved across de- and reselection
 	// of the block device. Zones are indexed by 0, obviously.
-	unsigned zone;
+	unsigned zone,zones;
 } blockobj;
 
 typedef struct reelbox {
@@ -725,7 +725,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		++PNUMFIXME;
 	}
 	if(d->logsec && d->size){
-		if(sector != d->size / d->logsec){
+		if(sector != last_usable_sector(d) + 1){
 			if(selected && zone != bo->zone){
 				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}else{
@@ -1194,7 +1194,7 @@ update_details(WINDOW *hw){
 					d->logsec,d->physsec);
 	}
 	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
-	mvwprintw(hw,6,START_COL,"ZONE %u",b->zone);
+	mvwprintw(hw,6,START_COL,"ZONE %u/%u",b->zone,b->zones ? b->zones - 1 : 0);
 	return 0;
 }
 
@@ -1649,8 +1649,12 @@ use_prev_zone(blockobj *b){
 
 static void
 use_next_zone(blockobj *b){
-	// FIXME don't go past the last one
-	++b->zone;
+	if(b->zones == 0){
+		return;
+	}
+	if(++b->zone >= b->zones){
+		b->zone = b->zones - 1;
+	}
 }
 
 static void
@@ -2744,7 +2748,7 @@ adapter_callback(controller *a, void *state){
 }
 
 static void
-update_blockobj(const device *d){
+update_blockobj(blockobj *b,const device *d){
 	unsigned fs,mounts,parts;
 	uintmax_t sector;
 	const device *p;
@@ -2783,9 +2787,13 @@ update_blockobj(const device *d){
 		sector = p->partdev.lsector + 1;
 	}
 	if(d->logsec){
-		if(sector != d->size / d->logsec){
+		if(sector != last_usable_sector(d) + 1){
 			++parts;
 		}
+	}
+	b->zones = parts;
+	if(b->zone >= b->zones){
+		b->zone = b->zones;
 	}
 }
 
@@ -2796,7 +2804,7 @@ create_blockobj(device *d){
 	if( (b = malloc(sizeof(*b))) ){
 		memset(b,0,sizeof(*b));
 		b->d = d;
-		update_blockobj(d);
+		update_blockobj(b,d);
 	}
 	return b;
 }
@@ -2825,7 +2833,7 @@ block_callback(device *d,void *v){
 			++as->devs;
 		}
 	}else{
-		update_blockobj(d);
+		update_blockobj(b,d);
 	}
 	if(as->rb){
 		int old,oldrows;

@@ -8,6 +8,7 @@ extern "C" {
 #include <time.h>
 #include <wchar.h>
 #include <stdio.h>
+#include <assert.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdarg.h>
@@ -131,6 +132,7 @@ typedef struct device {
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)
+			uint64_t last_usable;	// Last usable logical sector
 		} blkdev;
 		struct { // mdadm (MDRAID)
 			unsigned long disks;	// RAID disks in md
@@ -242,6 +244,14 @@ typedef struct controller {
 	dev_t devno;		// Don't expose this non-persistent datum
 	void *uistate;		// UI-managed opaque state
 } controller;
+
+static inline uintmax_t
+last_usable_sector(const device *d){
+	if(d->layout == LAYOUT_NONE){
+		return d->blkdev.last_usable;
+	}
+	return d->size / d->logsec - 1;
+}
 
 // Currently, we just blindly hand out references to our internal store. This
 // simply will not fly in the long run -- FIXME

@@ -39,6 +39,7 @@
 #include "popen.h"
 #include "smart.h"
 #include "sysfs.h"
+#include "ptable.h"
 #include "config.h"
 #include "mounts.h"
 #include "target.h"
@@ -435,7 +436,7 @@ free_devtable(devtable *dt){
 }
 
 static device *
-add_partition(device *d,const char *name,dev_t devno,unsigned pnum,
+add_partition_inner(device *d,const char *name,dev_t devno,unsigned pnum,
 				uint64_t fsect,uintmax_t sz){
 	device *p;
 
@@ -620,7 +621,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 								dire->d_name,strerror(errno));
 						sz = 0;
 					}
-					if(add_partition(d,dire->d_name,devno,pnum,fsect,sz) == NULL){
+					if(add_partition_inner(d,dire->d_name,devno,pnum,fsect,sz) == NULL){
 						close(subfd);
 						return -1;
 					}
@@ -917,6 +918,7 @@ create_new_device_inner(const char *name,int recurse){
 					blkid_free_probe(pr);
 					return NULL;
 				}
+				d->blkdev.last_usable = lookup_last_usable_sector(d);
 				for(p = d->parts ; p ; p = p->next){
 					blkid_partition part;
 
