@@ -202,6 +202,7 @@ enum {
 	MDADM_COLOR,
 	ZPOOL_COLOR,
 	PARTITION_COLOR,
+	ZONE_COLOR,			// Selected zone
 };
 
 int bevel_notop(WINDOW *w){
@@ -378,6 +379,7 @@ setup_colors(void){
 	assert(init_pair(MDADM_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(ZPOOL_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_BLUE,-1) == OK);
+	assert(init_pair(ZONE_COLOR,COLOR_YELLOW,-1) == OK);
 	return 0;
 }
 
@@ -694,6 +696,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		if(sector != p->partdev.fsector){
 			if(selected && zone != bo->zone){
 				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
+			}else if(selected){
+				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(ZONE_COLOR)) == OK);
 			}else{
 				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}
@@ -709,6 +713,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}
 		if(selected && zone != bo->zone){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+		}else if(selected){
+			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(ZONE_COLOR)) == OK);
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 		}
@@ -727,7 +733,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	if(d->logsec && d->size){
 		if(sector != last_usable_sector(d) + 1){
 			if(selected && zone != bo->zone){
-				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
+				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
+			}else if(selected){
+				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(ZONE_COLOR)) == OK);
 			}else{
 				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}
@@ -1184,14 +1192,17 @@ update_details(WINDOW *hw){
 					d->revision ? d->revision : "n/a",
 					qprefix(d->size,1,buf,sizeof(buf),0),
 					d->blkdev.serial ? d->blkdev.serial : "n/a");
-		mvwprintw(hw,4,START_COL,"Logical/physical sectors: %zuB/%zuB Transport: %s",
-					d->logsec,d->physsec,transport_str(d->blkdev.transport));
+		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju Transport: %s",
+					d->logsec,d->physsec,
+					d->size / (d->logsec ? d->logsec : 1),
+					transport_str(d->blkdev.transport));
 	}else{
 		mvwprintw(hw,3,START_COL,"%s: %s %s (%s)",d->name,
 					d->model,d->revision,
 					qprefix(d->size,1,buf,sizeof(buf),0));
-		mvwprintw(hw,4,START_COL,"Logical/physical sectors: %zuB/%zuB",
-					d->logsec,d->physsec);
+		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju",
+					d->logsec,d->physsec,
+					d->size / (d->logsec ? d->logsec : 1));
 	}
 	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
 	mvwprintw(hw,6,START_COL,"ZONE %u/%u",b->zone,b->zones ? b->zones - 1 : 0);
@@ -1641,20 +1652,12 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 
 static void
 use_prev_zone(blockobj *b){
-	if(b->zone == 0){
-		return;
-	}
-	--b->zone;
+	b->zone = b->zone ? b->zones - 1 : b->zone - 1;
 }
 
 static void
 use_next_zone(blockobj *b){
-	if(b->zones == 0){
-		return;
-	}
-	if(++b->zone >= b->zones){
-		b->zone = b->zones - 1;
-	}
+	b->zone = b->zone + 1 >= b->zones ? 0 : b->zone + 1;
 }
 
 static void
