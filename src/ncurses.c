@@ -1128,8 +1128,11 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 }
 
 static int
-adapter_details(WINDOW *hw){
+update_details(WINDOW *hw){
 	const controller *c = get_current_adapter();
+	char buf[PREFIXSTRLEN + 1];
+	const blockobj *b;
+	const device *d;
 	int cols,rows;
 
 	if(c == NULL){
@@ -1154,11 +1157,40 @@ adapter_details(WINDOW *hw){
 	assert(mvwprintw(hw,2,START_COL,"Firmware: %s BIOS: %s",
 				c->fwver ? c->fwver : "Unknown",
 				c->biosver ? c->biosver : "Unknown") != ERR);
+	mvwhline(hw,3,START_COL,' ',cols - 2);
+	mvwhline(hw,4,START_COL,' ',cols - 2);
+	mvwhline(hw,5,START_COL,' ',cols - 2);
+	if((b = current_adapter->selected) == NULL){
+		return 0;
+	}
+	d = b->d;
+	if(d->layout == LAYOUT_NONE){
+		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) S/N: %s",d->name,
+					d->model,d->revision,
+					qprefix(d->size,1,buf,sizeof(buf),0),
+					d->blkdev.serial);
+		mvwprintw(hw,4,START_COL,"Logical/physical sectors: %zuB/%zuB Transport: %s",
+					d->logsec,d->physsec,transport_str(d->blkdev.transport));
+	}else{
+		mvwprintw(hw,3,START_COL,"%s: %s %s (%s)",d->name,
+					d->model,d->revision,
+					qprefix(d->size,1,buf,sizeof(buf),0));
+		mvwprintw(hw,4,START_COL,"Logical/physical sectors: %zuB/%zuB",
+					d->logsec,d->physsec);
+	}
+	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
+	return 0;
+}
+
+static int
+update_details_cond(WINDOW *w){
+	if(details.p){
+		return update_details(w);
+	}
 	return 0;
 }
 
 static void pull_adapters_down(reelbox *,int,int,int);
-
 
 // Pass a NULL puller to move all adapters up
 static void
@@ -1511,7 +1543,7 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 			}
 			redraw_adapter(is->rb);
 			if(ps->p){
-				adapter_details(panel_window(ps->p));
+				update_details(panel_window(ps->p));
 			}
 			return;
 		}
@@ -1587,7 +1619,7 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 		pull_adapters_up(NULL,rows,cols,delta);
 	}
 	if(ps->p){
-		adapter_details(panel_window(ps->p));
+		update_details(panel_window(ps->p));
 	}
 }
 
@@ -1625,7 +1657,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 			top_reelbox = current_adapter;
 			redraw_adapter(current_adapter);
 			if(ps->p){
-				adapter_details(panel_window(ps->p));
+				update_details(panel_window(ps->p));
 			}
 			return;
 		}
@@ -1688,7 +1720,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 		}
 	}
 	if(ps->p){
-		adapter_details(panel_window(ps->p));
+		update_details(panel_window(ps->p));
 	}
 }
 
@@ -1884,7 +1916,7 @@ err:
 	return ERR;
 }
 
-static const int DETAILROWS = 2; // minimum number of details (for adapter)
+static const int DETAILROWS = 5; // FIXME make it dynamic based on selections
 
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
@@ -1893,7 +1925,7 @@ display_details(WINDOW *mainw,struct panel_state *ps){
 		goto err;
 	}
 	if(current_adapter){
-		if(adapter_details(panel_window(ps->p))){
+		if(update_details(panel_window(ps->p))){
 			goto err;
 		}
 	}
@@ -2412,12 +2444,14 @@ handle_ncurses_input(WINDOW *w){
 			case KEY_BACKSPACE:
 				pthread_mutex_lock(&bfl);
 				deselect_adapter_locked();
+				update_details_cond(panel_window(details.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			case '\r': case '\n': case KEY_ENTER:
 				pthread_mutex_lock(&bfl);
 				select_adapter();
+				update_details_cond(panel_window(details.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -2450,6 +2484,7 @@ handle_ncurses_input(WINDOW *w){
 				}else{
 					use_prev_device();
 				}
+				update_details_cond(panel_window(details.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -2464,6 +2499,7 @@ handle_ncurses_input(WINDOW *w){
 				}else{
 					use_next_device();
 				}
+				update_details_cond(panel_window(details.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -2833,7 +2869,7 @@ adapter_free(void *cv){
 			// give the details window to new current_iface
 			if(details.p){
 				if(current_adapter){
-					adapter_details(panel_window(details.p));
+					update_details(panel_window(details.p));
 				}else{
 					hide_panel_locked(&details);
 					active = NULL;
