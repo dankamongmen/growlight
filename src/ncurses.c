@@ -1127,10 +1127,9 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 	// FIXME pull_adapters_down();
 }
 
-// FIXME why accept 'rows' just to blow it away?
 static int
-adapter_details(WINDOW *hw,const controller *c,int rows){
-	int cols;
+adapter_details(WINDOW *hw,const controller *c){
+	int cols,rows;
 
 	getmaxyx(hw,rows,cols);
 	if(cols < START_COL * 2){
@@ -1508,7 +1507,7 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 			}
 			redraw_adapter(is->rb);
 			if(ps->p){
-				adapter_details(panel_window(ps->p),is->c,ps->ysize);
+				adapter_details(panel_window(ps->p),is->c);
 			}
 			return;
 		}
@@ -1584,7 +1583,7 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 		pull_adapters_up(NULL,rows,cols,delta);
 	}
 	if(ps->p){
-		adapter_details(panel_window(ps->p),rb->as->c,ps->ysize);
+		adapter_details(panel_window(ps->p),rb->as->c);
 	}
 }
 
@@ -1622,7 +1621,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 			top_reelbox = current_adapter;
 			redraw_adapter(current_adapter);
 			if(ps->p){
-				adapter_details(panel_window(ps->p),as->c,ps->ysize);
+				adapter_details(panel_window(ps->p),as->c);
 			}
 			return;
 		}
@@ -1685,7 +1684,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 		}
 	}
 	if(ps->p){
-		adapter_details(panel_window(ps->p),rb->as->c,ps->ysize);
+		adapter_details(panel_window(ps->p),rb->as->c);
 	}
 }
 
@@ -1881,7 +1880,7 @@ err:
 	return ERR;
 }
 
-static const int DETAILROWS = 2;
+static const int DETAILROWS = 2; // minimum number of details (for adapter)
 
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
@@ -1890,7 +1889,7 @@ display_details(WINDOW *mainw,struct panel_state *ps){
 		goto err;
 	}
 	if(current_adapter){
-		if(adapter_details(panel_window(ps->p),current_adapter->as->c,ps->ysize)){
+		if(adapter_details(panel_window(ps->p),current_adapter->as->c)){
 			goto err;
 		}
 	}
@@ -2830,7 +2829,7 @@ adapter_free(void *cv){
 			// give the details window to new current_iface
 			if(details.p){
 				if(current_adapter){
-					adapter_details(panel_window(details.p),get_current_adapter(),details.ysize);
+					adapter_details(panel_window(details.p),get_current_adapter());
 				}else{
 					hide_panel_locked(&details);
 					active = NULL;
