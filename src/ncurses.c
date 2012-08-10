@@ -66,8 +66,8 @@ typedef struct blockobj {
 	// always selected. The first time a blockobj is selected, zone 0 is
 	// selected. The selected zone is preserved across de- and reselection
 	// of the block device. Zones are indexed by 0, obviously.
-	unsigned zones,zone;
-	zobj *zchain;
+	unsigned zones;
+	zobj *zchain,*zone;
 } blockobj;
 
 typedef struct reelbox {
@@ -701,7 +701,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
 		}
-		mvwprintw(w,y,sx,"%*.*s",ex - sx - 1,ex - sx - 1,"");
+		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
 		mvwprintw(w,y,sx,"%s%s%s%s filesystem%s%s",
 				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 				d->mntsize ? " " : "",
@@ -710,10 +710,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				d->label ? d->label : "");
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
-		mvwprintw(w,y,sx,"%-*.*s",ex - sx - 1,ex - sx - 1,"No media detected in drive");
+		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"No media detected in drive");
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
-		mvwprintw(w,y,sx,"%-*.*s",ex - sx - 1,ex - sx - 1,"Unpartitioned space");
+		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"Unpartitioned space");
 		return;
 	}
 	if((z = bo->zchain) == NULL){
@@ -721,7 +721,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	}
 	do{
 		if(z->p == NULL){
-			if(selected && z->zoneno != bo->zone){
+			if(selected && z != bo->zone){
 				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}else if(selected){
 				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(ZONE_COLOR)) == OK);
@@ -737,7 +737,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				mvwaddch(w,y,off,L'E');
 			}
 		}else{
-			if(selected && z->zoneno != bo->zone){
+			if(selected && z != bo->zone){
 				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
 			}else if(selected){
 				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(ZONE_COLOR)) == OK);
@@ -1211,7 +1211,13 @@ update_details(WINDOW *hw){
 					d->size / (d->logsec ? d->logsec : 1));
 	}
 	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
-	mvwprintw(hw,6,START_COL,"ZONE %u/%u",b->zone + 1,b->zones);
+	if(b->zone){
+		if(b->zone->p){
+			mvwprintw(hw,6,START_COL,"%s",b->zone->p->name);
+		}else{
+			mvwprintw(hw,6,START_COL,"Unpartitioned space");
+		}
+	}
 	return 0;
 }
 
@@ -1658,12 +1664,12 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 
 static void
 use_prev_zone(blockobj *b){
-	b->zone = b->zone ? b->zone - 1 : b->zones - 1;
+	b->zone = b->zone->prev;
 }
 
 static void
 use_next_zone(blockobj *b){
-	b->zone = b->zone + 1 >= b->zones ? 0 : b->zone + 1;
+	b->zone = b->zone->next;
 }
 
 static void
@@ -2773,12 +2779,17 @@ free_zchain(zobj **z){
 
 static void
 update_blockobj(blockobj *b,const device *d){
-	unsigned fs,mounts,zones;
+	unsigned fs,mounts,zones,zonesel;
 	uintmax_t sector;
 	const device *p;
 	zobj *z,*lastz;
 
 	fs = mounts = zones = 0;
+	if(b->zone){
+		zonesel = b->zone->zoneno;
+	}else{
+		zonesel = 0;
+	}
 	if(d->mnttype){
 		++fs;
 		if(d->mnt){
@@ -2827,18 +2838,26 @@ update_blockobj(blockobj *b,const device *d){
 		}
 	}
 	free_zchain(&b->zchain);
+	b->zone = NULL;
+	if(zonesel >= zones){
+		zonesel = zones ? zones - 1 : 0;
+	}
+	zonesel = zones - zonesel;
 	if( (lastz = z) ){
 		while(z->prev){
+			if(zonesel-- == 1){
+				b->zone = z;
+			}
 			z = z->prev;
+		}
+		if(zonesel-- == 1){
+			b->zone = z;
 		}
 		z->prev = lastz;
 		lastz->next = z;
 	}
 	b->zchain = z;
 	b->zones = zones;
-	if(b->zone >= b->zones){
-		b->zone = b->zones - 1;
-	}
 	return;
 
 err:
