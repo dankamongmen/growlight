@@ -1128,9 +1128,13 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 }
 
 static int
-adapter_details(WINDOW *hw,const controller *c){
+adapter_details(WINDOW *hw){
+	const controller *c = get_current_adapter();
 	int cols,rows;
 
+	if(c == NULL){
+		return 0;
+	}
 	getmaxyx(hw,rows,cols);
 	if(cols < START_COL * 2){
 		return 0;
@@ -1507,7 +1511,7 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 			}
 			redraw_adapter(is->rb);
 			if(ps->p){
-				adapter_details(panel_window(ps->p),is->c);
+				adapter_details(panel_window(ps->p));
 			}
 			return;
 		}
@@ -1583,7 +1587,7 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 		pull_adapters_up(NULL,rows,cols,delta);
 	}
 	if(ps->p){
-		adapter_details(panel_window(ps->p),rb->as->c);
+		adapter_details(panel_window(ps->p));
 	}
 }
 
@@ -1621,7 +1625,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 			top_reelbox = current_adapter;
 			redraw_adapter(current_adapter);
 			if(ps->p){
-				adapter_details(panel_window(ps->p),as->c);
+				adapter_details(panel_window(ps->p));
 			}
 			return;
 		}
@@ -1684,7 +1688,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 		}
 	}
 	if(ps->p){
-		adapter_details(panel_window(ps->p),rb->as->c);
+		adapter_details(panel_window(ps->p));
 	}
 }
 
@@ -1889,7 +1893,7 @@ display_details(WINDOW *mainw,struct panel_state *ps){
 		goto err;
 	}
 	if(current_adapter){
-		if(adapter_details(panel_window(ps->p),current_adapter->as->c)){
+		if(adapter_details(panel_window(ps->p))){
 			goto err;
 		}
 	}
@@ -2829,7 +2833,7 @@ adapter_free(void *cv){
 			// give the details window to new current_iface
 			if(details.p){
 				if(current_adapter){
-					adapter_details(panel_window(details.p),get_current_adapter());
+					adapter_details(panel_window(details.p));
 				}else{
 					hide_panel_locked(&details);
 					active = NULL;
