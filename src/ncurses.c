@@ -1212,12 +1212,16 @@ update_details(WINDOW *hw){
 	}
 	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
 	if(b->zone){
+		char buf[PREFIXSTRLEN + 1];
+
 		if(b->zone->p){
-			mvwprintw(hw,6,START_COL,"LBA %u→%u: %s",
+			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: %s",
+					qprefix(d->logsec * (b->zone->lsector - b->zone->fsector - 1),1,buf,sizeof(buf),0),
 					b->zone->fsector,b->zone->lsector,
 					b->zone->p->name);
 		}else{
-			mvwprintw(hw,6,START_COL,"LBA %u→%u: unpartitioned space",
+			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: unpartitioned space",
+					qprefix(d->logsec * (b->zone->lsector - b->zone->fsector - 1),1,buf,sizeof(buf),0),
 					b->zone->fsector,b->zone->lsector);
 		}
 	}
