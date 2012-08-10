@@ -48,6 +48,13 @@ struct adapterstate;
 
 struct partobj;
 
+typedef struct zobj {
+	unsigned zoneno;		// in-order, but not monotonic growth (skip empties)
+	uintmax_t fsector,lsector;	// first and last logical sector, inclusive
+	const device *p;		// partition/block device, NULL for empty space
+	struct zobj *next;
+} zobj;
+
 typedef struct blockobj {
 	struct blockobj *next,*prev;
 	device *d;
@@ -60,6 +67,7 @@ typedef struct blockobj {
 	// selected. The selected zone is preserved across de- and reselection
 	// of the block device. Zones are indexed by 0, obviously.
 	unsigned zone,zones;
+	zobj *zchain;
 } blockobj;
 
 typedef struct reelbox {
@@ -138,6 +146,20 @@ device_lines(int expa,const blockobj *bo){
 		++l;
 	}
 	return l;
+}
+
+static zobj *
+create_zobj(unsigned zno,uintmax_t fsector,uintmax_t lsector,const device *p){
+	zobj *z;
+
+	if( (z = malloc(sizeof(*z))) ){
+		z->zoneno = zno;
+		z->fsector = fsector;
+		z->lsector = lsector;
+		z->p = p;
+		z->next = NULL;
+	}
+	return z;
 }
 
 static inline int
@@ -2751,11 +2773,24 @@ adapter_callback(controller *a, void *state){
 }
 
 static void
+free_zchain(zobj **z){
+	zobj *zt;
+
+	while( (zt = *z) ){
+		*z = zt->next;
+		free(zt);
+	}
+}
+
+static void
 update_blockobj(blockobj *b,const device *d){
 	unsigned fs,mounts,parts;
 	uintmax_t sector;
 	const device *p;
+	zobj *z,**tmp;
 
+	z = NULL;
+	tmp = &z;
 	fs = mounts = parts = 0;
 	if(d->mnttype){
 		++fs;
@@ -2772,8 +2807,16 @@ update_blockobj(blockobj *b,const device *d){
 	sector = 0;
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
+			if((*tmp = create_zobj(parts,sector,p->partdev.fsector - 1,NULL)) == NULL){
+				goto err;
+			}
+			tmp = &(*tmp)->next;
 			++parts;
 		}
+		if((*tmp = create_zobj(parts,p->partdev.fsector,p->partdev.lsector,p)) == NULL){
+			goto err;
+		}
+		tmp = &(*tmp)->next;
 		++parts;
 		if(p->mnttype){
 			++fs;
@@ -2791,13 +2834,24 @@ update_blockobj(blockobj *b,const device *d){
 	}
 	if(d->logsec){
 		if(sector != last_usable_sector(d) + 1){
+			if((*tmp = create_zobj(parts,sector,last_usable_sector(d),NULL)) == NULL){
+				goto err;
+			}
+			tmp = &(*tmp)->next;
 			++parts;
 		}
 	}
+	free_zchain(&b->zchain);
+	b->zchain = z;
 	b->zones = parts;
 	if(b->zone >= b->zones){
-		b->zone = b->zones;
+		b->zone = b->zones - 1;
 	}
+	return;
+
+err:
+	free_zchain(&z);
+	assert(0); // FIXME
 }
 
 static blockobj *
