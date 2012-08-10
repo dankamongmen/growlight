@@ -468,7 +468,7 @@ print_drive(const device *d,int descend){
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'M', '.', '.', '.',
+			d->physsec, 'V', 'D', '.', '.', '.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->dmdev.transport)

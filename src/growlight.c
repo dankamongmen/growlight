@@ -30,6 +30,7 @@
 
 #include "fs.h"
 #include "sg.h"
+#include "dm.h"
 #include "mbr.h"
 #include "zfs.h"
 #include "swap.h"
@@ -589,6 +590,13 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 						close(subfd);
 						return -1;
 					}
+				}else if(strcmp(dire->d_name,"dm") == 0){
+					d->layout = LAYOUT_DM;
+					memset(&d->dmdev,0,sizeof(d->dmdev));
+					if(explore_dm_sysfs(d,subfd)){
+						close(subfd);
+						return -1;
+					}
 				}else if(sysfs_exist_p(subfd,"partition")){
 					unsigned long sz,pnum,fsect;
 
@@ -842,7 +850,7 @@ create_new_device_inner(const char *name,int recurse){
 	}
 	// Allow d->model to run the checks on validly-filebacked loop devices
 	if((d->layout == LAYOUT_NONE && (d->blkdev.realdev || d->model))
-			|| (d->layout == LAYOUT_MDADM)){
+			|| (d->layout == LAYOUT_MDADM) || (d->layout == LAYOUT_DM)){
 		char devbuf[PATH_MAX];
 		blkid_parttable ptbl;
 		blkid_partlist ppl;
