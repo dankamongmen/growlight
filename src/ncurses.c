@@ -659,9 +659,11 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
-print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
+print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	unsigned off = sx - 1,ch;
+	const device *d = bo->d;
 	uintmax_t sector = 0;
+	unsigned zone = 0;
 	const device *p;
 
 	int PNUMFIXME = '0';
@@ -690,7 +692,7 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
-			if(selected){
+			if(selected && zone != bo->zone){
 				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}else{
 				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
@@ -703,8 +705,9 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 				}
 				mvwaddch(w,y,off,L'E');
 			}
+			++zone;
 		}
-		if(selected){
+		if(selected && zone != bo->zone){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
@@ -717,12 +720,13 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 			}
 			mvwaddch(w,y,off,PNUMFIXME);
 		}
+		++zone;
 		sector = p->partdev.lsector + 1;
 		++PNUMFIXME;
 	}
 	if(d->logsec && d->size){
 		if(sector != d->size / d->logsec){
-			if(selected){
+			if(selected && zone != bo->zone){
 				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}else{
 				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
@@ -735,6 +739,7 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 				}
 				mvwaddch(w,y,off,'E');
 			}
+			++zone;
 		}
 	}
 }
@@ -895,7 +900,7 @@ case LAYOUT_ZPOOL:
 	}
 	if(line + topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
-		print_blockbar(rb->win,bo->d,line,START_COL + 10 + 2,
+		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
 					cols - START_COL,selected);
 	}
 	if(selected){
@@ -2505,6 +2510,7 @@ handle_ncurses_input(WINDOW *w){
 				if(selection_active()){
 					use_next_zone(current_adapter->selected);
 				}
+				redraw_adapter(current_adapter);
 				update_details_cond(panel_window(details.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
@@ -2515,6 +2521,7 @@ handle_ncurses_input(WINDOW *w){
 				if(selection_active()){
 					use_prev_zone(current_adapter->selected);
 				}
+				redraw_adapter(current_adapter);
 				update_details_cond(panel_window(details.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
