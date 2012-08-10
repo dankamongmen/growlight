@@ -665,7 +665,7 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
 		}
 		mvwprintw(w,y,sx,"%*.*s",ex - sx - 1,ex - sx - 1,"");
-		mvwprintw(w,y,sx,PREFIXFMT "%s%s%s filesystem%s%s",
+		mvwprintw(w,y,sx,"%s%s%s%s filesystem%s%s",
 				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 				d->mntsize ? " " : "",
 				d->label ? "" : "unlabeled ", d->mnttype,
@@ -673,7 +673,10 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 				d->label ? d->label : "");
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
-		mvwprintw(w,y,sx,"%*.*s",ex - sx - 1,ex - sx - 1,"No media detected in drive");
+		mvwprintw(w,y,sx,"%-*.*s",ex - sx - 1,ex - sx - 1,"No media detected in drive");
+		return;
+	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
+		mvwprintw(w,y,sx,"%-*.*s",ex - sx - 1,ex - sx - 1,"Unpartitioned space");
 		return;
 	}
 	for(p = d->parts ; p ; p = p->next){
