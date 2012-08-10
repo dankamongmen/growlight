@@ -1213,9 +1213,12 @@ update_details(WINDOW *hw){
 	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
 	if(b->zone){
 		if(b->zone->p){
-			mvwprintw(hw,6,START_COL,"%s",b->zone->p->name);
+			mvwprintw(hw,6,START_COL,"LBA %u→%u: %s",
+					b->zone->fsector,b->zone->lsector,
+					b->zone->p->name);
 		}else{
-			mvwprintw(hw,6,START_COL,"Unpartitioned space");
+			mvwprintw(hw,6,START_COL,"LBA %u→%u: unpartitioned space",
+					b->zone->fsector,b->zone->lsector);
 		}
 	}
 	return 0;
@@ -2784,17 +2787,26 @@ update_blockobj(blockobj *b,const device *d){
 	const device *p;
 	zobj *z,*lastz;
 
-	fs = mounts = zones = 0;
+	fs = mounts = 0;
 	if(b->zone){
 		zonesel = b->zone->zoneno;
 	}else{
 		zonesel = 0;
 	}
+	z = NULL;
 	if(d->mnttype){
 		++fs;
 		if(d->mnt){
 			++mounts;
 		}
+		if((z = create_zobj(z,0,0,last_usable_sector(d),d)) == NULL){
+			goto err;
+		}
+		sector = last_usable_sector(d) + 1;
+		zones = 1;
+	}else{
+		sector = 0;
+		zones = 0;
 	}
 	if(d->target){
 		++mounts;
@@ -2802,8 +2814,6 @@ update_blockobj(blockobj *b,const device *d){
 	if(d->swapprio != SWAP_INVALID){
 		++fs;
 	}
-	z = NULL;
-	sector = 0;
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
 			if((z = create_zobj(z,zones,sector,p->partdev.fsector - 1,NULL)) == NULL){
@@ -2829,7 +2839,7 @@ update_blockobj(blockobj *b,const device *d){
 		}
 		sector = p->partdev.lsector + 1;
 	}
-	if(d->logsec){
+	if(d->logsec && d->size){
 		if(sector != last_usable_sector(d) + 1){
 			if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL)) == NULL){
 				goto err;
