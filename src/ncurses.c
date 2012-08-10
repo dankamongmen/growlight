@@ -901,7 +901,7 @@ case LAYOUT_ZPOOL:
 	if(line + topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
 		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
-					cols - START_COL,selected);
+					cols - START_COL - 1,selected);
 	}
 	if(selected){
 		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
