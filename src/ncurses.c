@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
@@ -26,6 +27,28 @@
 #endif
 #endif
 
+// Our color pairs
+enum {
+	BORDER_COLOR = 1,		// Main window
+	HEADER_COLOR,
+	FOOTER_COLOR,
+	UHEADING_COLOR,
+	UBORDER_COLOR,
+	PBORDER_COLOR,
+	PHEADING_COLOR,
+	SUBDISPLAY_COLOR,
+	OPTICAL_COLOR,
+	ROTATE_COLOR,
+	VIRTUAL_COLOR,
+	SSD_COLOR,
+	FS_COLOR,
+	EMPTY_COLOR,			// Empty sectors
+	MDADM_COLOR,
+	ZPOOL_COLOR,
+	PARTITION_COLOR,
+	ZONE_COLOR,			// Selected zone
+};
+
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 struct panel_state {
@@ -33,8 +56,20 @@ struct panel_state {
 	int ysize;		      // number of lines of *text* (not win)
 };
 
+struct form_state {
+	PANEL *p;
+	int ysize;			// number of lines of *text* (not win)
+	void (*fxn)(const char *);	// callback once form is done
+};
+
 #define PANEL_STATE_INITIALIZER { .p = NULL, .ysize = -1, }
+#define FORM_STATE_INITIALIZER(cb) { .p = NULL, .ysize = -1, .fxn = cb, }
 #define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
+
+// Forms are modal. They take over the keyboard UI and sit atop everything
+// else. Subwindows sit atop the hardware elements of the UI, but do not seize
+// any of the input UI. A form and subwindow can coexist.
+static struct form_state *actform;
 
 static struct panel_state *active;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
@@ -120,6 +155,148 @@ selection_active(void){
 		return 0;
 	}
 	return 1;
+}
+
+static int
+bevel(WINDOW *w){
+	static const cchar_t bchr[] = {
+		{ .attr = 0, .chars = L"╭", },
+		{ .attr = 0, .chars = L"╮", },
+		{ .attr = 0, .chars = L"╰", },
+		{ .attr = 0, .chars = L"╯", },
+	};
+	int rows,cols;
+
+	getmaxyx(w,rows,cols);
+	assert(rows && cols);
+	// called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bchr[3]);'
+	// we get ERR returned. this is known behavior: fuck ncurses. instead,
+	// we use mvwins_wch, which doesn't update the cursor position.
+	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
+	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
+	assert(whline(w,ACS_HLINE,cols - 2) != ERR);
+	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
+	if(rows > 2){
+		assert(mvwvline(w,1,cols - 1,ACS_VLINE,rows - 1) != ERR);
+		assert(mvwvline(w,1,0,ACS_VLINE,rows - 1) != ERR);
+	}
+	assert(mvwadd_wch(w,rows - 1,0,&bchr[2]) != ERR);
+	assert(whline(w,ACS_HLINE,cols - 2) != ERR);
+	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[3]) != ERR);
+	return OK;
+}
+
+static int
+draw_main_window(WINDOW *w){
+	int rows,cols,scol;
+
+	getmaxyx(w,rows,cols);
+	assert(cols >= 80);
+	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
+	if(bevel(w) != OK){
+		goto err;
+	}
+	scol = START_COL * 4;
+	assert(mvwprintw(w,0,scol,"[") != ERR);
+	assert(wattron(w,A_BOLD | COLOR_PAIR(HEADER_COLOR)) != ERR);
+	assert(wprintw(w,"%s %s | %d adapter%s",PACKAGE,VERSION,
+			count_adapters,count_adapters == 1 ? "" : "s") != ERR);
+	assert(wattrset(w,COLOR_PAIR(BORDER_COLOR)) != ERR);
+	assert(wprintw(w,"]") != ERR);
+	assert(wattron(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
+	// addstr() doesn't interpret format strings, so this is safe. It will
+	// fail, however, if the string can't fit on the window, which will for
+	// instance happen if there's an embedded newline.
+	assert(mvwaddstr(w,rows - 1,START_COL * 2,statusmsg) != ERR);
+	assert(wattroff(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
+	return OK;
+
+err:
+	return ERR;
+}
+
+static void
+locked_diag(const char *fmt,...){
+	va_list v;
+	char *nl;
+
+	va_start(v,fmt);
+	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
+	va_end(v);
+	if( (nl = strchr(statusmsg,'\n')) ){
+		*nl = '\0';
+	}
+	draw_main_window(stdscr);
+	if(diags.p){
+		update_diags(&diags);
+	}
+	screen_update();
+}
+
+// -------------------------------------------------------------------------
+// - partition type form, for new partition creation
+// -------------------------------------------------------------------------
+static void
+ptype_callback(const char *ptype){
+	unsigned long pt;
+	blockobj *b;
+	char *pend;
+
+	if(ptype == NULL){ // user cancelled
+		locked_diag("Partition creation cancelled by the user.");
+		return;
+	}
+	if(!current_adapter || !(b = current_adapter->selected)){
+		locked_diag("Lost selection while choose partition type.");
+		return;
+	}
+	b = current_adapter->selected;
+	if(((pt = strtoul(ptype,&pend,0)) == ULONG_MAX && errno == ERANGE) || *pend){
+		locked_diag("Bad partition type selection: %s",ptype);
+		return;
+	}
+	add_partition(b->d,L"FIXME",0,pt);
+}
+
+static struct form_state form_ptype = FORM_STATE_INITIALIZER(ptype_callback);
+// -------------------------------------------------------------------------
+// -- end partition type form
+// -------------------------------------------------------------------------
+
+static void
+raise_form(struct form_state *fs){
+	int cols = 40;
+	int rows = 4;
+	WINDOW *fsw;
+	int x,y;
+
+	if(actform){
+		return;
+	}
+	getmaxyx(stdscr,y,x);
+	if(cols == 0){
+		cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
+	}else{
+		assert(x >= cols + START_COL * 2);
+	}
+	assert(y >= rows + 3);
+	assert( (fsw = newwin(rows + 2,cols,rows,x - 20 - cols)) );
+	if(fsw == NULL){
+		return;
+	}
+	assert((fs->p = new_panel(fsw)));
+	assert(top_panel(fs->p) != ERR);
+	if(fs->p == NULL){
+		delwin(fsw);
+		return;
+	}
+	fs->ysize = rows;
+	// memory leaks follow if we're compiled with NDEBUG! FIXME
+	assert(wattron(fsw,A_BOLD) != ERR);
+	assert(wcolor_set(fsw,PBORDER_COLOR,NULL) == OK);
+	assert(bevel(fsw) == OK);
+	assert(wattroff(fsw,A_BOLD) != ERR);
+	actform = fs;
 }
 
 // This is the number of l we'd have in an optimal world; we might have
@@ -209,28 +386,6 @@ bottom_space_p(int rows){
 	return (rows - 1) - (getmaxy(last_reelbox->win) + getbegy(last_reelbox->win));
 }
 
-// Our color pairs
-enum {
-	BORDER_COLOR = 1,		// Main window
-	HEADER_COLOR,
-	FOOTER_COLOR,
-	UHEADING_COLOR,
-	UBORDER_COLOR,
-	PBORDER_COLOR,
-	PHEADING_COLOR,
-	SUBDISPLAY_COLOR,
-	OPTICAL_COLOR,
-	ROTATE_COLOR,
-	VIRTUAL_COLOR,
-	SSD_COLOR,
-	FS_COLOR,
-	EMPTY_COLOR,			// Empty sectors
-	MDADM_COLOR,
-	ZPOOL_COLOR,
-	PARTITION_COLOR,
-	ZONE_COLOR,			// Selected zone
-};
-
 int bevel_notop(WINDOW *w){
 	static const cchar_t bchr[] = {
 		{ .attr = 0, .chars = L"╰", },
@@ -282,35 +437,6 @@ int bevel_nobottom(WINDOW *w){
 }
 
 static int
-bevel(WINDOW *w){
-	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"╭", },
-		{ .attr = 0, .chars = L"╮", },
-		{ .attr = 0, .chars = L"╰", },
-		{ .attr = 0, .chars = L"╯", },
-	};
-	int rows,cols;
-
-	getmaxyx(w,rows,cols);
-	assert(rows && cols);
-	// called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bchr[3]);'
-	// we get ERR returned. this is known behavior: fuck ncurses. instead,
-	// we use mvwins_wch, which doesn't update the cursor position.
-	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
-	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
-	assert(whline(w,ACS_HLINE,cols - 2) != ERR);
-	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
-	if(rows > 2){
-		assert(mvwvline(w,1,cols - 1,ACS_VLINE,rows - 1) != ERR);
-		assert(mvwvline(w,1,0,ACS_VLINE,rows - 1) != ERR);
-	}
-	assert(mvwadd_wch(w,rows - 1,0,&bchr[2]) != ERR);
-	assert(whline(w,ACS_HLINE,cols - 2) != ERR);
-	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[3]) != ERR);
-	return OK;
-}
-
-static int
 ncurses_cleanup(WINDOW **w){
 	int ret = 0;
 
@@ -337,53 +463,6 @@ ncurses_cleanup(WINDOW **w){
 	default: fprintf(stderr,"Couldn't cleanup ncurses\n"); break;
 	}
 	return ret;
-}
-
-static int
-draw_main_window(WINDOW *w){
-	int rows,cols,scol;
-
-	getmaxyx(w,rows,cols);
-	assert(cols >= 80);
-	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
-	if(bevel(w) != OK){
-		goto err;
-	}
-	scol = START_COL * 4;
-	assert(mvwprintw(w,0,scol,"[") != ERR);
-	assert(wattron(w,A_BOLD | COLOR_PAIR(HEADER_COLOR)) != ERR);
-	assert(wprintw(w,"%s %s | %d adapter%s",PACKAGE,VERSION,
-			count_adapters,count_adapters == 1 ? "" : "s") != ERR);
-	assert(wattrset(w,COLOR_PAIR(BORDER_COLOR)) != ERR);
-	assert(wprintw(w,"]") != ERR);
-	assert(wattron(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
-	// addstr() doesn't interpret format strings, so this is safe. It will
-	// fail, however, if the string can't fit on the window, which will for
-	// instance happen if there's an embedded newline.
-	assert(mvwaddstr(w,rows - 1,START_COL * 2,statusmsg) != ERR);
-	assert(wattroff(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
-	return OK;
-
-err:
-	return ERR;
-}
-
-static void
-locked_diag(const char *fmt,...){
-	va_list v;
-	char *nl;
-
-	va_start(v,fmt);
-	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
-	va_end(v);
-	if( (nl = strchr(statusmsg,'\n')) ){
-		*nl = '\0';
-	}
-	draw_main_window(stdscr);
-	if(diags.p){
-		update_diags(&diags);
-	}
-	screen_update();
 }
 
 static int
@@ -2364,7 +2443,7 @@ new_partition(void){
 		return;
 	}
 	if(b->zone->p == NULL){
-		add_partition(b->d,L"FIXME",0,0xfd00);
+		raise_form(&form_ptype);
 		return;
 	}else if(b->zone->p->layout == LAYOUT_NONE){
 		locked_diag("A partition table needs be created on %s",b->d->name);
