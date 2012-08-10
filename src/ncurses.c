@@ -672,6 +672,9 @@ print_blockbar(WINDOW *w,const device *d,int y,int sx,int ex,int selected){
 				d->label ? " named " : "",
 				d->label ? d->label : "");
 		return;
+	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
+		mvwprintw(w,y,sx,"%*.*s",ex - sx - 1,ex - sx - 1,"No media detected in drive");
+		return;
 	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
