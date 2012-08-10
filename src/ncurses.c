@@ -2359,7 +2359,21 @@ new_partition(void){
 		locked_diag("Partition creation requires selection of a block device");
 		return;
 	}
-	// FIXME do stuff
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p == NULL){
+		add_partition(b->d,L"FIXME",0,0xfd00);
+		return;
+	}else if(b->zone->p->layout == LAYOUT_NONE){
+		locked_diag("A partition table needs be created on %s",b->d->name);
+		return;
+	}else if(b->zone->p->layout == LAYOUT_PARTITION){
+		locked_diag("Partition %s exists; remove it first",b->zone->p->name);
+		return;
+	}
+	// FIXME do stuff for mdadm, dm, zpool?
 }
 
 static void
@@ -2386,11 +2400,21 @@ delete_partition(void){
 		locked_diag("Partition deletion requires selection of a partition");
 		return;
 	}
-	if(b->d->layout != LAYOUT_PARTITION){
-		locked_diag("Selected object is not a partition");
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	wipe_partition(b->d);
+	if(b->zone->p == NULL){
+		locked_diag("Space is already unpartitioned");
+		return;
+	}else if(b->zone->p->layout == LAYOUT_NONE){
+		locked_diag("No partition table exists on %s",b->d->name);
+		return;
+	}else if(b->zone->p->layout == LAYOUT_PARTITION){
+		wipe_partition(b->zone->p);
+		return;
+	}
+	// FIXME do stuff for mdadm, dm, zpool?
 }
 
 static void
