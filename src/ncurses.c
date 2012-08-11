@@ -2295,6 +2295,7 @@ static void
 destroy_form_locked(struct form_state *fs){
 	if(fs){
 		WINDOW *fsw;
+		int z;
 
 		assert(fs == actform);
 		fsw = panel_window(fs->p);
@@ -2302,7 +2303,12 @@ destroy_form_locked(struct form_state *fs){
 		assert(del_panel(fs->p) == OK);
 		fs->p = NULL;
 		assert(delwin(fsw) == OK);
-		// FIXME free up opstrs
+		for(z = 0 ; z < fs->ysize ; ++z){
+			free(fs->ops[z].option);
+			free(fs->ops[z].desc);
+		}
+		free(fs->ops);
+		fs->ops = NULL;
 		fs->ysize = -1;
 		actform = NULL;
 	}
@@ -2598,7 +2604,6 @@ make_ptable(void){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	// FIXME memory leak. needs be cleaned in backpath!
 	if((ops_ptype = pttype_table(&opcount)) == NULL){
 		return;
 	}
@@ -2664,7 +2669,6 @@ new_partition(void){
 		return;
 	}
 	if(b->zone->p == NULL){
-		// FIXME memory leak. needs be cleaned in backpath!
 		if((ops_ptype = ptype_table(&opcount)) == NULL){
 			return;
 		}
