@@ -11,6 +11,7 @@
 #include "config.h"
 #include "health.h"
 #include "ptable.h"
+#include "ptypes.h"
 #include "growlight.h"
 
 #ifdef HAVE_NCURSESW_H
@@ -292,7 +293,7 @@ raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
 		assert(x >= cols + START_COL * 2);
 	}
 	assert(y >= ops + 3);
-	assert( (fsw = newwin(ops + 2,cols,ops,x - 20 - cols)) );
+	assert( (fsw = newwin(ops + 2,cols,y - ops - 2,x - 20 - cols)) );
 	if(fsw == NULL){
 		return;
 	}
@@ -2445,10 +2446,51 @@ remove_ptable(void){
 	wipe_ptable(b->d,NULL);
 }
 
+static struct form_option *
+ptype_table(int *count){
+	struct form_option *fo = NULL,*tmp;
+	const ptype *pt;
+
+	*count = 0;
+	for(pt = ptypes ; pt->name ; ++pt){
+		const size_t KEYSIZE = 5; // 4 hex digit code
+		char *key,*desc;
+
+		if((key = malloc(KEYSIZE)) == NULL){
+			goto err;
+		}
+		if((desc = strdup(pt->name)) == NULL){
+			free(key);
+			goto err;
+		}
+		if(snprintf(key,KEYSIZE,"%04x",pt->code) >= (int)KEYSIZE){
+			locked_diag("Couldn't convert key 0x%x",pt->code);
+			free(key);
+			free(desc);
+			goto err;
+		}
+		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+			free(key);
+			free(desc);
+			goto err;
+		}
+		fo = tmp;
+		fo[*count].option = key;
+		fo[*count].desc = desc;
+		++*count;
+	}
+	return fo;
+
+err:
+	free(fo);
+	*count = 0;
+	return NULL;
+}
+
 static void
 new_partition(void){
-	struct form_option *ops_ptype = NULL;
-	int opcount = 0;
+	struct form_option *ops_ptype;
+	int opcount;
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
@@ -2457,6 +2499,10 @@ new_partition(void){
 	}
 	if(b->zone == NULL){
 		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	// FIXME memory leak. needs be cleaned in backpath!
+	if((ops_ptype = ptype_table(&opcount)) == NULL){
 		return;
 	}
 	if(b->zone->p == NULL){
