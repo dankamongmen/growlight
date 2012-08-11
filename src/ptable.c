@@ -123,6 +123,10 @@ pttable_type *get_ptable_types(int *count){
 	int z;
 
 	*count = (sizeof(ptables) / sizeof(*ptables)) - 1;
+	if(*count <= 0){
+		diag("Invalid table type count (%d), aborting",*count);
+		return NULL;
+	}
 	if((pt = malloc(sizeof(*pt) * *count)) == NULL){
 		*count = 0;
 		return NULL;

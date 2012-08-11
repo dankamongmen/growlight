@@ -376,6 +376,7 @@ raise_form(struct form_state *fs,struct form_option *opstrs,int ops){
 	form_options(fs,opstrs,ops);
 	fs->ops = opstrs;
 	actform = fs;
+	locked_diag(fs->boxstr); // calls screen_update()
 }
 // -------------------------------------------------------------------------
 // -- end form API
@@ -2551,9 +2552,8 @@ pttype_table(int *count){
 			goto err;
 		}
 		fo = tmp;
-		fo[*count].option = key;
-		fo[*count].desc = desc;
-		++*count;
+		fo[z].option = key;
+		fo[z].desc = desc;
 	}
 	return fo;
 
@@ -2652,7 +2652,6 @@ new_partition(void){
 			return;
 		}
 		raise_form(&form_ptype,ops_ptype,opcount);
-		locked_diag("Select a partition type"); // calls screen_update()
 		return;
 	}else if(b->zone->p->layout == LAYOUT_NONE){
 		locked_diag("A partition table needs be created on %s",b->d->name);
