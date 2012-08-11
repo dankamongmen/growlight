@@ -272,6 +272,14 @@ static struct form_state form_ptype = FORM_STATE_INITIALIZER(ptype_callback);
 // -------------------------------------------------------------------------
 // -- end partition type form
 // -------------------------------------------------------------------------
+static void
+form_options(struct form_state *fs,const struct form_option *opstrs,int ops){
+	int z;
+
+	for(z = 0 ; z < ops ; ++z){
+		mvwprintw(panel_window(fs->p),z + 1,START_COL,"%s",opstrs[z].desc);
+	}
+}
 
 static void
 raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
@@ -309,6 +317,7 @@ raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
 	assert(wcolor_set(fsw,PBORDER_COLOR,NULL) == OK);
 	assert(bevel(fsw) == OK);
 	assert(wattroff(fsw,A_BOLD) != ERR);
+	form_options(fs,opstrs,ops);
 	actform = fs;
 }
 // -------------------------------------------------------------------------
