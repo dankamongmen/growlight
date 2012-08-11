@@ -235,6 +235,7 @@ struct form_state {
 	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
 	int idx;			// selection index, [0..ysize)
+	const char *boxstr;		// string for box label
 	struct form_option *ops;	// form_option array for *this instance*
 };
 
@@ -252,7 +253,7 @@ ptype_callback(const char *ptype){
 		return;
 	}
 	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while choose partition type.");
+		locked_diag("Lost selection while choosing partition type.");
 		return;
 	}
 	b = current_adapter->selected;
@@ -263,12 +264,47 @@ ptype_callback(const char *ptype){
 	add_partition(b->d,L"FIXME",0,pt);
 }
 
-#define FORM_STATE_INITIALIZER(cb) { .p = NULL, .ysize = -1, .fxn = (cb), .idx = 0, }
-
-static struct form_state form_ptype = FORM_STATE_INITIALIZER(ptype_callback);
+static struct form_state form_ptype = {
+	.boxstr = "Select a partition type",
+	.p = NULL,
+	.ysize = -1,
+	.fxn = ptype_callback,
+	.idx = 0,
+};
 // -------------------------------------------------------------------------
 // -- end partition type form
 // -------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------
+// - partition tabletype form, for new partition table creation
+// -------------------------------------------------------------------------
+static void
+pttype_callback(const char *pttype){
+	blockobj *b;
+
+	if(pttype == NULL){ // user cancelled
+		locked_diag("Partition table creation cancelled by the user.");
+		return;
+	}
+	if(!current_adapter || !(b = current_adapter->selected)){
+		locked_diag("Lost selection while choosing table type.");
+		return;
+	}
+	b = current_adapter->selected;
+	make_partition_table(b->d,pttype);
+}
+
+static struct form_state form_pttype = {
+	.boxstr = "Select a table type",
+	.p = NULL,
+	.ysize = -1,
+	.fxn = pttype_callback,
+	.idx = 0,
+};
+// -------------------------------------------------------------------------
+// -- end partition table type form
+// -------------------------------------------------------------------------
+
 static void
 form_options(struct form_state *fs,const struct form_option *opstrs,int ops){
 	WINDOW *fsw = panel_window(fs->p);
@@ -334,7 +370,7 @@ raise_form(struct form_state *fs,struct form_option *opstrs,int ops){
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
-	mvwprintw(fsw,0,cols - strlen("Select partition type"),"Select partition type");
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
 	mvwprintw(fsw,fs->ysize + 1,cols - strlen("Backspace cancels"),"Backspace cancels");
 	wattroff(fsw,A_BOLD);
 	form_options(fs,opstrs,ops);
@@ -827,14 +863,13 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
+	char pre[PREFIXSTRLEN + 1];
 	unsigned off = sx - 1,ch;
 	const device *d = bo->d;
 	const zobj *z;
 
 	int PNUMFIXME = '0';
 	if(d->mnttype){
-		char pre[PREFIXSTRLEN + 1];
-
 		if(selected){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
 		}else{
@@ -852,7 +887,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"No media detected in drive");
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
-		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"Unpartitioned space");
+		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
+		mvwprintw(w,y,sx,"%s %s",
+				qprefix(d->size,1,pre,sizeof(pre),1),
+				"unpartitioned space");
 		return;
 	}
 	if((z = bo->zchain) == NULL){
@@ -2464,18 +2502,6 @@ liberate_disk(void){
 }
 
 static void
-make_ptable(void){
-	blockobj *b;
-
-	if((b = get_selected_blockobj()) == NULL){
-		locked_diag("Partition table creation requires selection of a block device");
-		return;
-	}
-	// FIXME: support multiple partition table types
-	make_partition_table(b->d,"gpt");
-}
-
-static void
 remove_ptable(void){
 	blockobj *b;
 
@@ -2488,6 +2514,62 @@ remove_ptable(void){
 		return;
 	}
 	wipe_ptable(b->d,NULL);
+}
+
+static struct form_option *
+pttype_table(int *count){
+	struct form_option *fo = NULL,*tmp;
+	const char **types,**cr;
+
+	*count = 0;
+	types = get_ptable_types();
+	for(cr = types ; *cr ; ++*cr){
+		char *key,*desc;
+
+		if((key = strdup(*cr)) == NULL){
+			goto err;
+		}
+		if((desc = strdup(*cr)) == NULL){
+			free(key);
+			goto err;
+		}
+		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+			free(key);
+			free(desc);
+			goto err;
+		}
+		fo = tmp;
+		fo[*count].option = key;
+		fo[*count].desc = desc;
+		++*count;
+	}
+	return fo;
+
+err:
+	free(fo);
+	*count = 0;
+	return NULL;
+}
+
+static void
+make_ptable(void){
+	struct form_option *ops_ptype;
+	int opcount;
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Partition table creation requires selection of a block device");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	// FIXME memory leak. needs be cleaned in backpath!
+	if((ops_ptype = pttype_table(&opcount)) == NULL){
+		return;
+	}
+	raise_form(&form_pttype,ops_ptype,opcount);
 }
 
 static struct form_option *
@@ -2545,11 +2627,11 @@ new_partition(void){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	// FIXME memory leak. needs be cleaned in backpath!
-	if((ops_ptype = ptype_table(&opcount)) == NULL){
-		return;
-	}
 	if(b->zone->p == NULL){
+		// FIXME memory leak. needs be cleaned in backpath!
+		if((ops_ptype = ptype_table(&opcount)) == NULL){
+			return;
+		}
 		raise_form(&form_ptype,ops_ptype,opcount);
 		locked_diag("Select a partition type"); // calls screen_update()
 		return;
