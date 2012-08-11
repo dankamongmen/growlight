@@ -56,20 +56,8 @@ struct panel_state {
 	int ysize;		      // number of lines of *text* (not win)
 };
 
-struct form_state {
-	PANEL *p;
-	int ysize;			// number of lines of *text* (not win)
-	void (*fxn)(const char *);	// callback once form is done
-};
-
 #define PANEL_STATE_INITIALIZER { .p = NULL, .ysize = -1, }
-#define FORM_STATE_INITIALIZER(cb) { .p = NULL, .ysize = -1, .fxn = cb, }
 #define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
-
-// Forms are modal. They take over the keyboard UI and sit atop everything
-// else. Subwindows sit atop the hardware elements of the UI, but do not seize
-// any of the input UI. A form and subwindow can coexist.
-static struct form_state *actform;
 
 static struct panel_state *active;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
@@ -234,6 +222,25 @@ locked_diag(const char *fmt,...){
 }
 
 // -------------------------------------------------------------------------
+// -- begin form API
+// -------------------------------------------------------------------------
+
+struct form_state {
+	PANEL *p;
+	int ysize;			// number of lines of *text* (not win)
+	void (*fxn)(const char *);	// callback once form is done
+};
+
+struct form_option {
+	const char *option;		// option key, the string passed to cb
+	const char *desc;		// longer description
+};
+
+// Forms are modal. They take over the keyboard UI and sit atop everything
+// else. Subwindows sit atop the hardware elements of the UI, but do not seize
+// any of the input UI. A form and subwindow can coexist.
+static struct form_state *actform;
+// -------------------------------------------------------------------------
 // - partition type form, for new partition creation
 // -------------------------------------------------------------------------
 static void
@@ -258,18 +265,23 @@ ptype_callback(const char *ptype){
 	add_partition(b->d,L"FIXME",0,pt);
 }
 
+#define FORM_STATE_INITIALIZER(cb) { .p = NULL, .ysize = -1, .fxn = cb, }
+
 static struct form_state form_ptype = FORM_STATE_INITIALIZER(ptype_callback);
 // -------------------------------------------------------------------------
 // -- end partition type form
 // -------------------------------------------------------------------------
 
 static void
-raise_form(struct form_state *fs){
+raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
 	int cols = 40;
-	int rows = 4;
 	WINDOW *fsw;
 	int x,y;
 
+	if(opstrs == NULL || !ops){
+		locked_diag("Passed empty %u-option string table",ops);
+		return;
+	}
 	if(actform){
 		return;
 	}
@@ -279,8 +291,8 @@ raise_form(struct form_state *fs){
 	}else{
 		assert(x >= cols + START_COL * 2);
 	}
-	assert(y >= rows + 3);
-	assert( (fsw = newwin(rows + 2,cols,rows,x - 20 - cols)) );
+	assert(y >= ops + 3);
+	assert( (fsw = newwin(ops + 2,cols,ops,x - 20 - cols)) );
 	if(fsw == NULL){
 		return;
 	}
@@ -290,7 +302,7 @@ raise_form(struct form_state *fs){
 		delwin(fsw);
 		return;
 	}
-	fs->ysize = rows;
+	fs->ysize = ops;
 	// memory leaks follow if we're compiled with NDEBUG! FIXME
 	assert(wattron(fsw,A_BOLD) != ERR);
 	assert(wcolor_set(fsw,PBORDER_COLOR,NULL) == OK);
@@ -298,6 +310,9 @@ raise_form(struct form_state *fs){
 	assert(wattroff(fsw,A_BOLD) != ERR);
 	actform = fs;
 }
+// -------------------------------------------------------------------------
+// -- end form API
+// -------------------------------------------------------------------------
 
 // This is the number of l we'd have in an optimal world; we might have
 // fewer available to us on this screen at this time.
@@ -2432,6 +2447,8 @@ remove_ptable(void){
 
 static void
 new_partition(void){
+	struct form_option *ops_ptype = NULL;
+	int opcount = 0;
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
@@ -2443,7 +2460,7 @@ new_partition(void){
 		return;
 	}
 	if(b->zone->p == NULL){
-		raise_form(&form_ptype);
+		raise_form(&form_ptype,ops_ptype,opcount);
 		screen_update();
 		return;
 	}else if(b->zone->p->layout == LAYOUT_NONE){
