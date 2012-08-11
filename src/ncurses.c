@@ -1291,16 +1291,16 @@ update_details(WINDOW *hw){
 	}
 	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
 	if(b->zone){
-		char buf[PREFIXSTRLEN + 1];
+		char buf[BPREFIXSTRLEN + 1];
 
 		if(b->zone->p){
 			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: %s",
-					qprefix(d->logsec * (b->zone->lsector - b->zone->fsector - 1),1,buf,sizeof(buf),0),
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
 					b->zone->p->name);
 		}else{
 			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: unpartitioned space",
-					qprefix(d->logsec * (b->zone->lsector - b->zone->fsector - 1),1,buf,sizeof(buf),0),
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector);
 		}
 	}
@@ -2444,6 +2444,7 @@ new_partition(void){
 	}
 	if(b->zone->p == NULL){
 		raise_form(&form_ptype);
+		screen_update();
 		return;
 	}else if(b->zone->p->layout == LAYOUT_NONE){
 		locked_diag("A partition table needs be created on %s",b->d->name);
