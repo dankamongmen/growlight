@@ -2533,7 +2533,7 @@ new_partition(void){
 	}
 	if(b->zone->p == NULL){
 		raise_form(&form_ptype,ops_ptype,opcount);
-		screen_update();
+		locked_diag("Select a partition type"); // calls screen_update()
 		return;
 	}else if(b->zone->p->layout == LAYOUT_NONE){
 		locked_diag("A partition table needs be created on %s",b->d->name);
@@ -2657,11 +2657,45 @@ umount_filesystem(void){
 	// FIXME make that fucker
 }
 
+// We received input while a modal form was active. Divert it from the typical
+// UI, and handle it according to the form.
+static void
+handle_actform_input(int ch){
+	switch(ch){
+		case '\r': case '\n': case KEY_ENTER:
+			pthread_mutex_lock(&bfl);
+			// FIXME destroy form
+			// invoke callback with form results
+			pthread_mutex_unlock(&bfl);
+			break;
+		case 12: // CTRL+L FIXME
+			pthread_mutex_lock(&bfl);
+			wrefresh(curscr);
+			screen_update();
+			pthread_mutex_unlock(&bfl);
+			break;
+		default:{
+			const char *hstr = !help.p ? " ('H' for help)" : "";
+			// diag() locks/unlocks, and calls screen_update()
+			if(isprint(ch)){
+				diag("unknown command '%c'%s",ch,hstr);
+			}else{
+				diag("unknown scancode %d%s",ch,hstr);
+			}
+			break;
+		}
+	}
+}
+
 static void
 handle_ncurses_input(WINDOW *w){
 	int ch;
 
 	while((ch = getch()) != 'q' && ch != 'Q'){
+		if(actform){
+			handle_actform_input(ch);
+			continue;
+		}
 		switch(ch){
 			case 'H':{
 				pthread_mutex_lock(&bfl);
