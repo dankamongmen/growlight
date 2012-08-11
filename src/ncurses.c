@@ -226,8 +226,8 @@ locked_diag(const char *fmt,...){
 // any of the input UI. A form and subwindow can coexist.
 
 struct form_option {
-	const char *option;		// option key, the string passed to cb
-	const char *desc;		// longer description
+	char *option;			// option key (the string passed to cb)
+	char *desc;			// longer description
 };
 
 struct form_state {
@@ -2529,17 +2529,19 @@ remove_ptable(void){
 static struct form_option *
 pttype_table(int *count){
 	struct form_option *fo = NULL,*tmp;
-	const char **types,**cr;
+	pttable_type *types;
+	int z;
 
-	*count = 0;
-	types = get_ptable_types();
-	for(cr = types ; *cr ; ++*cr){
+	if((types = get_ptable_types(count)) == NULL){
+		return NULL;
+	}
+	for(z = 0 ; z < *count ; ++z){
 		char *key,*desc;
 
-		if((key = strdup(*cr)) == NULL){
+		if((key = strdup(types[z].name)) == NULL){
 			goto err;
 		}
-		if((desc = strdup(*cr)) == NULL){
+		if((desc = strdup(types[z].desc)) == NULL){
 			free(key);
 			goto err;
 		}
@@ -2556,6 +2558,10 @@ pttype_table(int *count){
 	return fo;
 
 err:
+	while(z--){
+		free(fo[z].option);
+		free(fo[z].desc);
+	}
 	free(fo);
 	*count = 0;
 	return NULL;
@@ -2618,8 +2624,11 @@ ptype_table(int *count){
 	return fo;
 
 err:
+	while(*count--){
+		free(fo[*count].option);
+		free(fo[*count].desc);
+	}
 	free(fo);
-	*count = 0;
 	return NULL;
 }
 

@@ -78,6 +78,7 @@ last_generic(const device *d){
 
 static const struct ptable {
 	const char *name;
+	const char *desc;
 	int (*make)(device *);
 	int (*zap)(device *);
 	int (*add)(device *,const wchar_t *,uintmax_t,unsigned long long);
@@ -90,6 +91,7 @@ static const struct ptable {
 } ptables[] = {
 	{
 		.name = "gpt",
+		.desc = "GUID Partition Table",
 		.make = new_gpt,
 		.zap = zap_gpt,
 		.add = add_gpt,
@@ -102,6 +104,7 @@ static const struct ptable {
 	},
 	{
 		.name = "dos",
+		.desc = "IBMPC (DOS) / Master Boot Record",
 		.make = dos_make_table,
 		.zap = dos_zap_table,
 		.add = dos_add_part,
@@ -115,22 +118,42 @@ static const struct ptable {
 	{ .name = NULL, }
 };
 
-// FIXME need initialize values
-static const char *ptable_types[sizeof(ptables) / sizeof(*ptables) + 1];
+pttable_type *get_ptable_types(int *count){
+	pttable_type *pt;
+	int z;
 
-const char **get_ptable_types(void){
-	static unsigned once;
-
-	// FIXME thread-unsafe
-	if(!once){
-		unsigned z;
-
-		for(z = 0 ; z < sizeof(ptables) / sizeof(*ptables) ; ++z){
-			ptable_types[z] = ptables[z].name;
-		}
-		once = 1;
+	*count = (sizeof(ptables) / sizeof(*ptables)) - 1;
+	if((pt = malloc(sizeof(*pt) * *count)) == NULL){
+		*count = 0;
+		return NULL;
 	}
-	return ptable_types;
+	for(z = 0 ; z < *count ; ++z){
+		if((pt[z].name = strdup(ptables[z].name)) == NULL){
+			goto err;
+		}
+		if((pt[z].desc = strdup(ptables[z].desc)) == NULL){
+			free(pt[z].name);
+			goto err;
+		}
+	}
+	return pt;
+
+err:
+	while(z--){
+		free(pt[z].name);
+		free(pt[z].desc);
+	}
+	free(pt);
+	*count = 0;
+	return NULL;
+}
+
+void free_ptable_types(pttable_type *pt,int count){
+	while(count--){
+		free(pt[count].name);
+		free(pt[count].desc);
+	}
+	free(pt);
 }
 
 int make_partition_table(device *d,const char *ptype){

@@ -907,18 +907,19 @@ mdadm(wchar_t * const *args,const char *arghelp){
 
 static int
 print_tabletypes(void){
-	const char **types,*cr;
-	int rr,r = 0;
+	pttable_type *ptypes;
+	int z,count,rr,r = 0;
 
-	types = get_ptable_types();
-	while( (cr = *types) ){
-		unsigned last = !*++types;
-
-		r += rr = printf("%s%c",cr,last ? '\n' : ',');
+	if((ptypes = get_ptable_types(&count)) == NULL){
+		return -1;
+	}
+	for(z = 0 ; z < count ; ++z){
+		r += rr = printf("%-4.4s %s\n",ptypes[z].name,ptypes[z].desc);
 		if(rr < 0){
 			return -1;
 		}
 	}
+	free_ptable_types(ptypes,count);
 	return r;
 }
 

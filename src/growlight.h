@@ -262,7 +262,13 @@ device *lookup_device(const char *name);
 controller *lookup_controller(const char *name);
 
 // Supported partition table types
-const char **get_ptable_types(void);
+typedef struct pttable_type {
+	char *name;
+	char *desc;
+} pttable_type;
+
+pttable_type *get_ptable_types(int *);
+void free_ptable_types(pttable_type *,int);
 
 // Supported filesystem types
 const char **get_fs_types(void);
