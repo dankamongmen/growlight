@@ -2292,6 +2292,23 @@ err:
 }
 
 static void
+destroy_form_locked(struct form_state *fs){
+	if(fs){
+		WINDOW *fsw;
+
+		assert(fs == actform);
+		fsw = panel_window(fs->p);
+		hide_panel(fs->p);
+		assert(del_panel(fs->p) == OK);
+		fs->p = NULL;
+		assert(delwin(fsw) == OK);
+		// FIXME free up opstrs
+		fs->ysize = -1;
+		actform = NULL;
+	}
+}
+
+static void
 hide_panel_locked(struct panel_state *ps){
 	if(ps){
 		WINDOW *psw;
@@ -2780,18 +2797,31 @@ umount_filesystem(void){
 static void
 handle_actform_input(int ch){
 	struct form_state *fs = actform;
+	void (*cb)(const char *);
 
 	switch(ch){
-		case '\r': case '\n': case KEY_ENTER:
-			pthread_mutex_lock(&bfl);
-			// FIXME destroy form
-			// invoke callback with form results
-			pthread_mutex_unlock(&bfl);
-			break;
 		case 12: // CTRL+L FIXME
 			pthread_mutex_lock(&bfl);
 			wrefresh(curscr);
 			screen_update();
+			pthread_mutex_unlock(&bfl);
+			break;
+		case '\r': case '\n': case KEY_ENTER:{
+			char *optstr;
+
+			pthread_mutex_lock(&bfl);
+			assert(optstr = strdup(actform->ops[actform->idx].option));
+			cb = actform->fxn;
+			destroy_form_locked(actform);
+			cb(optstr);
+			free(optstr);
+			pthread_mutex_unlock(&bfl);
+			break;
+		}case KEY_BACKSPACE:
+			pthread_mutex_lock(&bfl);
+			cb = actform->fxn;
+			destroy_form_locked(actform);
+			cb(NULL);
 			pthread_mutex_unlock(&bfl);
 			break;
 		case KEY_UP: case 'k':{
