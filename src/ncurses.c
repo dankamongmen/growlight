@@ -229,6 +229,7 @@ struct form_state {
 	PANEL *p;
 	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
+	int idx;			// selection index, [0..ysize)
 };
 
 struct form_option {
@@ -261,7 +262,7 @@ ptype_callback(const char *ptype){
 	add_partition(b->d,L"FIXME",0,pt);
 }
 
-#define FORM_STATE_INITIALIZER(cb) { .p = NULL, .ysize = -1, .fxn = cb, }
+#define FORM_STATE_INITIALIZER(cb) { .p = NULL, .ysize = -1, .fxn = (cb), .idx = 0, }
 
 static struct form_state form_ptype = FORM_STATE_INITIALIZER(ptype_callback);
 // -------------------------------------------------------------------------
@@ -269,11 +270,24 @@ static struct form_state form_ptype = FORM_STATE_INITIALIZER(ptype_callback);
 // -------------------------------------------------------------------------
 static void
 form_options(struct form_state *fs,const struct form_option *opstrs,int ops){
-	int z;
+	WINDOW *fsw = panel_window(fs->p);
+	int z,cols;
 
+	cols = getmaxx(fsw);
+	wattron(fsw,A_BOLD);
+	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 	for(z = 0 ; z < ops ; ++z){
-		mvwprintw(panel_window(fs->p),z + 1,START_COL,"%s %s",
-				opstrs[z].option,opstrs[z].desc);
+		if(z == fs->idx){
+			wattron(fsw,A_REVERSE);
+		}
+		mvwprintw(fsw,z + 1,START_COL,"%s %-*.*s",
+				opstrs[z].option,
+				cols - strlen(opstrs[z].option) - 1 - START_COL * 2,
+				cols - strlen(opstrs[z].option) - 1 - START_COL * 2,
+				opstrs[z].desc);
+		if(z == fs->idx){
+			wattroff(fsw,A_REVERSE);
+		}
 	}
 }
 
@@ -318,8 +332,6 @@ raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
-	wattron(fsw,A_BOLD);
-	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 	form_options(fs,opstrs,ops);
 	actform = fs;
 }
