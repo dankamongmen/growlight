@@ -333,6 +333,10 @@ raise_form(struct form_state *fs,struct form_option *opstrs,int ops){
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
+	wattron(fsw,A_BOLD);
+	mvwprintw(fsw,0,cols - strlen("Select partition type"),"Select partition type");
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen("Backspace cancels"),"Backspace cancels");
+	wattroff(fsw,A_BOLD);
 	form_options(fs,opstrs,ops);
 	fs->ops = opstrs;
 	actform = fs;
