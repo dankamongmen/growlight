@@ -225,16 +225,17 @@ locked_diag(const char *fmt,...){
 // else. Subwindows sit atop the hardware elements of the UI, but do not seize
 // any of the input UI. A form and subwindow can coexist.
 
+struct form_option {
+	const char *option;		// option key, the string passed to cb
+	const char *desc;		// longer description
+};
+
 struct form_state {
 	PANEL *p;
 	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
 	int idx;			// selection index, [0..ysize)
-};
-
-struct form_option {
-	const char *option;		// option key, the string passed to cb
-	const char *desc;		// longer description
+	struct form_option *ops;	// form_option array for *this instance*
 };
 
 // -------------------------------------------------------------------------
@@ -292,7 +293,7 @@ form_options(struct form_state *fs,const struct form_option *opstrs,int ops){
 }
 
 static void
-raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
+raise_form(struct form_state *fs,struct form_option *opstrs,int ops){
 	size_t longop,longdesc;
 	WINDOW *fsw;
 	int cols;
@@ -333,6 +334,7 @@ raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	form_options(fs,opstrs,ops);
+	fs->ops = opstrs;
 	actform = fs;
 }
 // -------------------------------------------------------------------------
@@ -2673,6 +2675,8 @@ umount_filesystem(void){
 // UI, and handle it according to the form.
 static void
 handle_actform_input(int ch){
+	struct form_state *fs = actform;
+
 	switch(ch){
 		case '\r': case '\n': case KEY_ENTER:
 			pthread_mutex_lock(&bfl);
@@ -2686,6 +2690,26 @@ handle_actform_input(int ch){
 			screen_update();
 			pthread_mutex_unlock(&bfl);
 			break;
+		case KEY_UP: case 'k':{
+			pthread_mutex_lock(&bfl);
+			if(fs->idx-- == 0){
+				fs->idx = fs->ysize - 1;
+			}
+			form_options(fs,fs->ops,fs->ysize);
+			screen_update();
+			pthread_mutex_unlock(&bfl);
+			break;
+		}
+		case KEY_DOWN: case 'j':{
+			pthread_mutex_lock(&bfl);
+			if(fs->idx++ >= fs->ysize - 1){
+				fs->idx = 0;
+			}
+			form_options(fs,fs->ops,fs->ysize);
+			screen_update();
+			pthread_mutex_unlock(&bfl);
+			break;
+		}
 		default:{
 			const char *hstr = !help.p ? " ('H' for help)" : "";
 			// diag() locks/unlocks, and calls screen_update()
