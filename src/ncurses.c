@@ -38,6 +38,8 @@ enum {
 	PBORDER_COLOR,
 	PHEADING_COLOR,
 	SUBDISPLAY_COLOR,
+	FORMBORDER_COLOR,
+	FORMTEXT_COLOR,
 	OPTICAL_COLOR,
 	ROTATE_COLOR,
 	VIRTUAL_COLOR,
@@ -66,6 +68,9 @@ static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
 static struct panel_state environment = PANEL_STATE_INITIALIZER;
 
+static struct form_state *actform;
+
+static void screen_update(void);
 static int update_diags(struct panel_state *);
 
 struct adapterstate;
@@ -125,15 +130,6 @@ static reelbox *current_adapter,*top_reelbox,*last_reelbox;
 
 #define START_COL 1		// Room to leave for borders
 #define PAD_COLS(cols) ((cols) - START_COL * 2)
-
-static inline void
-screen_update(void){
-	if(active){
-		assert(top_panel(active->p) != ERR);
-	}
-	update_panels();
-	assert(doupdate() == OK);
-}
 
 static int
 selection_active(void){
@@ -225,6 +221,9 @@ locked_diag(const char *fmt,...){
 // -------------------------------------------------------------------------
 // -- begin form API
 // -------------------------------------------------------------------------
+// Forms are modal. They take over the keyboard UI and sit atop everything
+// else. Subwindows sit atop the hardware elements of the UI, but do not seize
+// any of the input UI. A form and subwindow can coexist.
 
 struct form_state {
 	PANEL *p;
@@ -237,10 +236,6 @@ struct form_option {
 	const char *desc;		// longer description
 };
 
-// Forms are modal. They take over the keyboard UI and sit atop everything
-// else. Subwindows sit atop the hardware elements of the UI, but do not seize
-// any of the input UI. A form and subwindow can coexist.
-static struct form_state *actform;
 // -------------------------------------------------------------------------
 // - partition type form, for new partition creation
 // -------------------------------------------------------------------------
@@ -277,14 +272,16 @@ form_options(struct form_state *fs,const struct form_option *opstrs,int ops){
 	int z;
 
 	for(z = 0 ; z < ops ; ++z){
-		mvwprintw(panel_window(fs->p),z + 1,START_COL,"%s",opstrs[z].desc);
+		mvwprintw(panel_window(fs->p),z + 1,START_COL,"%s %s",
+				opstrs[z].option,opstrs[z].desc);
 	}
 }
 
 static void
 raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
-	int cols = 40;
+	size_t longop,longdesc;
 	WINDOW *fsw;
+	int cols;
 	int x,y;
 
 	if(opstrs == NULL || !ops){
@@ -294,14 +291,20 @@ raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
 	if(actform){
 		return;
 	}
-	getmaxyx(stdscr,y,x);
-	if(cols == 0){
-		cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
-	}else{
-		assert(x >= cols + START_COL * 2);
+	longdesc = longop = 0;
+	for(x = 0 ; x < ops ; ++x){
+		if(strlen(opstrs[x].option) > longop){
+			longop = strlen(opstrs[x].option);
+		}
+		if(strlen(opstrs[x].desc) > longdesc){
+			longdesc = strlen(opstrs[x].desc);
+		}
 	}
+	cols = longdesc + longop + 1;
+	getmaxyx(stdscr,y,x);
+	assert(x >= cols + START_COL * 2);
 	assert(y >= ops + 3);
-	assert( (fsw = newwin(ops + 2,cols,y - ops - 2,x - 20 - cols)) );
+	assert( (fsw = newwin(ops + 2,cols + START_COL * 2,y - ops - 4,5)) );
 	if(fsw == NULL){
 		return;
 	}
@@ -312,17 +315,29 @@ raise_form(struct form_state *fs,const struct form_option *opstrs,int ops){
 		return;
 	}
 	fs->ysize = ops;
-	// memory leaks follow if we're compiled with NDEBUG! FIXME
-	assert(wattron(fsw,A_BOLD) != ERR);
-	assert(wcolor_set(fsw,PBORDER_COLOR,NULL) == OK);
-	assert(bevel(fsw) == OK);
-	assert(wattroff(fsw,A_BOLD) != ERR);
+	wattroff(fsw,A_BOLD);
+	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+	bevel(fsw);
+	wattron(fsw,A_BOLD);
+	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 	form_options(fs,opstrs,ops);
 	actform = fs;
 }
 // -------------------------------------------------------------------------
 // -- end form API
 // -------------------------------------------------------------------------
+
+static inline void
+screen_update(void){
+	if(active){
+		assert(top_panel(active->p) != ERR);
+	}
+	if(actform){
+		assert(top_panel(actform->p) != ERR);
+	}
+	update_panels();
+	assert(doupdate() == OK);
+}
 
 // This is the number of l we'd have in an optimal world; we might have
 // fewer available to us on this screen at this time.
@@ -500,6 +515,8 @@ setup_colors(void){
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(FORMTEXT_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
@@ -2733,9 +2750,6 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_lock(&bfl);
 				if(!selection_active()){
 					use_prev_controller(w,&details);
-					if(active){
-						assert(top_panel(active->p) != ERR);
-					}
 				}else{
 					use_prev_device();
 				}
@@ -2748,9 +2762,6 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_lock(&bfl);
 				if(!selection_active()){
 					use_next_controller(w,&details);
-					if(active){
-						assert(top_panel(active->p) != ERR);
-					}
 				}else{
 					use_next_device();
 				}
