@@ -580,7 +580,7 @@ setup_colors(void){
 	assert(init_pair(MDADM_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(ZPOOL_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(ZONE_COLOR,COLOR_YELLOW,-1) == OK);
+	assert(init_pair(ZONE_COLOR,COLOR_BLACK,-1) == OK);
 	return 0;
 }
 
@@ -884,9 +884,19 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				d->label ? d->label : "");
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
+		if(selected){
+			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+		}else{
+			assert(wattrset(w,COLOR_PAIR(OPTICAL_COLOR)) == OK);
+		}
 		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"No media detected in drive");
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
+		if(selected){
+			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
+		}else{
+			assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
+		}
 		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
 		mvwprintw(w,y,sx,"%s %s",
 				qprefix(d->size,1,pre,sizeof(pre),1),
@@ -901,7 +911,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			if(selected && z != bo->zone){
 				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}else if(selected){
-				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(ZONE_COLOR)) == OK);
+				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}else{
 				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}
