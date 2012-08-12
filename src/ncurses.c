@@ -2669,6 +2669,15 @@ new_partition(void){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
+	if(b->d->layout != LAYOUT_NONE){
+		// FIXME for blockdev.pttable check below. remove!
+		locked_diag("Partition tables can only be made on block devices");
+		return;
+	}
+	if(b->d->blkdev.pttable == NULL){
+		locked_diag("Partition creation requires a partition table");
+		return;
+	}
 	if(b->zone->p == NULL){
 		if((ops_ptype = ptype_table(&opcount)) == NULL){
 			return;
