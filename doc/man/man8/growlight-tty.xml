@@ -264,7 +264,14 @@ detailed information about the block device.</para>
 detected partitions. Passed "-v", data present on a given partition will also
 be listed. "del" attempts to convert a partition to unallocated space. "add"
 attempts to carve a partition of the specified size, type and name from
-the specified block device's free space. "setuuid" attempts to set the partition
+the specified block device's free space. "size" may be either a single number,
+representing a size in bytes, or a range indicated by one or two numbers
+separated by a colon. A range with no first number specifies "empty space up
+until this sector." A range with no second number specifies "empty space following
+this sector." A range with two numbers indicates "the specified range", and must
+be wholly contained within free space. A size
+of 0 indicates "all space available." When a size is used instead of a sector
+range, the space is taken from the largest free space. "setuuid" attempts to set the partition
 GUID (<emphasis>not</emphasis> the Type UUID) to uuid. "setname" attempts to
 set the partition label to name. With no arguments, "settype" lists the types
 supported by various partitioning schemes. Otherwise, it attempts to set the

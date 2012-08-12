@@ -19,7 +19,8 @@ int make_partition_table(struct device *,const char *);
 // type is specified, the detected type, if it exists, is used.
 int wipe_ptable(struct device *,const char *);
 
-int add_partition(struct device *,const wchar_t *,size_t,unsigned long long);
+int add_partition(struct device *,const wchar_t *,uintmax_t,unsigned long long);
+int add_partition_precise(struct device *,const wchar_t *,uintmax_t,uintmax_t,unsigned long long);
 int wipe_partition(const struct device *);
 int name_partition(struct device *,const wchar_t *);
 int uuid_partition(struct device *,const void *);
@@ -27,6 +28,7 @@ int check_partition(struct device *);
 int partition_set_flag(struct device *,uint64_t,unsigned);
 int partition_set_code(struct device *,unsigned long long);
 uintmax_t lookup_last_usable_sector(const struct device *);
+int partitions_named_p(const struct device *);
 
 #ifdef __cplusplus
 }

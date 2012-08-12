@@ -127,7 +127,7 @@ wstrtoxu(const wchar_t *wstr,unsigned *ux){
 }
 
 static int
-wstrtoull(const wchar_t *wstr,unsigned long long *ull){
+wstrtoull(const wchar_t *wstr,uintmax_t *ull){
 	char buf[BUFSIZ],*e;
 
 	if(snprintf(buf,sizeof(buf),"%ls",wstr) >= (int)sizeof(buf)){
@@ -1148,6 +1148,49 @@ print_partition_types(void){
 	return 0;
 }
 
+// Allows:
+//
+//  a number by itself. this ought be considered a size in bytes. written to
+//  	**size only. *fsec and *lsec are set to NULL.
+//  a number followed by a colon, indicating the specified sector through the
+//      end of its empty space, and written to **fsec. *size and *lsec = NULL.
+//  a colon followed by a number, indicating the largest contiguous free space
+//      possibly ending with that sector, and written to **lsec.
+//  two numbers separated by a colon, indicating a precise range.
+static int
+extract_partition_spec(const wchar_t *spec,uintmax_t **size,
+				uintmax_t **fsec,uintmax_t **lsec){
+	wchar_t *sep;
+
+	if((sep = wcschr(spec,L':')) == NULL){
+		*fsec = *lsec = NULL;
+		if(wstrtoull(spec,*size)){
+			return -1;
+		}
+	}
+	if(spec == sep){
+		*size = *fsec = NULL;
+		if(wstrtoull(sep + 1,*lsec)){
+			return -1;
+		}
+		return 0;
+	}else if(sep[1] == L'\0'){
+		*size = *lsec = NULL;
+		if(wstrtoull(spec,*fsec)){
+			return -1;
+		}
+		return 0;
+	}
+	*size = NULL;
+	if(wstrtoull(spec,*fsec)){
+		return -1;
+	}
+	if(wstrtoull(sep + 1,*lsec)){
+		return -1;
+	}
+	return 0;
+}
+
 static int
 partition(wchar_t * const *args,const char *arghelp){
 	const controller *c;
@@ -1161,7 +1204,7 @@ partition(wchar_t * const *args,const char *arghelp){
 		device *d;
 
 		if(wcscmp(args[1],L"setflag") == 0){
-			unsigned long long ull;
+			uintmax_t ull;
 			unsigned val;
 
 			if(!args[2]){
@@ -1233,15 +1276,18 @@ partition(wchar_t * const *args,const char *arghelp){
 			return -1;
 		}
 		if(wcscmp(args[1],L"add") == 0){
-			unsigned long long ull;
+			uintmax_t fsec,lsec,size,*f,*l,*s;
 			unsigned code;
 
-			// target dev == 2, 3 == size, 4 == name, 5 == type
+			// target dev == 2, 3 == sectors, 4 == name, 5 == type
 			if(!args[3] || !args[4] || !args[5] || args[6]){
 				usage(args,arghelp);
 				return -1;
 			}
-			if(wstrtoull(args[3],&ull)){
+			f = &fsec;
+			l = &lsec;
+			s = &size;
+			if(extract_partition_spec(args[3],&s,&f,&l)){
 				usage(args,arghelp);
 				return -1;
 			}
@@ -1249,8 +1295,14 @@ partition(wchar_t * const *args,const char *arghelp){
 				usage(args,arghelp);
 				return -1;
 			}
-			if(add_partition(d,args[4],ull,code)){
-				return -1;
+			if(s){
+				if(add_partition(d,args[4],size,code)){
+					return -1;
+				}
+			}else{
+				if(add_partition_precise(d,args[4],fsec,lsec,code)){
+					return -1;
+				}
 			}
 			return 0;
 		}else if(wcscmp(args[1],L"del") == 0){
@@ -1849,7 +1901,7 @@ diags(wchar_t * const *args,const char *arghelp){
 	idx = sizeof(logs) / sizeof(*logs);
 	if(args[1]){
 		if(!args[2]){
-			unsigned long long ull;
+			uintmax_t ull;
 
 			if(wstrtoull(args[1],&ull)){
 				usage(args,arghelp);
@@ -1913,7 +1965,9 @@ static const struct fxn {
 			"                 | [ \"detail\" blockdev ]\n"
 			"                 | [ -v ] no arguments to list all blockdevs"),
 	FXN(partition,"[ \"del\" partition ]\n"
-			"                 | [ \"add\" blockdev size name type ]\n"
+			"                 | [ \"add\" blockdev size/range name type ]\n"
+			"                    size: a single number, interpreted as bytes\n"
+			"                    range: num:num, num: or :num, interpreted as sectors\n"
 			"                 | [ \"setuuid\" partition uuid ]\n"
 			"                 | [ \"setname\" partition name ]\n"
 			"                 | [ \"settype\" [ partition type ] ]\n"
@@ -1939,7 +1993,7 @@ static const struct fxn {
 			"                 | [ -v ] no arguments to list all devicemaps"),
 	FXN(zpool,"[ arguments passed directly through to zpool(8) ]\n"
 			"                 | [ -v ] no arguments to list all zpools"),
-	FXN(zfs,"arguments passed directly through to zfs(8)\n"),
+	FXN(zfs,"arguments passed directly through to zfs(8)"),
 	FXN(target,"[ \"set\" path ]\n"
 			"                 | [ \"unset\" ]\n"
 			"                 | [ \"finalize\" ]\n"

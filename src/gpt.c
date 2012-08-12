@@ -467,7 +467,12 @@ unmap_gpt(const device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
 	return 0;
 }
 
-#include "popen.h"
+int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
+	assert(d && name && fsec && lsec && code);
+	diag("Precise GPT creation not yet supported FIXME\n");
+	return -1;
+}
+
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
 	uint64_t flba,llba,flarge,llarge,nextgap;
 	static const uint8_t zguid[GUIDSIZE];
