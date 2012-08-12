@@ -292,6 +292,7 @@ struct form_option {
 struct form_input {
 	char *prompt;			// short prompt
 	char *longprompt;		// longer prompt, not currently used
+	char *buffer;			// input buffer, initialized to ""
 };
 
 typedef enum {
@@ -336,8 +337,44 @@ create_form(const char *str,void (*fxn)(const char *),form_enum ftype){
 }
 
 static void
+destroy_form_locked(struct form_state *fs){
+	if(fs){
+		WINDOW *fsw;
+		int z;
+
+		assert(fs == actform);
+		fsw = panel_window(fs->p);
+		hide_panel(fs->p);
+		assert(del_panel(fs->p) == OK);
+		fs->p = NULL;
+		assert(delwin(fsw) == OK);
+		switch(fs->formtype){
+			case FORM_SELECT:
+				for(z = 0 ; z < fs->ysize ; ++z){
+					free(fs->ops[z].option);
+					free(fs->ops[z].desc);
+				}
+				free(fs->ops);
+				fs->ops = NULL;
+				break;
+			case FORM_STRING_INPUT:
+				free(fs->inp.buffer);
+				free(fs->inp.prompt);
+				free(fs->inp.longprompt);
+				fs->inp.longprompt = NULL;
+				fs->inp.prompt = NULL;
+				fs->inp.buffer = NULL;
+				break;
+		}
+		fs->ysize = -1;
+		actform = NULL;
+	}
+}
+
+static void
 free_form(struct form_state *fs){
 	if(fs){
+		destroy_form_locked(fs);
 		free(fs->boxstr);
 		free(fs);
 	}
@@ -476,6 +513,7 @@ raise_str_form(const char *str,void (*fxn)(const char *)){
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
 	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
 	fs->inp.prompt = fs->boxstr;
+	fs->inp.buffer = strdup("");
 	actform = fs;
 	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 	mvwprintw(fsw,1,START_COL,"%-*.*s: ",
@@ -2674,39 +2712,6 @@ err:
 }
 
 static void
-destroy_form_locked(struct form_state *fs){
-	if(fs){
-		WINDOW *fsw;
-		int z;
-
-		assert(fs == actform);
-		fsw = panel_window(fs->p);
-		hide_panel(fs->p);
-		assert(del_panel(fs->p) == OK);
-		fs->p = NULL;
-		assert(delwin(fsw) == OK);
-		switch(fs->formtype){
-			case FORM_SELECT:
-				for(z = 0 ; z < fs->ysize ; ++z){
-					free(fs->ops[z].option);
-					free(fs->ops[z].desc);
-				}
-				free(fs->ops);
-				fs->ops = NULL;
-				break;
-			case FORM_STRING_INPUT:
-				free(fs->inp.prompt);
-				free(fs->inp.longprompt);
-				fs->inp.longprompt = NULL;
-				fs->inp.prompt = NULL;
-				break;
-		}
-		fs->ysize = -1;
-		actform = NULL;
-	}
-}
-
-static void
 hide_panel_locked(struct panel_state *ps){
 	if(ps){
 		WINDOW *psw;
@@ -3246,6 +3251,54 @@ umount_filesystem(void){
 	// FIXME make that fucker
 }
 
+// We received input while a modal freeform string input form was active.
+// Divert it from the typical UI, and handle it according to the form.
+static void
+handle_actform_string_input(int ch){
+	struct form_state *fs = actform;
+	void (*cb)(const char *);
+
+	switch(ch){
+	case 12: // CTRL+L FIXME
+		pthread_mutex_lock(&bfl);
+		wrefresh(curscr);
+		screen_update();
+		pthread_mutex_unlock(&bfl);
+		break;
+	case '\r': case '\n': case KEY_ENTER:{
+		char *str;
+
+		pthread_mutex_lock(&bfl);
+		cb = actform->fxn;
+		assert(str = strdup(actform->inp.buffer));
+		free_form(actform);
+		actform = NULL;
+		cb(str);
+		free(str);
+		pthread_mutex_unlock(&bfl);
+		break;
+	}case KEY_ESC:{
+		pthread_mutex_lock(&bfl);
+		cb = actform->fxn;
+		free_form(actform);
+		actform = NULL;
+		cb(NULL);
+		pthread_mutex_unlock(&bfl);
+		break;
+	// FIXME handle backspace!
+	}default:{
+		char *tmp;
+
+		if((tmp = malloc(strlen(fs->inp.buffer) + 1)) == NULL){
+			locked_diag("Couldn't allocate input buffer (%s?)",strerror(errno));
+			return;
+		}
+		fs->inp.buffer = tmp;
+		fs->inp.buffer[strlen(fs->inp.buffer) + 1] = '\0';
+		fs->inp.buffer[strlen(fs->inp.buffer)] = ch;
+	} }
+}
+
 // We received input while a modal form was active. Divert it from the typical
 // UI, and handle it according to the form.
 static void
@@ -3253,6 +3306,10 @@ handle_actform_input(int ch){
 	struct form_state *fs = actform;
 	void (*cb)(const char *);
 
+	if(fs->formtype == FORM_STRING_INPUT){
+		handle_actform_string_input(ch);
+		return;
+	}
 	switch(ch){
 		case 12: // CTRL+L FIXME
 			pthread_mutex_lock(&bfl);
@@ -3264,27 +3321,19 @@ handle_actform_input(int ch){
 			char *optstr;
 
 			pthread_mutex_lock(&bfl);
-			switch(actform->formtype){
-			case FORM_SELECT:
-				assert(optstr = strdup(actform->ops[actform->idx].option));
-				cb = actform->fxn;
-				destroy_form_locked(actform);
-				cb(optstr);
-				free(optstr);
-				break;
-			case FORM_STRING_INPUT:
-				cb = actform->fxn;
-				destroy_form_locked(actform);
-				cb("FIXME"); // FIXME collect the input!
-				break;
-			break;
-			}
+			assert(optstr = strdup(actform->ops[actform->idx].option));
+			cb = actform->fxn;
+			free_form(actform);
+			actform = NULL;
+			cb(optstr);
+			free(optstr);
 			pthread_mutex_unlock(&bfl);
 			break;
 		}case KEY_ESC:
 			pthread_mutex_lock(&bfl);
 			cb = actform->fxn;
-			destroy_form_locked(actform);
+			free_form(actform);
+			actform = NULL;
 			cb(NULL);
 			pthread_mutex_unlock(&bfl);
 			break;
