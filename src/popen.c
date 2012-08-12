@@ -69,7 +69,7 @@ int popen_drain(const char *cmd){
 		return -1;
 	}
 	while(fgets(buf,sizeof(buf),fd)){
-		printf("%s",buf);
+		diag("%s",buf);
 	}
 	if(!feof(fd)){
 		diag("Error reading from '%s' (%s?)\n",cmd,strerror(errno));
