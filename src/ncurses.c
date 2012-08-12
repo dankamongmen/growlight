@@ -288,22 +288,95 @@ struct form_option {
 	char *desc;			// longer description
 };
 
+struct form_input {
+	char *prompt;			// short prompt
+	char *longprompt;		// longer prompt, not currently used
+};
+
+typedef enum {
+	FORM_SELECT,			// form_option[]
+	FORM_STRING_INPUT,		// form_input
+} form_enum;
+
 struct form_state {
 	PANEL *p;
 	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
 	int idx;			// selection index, [0..ysize)
 	int longop;			// length of longest op
-	const char *boxstr;		// string for box label
-	struct form_option *ops;	// form_option array for *this instance*
+	char *boxstr;			// string for box label
+	form_enum formtype;		// type of form
+	union {
+		struct form_option *ops;// form_option array for *this instance*
+		struct form_input inp;	// form_input state for this instance
+	};
 };
 
 // -------------------------------------------------------------------------
-// - string type form, for generic input
+// -- form creation
 // -------------------------------------------------------------------------
-/*static void
-raise_str_form(struct form_state *fs,struct form_option *opstrs,int ops){
+static struct form_state *
+create_form(const char *str,void (*fxn)(const char *),form_enum ftype){
+	struct form_state *fs;
+
+	if( (fs = malloc(sizeof(*fs))) ){
+		memset(fs,0,sizeof(*fs));
+		if((fs->boxstr = strdup(str)) == NULL){
+			locked_diag("Couldn't create input dialog (%s?)",strerror(errno));
+			free(fs);
+			return NULL;
+		}
+		fs->formtype = ftype;
+		fs->fxn = fxn;
+	}else{
+		locked_diag("Couldn't create input dialog (%s?)",strerror(errno));
+	}
+	return fs;
+}
+
+static void
+free_form(struct form_state *fs){
+	if(fs){
+		free(fs->boxstr);
+		free(fs);
+	}
+}
+
+static void
+form_options(struct form_state *fs){
+	const struct form_option *opstrs = fs->ops;
+	WINDOW *fsw = panel_window(fs->p);
+	const int ops = fs->ysize;
+	int z,cols;
+
+	if(fs->formtype != FORM_SELECT){
+		return;
+	}
+	cols = getmaxx(fsw);
+	wattron(fsw,A_BOLD);
+	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+	for(z = 0 ; z < ops ; ++z){
+		if(z == fs->idx){
+			wattron(fsw,A_REVERSE);
+		}
+		mvwprintw(fsw,z + 1,START_COL,"%-*.*s %-*.*s",
+				fs->longop,fs->longop,opstrs[z].option,
+				cols - fs->longop - 1 - START_COL * 2,
+				cols - fs->longop - 1 - START_COL * 2,
+				opstrs[z].desc);
+		if(z == fs->idx){
+			wattroff(fsw,A_REVERSE);
+		}
+	}
+}
+
+// -------------------------------------------------------------------------
+// - select type form, for single choice from among a set
+// -------------------------------------------------------------------------
+static void
+raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops){
 	size_t longop,longdesc;
+	struct form_state *fs;
 	WINDOW *fsw;
 	int cols;
 	int x,y;
@@ -313,6 +386,10 @@ raise_str_form(struct form_state *fs,struct form_option *opstrs,int ops){
 		return;
 	}
 	if(actform){
+		locked_diag("An input dialog is already active");
+		return;
+	}
+	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
 		return;
 	}
 	longdesc = longop = 0;
@@ -330,12 +407,14 @@ raise_str_form(struct form_state *fs,struct form_option *opstrs,int ops){
 	assert(y >= ops + 3);
 	assert( (fsw = newwin(ops + 2,cols + START_COL * 2,y - ops - 4,5)) );
 	if(fsw == NULL){
+		free_form(fs);
 		return;
 	}
 	assert((fs->p = new_panel(fsw)));
 	assert(top_panel(fs->p) != ERR);
 	if(fs->p == NULL){
 		delwin(fsw);
+		free_form(fs);
 		return;
 	}
 	fs->ysize = ops;
@@ -344,14 +423,66 @@ raise_str_form(struct form_state *fs,struct form_option *opstrs,int ops){
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen("Escape cancels"),"Escape cancels");
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc/⌫bkspc return"),"⎋esc/⌫bkspc return");
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
 	fs->ops = opstrs;
 	form_options(fs);
 	actform = fs;
 	locked_diag(fs->boxstr); // calls screen_update()
-}*/
+}
+
+// -------------------------------------------------------------------------
+// - string type form, for generic input
+// -------------------------------------------------------------------------
+static void
+raise_str_form(const char *str,void (*fxn)(const char *)){
+	struct form_state *fs;
+	WINDOW *fsw;
+	int cols;
+	int x,y;
+
+	assert(str && fxn);
+	if(actform){
+		locked_diag("An input dialog is already active");
+		return;
+	}
+	if((fs = create_form(str,fxn,FORM_STRING_INPUT)) == NULL){
+		return;
+	}
+	fs->longop = strlen(str);
+	cols = fs->longop + 40 + 1; // FIXME? 40 for input currently
+	getmaxyx(stdscr,y,x);
+	assert(x >= cols + START_COL * 2);
+	assert(y >= 3);
+	assert( (fsw = newwin(3,cols + START_COL * 2,y - 5,5)) );
+	if(fsw == NULL){
+		free_form(fs);
+		return;
+	}
+	assert((fs->p = new_panel(fsw)));
+	assert(top_panel(fs->p) != ERR);
+	if(fs->p == NULL){
+		delwin(fsw);
+		free_form(fs);
+		return;
+	}
+	fs->ysize = 1;
+	wattroff(fsw,A_BOLD);
+	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+	bevel(fsw);
+	wattron(fsw,A_BOLD);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc/⌫bkspc return"),"⎋esc/⌫bkspc return");
+	wattroff(fsw,A_BOLD);
+	fs->inp.prompt = fs->boxstr;
+	actform = fs;
+	assert(mvwprintw(fsw,1,START_COL,"%-*.*s: %-*.*s",
+				fs->longop,fs->longop,fs->inp.prompt,
+				cols - fs->longop - 1 - START_COL * 2,
+				cols - fs->longop - 1 - START_COL * 2,"") != ERR);
+	locked_diag(fs->boxstr); // calls screen_update()
+}
 // -------------------------------------------------------------------------
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
@@ -381,16 +512,86 @@ fs_callback(const char *fs){
 	locked_diag("I'm confused. Aborting.\n");
 }
 
-static struct form_state form_fs = {
-	.boxstr = "Select a filesystem type",
-	.p = NULL,
-	.ysize = -1,
-	.fxn = fs_callback,
-	.idx = 0,
-};
 // -------------------------------------------------------------------------
-// -- end partition type form
+// -- end filesystem type form
 // -------------------------------------------------------------------------
+
+static struct form_option *
+ptype_table(int *count){
+	struct form_option *fo = NULL,*tmp;
+	const ptype *pt;
+
+	*count = 0;
+	for(pt = ptypes ; pt->name ; ++pt){
+		const size_t KEYSIZE = 5; // 4 hex digit code
+		char *key,*desc;
+
+		if((key = malloc(KEYSIZE)) == NULL){
+			goto err;
+		}
+		if((desc = strdup(pt->name)) == NULL){
+			free(key);
+			goto err;
+		}
+		if(snprintf(key,KEYSIZE,"%04x",pt->code) >= (int)KEYSIZE){
+			locked_diag("Couldn't convert key 0x%x",pt->code);
+			free(key);
+			free(desc);
+			goto err;
+		}
+		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+			free(key);
+			free(desc);
+			goto err;
+		}
+		fo = tmp;
+		fo[*count].option = key;
+		fo[*count].desc = desc;
+		++*count;
+	}
+	return fo;
+
+err:
+	while(*count--){
+		free(fo[*count].option);
+		free(fo[*count].desc);
+	}
+	free(fo);
+	return NULL;
+}
+
+// -------------------------------------------------------------------------
+// - partition name form, for new partition creation
+// -------------------------------------------------------------------------
+static void ptype_callback(const char *);
+
+static unsigned long pending_ptype; // set when waiting for name callback
+
+static void
+ptype_name_callback(const char *name){
+	unsigned long pt;
+	blockobj *b;
+
+	pt = pending_ptype;
+	pending_ptype = 0;
+	if(!current_adapter || !(b = current_adapter->selected)){
+		locked_diag("Lost selection while choosing partition type");
+		return;
+	}
+	if(name == NULL){ // go back to partition type
+		struct form_option *ops_ptype;
+		int opcount;
+
+		if((ops_ptype = ptype_table(&opcount)) == NULL){
+			return;
+		}
+		raise_form("Select a partition type",ptype_callback,ops_ptype,opcount);
+		return;
+	}
+	// FIXME this won't necessarily map to the selected zone!
+	// FIXME use name! convert to wchar_t
+	add_partition(b->d,L"FIXME",0,pt);
+}
 
 // -------------------------------------------------------------------------
 // - partition type form, for new partition creation
@@ -409,23 +610,19 @@ ptype_callback(const char *ptype){
 		locked_diag("Lost selection while choosing partition type");
 		return;
 	}
-	b = current_adapter->selected;
 	if(((pt = strtoul(ptype,&pend,16)) == ULONG_MAX && errno == ERANGE) || *pend){
 		locked_diag("Bad partition type selection: %s",ptype);
 		return;
 	}
-	// FIXME see bug 234 -- some partition types don't want names
+	if(partitions_named_p(b->d)){
+		pending_ptype = pt;
+		raise_str_form("enter partition name",ptype_name_callback);
+		return;
+	}
 	// FIXME this won't necessarily map to the selected zone!
-	add_partition(b->d,L"FIXME",0,pt);
+	add_partition(b->d,NULL,0,pt);
 }
 
-static struct form_state form_ptype = {
-	.boxstr = "Select a partition type",
-	.p = NULL,
-	.ysize = -1,
-	.fxn = ptype_callback,
-	.idx = 0,
-};
 // -------------------------------------------------------------------------
 // -- end partition type form
 // -------------------------------------------------------------------------
@@ -449,93 +646,9 @@ pttype_callback(const char *pttype){
 	make_partition_table(b->d,pttype);
 }
 
-static struct form_state form_pttype = {
-	.boxstr = "Select a table type",
-	.p = NULL,
-	.ysize = -1,
-	.fxn = pttype_callback,
-	.idx = 0,
-};
 // -------------------------------------------------------------------------
 // -- end partition table type form
 // -------------------------------------------------------------------------
-
-static void
-form_options(struct form_state *fs){
-	const struct form_option *opstrs = fs->ops;
-	WINDOW *fsw = panel_window(fs->p);
-	const int ops = fs->ysize;
-	int z,cols;
-
-	cols = getmaxx(fsw);
-	wattron(fsw,A_BOLD);
-	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-	for(z = 0 ; z < ops ; ++z){
-		if(z == fs->idx){
-			wattron(fsw,A_REVERSE);
-		}
-		mvwprintw(fsw,z + 1,START_COL,"%-*.*s %-*.*s",
-				fs->longop,fs->longop,opstrs[z].option,
-				cols - fs->longop - 1 - START_COL * 2,
-				cols - fs->longop - 1 - START_COL * 2,
-				opstrs[z].desc);
-		if(z == fs->idx){
-			wattroff(fsw,A_REVERSE);
-		}
-	}
-}
-
-static void
-raise_form(struct form_state *fs,struct form_option *opstrs,int ops){
-	size_t longop,longdesc;
-	WINDOW *fsw;
-	int cols;
-	int x,y;
-
-	if(opstrs == NULL || !ops){
-		locked_diag("Passed empty %u-option string table",ops);
-		return;
-	}
-	if(actform){
-		return;
-	}
-	longdesc = longop = 0;
-	for(x = 0 ; x < ops ; ++x){
-		if(strlen(opstrs[x].option) > longop){
-			longop = strlen(opstrs[x].option);
-		}
-		if(strlen(opstrs[x].desc) > longdesc){
-			longdesc = strlen(opstrs[x].desc);
-		}
-	}
-	cols = longdesc + longop + 1;
-	getmaxyx(stdscr,y,x);
-	assert(x >= cols + START_COL * 2);
-	assert(y >= ops + 3);
-	assert( (fsw = newwin(ops + 2,cols + START_COL * 2,y - ops - 4,5)) );
-	if(fsw == NULL){
-		return;
-	}
-	assert((fs->p = new_panel(fsw)));
-	assert(top_panel(fs->p) != ERR);
-	if(fs->p == NULL){
-		delwin(fsw);
-		return;
-	}
-	fs->ysize = ops;
-	wattroff(fsw,A_BOLD);
-	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
-	bevel(fsw);
-	wattron(fsw,A_BOLD);
-	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen("Escape cancels"),"Escape cancels");
-	wattroff(fsw,A_BOLD);
-	fs->longop = longop;
-	fs->ops = opstrs;
-	form_options(fs);
-	actform = fs;
-	locked_diag(fs->boxstr); // calls screen_update()
-}
 // -------------------------------------------------------------------------
 // -- end form API
 // -------------------------------------------------------------------------
@@ -2881,51 +2994,7 @@ make_ptable(void){
 	if((ops_ptype = pttype_table(&opcount)) == NULL){
 		return;
 	}
-	raise_form(&form_pttype,ops_ptype,opcount);
-}
-
-static struct form_option *
-ptype_table(int *count){
-	struct form_option *fo = NULL,*tmp;
-	const ptype *pt;
-
-	*count = 0;
-	for(pt = ptypes ; pt->name ; ++pt){
-		const size_t KEYSIZE = 5; // 4 hex digit code
-		char *key,*desc;
-
-		if((key = malloc(KEYSIZE)) == NULL){
-			goto err;
-		}
-		if((desc = strdup(pt->name)) == NULL){
-			free(key);
-			goto err;
-		}
-		if(snprintf(key,KEYSIZE,"%04x",pt->code) >= (int)KEYSIZE){
-			locked_diag("Couldn't convert key 0x%x",pt->code);
-			free(key);
-			free(desc);
-			goto err;
-		}
-		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
-			free(key);
-			free(desc);
-			goto err;
-		}
-		fo = tmp;
-		fo[*count].option = key;
-		fo[*count].desc = desc;
-		++*count;
-	}
-	return fo;
-
-err:
-	while(*count--){
-		free(fo[*count].option);
-		free(fo[*count].desc);
-	}
-	free(fo);
-	return NULL;
+	raise_form("Select a table type",pttype_callback,ops_ptype,opcount);
 }
 
 static void
@@ -2955,7 +3024,7 @@ new_partition(void){
 		if((ops_ptype = ptype_table(&opcount)) == NULL){
 			return;
 		}
-		raise_form(&form_ptype,ops_ptype,opcount);
+		raise_form("Select a partition type",ptype_callback,ops_ptype,opcount);
 		return;
 	}else if(b->zone->p->layout == LAYOUT_NONE){
 		locked_diag("A partition table needs be created on %s",b->d->name);
@@ -3028,7 +3097,7 @@ new_filesystem(void){
 		if((ops_fs = fs_table(&opcount)) == NULL){
 			return;
 		}
-		raise_form(&form_fs,ops_fs,opcount);
+		raise_form("Select a filesystem type",fs_callback,ops_fs,opcount);
 		return;
 	}
 }
