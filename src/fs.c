@@ -29,35 +29,73 @@ ext4_mkfs(const char *dev){
 // FIXME surely there's a less grotesque way of doing this? parse blkid -k?
 static const struct fs {
 	const char *name;
+	const char *desc;
 	int (*mkfs)(const char *);
 } fss[] = {
-	{ .name = "vfat", },
+	{
+		.name = "vfat",
+		.desc = "File Allocation Table (DOS default)",
+	},
 	{ .name = "swsuspend", },
 	{ .name = "swap", },
-	{ .name = "xfs", },
+	{
+		.name = "xfs",
+		.desc = "SGI's XFS (IRIX default)",
+	},
 	{ .name = "ext4dev", },
 	{
 		.name = "ext4",
+		.desc = "Extended Filesystem 4 (Linux default)",
 		.mkfs = ext4_mkfs,
 	},
-	{ .name = "ext3", },
-	{ .name = "ext2", },
+	{
+		.name = "ext3",
+		.desc = "Extended Filesystem 3",
+	},
+	{
+		.name = "ext2",
+		.desc = "Extended Filesystem 2",
+	},
 	{ .name = "jbd", },
 	{ .name = "reiserfs", },
 	{ .name = "reiser4", },
-	{ .name = "jfs", },
-	{ .name = "udf", },
-	{ .name = "iso9660", },
+	{
+		.name = "jfs",
+		.desc = "IBM's Journaled Filesystem (AIX JFS2)",
+	},
+	{
+		.name = "udf",
+		.desc = "Universal Disk Format (ISO/IEC 13346)",
+	},
+	{
+		.name = "iso9660",
+		.desc = "Compact Disc Filesystem (ISO 9660:1999)",
+	},
 	{ .name = "zfs_member", },
-	{ .name = "hfsplus", },
-	{ .name = "hfs", },
-	{ .name = "ufs", },
+	{
+		.name = "hfsplus",
+		.desc = "HFS+ (Mac OS Extended) (OS X default)",
+	},
+	{
+		.name = "hfs",
+		.desc = "Hierarchal Filesystem (Mac OS Standard)",
+	},
+	{
+		.name = "ufs",
+		.desc = "UNIX Filesystem (BFFS) (BSD default)",
+	},
 	{ .name = "hpfs", },
 	{ .name = "sysv", },
 	{ .name = "xenix", },
 	{ .name = "ntfs", },
-	{ .name = "cramfs", },
-	{ .name = "romfs", },
+	{
+		.name = "cramfs",
+		.desc = "Compressed Read-Only Filesystem",
+	},
+	{
+		.name = "romfs",
+		.desc = "Read-Only Filesystem",
+	},
 	{ .name = "minix", },
 	{ .name = "gfs", },
 	{ .name = "gfs2", },
@@ -65,34 +103,70 @@ static const struct fs {
 	{ .name = "ocfs2", },
 	{ .name = "oracleasm", },
 	{ .name = "vxfs", },
-	{ .name = "squashfs", },
+	{
+		.name = "squashfs",
+		.desc = "Squashed Read-Only Filesystem",
+	},
 	{ .name = "nss", },
-	{ .name = "btrfs", },
+	{
+		.name = "btrfs",
+		.desc = "Oracle's B-Tree Filesystem",
+	},
 	{ .name = "ubifs", },
-	{ .name = "bfs", },
+	{
+		.name = "bfs",
+		.desc = "UNIXWare Boot Filesystem (SCO boot default)",
+	},
 	{ .name = "VMFS", },
-	{ .name = "befs", },
-	{ .name = "nilfs2", },
+	{
+		.name = "befs",
+		.desc = "Be Filesystem (BeOS default)",
+	},
+	{
+		.name = "nilfs2",
+		.desc = "NTT's New Implementation of Log-structued FS 2",
+	},
 	{ .name = "exfat", },
 	{ .name = NULL, }
 };
 
-// FIXME need initialize values
-static const char *fs_types[sizeof(fss) / sizeof(*fss) + 1];
+pttable_type *get_fs_types(int *count){
+	pttable_type *pt;
+	int z;
 
-const char **get_fs_types(void){
-	static unsigned once;
-
-	// FIXME thread-unsafe
-	if(!once){
-		unsigned z;
-
-		for(z = 0 ; z < sizeof(fss) / sizeof(*fss) ; ++z){
-			fs_types[z] = fss[z].name;
-		}
-		once = 1;
+	*count = (sizeof(fss) / sizeof(*fss)) - 1;
+	if(*count <= 0){
+		diag("Invalid fs type count (%d), aborting",*count);
+		return NULL;
 	}
-	return fs_types;
+	if((pt = malloc(sizeof(*pt) * *count)) == NULL){
+		*count = 0;
+		return NULL;
+	}
+	for(z = 0 ; z < *count ; ++z){
+		if((pt[z].name = strdup(fss[z].name)) == NULL){
+			goto err;
+		}
+		if(fss[z].desc == NULL){
+			// FIXME they all ought have descriptions
+			pt[z].desc = strdup("FIXME Need description");
+		}else{
+			if((pt[z].desc = strdup(fss[z].desc)) == NULL){
+				free(pt[z].name);
+				goto err;
+			}
+		}
+	}
+	return pt;
+
+err:
+	while(z--){
+		free(pt[z].name);
+		free(pt[z].desc);
+	}
+	free(pt);
+	*count = 0;
+	return NULL;
 }
 
 int make_filesystem(device *d,const char *ptype){

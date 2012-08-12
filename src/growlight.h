@@ -267,11 +267,10 @@ typedef struct pttable_type {
 	char *desc;
 } pttable_type;
 
+// Supported partition table, partition, and filesystem types
 pttable_type *get_ptable_types(int *);
+pttable_type *get_fs_types(int *);
 void free_ptable_types(pttable_type *,int);
-
-// Supported filesystem types
-const char **get_fs_types(void);
 
 int make_partition_table(device *,const char *);
 
