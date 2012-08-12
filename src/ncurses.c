@@ -257,7 +257,17 @@ fs_callback(const char *fs){
 		return;
 	}
 	b = current_adapter->selected;
-	make_filesystem(b->zone->p,fs);
+	if(b->zone->p == NULL){
+		make_filesystem(b->d,fs);
+		return;
+	}else if(b->zone->p->layout != LAYOUT_PARTITION){
+		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+		return;
+	}else{
+		make_filesystem(b->zone->p,fs);
+		return;
+	}
+	locked_diag("I'm confused. Aborting.\n");
 }
 
 static struct form_state form_fs = {
@@ -294,6 +304,7 @@ ptype_callback(const char *ptype){
 		return;
 	}
 	// FIXME see bug 234 -- some partition types don't want names
+	// FIXME this won't necessarily map to the selected zone!
 	add_partition(b->d,L"FIXME",0,pt);
 }
 

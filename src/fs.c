@@ -238,6 +238,10 @@ err:
 int make_filesystem(device *d,const char *ptype){
 	const struct fs *pt;
 
+	if(d == NULL || ptype == NULL){
+		diag("Passed NULL arguments, aborting\n");
+		return -1;
+	}
 	if(d->target){
 		diag("Won't create fs on target mount %s (%s)\n",
 				d->name,d->target->path);
