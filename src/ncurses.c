@@ -7,6 +7,7 @@
 #include <locale.h>
 #include <pthread.h>
 
+#include "fs.h"
 #include "mbr.h"
 #include "config.h"
 #include "health.h"
@@ -80,7 +81,7 @@ struct partobj;
 typedef struct zobj {
 	unsigned zoneno;		// in-order, but not monotonic growth (skip empties)
 	uintmax_t fsector,lsector;	// first and last logical sector, inclusive
-	const device *p;		// partition/block device, NULL for empty space
+	device *p;			// partition/block device, NULL for empty space
 	struct zobj *prev,*next;
 } zobj;
 
@@ -235,9 +236,40 @@ struct form_state {
 	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
 	int idx;			// selection index, [0..ysize)
+	int longop;			// length of longest op
 	const char *boxstr;		// string for box label
 	struct form_option *ops;	// form_option array for *this instance*
 };
+
+// -------------------------------------------------------------------------
+// - filesystem type form, for new filesystem creation
+// -------------------------------------------------------------------------
+static void
+fs_callback(const char *fs){
+	blockobj *b;
+
+	if(fs == NULL){ // user cancelled
+		locked_diag("Filesystem creation cancelled by the user.");
+		return;
+	}
+	if(!current_adapter || !(b = current_adapter->selected)){
+		locked_diag("Lost selection while choosing filesystem type.");
+		return;
+	}
+	b = current_adapter->selected;
+	make_filesystem(b->zone->p,fs);
+}
+
+static struct form_state form_fs = {
+	.boxstr = "Select a filesystem type",
+	.p = NULL,
+	.ysize = -1,
+	.fxn = fs_callback,
+	.idx = 0,
+};
+// -------------------------------------------------------------------------
+// -- end partition type form
+// -------------------------------------------------------------------------
 
 // -------------------------------------------------------------------------
 // - partition type form, for new partition creation
@@ -307,8 +339,10 @@ static struct form_state form_pttype = {
 // -------------------------------------------------------------------------
 
 static void
-form_options(struct form_state *fs,const struct form_option *opstrs,int ops){
+form_options(struct form_state *fs){
+	const struct form_option *opstrs = fs->ops;
 	WINDOW *fsw = panel_window(fs->p);
+	const int ops = fs->ysize;
 	int z,cols;
 
 	cols = getmaxx(fsw);
@@ -318,10 +352,10 @@ form_options(struct form_state *fs,const struct form_option *opstrs,int ops){
 		if(z == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
-		mvwprintw(fsw,z + 1,START_COL,"%s %-*.*s",
-				opstrs[z].option,
-				cols - strlen(opstrs[z].option) - 1 - START_COL * 2,
-				cols - strlen(opstrs[z].option) - 1 - START_COL * 2,
+		mvwprintw(fsw,z + 1,START_COL,"%-*.*s %-*.*s",
+				fs->longop,fs->longop,opstrs[z].option,
+				cols - fs->longop - 1 - START_COL * 2,
+				cols - fs->longop - 1 - START_COL * 2,
 				opstrs[z].desc);
 		if(z == fs->idx){
 			wattroff(fsw,A_REVERSE);
@@ -374,8 +408,9 @@ raise_form(struct form_state *fs,struct form_option *opstrs,int ops){
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
 	mvwprintw(fsw,fs->ysize + 1,cols - strlen("Backspace cancels"),"Backspace cancels");
 	wattroff(fsw,A_BOLD);
-	form_options(fs,opstrs,ops);
+	fs->longop = longop;
 	fs->ops = opstrs;
+	form_options(fs);
 	actform = fs;
 	locked_diag(fs->boxstr); // calls screen_update()
 }
@@ -422,8 +457,7 @@ device_lines(int expa,const blockobj *bo){
 }
 
 static zobj *
-create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,
-		uintmax_t lsector,const device *p){
+create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,device *p){
 	zobj *z;
 
 	if( (z = malloc(sizeof(*z))) ){
@@ -2694,6 +2728,72 @@ new_partition(void){
 	// FIXME do stuff for mdadm, dm, zpool?
 }
 
+static struct form_option *
+fs_table(int *count){
+	struct form_option *fo = NULL,*tmp;
+	pttable_type *types;
+	int z;
+
+	if((types = get_fs_types(count)) == NULL){
+		return NULL;
+	}
+	for(z = 0 ; z < *count ; ++z){
+		char *key,*desc;
+
+		if((key = strdup(types[z].name)) == NULL){
+			goto err;
+		}
+		if((desc = strdup(types[z].desc)) == NULL){
+			free(key);
+			goto err;
+		}
+		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+			free(key);
+			free(desc);
+			goto err;
+		}
+		fo = tmp;
+		fo[z].option = key;
+		fo[z].desc = desc;
+	}
+	return fo;
+
+err:
+	while(z--){
+		free(fo[z].option);
+		free(fo[z].desc);
+	}
+	free(fo);
+	*count = 0;
+	return NULL;
+}
+
+static void
+new_filesystem(void){
+	struct form_option *ops_fs;
+	int opcount;
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Filesystem creation requires a selected block device");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+		locked_diag("Filesystems cannot be created in empty space");
+		return;
+	}else{
+		if((ops_fs = fs_table(&opcount)) == NULL){
+			return;
+		}
+		raise_form(&form_fs,ops_fs,opcount);
+		return;
+	}
+}
+
 static void
 set_partition_attrs(void){
 	blockobj *b;
@@ -2789,12 +2889,6 @@ badblock_check(void){
 }
 
 static void
-new_filesystem(void){
-	// FIXME get current partition, empty space, or blockobj
-	// FIXME make that fucker
-}
-
-static void
 mount_filesystem(void){
 	// FIXME get current partition, empty space, or blockobj
 	// FIXME make that fucker
@@ -2843,7 +2937,7 @@ handle_actform_input(int ch){
 			if(fs->idx-- == 0){
 				fs->idx = fs->ysize - 1;
 			}
-			form_options(fs,fs->ops,fs->ysize);
+			form_options(fs);
 			screen_update();
 			pthread_mutex_unlock(&bfl);
 			break;
@@ -2853,7 +2947,7 @@ handle_actform_input(int ch){
 			if(fs->idx++ >= fs->ysize - 1){
 				fs->idx = 0;
 			}
-			form_options(fs,fs->ops,fs->ysize);
+			form_options(fs);
 			screen_update();
 			pthread_mutex_unlock(&bfl);
 			break;
@@ -3190,11 +3284,11 @@ free_zchain(zobj **z){
 }
 
 static void
-update_blockobj(blockobj *b,const device *d){
+update_blockobj(blockobj *b,device *d){
 	unsigned fs,mounts,zones,zonesel;
 	uintmax_t sector;
-	const device *p;
 	zobj *z,*lastz;
+	device *p;
 
 	fs = mounts = 0;
 	if(b->zone){
