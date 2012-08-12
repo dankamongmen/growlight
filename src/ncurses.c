@@ -2691,14 +2691,16 @@ destroy_form_locked(struct form_state *fs){
 					free(fs->ops[z].option);
 					free(fs->ops[z].desc);
 				}
+				free(fs->ops);
+				fs->ops = NULL;
 				break;
 			case FORM_STRING_INPUT:
 				free(fs->inp.prompt);
 				free(fs->inp.longprompt);
+				fs->inp.longprompt = NULL;
+				fs->inp.prompt = NULL;
 				break;
 		}
-		free(fs->ops);
-		fs->ops = NULL;
 		fs->ysize = -1;
 		actform = NULL;
 	}
@@ -3117,8 +3119,6 @@ new_filesystem(void){
 
 static void
 kill_filesystem(void){
-	struct form_option *ops_fs;
-	int opcount;
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
