@@ -2400,12 +2400,11 @@ err:
 
 static int
 display_maps(WINDOW *mainw,struct panel_state *ps){
-	unsigned cols = getmaxx(mainw) / 2;
 	// FIXME compute based off number of maps + targets
 	unsigned rows = 2;
 
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,rows,cols,L"press 'E' to dismiss display")){
+	if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display")){
 		goto err;
 	}
 	if(map_details(panel_window(ps->p))){
@@ -2732,6 +2731,15 @@ make_ptable(void){
 
 	if((b = get_selected_blockobj()) == NULL){
 		locked_diag("Partition table creation requires selection of a block device");
+		return;
+	}
+	if(b->d->layout != LAYOUT_NONE){
+		// FIXME
+		locked_diag("Partition table creation requires a physical device");
+		return;
+	}
+	if(b->d->blkdev.pttable){
+		locked_diag("Partition table already exists on %s",b->d->name);
 		return;
 	}
 	if(b->zone == NULL){
@@ -3065,10 +3073,31 @@ handle_actform_input(int ch){
 }
 
 static void
+setup_target(void){
+	if(target_mode_p()){
+		locked_diag("Already have a target at %s",growlight_target);
+		return;
+	}
+	// FIXME 
+}
+
+static void
+unset_target(void){
+	if(!target_mode_p()){
+		locked_diag("Not in target mode");
+		return;
+	}
+	if(set_target(NULL)){
+		return;
+	}
+	locked_diag("Successfully left target mode");
+}
+
+static void
 handle_ncurses_input(WINDOW *w){
 	int ch;
 
-	while((ch = getch()) != 'q' && ch != 'Q'){
+	while((ch = getch()) != ERR){
 		if(actform){
 			handle_actform_input(ch);
 			continue;
@@ -3272,6 +3301,21 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
+			case 'i':{
+				pthread_mutex_lock(&bfl);
+				setup_target();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'I':{
+				pthread_mutex_lock(&bfl);
+				unset_target();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'q': case 'Q':
+				diag("User-initiated shutdown");
+				return;
 			default:{
 				const char *hstr = !help.p ? " ('H' for help)" : "";
 				// diag() locks/unlocks, and calls screen_update()
@@ -3284,6 +3328,7 @@ handle_ncurses_input(WINDOW *w){
 			}
 		}
 	}
+	diag("Error reading from console, aborting");
 }
 
 static adapterstate *
