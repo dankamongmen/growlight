@@ -62,8 +62,10 @@ struct panel_state {
 
 #define PANEL_STATE_INITIALIZER { .p = NULL, .ysize = -1, }
 #define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
+#define SUBDISPLAY_INVAL_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR))
 
 static struct panel_state *active;
+static struct panel_state maps = PANEL_STATE_INITIALIZER;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
 static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
@@ -2104,6 +2106,7 @@ static const wchar_t *helps[] = {
 	L"(q)uit                        ctrl+'L': redraw the screen",
 	L"'e': view environment details 'H': toggle this help display",
 	L"'v': view selection details   'D': view recent diagnostics",
+	L"'E': view active mountpoints / installpoints",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
 	L"'h'/'←': navigate left        'l'/'→': navigate right",
 	L"'-': collapse adapter         '+': expand adapter",
@@ -2120,15 +2123,20 @@ static const wchar_t *helps[] = {
 	NULL
 };
 
+static const wchar_t *helps_target[] = {
+	L"'i': set target               'I': unset target",
+	NULL
+};
+
 static size_t
-max_helpstr_len(const wchar_t **helps){
+max_helpstr_len(const wchar_t **h){
 	size_t max = 0;
 
-	while(*helps){
-		if(wcslen(*helps) > max){
-			max = wcslen(*helps);
+	while(*h){
+		if(wcslen(*h) > max){
+			max = wcslen(*h);
 		}
-		++helps;
+		++h;
 	}
 	return max;
 }
@@ -2142,10 +2150,45 @@ helpstrs(WINDOW *hw,int row,int rows){
 	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
 		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
 	}
+	row += z;
+	if(!target_mode_p()){
+		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
+	}
+	for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
+		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
+	}
 	return OK;
 }
 
 static const int DIAGROWS = 8;
+
+// Used after shutting down on error, which will clean the screen. This takes
+// the last few diagnostics and prints them to stderr.
+static int
+dump_diags(void){
+	logent l[10];
+	int y,r;
+
+	y = sizeof(l) / sizeof(*l);
+	if((y = get_logs(y,l)) < 0){
+		return -1;
+	}
+	for(r = 0 ; r < y ; ++r){
+		char tbuf[27],*c;
+
+		if(l[r].msg == NULL){
+			break;
+		}
+		assert(ctime_r(&l[r].when,tbuf));
+		tbuf[strlen(tbuf) - 1] = ' '; // kill newline
+		while( (c = strchr(l[r].msg,'\n')) || (c = strchr(l[r].msg,'\t')) ){
+			*c = ' ';
+		}
+		fprintf(stderr,"%s %s\n",tbuf,l[r].msg);
+		free(l[r].msg);
+	}
+	return 0;
+}
 
 static int
 update_diags(struct panel_state *ps){
@@ -2236,9 +2279,15 @@ err:
 
 static int
 display_help(WINDOW *mainw,struct panel_state *ps){
-	static const int helprows = sizeof(helps) / sizeof(*helps) - 1; // NULL != row
-	const int helpcols = max_helpstr_len(helps) + 4; // spacing + borders
+	static const int helprows = sizeof(helps) / sizeof(*helps) - 1 +
+		sizeof(helps_target) / sizeof(*helps_target) - 1; // NULL != row
+	unsigned helpcols;
 
+	helpcols = max_helpstr_len(helps);
+	if(max_helpstr_len(helps_target) > helpcols){
+		helpcols = max_helpstr_len(helps_target);
+	}
+	helpcols += 4; // spacing + borders
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help")){
 		goto err;
@@ -2315,12 +2364,50 @@ env_details(WINDOW *hw,int rows){
 }
 
 static int
+map_details(WINDOW *hw){
+	int x,y;
+
+	getmaxyx(hw,y,x);
+	//FIXME
+	assert(x);
+	assert(y);
+	return 0;
+}
+
+static int
 display_enviroment(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display")){
 		goto err;
 	}
 	if(env_details(panel_window(ps->p),ps->ysize)){
+		goto err;
+	}
+	return OK;
+
+err:
+	if(ps->p){
+		WINDOW *psw = panel_window(ps->p);
+
+		hide_panel(ps->p);
+		del_panel(ps->p);
+		delwin(psw);
+	}
+	memset(ps,0,sizeof(*ps));
+	return ERR;
+}
+
+static int
+display_maps(WINDOW *mainw,struct panel_state *ps){
+	unsigned cols = getmaxx(mainw) / 2;
+	// FIXME compute based off number of maps + targets
+	unsigned rows = 2;
+
+	memset(ps,0,sizeof(*ps));
+	if(new_display_panel(mainw,ps,rows,cols,L"press 'E' to dismiss display")){
+		goto err;
+	}
+	if(map_details(panel_window(ps->p))){
 		goto err;
 	}
 	return OK;
@@ -3014,6 +3101,13 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
+			case 'E':{
+				pthread_mutex_lock(&bfl);
+				toggle_panel(w,&maps,display_maps);
+				screen_update();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
 			case KEY_BACKSPACE:
 				pthread_mutex_lock(&bfl);
 				deselect_adapter_locked();
@@ -3570,16 +3664,6 @@ vdiag(const char *fmt,va_list v){
 	pthread_mutex_unlock(&bfl);
 }
 
-static void
-fatal(const char *fmt,...){
-	va_list va;
-
-	assert(endwin() != ERR);
-	va_start(va,fmt);
-	vfprintf(stderr,fmt,va);
-	va_end(va);
-}
-
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = vdiag,
@@ -3587,7 +3671,6 @@ int main(int argc,char * const *argv){
 		.block_event = block_callback,
 		.adapter_free = adapter_free,
 		.block_free = block_free,
-		.fatal = fatal,
 	};
 	WINDOW *w;
 
@@ -3600,14 +3683,17 @@ int main(int argc,char * const *argv){
 	}
 	if(growlight_init(argc,argv,&ui)){
 		ncurses_cleanup(&w);
+		dump_diags();
 		return EXIT_FAILURE;
 	}
 	handle_ncurses_input(w);
 	if(growlight_stop()){
 		ncurses_cleanup(&w);
+		dump_diags();
 		return EXIT_FAILURE;
 	}
 	if(ncurses_cleanup(&w)){
+		dump_diags();
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
