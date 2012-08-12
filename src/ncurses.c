@@ -1908,12 +1908,16 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 
 static void
 use_prev_zone(blockobj *b){
-	b->zone = b->zone->prev;
+	if(b->zone){
+		b->zone = b->zone->prev;
+	}
 }
 
 static void
 use_next_zone(blockobj *b){
-	b->zone = b->zone->next;
+	if(b->zone){
+		b->zone = b->zone->next;
+	}
 }
 
 static void
@@ -2113,19 +2117,24 @@ static const wchar_t *helps[] = {
 	L"'-': collapse adapter         '+': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'R': rescan selection         'S': reset selection",
+	NULL
+};
+
+static const wchar_t *helps_block[] = {
 	L"'m': make partition table     'r': remove partition table",
 	L"'W': wipe master boot record  'B': bad blocks check",
 	L"'n': new partition            'd': delete partition",
 	L"'s': set partition attributes 'M': make new filesystem",
 	L"'F': fsck filesystem          'w': wipe filesystem",
 	L"'U': set UUID                 'L': set label/name",
-	L"'o': mount filesystem         'u': unmount filesystem",
+	L"'o': mount filesystem         'O': unmount filesystem",
 	L"'b': bind to aggregate        'f': free from aggregate",
 	NULL
 };
 
 static const wchar_t *helps_target[] = {
 	L"'i': set target               'I': unset target",
+	L"'t': mount target             'T': unmount target",
 	NULL
 };
 
@@ -2143,22 +2152,54 @@ max_helpstr_len(const wchar_t **h){
 }
 
 static int
-helpstrs(WINDOW *hw,int row,int rows){
+helpstrs(WINDOW *hw,int row){
 	const wchar_t *hs;
-	int z;
+	int z,rows;
 
+	rows = getmaxy(hw);
 	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
 		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
 	}
 	row += z;
+	if(!current_adapter || !current_adapter->selected){
+		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
+	}else{
+		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	}
+	for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
+		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
+	}
+	row += z;
 	if(!target_mode_p()){
 		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
+	}else{
+		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 	}
 	for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
 		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
 	}
 	return OK;
+}
+
+static int
+update_help_cond(WINDOW *w){
+	if(help.p){
+		return helpstrs(w,1);
+	}
+	return 0;
+}
+
+static int
+mount_target(void){
+	// FIXME
+	return 0;
+}
+
+static int
+umount_target(void){
+	// FIXME
+	return 0;
 }
 
 static const int DIAGROWS = 8;
@@ -2281,6 +2322,7 @@ err:
 static int
 display_help(WINDOW *mainw,struct panel_state *ps){
 	static const int helprows = sizeof(helps) / sizeof(*helps) - 1 +
+		sizeof(helps_block) / sizeof(*helps_block) - 1 +
 		sizeof(helps_target) / sizeof(*helps_target) - 1; // NULL != row
 	unsigned helpcols;
 
@@ -2288,12 +2330,15 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 	if(max_helpstr_len(helps_target) > helpcols){
 		helpcols = max_helpstr_len(helps_target);
 	}
+	if(max_helpstr_len(helps_block) > helpcols){
+		helpcols = max_helpstr_len(helps_block);
+	}
 	helpcols += 4; // spacing + borders
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help")){
 		goto err;
 	}
-	if(helpstrs(panel_window(ps->p),1,ps->ysize)){
+	if(helpstrs(panel_window(ps->p),1)){
 		goto err;
 	}
 	return OK;
@@ -3142,6 +3187,7 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_lock(&bfl);
 				deselect_adapter_locked();
 				update_details_cond(panel_window(details.p));
+				update_help_cond(panel_window(help.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -3149,6 +3195,7 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_lock(&bfl);
 				select_adapter();
 				update_details_cond(panel_window(details.p));
+				update_help_cond(panel_window(help.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -3201,6 +3248,7 @@ handle_ncurses_input(WINDOW *w){
 					use_prev_device();
 				}
 				update_details_cond(panel_window(details.p));
+				update_help_cond(panel_window(help.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -3213,6 +3261,7 @@ handle_ncurses_input(WINDOW *w){
 					use_next_device();
 				}
 				update_details_cond(panel_window(details.p));
+				update_help_cond(panel_window(help.p));
 				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
@@ -3283,9 +3332,21 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
-			case 'u':{
+			case 'O':{
 				pthread_mutex_lock(&bfl);
 				umount_filesystem();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 't':{
+				pthread_mutex_lock(&bfl);
+				mount_target();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'T':{
+				pthread_mutex_lock(&bfl);
+				umount_target();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
