@@ -257,10 +257,11 @@ ptype_callback(const char *ptype){
 		return;
 	}
 	b = current_adapter->selected;
-	if(((pt = strtoul(ptype,&pend,0)) == ULONG_MAX && errno == ERANGE) || *pend){
+	if(((pt = strtoul(ptype,&pend,16)) == ULONG_MAX && errno == ERANGE) || *pend){
 		locked_diag("Bad partition type selection: %s",ptype);
 		return;
 	}
+	// FIXME see bug 234 -- some partition types don't want names
 	add_partition(b->d,L"FIXME",0,pt);
 }
 
