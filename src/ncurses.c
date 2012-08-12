@@ -41,8 +41,6 @@ enum {
 	PBORDER_COLOR,
 	PHEADING_COLOR,
 	SUBDISPLAY_COLOR,
-	FORMBORDER_COLOR,
-	FORMTEXT_COLOR,
 	OPTICAL_COLOR,
 	ROTATE_COLOR,
 	VIRTUAL_COLOR,
@@ -53,6 +51,9 @@ enum {
 	ZPOOL_COLOR,
 	PARTITION_COLOR,
 	ZONE_COLOR,			// Selected zone
+	FORMBORDER_COLOR,
+	FORMTEXT_COLOR,
+	INPUT_COLOR,			// Form input color
 };
 
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -354,16 +355,16 @@ form_options(struct form_state *fs){
 	}
 	cols = getmaxx(fsw);
 	wattron(fsw,A_BOLD);
-	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 	for(z = 0 ; z < ops ; ++z){
+		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+		mvwprintw(fsw,z + 1,START_COL,"%-*.*s ",
+			fs->longop,fs->longop,opstrs[z].option);
 		if(z == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
-		mvwprintw(fsw,z + 1,START_COL,"%-*.*s %-*.*s",
-				fs->longop,fs->longop,opstrs[z].option,
-				cols - fs->longop - 1 - START_COL * 2,
-				cols - fs->longop - 1 - START_COL * 2,
-				opstrs[z].desc);
+		wcolor_set(fsw,INPUT_COLOR,NULL);
+		wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 2,
+			cols - fs->longop - 1 - START_COL * 2,opstrs[z].desc);
 		if(z == fs->idx){
 			wattroff(fsw,A_REVERSE);
 		}
@@ -423,7 +424,7 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc/⌫bkspc return"),"⎋esc/⌫bkspc return");
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
 	fs->ops = opstrs;
@@ -473,14 +474,17 @@ raise_str_form(const char *str,void (*fxn)(const char *)){
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc/⌫bkspc return"),"⎋esc/⌫bkspc return");
-	wattroff(fsw,A_BOLD);
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
 	fs->inp.prompt = fs->boxstr;
 	actform = fs;
-	assert(mvwprintw(fsw,1,START_COL,"%-*.*s: %-*.*s",
-				fs->longop,fs->longop,fs->inp.prompt,
-				cols - fs->longop - 1 - START_COL * 2,
-				cols - fs->longop - 1 - START_COL * 2,"") != ERR);
+	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+	mvwprintw(fsw,1,START_COL,"%-*.*s: ",
+		fs->longop,fs->longop,fs->inp.prompt);
+	wattron(fsw,A_REVERSE);
+	wcolor_set(fsw,INPUT_COLOR,NULL);
+	wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 2,
+		cols - fs->longop - START_COL * 2,"");
+	wattroff(fsw,A_BOLD);
 	locked_diag(fs->boxstr); // calls screen_update()
 }
 // -------------------------------------------------------------------------
@@ -585,7 +589,7 @@ ptype_name_callback(const char *name){
 		if((ops_ptype = ptype_table(&opcount)) == NULL){
 			return;
 		}
-		raise_form("Select a partition type",ptype_callback,ops_ptype,opcount);
+		raise_form("select a partition type",ptype_callback,ops_ptype,opcount);
 		return;
 	}
 	// FIXME this won't necessarily map to the selected zone!
@@ -790,8 +794,6 @@ setup_colors(void){
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
-	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,-1) == OK);
-	assert(init_pair(FORMTEXT_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
@@ -802,6 +804,9 @@ setup_colors(void){
 	assert(init_pair(ZPOOL_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(ZONE_COLOR,COLOR_BLACK,-1) == OK);
+	assert(init_pair(FORMBORDER_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(FORMTEXT_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(INPUT_COLOR,COLOR_CYAN,-1) == OK);
 	return 0;
 }
 
@@ -2994,7 +2999,7 @@ make_ptable(void){
 	if((ops_ptype = pttype_table(&opcount)) == NULL){
 		return;
 	}
-	raise_form("Select a table type",pttype_callback,ops_ptype,opcount);
+	raise_form("select a table type",pttype_callback,ops_ptype,opcount);
 }
 
 static void
@@ -3024,7 +3029,7 @@ new_partition(void){
 		if((ops_ptype = ptype_table(&opcount)) == NULL){
 			return;
 		}
-		raise_form("Select a partition type",ptype_callback,ops_ptype,opcount);
+		raise_form("select a partition type",ptype_callback,ops_ptype,opcount);
 		return;
 	}else if(b->zone->p->layout == LAYOUT_NONE){
 		locked_diag("A partition table needs be created on %s",b->d->name);
@@ -3097,7 +3102,7 @@ new_filesystem(void){
 		if((ops_fs = fs_table(&opcount)) == NULL){
 			return;
 		}
-		raise_form("Select a filesystem type",fs_callback,ops_fs,opcount);
+		raise_form("select a filesystem type",fs_callback,ops_fs,opcount);
 		return;
 	}
 }
@@ -3233,7 +3238,7 @@ handle_actform_input(int ch){
 			free(optstr);
 			pthread_mutex_unlock(&bfl);
 			break;
-		}case KEY_BACKSPACE: case KEY_ESC:
+		}case KEY_ESC:
 			pthread_mutex_lock(&bfl);
 			cb = actform->fxn;
 			destroy_form_locked(actform);
@@ -3261,13 +3266,7 @@ handle_actform_input(int ch){
 			break;
 		}
 		default:{
-			const char *hstr = !help.p ? " ('H' for help)" : "";
-			// diag() locks/unlocks, and calls screen_update()
-			if(isprint(ch)){
-				diag("unknown command '%c'%s",ch,hstr);
-			}else{
-				diag("unknown scancode %d%s",ch,hstr);
-			}
+			diag("please %s (⎋esc returns)",actform->boxstr);
 			break;
 		}
 	}
