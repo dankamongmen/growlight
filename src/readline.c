@@ -1496,7 +1496,9 @@ fs(wchar_t * const *args,const char *arghelp){
 			usage(args,arghelp);
 			return -1;
 		}
-		// FIXME
+		if(wipe_filesystem(d)){
+			return -1;
+		}
 		return 0;
 	}else if(wcscmp(args[1],L"fsck") == 0){
 		if(args[3]){

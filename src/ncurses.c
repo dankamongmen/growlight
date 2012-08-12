@@ -482,7 +482,7 @@ raise_str_form(const char *str,void (*fxn)(const char *)){
 		fs->longop,fs->longop,fs->inp.prompt);
 	wattron(fsw,A_REVERSE);
 	wcolor_set(fsw,INPUT_COLOR,NULL);
-	wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 2,
+	wprintw(fsw,"%-*.*s",cols - fs->longop - START_COL * 2,
 		cols - fs->longop - START_COL * 2,"");
 	wattroff(fsw,A_BOLD);
 	locked_diag(fs->boxstr); // calls screen_update()
@@ -2685,9 +2685,17 @@ destroy_form_locked(struct form_state *fs){
 		assert(del_panel(fs->p) == OK);
 		fs->p = NULL;
 		assert(delwin(fsw) == OK);
-		for(z = 0 ; z < fs->ysize ; ++z){
-			free(fs->ops[z].option);
-			free(fs->ops[z].desc);
+		switch(fs->formtype){
+			case FORM_SELECT:
+				for(z = 0 ; z < fs->ysize ; ++z){
+					free(fs->ops[z].option);
+					free(fs->ops[z].desc);
+				}
+				break;
+			case FORM_STRING_INPUT:
+				free(fs->inp.prompt);
+				free(fs->inp.longprompt);
+				break;
 		}
 		free(fs->ops);
 		fs->ops = NULL;
@@ -3108,6 +3116,31 @@ new_filesystem(void){
 }
 
 static void
+kill_filesystem(void){
+	struct form_option *ops_fs;
+	int opcount;
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Filesystem wipe requires a selected block device");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+		locked_diag("Filesystems cannot be wiped from empty space");
+		return;
+	}
+	if(b->zone->p){
+		wipe_filesystem(b->zone->p);
+	}else{
+		wipe_filesystem(b->d);
+	}
+}
+
+static void
 set_partition_attrs(void){
 	blockobj *b;
 
@@ -3231,11 +3264,21 @@ handle_actform_input(int ch){
 			char *optstr;
 
 			pthread_mutex_lock(&bfl);
-			assert(optstr = strdup(actform->ops[actform->idx].option));
-			cb = actform->fxn;
-			destroy_form_locked(actform);
-			cb(optstr);
-			free(optstr);
+			switch(actform->formtype){
+			case FORM_SELECT:
+				assert(optstr = strdup(actform->ops[actform->idx].option));
+				cb = actform->fxn;
+				destroy_form_locked(actform);
+				cb(optstr);
+				free(optstr);
+				break;
+			case FORM_STRING_INPUT:
+				cb = actform->fxn;
+				destroy_form_locked(actform);
+				cb("FIXME"); // FIXME collect the input!
+				break;
+			break;
+			}
 			pthread_mutex_unlock(&bfl);
 			break;
 		}case KEY_ESC:
@@ -3478,6 +3521,12 @@ handle_ncurses_input(WINDOW *w){
 			case 'M':{
 				pthread_mutex_lock(&bfl);
 				new_filesystem();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'w':{
+				pthread_mutex_lock(&bfl);
+				kill_filesystem();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}

@@ -327,3 +327,12 @@ int parse_filesystems(const glightui *gui __attribute__ ((unused)),const char *f
 	close(fd);
 	return 0;
 }
+
+int wipe_filesystem(device *d){
+	if(d->mnttype == NULL){
+		diag("No filesystem on %s\n",d->name);
+		return -1;
+	}
+	diag("Filesystem wipe is not yet implemented FIXME");
+	return 0;
+}
