@@ -56,7 +56,10 @@ static const struct fs {
 		.name = "ext2",
 		.desc = "Extended Filesystem 2",
 	},
-	{ .name = "jbd", },
+	{
+		.name = "jbd",
+		.desc = "Journaling Block Device",
+	},
 	{ .name = "reiserfs", },
 	{ .name = "reiser4", },
 	{
@@ -84,8 +87,14 @@ static const struct fs {
 		.name = "ufs",
 		.desc = "UNIX Filesystem (BFFS) (BSD default)",
 	},
-	{ .name = "hpfs", },
-	{ .name = "sysv", },
+	{
+		.name = "hpfs",
+		.desc = "High Performance Filesystem (Windows default)",
+	},
+	{
+		.name = "sysv",
+		.desc = "System V Filesystem (S5FS)",
+	},
 	{ .name = "xenix", },
 	{ .name = "ntfs", },
 	{
