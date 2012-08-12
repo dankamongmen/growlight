@@ -2453,7 +2453,7 @@ env_details(WINDOW *hw,int rows){
 		const char *term = getenv("TERM");
 
 		lang = lang ? lang : "Undefined";
-		assert(mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s",lang,term) != ERR);
+		assert(mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s  ESCDELAY: %d",lang,term,ESCDELAY) != ERR);
 		--z;
 		break;
 	}default:{
