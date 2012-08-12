@@ -84,16 +84,27 @@ int parse_swaps(const glightui *gui,const char *name){
 	}
 	// First line is a legend
 	while(fgets(buf,sizeof(buf),fp)){
-		char *toke = buf;
+		char *toke = buf,*type;
 		device *d;
 
 		if(++line == 1){
 			continue;
 		}
+		while(isgraph(*toke)){ // First field: "Filename"
+			++toke;
+		}
+		*toke++ = '\0';
+		while(isspace(*toke)){
+			++toke;
+		}
+		type = toke++;		// Second field: "Type". "block"/"file"
 		while(isgraph(*toke)){
 			++toke;
 		}
-		*toke = '\0';
+		*toke++ = '\0';
+		if(strcmp(type,"file") == 0){
+			continue;
+		}
 		if((d = lookup_device(buf)) == NULL){
 			goto err;
 		}
