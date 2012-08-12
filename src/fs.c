@@ -36,13 +36,22 @@ static const struct fs {
 		.name = "vfat",
 		.desc = "File Allocation Table (DOS default)",
 	},
-	{ .name = "swsuspend", },
-	{ .name = "swap", },
+	{
+		.name = "swsuspend",
+		.desc = "Software suspend block device",
+	},
+	{
+		.name = "swap",
+		.desc = "Swap device",
+	},
 	{
 		.name = "xfs",
 		.desc = "SGI's XFS (IRIX default)",
 	},
-	{ .name = "ext4dev", },
+	{
+		.name = "ext4dev",
+		.desc = "Obsolete, development-series ext4",
+	},
 	{
 		.name = "ext4",
 		.desc = "Extended Filesystem 4 (Linux default)",
@@ -60,8 +69,14 @@ static const struct fs {
 		.name = "jbd",
 		.desc = "Journaling Block Device",
 	},
-	{ .name = "reiserfs", },
-	{ .name = "reiser4", },
+	{
+		.name = "reiserfs",
+		.desc = "ReiserFS",
+	},
+	{
+		.name = "reiser4",
+		.desc = "ReiserFS 4",
+	},
 	{
 		.name = "jfs",
 		.desc = "IBM's Journaled Filesystem (AIX JFS2)",
@@ -74,7 +89,10 @@ static const struct fs {
 		.name = "iso9660",
 		.desc = "Compact Disc Filesystem (ISO 9660:1999)",
 	},
-	{ .name = "zfs_member", },
+	{
+		.name = "zfs_member",
+		.desc = "ZFS zpool member",
+	},
 	{
 		.name = "hfsplus",
 		.desc = "HFS+ (Mac OS Extended) (OS X default)",
@@ -89,14 +107,20 @@ static const struct fs {
 	},
 	{
 		.name = "hpfs",
-		.desc = "High Performance Filesystem (Windows default)",
+		.desc = "OS/2's High Performance Filesystem",
 	},
 	{
 		.name = "sysv",
 		.desc = "System V Filesystem (S5FS)",
 	},
-	{ .name = "xenix", },
-	{ .name = "ntfs", },
+	{
+		.name = "xenix",
+		.desc = "XENIX Filesystem (XENIX default)",
+	},
+	{
+		.name = "ntfs",
+		.desc = "Microsoft's New Technology Filesystem (Windows default)",
+	},
 	{
 		.name = "cramfs",
 		.desc = "Compressed Read-Only Filesystem",
@@ -105,28 +129,58 @@ static const struct fs {
 		.name = "romfs",
 		.desc = "Read-Only Filesystem",
 	},
-	{ .name = "minix", },
-	{ .name = "gfs", },
-	{ .name = "gfs2", },
-	{ .name = "ocfs", },
-	{ .name = "ocfs2", },
-	{ .name = "oracleasm", },
-	{ .name = "vxfs", },
+	{
+		.name = "minix",
+		.desc = "MINIX Filesystem (MINIX default)",
+       	},
+	{
+		.name = "gfs",
+		.desc = "Red Hat's Global Filesystem",
+	},
+	{
+		.name = "gfs2",
+		.desc = "Red Hat's Global Filesystem 2",
+	},
+	{
+		.name = "ocfs",
+		.desc = "Oracle Cluster Filesystem",
+	},
+	{
+		.name = "ocfs2",
+		.desc = "Oracle Cluster Filesystem 2",
+	},
+	{
+		.name = "oracleasm",
+		.desc = "Oracle Automatic Storage Management",
+	},
+	{
+		.name = "vxfs",
+		.desc = "VERITAS Filesystem (HP-UX JFS) (HP-UX default)",
+	},
 	{
 		.name = "squashfs",
 		.desc = "Squashed Read-Only Filesystem",
 	},
-	{ .name = "nss", },
+	{
+		.name = "nss",
+		.desc = "Novell Storage Services",
+	},
 	{
 		.name = "btrfs",
 		.desc = "Oracle's B-Tree Filesystem",
 	},
-	{ .name = "ubifs", },
+	{
+		.name = "ubifs",
+		.desc = "Unsorted Block Image Filesystem",
+	},
 	{
 		.name = "bfs",
 		.desc = "UNIXWare Boot Filesystem (SCO boot default)",
 	},
-	{ .name = "VMFS", },
+	{
+		.name = "VMFS",
+		.desc = "VMware's Virtual Machine Filesystem",
+	},
 	{
 		.name = "befs",
 		.desc = "Be Filesystem (BeOS default)",
@@ -135,7 +189,10 @@ static const struct fs {
 		.name = "nilfs2",
 		.desc = "NTT's New Implementation of Log-structued FS 2",
 	},
-	{ .name = "exfat", },
+	{
+		.name = "exfat",
+		.desc = "Microsoft's Extented File Allocation Table",
+	},
 	{ .name = NULL, }
 };
 
