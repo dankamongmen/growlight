@@ -29,6 +29,8 @@
 #endif
 #endif
 
+#define KEY_ESC 27
+
 // Our color pairs
 enum {
 	BORDER_COLOR = 1,		// Main window
@@ -297,6 +299,60 @@ struct form_state {
 };
 
 // -------------------------------------------------------------------------
+// - string type form, for generic input
+// -------------------------------------------------------------------------
+/*static void
+raise_str_form(struct form_state *fs,struct form_option *opstrs,int ops){
+	size_t longop,longdesc;
+	WINDOW *fsw;
+	int cols;
+	int x,y;
+
+	if(opstrs == NULL || !ops){
+		locked_diag("Passed empty %u-option string table",ops);
+		return;
+	}
+	if(actform){
+		return;
+	}
+	longdesc = longop = 0;
+	for(x = 0 ; x < ops ; ++x){
+		if(strlen(opstrs[x].option) > longop){
+			longop = strlen(opstrs[x].option);
+		}
+		if(strlen(opstrs[x].desc) > longdesc){
+			longdesc = strlen(opstrs[x].desc);
+		}
+	}
+	cols = longdesc + longop + 1;
+	getmaxyx(stdscr,y,x);
+	assert(x >= cols + START_COL * 2);
+	assert(y >= ops + 3);
+	assert( (fsw = newwin(ops + 2,cols + START_COL * 2,y - ops - 4,5)) );
+	if(fsw == NULL){
+		return;
+	}
+	assert((fs->p = new_panel(fsw)));
+	assert(top_panel(fs->p) != ERR);
+	if(fs->p == NULL){
+		delwin(fsw);
+		return;
+	}
+	fs->ysize = ops;
+	wattroff(fsw,A_BOLD);
+	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+	bevel(fsw);
+	wattron(fsw,A_BOLD);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen("Escape cancels"),"Escape cancels");
+	wattroff(fsw,A_BOLD);
+	fs->longop = longop;
+	fs->ops = opstrs;
+	form_options(fs);
+	actform = fs;
+	locked_diag(fs->boxstr); // calls screen_update()
+}*/
+// -------------------------------------------------------------------------
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
 static void
@@ -304,11 +360,11 @@ fs_callback(const char *fs){
 	blockobj *b;
 
 	if(fs == NULL){ // user cancelled
-		locked_diag("Filesystem creation cancelled by the user.");
+		locked_diag("Filesystem creation cancelled by the user");
 		return;
 	}
 	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while choosing filesystem type.");
+		locked_diag("Lost selection while choosing filesystem type");
 		return;
 	}
 	b = current_adapter->selected;
@@ -346,11 +402,11 @@ ptype_callback(const char *ptype){
 	char *pend;
 
 	if(ptype == NULL){ // user cancelled
-		locked_diag("Partition creation cancelled by the user.");
+		locked_diag("Partition creation cancelled by the user");
 		return;
 	}
 	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while choosing partition type.");
+		locked_diag("Lost selection while choosing partition type");
 		return;
 	}
 	b = current_adapter->selected;
@@ -382,11 +438,11 @@ pttype_callback(const char *pttype){
 	blockobj *b;
 
 	if(pttype == NULL){ // user cancelled
-		locked_diag("Partition table creation cancelled by the user.");
+		locked_diag("Partition table creation cancelled by the user");
 		return;
 	}
 	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while choosing table type.");
+		locked_diag("Lost selection while choosing table type");
 		return;
 	}
 	b = current_adapter->selected;
@@ -472,7 +528,7 @@ raise_form(struct form_state *fs,struct form_option *opstrs,int ops){
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen("Backspace cancels"),"Backspace cancels");
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen("Escape cancels"),"Escape cancels");
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
 	fs->ops = opstrs;
@@ -674,6 +730,7 @@ ncurses_setup(void){
 		errstr = "Couldn't initialize ncurses colordefs\n";
 		goto err;
 	}
+	ESCDELAY = 100;
 	keypad(stdscr,TRUE);
 	if(nodelay(stdscr,FALSE) != OK){
 		errstr = "Couldn't set blocking input\n";
@@ -1249,7 +1306,7 @@ select_adapter_dev(reelbox *rb,blockobj *bo,int delta){
 
 // Positive delta moves down, negative delta moves up, except for l2 == NULL
 // where we always move to -1 (and delta is ignored).
-static int
+static void
 select_adapter_node(reelbox *rb,struct blockobj *bo,int delta){
 	assert(bo != rb->selected);
 	if((rb->selected = bo) == NULL){
@@ -1257,23 +1314,20 @@ select_adapter_node(reelbox *rb,struct blockobj *bo,int delta){
 	}else{
 		rb->selline += delta;
 	}
-	return redraw_adapter(rb);
+	redraw_adapter(rb);
 }
 
-static int
+static void
 deselect_adapter_locked(void){
 	reelbox *rb;
 
 	if((rb = current_adapter) == NULL){
-		return 0;
+		return;
 	}
 	if(rb->selected == NULL){
-		return 0;
+		return;
 	}
-	if(select_adapter_node(rb,NULL,0)){
-		return -1;
-	}
-	return redraw_adapter(rb);
+	select_adapter_node(rb,NULL,0); // calls redraw_adapter()
 }
 
 // Move this adapter, possibly hiding it. Negative delta indicates movement
@@ -2663,6 +2717,7 @@ select_adapter(void){
 		return -1;
 	}
 	if(rb->selected){
+		locked_diag("Already browsing [%s]",rb->as->c->ident);
 		return 0;
 	}
 	if(rb->as->bobjs == NULL){
@@ -3077,7 +3132,7 @@ handle_actform_input(int ch){
 			free(optstr);
 			pthread_mutex_unlock(&bfl);
 			break;
-		}case KEY_BACKSPACE:
+		}case KEY_BACKSPACE: case KEY_ESC:
 			pthread_mutex_lock(&bfl);
 			cb = actform->fxn;
 			destroy_form_locked(actform);
@@ -3183,7 +3238,7 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
-			case KEY_BACKSPACE:
+			case KEY_BACKSPACE: case KEY_ESC:
 				pthread_mutex_lock(&bfl);
 				deselect_adapter_locked();
 				update_details_cond(panel_window(details.p));
