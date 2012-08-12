@@ -146,14 +146,63 @@ selection_active(void){
 }
 
 static int
+bevel_bottom(WINDOW *w){
+	static const cchar_t bchr[] = {
+		{ .attr = 0, .chars = L"└", },
+		{ .attr = 0, .chars = L"┘", },
+		{ .attr = 0, .chars = L"─", },
+		{ .attr = 0, .chars = L"│", },
+	};
+	int rows,cols,z;
+
+	getmaxyx(w,rows,cols);
+	assert(mvwadd_wch(w,rows - 1,0,&bchr[0]) != ERR);
+	for(z = 1 ; z < cols - 1 ; ++z){
+		assert(mvwadd_wch(w,rows - 1,z,&bchr[2]) != ERR);
+	}
+	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[1]) != ERR);
+	for(z = 0 ; z < rows - 1 ; ++z){
+		mvwadd_wch(w,z,0,&bchr[3]);
+		mvwins_wch(w,z,cols - 1,&bchr[3]);
+	}
+	return OK;
+}
+
+static int
+bevel_top(WINDOW *w){
+	static const cchar_t bchr[] = {
+		{ .attr = 0, .chars = L"┌", },
+		{ .attr = 0, .chars = L"┐", },
+		{ .attr = 0, .chars = L"─", },
+		{ .attr = 0, .chars = L"│", },
+	};
+	int rows,cols,z;
+
+	getmaxyx(w,rows,cols);
+	assert(rows && cols);
+	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
+	for(z = 1 ; z < cols - 1 ; ++z){
+		assert(mvwadd_wch(w,0,z,&bchr[2]) != ERR);
+	}
+	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
+	for(z = 1 ; z < rows ; ++z){
+		mvwadd_wch(w,z,0,&bchr[3]);
+		mvwins_wch(w,z,cols - 1,&bchr[3]);
+	}
+	return OK;
+}
+
+static int
 bevel(WINDOW *w){
 	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"╭", },
-		{ .attr = 0, .chars = L"╮", },
-		{ .attr = 0, .chars = L"╰", },
-		{ .attr = 0, .chars = L"╯", },
+		{ .attr = 0, .chars = L"┌", },
+		{ .attr = 0, .chars = L"┐", },
+		{ .attr = 0, .chars = L"└", },
+		{ .attr = 0, .chars = L"┘", },
+		{ .attr = 0, .chars = L"│", },
+		{ .attr = 0, .chars = L"─", },
 	};
-	int rows,cols;
+	int rows,cols,z;
 
 	getmaxyx(w,rows,cols);
 	assert(rows && cols);
@@ -162,14 +211,18 @@ bevel(WINDOW *w){
 	// we use mvwins_wch, which doesn't update the cursor position.
 	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
 	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
-	assert(whline(w,ACS_HLINE,cols - 2) != ERR);
-	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
-	if(rows > 2){
-		assert(mvwvline(w,1,cols - 1,ACS_VLINE,rows - 1) != ERR);
-		assert(mvwvline(w,1,0,ACS_VLINE,rows - 1) != ERR);
+	for(z = 1 ; z < cols - 1 ; ++z){
+		assert(mvwadd_wch(w,0,z,&bchr[5]) != ERR);
 	}
+	for(z = rows - 2 ; z > 0 ; --z){
+		assert(mvwadd_wch(w,z,0,&bchr[4]) != ERR);
+		assert(mvwins_wch(w,z,cols - 1,&bchr[4]) != ERR);
+	}
+	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
 	assert(mvwadd_wch(w,rows - 1,0,&bchr[2]) != ERR);
-	assert(whline(w,ACS_HLINE,cols - 2) != ERR);
+	for(z = 1 ; z < cols - 1 ; ++z){
+		assert(mvwadd_wch(w,rows - 1,z,&bchr[5]) != ERR);
+	}
 	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[3]) != ERR);
 	return OK;
 }
@@ -529,56 +582,6 @@ bottom_space_p(int rows){
 	return (rows - 1) - (getmaxy(last_reelbox->win) + getbegy(last_reelbox->win));
 }
 
-int bevel_notop(WINDOW *w){
-	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"╰", },
-		{ .attr = 0, .chars = L"╯", },
-	};
-	int rows,cols;
-
-	getmaxyx(w,rows,cols);
-	assert(rows && cols);
-	if(rows > 1){
-		assert(mvwvline(w,0,0,ACS_VLINE,rows - 1) != ERR);
-		assert(mvwvline(w,0,cols - 1,ACS_VLINE,rows - 1) != ERR);
-	}
-	assert(mvwadd_wch(w,rows - 1,0,&bchr[0]) != ERR);
-	assert(mvwhline(w,rows - 1,1,ACS_HLINE,cols - 2) != ERR);
-	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[1]) != ERR);
-	return OK;
-}
-
-int bevel_noborder(WINDOW *w){
-	int rows,cols;
-
-	getmaxyx(w,rows,cols);
-	assert(rows && cols);
-	if(rows > 1){
-		assert(mvwvline(w,1,0,ACS_VLINE,rows) != ERR);
-		assert(mvwvline(w,1,cols - 1,ACS_VLINE,rows) != ERR);
-	}
-	return OK;
-}
-
-int bevel_nobottom(WINDOW *w){
-	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"╭", },
-		{ .attr = 0, .chars = L"╮", },
-	};
-	int rows,cols;
-
-	getmaxyx(w,rows,cols);
-	assert(rows && cols);
-	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
-	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
-	assert(mvwhline(w,0,1,ACS_HLINE,cols - 2) != ERR);
-	if(rows > 1){
-		assert(mvwvline(w,1,0,ACS_VLINE,rows - 1) != ERR);
-		assert(mvwvline(w,1,cols - 1,ACS_VLINE,rows - 1) != ERR);
-	}
-	return OK;
-}
-
 static int
 ncurses_cleanup(WINDOW **w){
 	int ret = 0;
@@ -747,14 +750,12 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 		if(belowend == 0){
 			assert(bevel(w) == OK);
 		}else{
-			assert(bevel_nobottom(w) == OK);
+			assert(bevel_top(w) == OK);
 		}
 	}else{
 		if(belowend == 0){
-			assert(bevel_notop(w) == OK);
-		}else{
-			assert(bevel_noborder(w) == OK);
-		}
+			assert(bevel_bottom(w) == OK);
+		} // otherwise it has no top or bottom visible
 	}
 	assert(wattroff(w,A_REVERSE) == OK);
 
