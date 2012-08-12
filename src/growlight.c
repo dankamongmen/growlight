@@ -1250,29 +1250,14 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 }
 
 static void
-version(const char *name,int status){
-	if(gui->fatal){
-		gui->fatal("%s version %s\n",name,VERSION);
-	}else{
-		FILE *fp = status == EXIT_SUCCESS ? stdout : stderr;
-
-		fprintf(fp,"%s version %s\n",name,VERSION);
-	}
-	exit(status);
+version(const char *name){
+	diag("%s version %s\n",basename(name),VERSION);
 }
 
 static void
-usage(const char *name,int status){
-	if(gui->fatal){
-		gui->fatal("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
-				"\t\t[ -t|--target path ]\n",name);
-	}else{
-		FILE *fp = status != EXIT_SUCCESS ? stderr : stdout;
-
-		fprintf(fp,"usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
-				"\t\t[ -t|--target path ]\n",name);
-	}
-	exit(status);
+usage(const char *name){
+	diag("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
+				"\t\t[ -t|--target path ]\n",basename(name));
 }
 
 static int
@@ -1529,19 +1514,22 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	while((opt = getopt_long(argc,argv,":ht:vV",ops,&longidx)) >= 0){
 		switch(opt){
 		case 'h':{
-			usage(argv[0],EXIT_SUCCESS);
-			break;
+			usage(argv[0]);
+			return -1;
 		}case 't':{
 			if(growlight_target){
 				diag("Error: defined --target twice (%s, %s)\n",
 						growlight_target,optarg);
-				usage(argv[0],EXIT_FAILURE);
+				usage(argv[0]);
+				return -1;
 			}else if(optarg == NULL){
 				diag("-t|--target requires an argument\n");
-				usage(argv[0],EXIT_FAILURE);
+				usage(argv[0]);
+				return -1;
 			}else{
 				if(set_target(optarg)){
-					return EXIT_FAILURE;
+					usage(argv[0]);
+					return -1;
 				}
 			}
 			break;
@@ -1549,20 +1537,20 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			verbose = 1;
 			break;
 		}case 'V':{
-			version(argv[0],EXIT_SUCCESS);
-			break;
+			version(argv[0]);
+			return -1;
 		}case ':':{
 			diag("Option requires argument: '%c'\n",optopt);
-			usage(argv[0],EXIT_FAILURE);
-			break;
+			usage(argv[0]);
+			return -1;
 		}case '?':{
 			diag("Unknown option: '%c'\n",optopt);
-			usage(argv[0],EXIT_FAILURE);
-			break;
+			usage(argv[0]);
+			return -1;
 		}default:{
 			diag("Misuse of option: '%c'\n",optopt);
-			usage(argv[0],EXIT_FAILURE);
-			break;
+			usage(argv[0]);
+			return -1;
 		} }
 	}
 	dm_get_library_version(buf,sizeof(buf));

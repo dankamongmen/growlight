@@ -16,6 +16,7 @@ extern "C" {
 #include <sys/types.h>
 
 #include "mounts.h"
+#include "target.h"
 
 extern unsigned verbose;
 extern unsigned finalized;
@@ -48,12 +49,6 @@ typedef struct growlight_ui {
 
 	// Controller state followed by block state
 	void (*block_free)(void *,void *);
-
-	// I'm sorry about this ugly customer :/. Like vdiag(), but we're going
-	// to abort after we're done calling you. Only used thus far during
-	// initialization, to allow ncurses to call endwin(). If NULL, we use
-	// good ol' fprintf(stderr). Hopefully this will one day go away. FIXME
-	void (*fatal)(const char *,...);
 } glightui;
 
 int growlight_init(int,char * const *,const glightui *);
@@ -417,6 +412,11 @@ typedef struct logent {
 // MAXIMUM_LOG_ENTRIES. If there are less than n present, they'll be copied
 // into the first n logents; logent[n].msg will then be NULL.
 int get_logs(unsigned,logent *);
+
+static inline int
+target_mode_p(void){
+	return !!growlight_target;
+}
 
 #ifdef __cplusplus
 }
