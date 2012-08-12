@@ -2112,23 +2112,23 @@ static const wchar_t *helps[] = {
 	L"'e': view environment details 'H': toggle this help display",
 	L"'v': view selection details   'D': view recent diagnostics",
 	L"'E': view active mountpoints / installpoints",
-	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
-	L"'h'/'←': navigate left        'l'/'→': navigate right",
 	L"'-': collapse adapter         '+': expand adapter",
-	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'R': rescan selection         'S': reset selection",
+	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
+	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
 	NULL
 };
 
 static const wchar_t *helps_block[] = {
+	L"'h'/'←': navigate left        'l'/'→': navigate right",
 	L"'m': make partition table     'r': remove partition table",
 	L"'W': wipe master boot record  'B': bad blocks check",
 	L"'n': new partition            'd': delete partition",
 	L"'s': set partition attributes 'M': make new filesystem",
 	L"'F': fsck filesystem          'w': wipe filesystem",
 	L"'U': set UUID                 'L': set label/name",
-	L"'o': mount filesystem         'O': unmount filesystem",
 	L"'b': bind to aggregate        'f': free from aggregate",
+	L"'o': mount filesystem         'O': unmount filesystem",
 	NULL
 };
 
