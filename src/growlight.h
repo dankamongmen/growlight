@@ -325,6 +325,7 @@ transport_str(transport_e t){
 #define PREFIXSTRLEN 7  // Does not include a '\0' (xxx.xxU)
 #define BPREFIXSTRLEN 9  // Does not include a '\0' (xxx.xxUi), i == prefix
 #define PREFIXFMT "%7s"
+#define BPREFIXFMT "%9s"
 
 // Takes an arbitrarily large number, and prints it into a fixed-size buffer by
 // adding the necessary SI suffix. Usually, pass a |PREFIXSTRLEN+1|-sized

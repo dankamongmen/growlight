@@ -1446,6 +1446,17 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 	// FIXME pull_adapters_down();
 }
 
+static void
+detail_fs(WINDOW *hw,const device *d,int row){
+	char buf[BPREFIXSTRLEN + 1];
+
+	if(d->mnttype){
+		mvwprintw(hw,row,START_COL,BPREFIXFMT "B %s filesystem",
+			bprefix(d->mntsize,1,buf,sizeof(buf),1),
+				d->mnttype);
+	}
+}
+
 static int
 update_details(WINDOW *hw){
 	const controller *c = get_current_adapter();
@@ -1455,7 +1466,7 @@ update_details(WINDOW *hw){
 	int cols,rows,n;
 
 	if(c == NULL){
-		return 0;
+		return 0; // FIXME hide thyself!
 	}
 	getmaxyx(hw,rows,cols);
 	if(cols < START_COL * 2){
@@ -1511,26 +1522,31 @@ update_details(WINDOW *hw){
 			case LAYOUT_MDADM:
 			case LAYOUT_ZPOOL:
 			case LAYOUT_DM:
-			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: %s",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u: %s",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
 					b->zone->p->name);
+			detail_fs(hw,b->zone->p,7);
 			break;
 			case LAYOUT_PARTITION:
-			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: %s (%ls)",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B P%02x LBA %u→%u: %s (%ls) type %04x",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
+					b->zone->p->partdev.pnumber,
 					b->zone->fsector,b->zone->lsector,
 					b->zone->p->name,
 					b->zone->p->partdev.pname ?
 					 b->zone->p->partdev.pname :
-					 L"unnamed");
+					 L"unnamed",b->zone->p->partdev.partrole);
+			detail_fs(hw,b->zone->p,7);
 			break;
 			}
 		}else{
-			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: unpartitioned space",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u: unpartitioned space",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector);
 		}
+	}else{
+		mvwprintw(hw,6,START_COL,"Media is not loaded");
 	}
 	return 0;
 }
@@ -2362,7 +2378,7 @@ err:
 	return ERR;
 }
 
-static const int DETAILROWS = 6; // FIXME make it dynamic based on selections
+static const int DETAILROWS = 7; // FIXME make it dynamic based on selections
 
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
