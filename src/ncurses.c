@@ -1506,10 +1506,26 @@ update_details(WINDOW *hw){
 		char buf[BPREFIXSTRLEN + 1];
 
 		if(b->zone->p){
+			switch(b->zone->p->layout){
+			case LAYOUT_NONE:
+			case LAYOUT_MDADM:
+			case LAYOUT_ZPOOL:
+			case LAYOUT_DM:
 			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: %s",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
 					b->zone->p->name);
+			break;
+			case LAYOUT_PARTITION:
+			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: %s (%ls)",
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
+					b->zone->fsector,b->zone->lsector,
+					b->zone->p->name,
+					b->zone->p->partdev.pname ?
+					 b->zone->p->partdev.pname :
+					 L"unnamed");
+			break;
+			}
 		}else{
 			mvwprintw(hw,6,START_COL,PREFIXFMT " LBA %u→%u: unpartitioned space",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
