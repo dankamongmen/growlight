@@ -1062,88 +1062,6 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 	}
 }
 
-/*static void
-print_fs(const device *d,WINDOW *w,int *line,int rows,unsigned cols,
-					unsigned endp,int selected){
-	char buf[PREFIXSTRLEN + 1];
-
-	if(selected){
-		assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
-	}else{
-		assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
-	}
-	if(*line >= rows - !endp){
-		return;
-	}
-	if(d->mnttype){
-		mvwprintw(w,*line,START_COL,"  %-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
-				FSLABELSIZ,FSLABELSIZ,
-				d->label ? d->label : "n/a",
-				d->mnttype,
-				d->uuid ? d->uuid : "n/a",
-				qprefix(d->mntsize,1,buf,sizeof(buf),0),
-				cols - 72,cols - 72,"");
-		if(++*line >= rows - !endp){
-			return;
-		}
-	}
-	if(d->swapprio != SWAP_INVALID){
-		mvwprintw(w,*line,START_COL,"  %-*.*s %-5.5s %-36.36s " PREFIXFMT "%-*.*s",
-				FSLABELSIZ,FSLABELSIZ,
-				d->label ? d->label : "n/a",
-				d->mnttype,
-				d->uuid ? d->uuid : "n/a",
-				qprefix(d->mntsize,1,buf,sizeof(buf),0),
-				cols - 72,cols - 72,"");
-		if(++*line >= rows - !endp){
-			return;
-		}
-	}
-	if(d->mnt){
-		char buf[cols + 1];
-
-		snprintf(buf,sizeof(buf),"%s %s",d->mnt,d->mntops);
-		mvwprintw(w,*line,START_COL,"   %-*.*s",
-					cols - (START_COL * 4) - 1,
-					cols - (START_COL * 4) - 1,
-					buf);
-		if(++*line >= rows - !endp){
-			return;
-		}
-	}
-	if(d->target){
-		char buf[cols + 1];
-
-		snprintf(buf,sizeof(buf),"%s %s",d->target->path,d->target->ops);
-		mvwprintw(w,*line,START_COL,"   %-*.*s",
-					cols - (START_COL * 4) - 1,
-					cols - (START_COL * 4) - 1,
-					buf);
-		if(++*line >= rows - !endp){
-			return;
-		}
-	}
-}
-
-static void
-print_empty(WINDOW *w,int *line,int rows,unsigned cols,
-			unsigned endp,int selected,
-			uint64_t fsect,uint64_t lsect,
-			size_t sectsize){
-	char buf[BPREFIXSTRLEN + 1];
-
-	if(*line >= rows - !endp){
-		return;
-	}
-#define STR " Empty space "
-	mvwprintw(w,*line,START_COL,"%s%-*.*s",STR,
-			cols - (START_COL * 4) - __builtin_strlen(STR) + 2,
-			cols - (START_COL * 4) - __builtin_strlen(STR) + 2,
-			bprefix((lsect - fsect) * sectsize,1,buf,sizeof(buf),1));
-#undef STR
-	++*line;
-}*/
-
 static inline unsigned
 sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos){
 	unsigned u = ((sec * d->logsec) / (float)d->size) * (ex - sx - 1) + sx;
@@ -2734,8 +2652,14 @@ map_details(WINDOW *hw){
 	int y,rows;
 
 	rows = getmaxy(hw);
+	y = 1;
+	if(growlight_target){
+		wattrset(hw,A_BOLD|COLOR_PAIR(UHEADING_COLOR));
+		mvwprintw(hw,1,START_COL,"Operating in target mode (%s)",growlight_target);
+		++y;
+	}
 	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
-	mvwprintw(hw,START_COL,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
+	mvwprintw(hw,y,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
 			FSLABELSIZ,FSLABELSIZ,"Label",
 			"Type","UUID","Bytes","Device");
 	if((y = START_COL + 1) >= rows){
