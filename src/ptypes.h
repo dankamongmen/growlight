@@ -6,7 +6,10 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "growlight.h"
+#include "gpt.h"
+
+#define PARTROLE_ESP		0xef00
+#define PARTROLE_PRIMARY	0x8300
 
 typedef struct ptype {
 	uint16_t code;			// [fg]disk/parted code (2 bytes)
@@ -21,6 +24,11 @@ extern const ptype ptypes[];
 // Returns 0 for a valid code, or -1 if there's no ident for the scheme.
 int get_gpt_guid(unsigned,void *);
 int get_mbr_code(unsigned,unsigned *);
+
+static inline int
+ptype_default_p(unsigned code){
+	return code == PARTROLE_PRIMARY;
+}
 
 int ptype_supported(const char *,const ptype *);
 

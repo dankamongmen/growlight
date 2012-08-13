@@ -411,7 +411,7 @@ form_options(struct form_state *fs){
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
 static void
-raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops){
+raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops,int defidx){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	WINDOW *fsw;
@@ -454,6 +454,9 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 		free_form(fs);
 		return;
 	}
+	if((fs->idx = defidx) < 0){
+		fs->idx = defidx = 0;
+	}
 	fs->ysize = ops;
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
@@ -466,7 +469,7 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 	fs->ops = opstrs;
 	form_options(fs);
 	actform = fs;
-	locked_diag(fs->boxstr); // calls screen_update()
+	screen_update();
 }
 
 // -------------------------------------------------------------------------
@@ -485,15 +488,16 @@ form_string_options(struct form_state *fs){
 	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 	mvwprintw(fsw,1,START_COL,"%-*.*s: ",
 		fs->longop,fs->longop,fs->inp.prompt);
-	wattron(fsw,A_REVERSE);
 	wcolor_set(fsw,INPUT_COLOR,NULL);
 	wprintw(fsw,"%-*.*s",cols - fs->longop - 2 - START_COL * 2,
 		cols - fs->longop - 2 - START_COL * 2,fs->inp.buffer);
 	wattroff(fsw,A_BOLD);
+	// Place the cursor at the end of input
+	wmove(fsw,1,START_COL + 2 + strlen(fs->inp.buffer) + fs->longop); // 2 for ": " on prompt
 }
 
 static void
-raise_str_form(const char *str,void (*fxn)(const char *)){
+raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
 	struct form_state *fs;
 	WINDOW *fsw;
 	int cols;
@@ -532,10 +536,12 @@ raise_str_form(const char *str,void (*fxn)(const char *)){
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
 	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
 	fs->inp.prompt = fs->boxstr;
-	fs->inp.buffer = strdup("");
+	def = def ? def : "";
+	fs->inp.buffer = strdup(def);
 	form_string_options(fs);
 	actform = fs;
-	locked_diag(fs->boxstr); // calls screen_update()
+	curs_set(1);
+	screen_update();
 }
 
 // -------------------------------------------------------------------------
@@ -602,7 +608,7 @@ fs_callback(const char *fs){
 // -------------------------------------------------------------------------
 
 static struct form_option *
-ptype_table(const device *d,int *count){
+ptype_table(const device *d,int *count,int match,int *defidx){
 	struct form_option *fo = NULL,*tmp;
 	const ptype *pt;
 
@@ -638,6 +644,13 @@ ptype_table(const device *d,int *count){
 		fo = tmp;
 		fo[*count].option = key;
 		fo[*count].desc = desc;
+		if(match == -1){
+			if(ptype_default_p(pt->code)){
+				*defidx = *count;
+			}
+		}else if(match == pt->code){
+			*defidx = *count;
+		}
 		++*count;
 	}
 	return fo;
@@ -659,6 +672,16 @@ static void psectors_callback(const char *);
 
 static unsigned long pending_ptype; // set by partition type callback
 static uintmax_t pending_fsect,pending_lsect; // set by partition spec callback
+static char *pending_spec;		// set by spec callback; heap-allocated
+
+// Call on exit from the new partition form path
+static void
+cleanup_new_partition(void){
+	free(pending_spec);
+	pending_spec = NULL;
+	pending_fsect = pending_lsect = 0;
+	pending_ptype = 0;
+}
 
 static void
 ptype_name_callback(const char *name){
@@ -669,63 +692,71 @@ ptype_name_callback(const char *name){
 	size_t wcs;
 
 	if(name == NULL){ // go back to partition spec
-		// FIXME supply previous entry as default
-		raise_str_form("enter partition spec",psectors_callback);
+		raise_str_form("enter partition spec",psectors_callback,pending_spec);
 		return;
 	}
 	if(!current_adapter || !(b = current_adapter->selected)){
 		locked_diag("Lost selection while naming partition");
+		cleanup_new_partition();
 		return;
 	}
 	n = name;
 	memset(&ps,0,sizeof(ps));
 	if((wcs = mbsrtowcs(NULL,&n,0,&ps)) == (size_t)-1){
 		locked_diag("Couldn't interpret multibyte '%s'",name);
+		cleanup_new_partition();
 		return;
 	}
 	if((wstr = malloc(sizeof(*wstr) * (wcs + 1))) == NULL){
 		locked_diag("Couldn't allocate wide string");
+		cleanup_new_partition();
 		return;
 	}
 	n = name;
 	memset(&ps,0,sizeof(ps));
 	if(mbsrtowcs(wstr,&n,wcs + 1,&ps) != wcs){
 		locked_diag("Error converting multibyte '%s'",name);
+		cleanup_new_partition();
 		return;
 	}
 	add_partition_precise(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
-	pending_fsect = pending_lsect = 0;
-	pending_ptype = 0;
 	free(wstr);
+	cleanup_new_partition();
 }
 
 static void
 psectors_callback(const char *psects){
+	uintmax_t fsect,lsect;
 	blockobj *b;
 
 	if(!current_adapter || !(b = current_adapter->selected)){
 		locked_diag("Lost selection while specifying partition");
+		cleanup_new_partition();
 		return;
 	}
 	if(psects == NULL){ // go back to partition type
 		struct form_option *ops_ptype;
-		int opcount;
+		int opcount,defidx;
 
-		if((ops_ptype = ptype_table(b->d,&opcount)) == NULL){
+		if((ops_ptype = ptype_table(b->d,&opcount,pending_ptype,&defidx)) == NULL){
+			cleanup_new_partition();
 			return;
 		}
-		// FIXME supply previous selection (pending_ptype) as default
-		raise_form("select a partition type",ptype_callback,ops_ptype,opcount);
+		raise_form("select a partition type",ptype_callback,ops_ptype,opcount,defidx);
 		return;
 	}
-	if(partitions_named_p(b->d)){
-		// FIXME pass spec via global vars pending_[fl]sect
-		raise_str_form("enter partition name",ptype_name_callback);
+	// FIXME lex it
+	fsect = 0;
+	lsect = 0;
+	if(b->zone && partitions_named_p(b->zone->p)){
+		pending_spec = strdup(psects);
+		pending_fsect = fsect;
+		pending_lsect = lsect;
+		raise_str_form("enter partition name",ptype_name_callback,NULL);
 		return;
 	}
-	add_partition_precise(b->d,NULL,pending_fsect,pending_lsect,pending_ptype);
-	pending_fsect = pending_lsect = 0;
-	pending_ptype = 0;
+	add_partition_precise(b->d,NULL,fsect,lsect,pending_ptype);
+	cleanup_new_partition();
 }
 
 // -------------------------------------------------------------------------
@@ -739,17 +770,22 @@ ptype_callback(const char *ptype){
 
 	if(ptype == NULL){ // user cancelled
 		locked_diag("Partition creation cancelled by the user");
+		cleanup_new_partition();
 		return;
 	}
 	if(!current_adapter || !(b = current_adapter->selected)){
 		locked_diag("Lost selection while choosing partition type");
+		cleanup_new_partition();
 		return;
 	}
 	if(((pt = strtoul(ptype,&pend,16)) == ULONG_MAX && errno == ERANGE) || *pend){
 		locked_diag("Bad partition type selection: %s",ptype);
+		cleanup_new_partition();
 		return;
 	}
-	raise_str_form("enter partition spec",psectors_callback);
+	pending_ptype = pt;
+	raise_str_form("enter partition spec",psectors_callback,
+			pending_spec ? pending_spec : "100%");
 }
 
 // -------------------------------------------------------------------------
@@ -3107,7 +3143,7 @@ make_ptable(void){
 	if((ops_ptype = pttype_table(&opcount)) == NULL){
 		return;
 	}
-	raise_form("select a table type",pttype_callback,ops_ptype,opcount);
+	raise_form("select a table type",pttype_callback,ops_ptype,opcount,-1);
 }
 
 static void
@@ -3134,10 +3170,12 @@ new_partition(void){
 		return;
 	}
 	if(b->zone->p == NULL){
-		if((ops_ptype = ptype_table(b->d,&opcount)) == NULL){
+		int defidx;
+
+		if((ops_ptype = ptype_table(b->d,&opcount,-1,&defidx)) == NULL){
 			return;
 		}
-		raise_form("select a partition type",ptype_callback,ops_ptype,opcount);
+		raise_form("select a partition type",ptype_callback,ops_ptype,opcount,defidx);
 		return;
 	}else if(b->zone->p->layout == LAYOUT_NONE){
 		locked_diag("A partition table needs be created on %s",b->d->name);
@@ -3210,7 +3248,7 @@ new_filesystem(void){
 		if((ops_fs = fs_table(&opcount)) == NULL){
 			return;
 		}
-		raise_form("select a filesystem type",fs_callback,ops_fs,opcount);
+		raise_form("select a filesystem type",fs_callback,ops_fs,opcount,-1);
 		return;
 	}
 }
@@ -3381,7 +3419,7 @@ mount_filesystem(void){
 		locked_diag("Cannot mount unused space");
 		return;
 	}else{
-		raise_str_form("enter mountpount",mountpoint_callback);
+		raise_str_form("enter mountpount",mountpoint_callback,"/");
 		return;
 	}
 }
@@ -3435,7 +3473,7 @@ mount_target(void){
 		locked_diag("Cannot mount unused space");
 		return;
 	}else{
-		raise_str_form("enter target mountpount",targpoint_callback);
+		raise_str_form("enter target mountpount",targpoint_callback,"/");
 		return;
 	}
 }
@@ -3486,6 +3524,7 @@ handle_actform_string_input(int ch){
 		assert(str = strdup(actform->inp.buffer));
 		free_form(actform);
 		actform = NULL;
+		curs_set(0);
 		cb(str);
 		free(str);
 		pthread_mutex_unlock(&bfl);
@@ -3495,6 +3534,7 @@ handle_actform_string_input(int ch){
 		cb = actform->fxn;
 		free_form(actform);
 		actform = NULL;
+		curs_set(0);
 		cb(NULL);
 		pthread_mutex_unlock(&bfl);
 		break;

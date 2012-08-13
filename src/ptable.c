@@ -344,7 +344,7 @@ int partitions_named_p(const device *d){
 		return -1;
 	}
 	if(d->layout != LAYOUT_PARTITION){
-		diag("Will only name real partitions\n");
+		diag("Can only name real partitions\n");
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
