@@ -481,14 +481,14 @@ form_string_options(struct form_state *fs){
 		return;
 	}
 	cols = getmaxx(fsw);
-	wattron(fsw,A_BOLD);
+	wattrset(fsw,A_BOLD);
 	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 	mvwprintw(fsw,1,START_COL,"%-*.*s: ",
 		fs->longop,fs->longop,fs->inp.prompt);
 	wattron(fsw,A_REVERSE);
 	wcolor_set(fsw,INPUT_COLOR,NULL);
-	wprintw(fsw,"%-*.*s",cols - fs->longop - START_COL * 2,
-		cols - fs->longop - START_COL * 2,fs->inp.buffer);
+	wprintw(fsw,"%-*.*s",cols - fs->longop - 2 - START_COL * 2,
+		cols - fs->longop - 2 - START_COL * 2,fs->inp.buffer);
 	wattroff(fsw,A_BOLD);
 }
 
@@ -3298,13 +3298,25 @@ handle_actform_string_input(int ch){
 		cb(NULL);
 		pthread_mutex_unlock(&bfl);
 		break;
-	// FIXME handle backspace!
+	}case KEY_BACKSPACE:{
+		pthread_mutex_lock(&bfl);
+		if(strlen(fs->inp.buffer)){
+			fs->inp.buffer[strlen(fs->inp.buffer) - 1] = '\0';
+			form_string_options(fs);
+			screen_update();
+		}
+		pthread_mutex_unlock(&bfl);
+		break;
 	}default:{
 		char *tmp;
 
-		assert((unsigned)ch <= 255);
+		if(ch >= 256 || !isgraph(ch)){
+			diag("please %s (⎋esc returns)",actform->boxstr);
+		}
+		pthread_mutex_lock(&bfl);
 		if((tmp = realloc(fs->inp.buffer,strlen(fs->inp.buffer) + 2)) == NULL){
 			locked_diag("Couldn't allocate input buffer (%s?)",strerror(errno));
+			pthread_mutex_unlock(&bfl);
 			return;
 		}
 		fs->inp.buffer = tmp;
@@ -3312,6 +3324,7 @@ handle_actform_string_input(int ch){
 		fs->inp.buffer[strlen(fs->inp.buffer)] = (unsigned char)ch;
 		form_string_options(fs);
 		screen_update();
+		pthread_mutex_unlock(&bfl);
 	} }
 }
 
