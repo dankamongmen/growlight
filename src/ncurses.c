@@ -2670,19 +2670,23 @@ env_details(WINDOW *hw,int rows){
 }
 
 static void
-print_mount(WINDOW *w,int row,int both,const device *d){
+print_mount(WINDOW *w,int *row,int both,const device *d){
 	char buf[PREFIXSTRLEN + 1];
 
-	mvwprintw(w,row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
+	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
 			d->uuid ? d->uuid : "n/a",
 			qprefix(d->mntsize,1,buf,sizeof(buf),0),
 			d->name);
+	++*row;
 	if(!both){
 		return;
 	}
-	mvwprintw(w,row + 1,START_COL," %s %s",d->mnt,d->mntops);
+	wattroff(w,A_BOLD);
+	mvwprintw(w,*row,START_COL," %s %s",d->mnt,d->mntops);
+	wattron(w,A_BOLD);
+	++*row;
 }
 
 static int
@@ -2705,8 +2709,8 @@ map_details(WINDOW *hw){
 			const device *p;
 
 			if(d->mnt){
-				print_mount(hw,y,y + 1 < rows,d);
-				if(++y >= rows){
+				print_mount(hw,&y,y + 1 < rows,d);
+				if(y >= rows){
 					return 0;
 				}
 			}else if(d->target){
@@ -2719,8 +2723,8 @@ map_details(WINDOW *hw){
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if(p->mnt){
-					print_mount(hw,y,y + 1 < rows,p);
-					if(++y >= rows){
+					print_mount(hw,&y,y + 1 < rows,p);
+					if(y >= rows){
 						return 0;
 					}
 				}else if(p->target){
