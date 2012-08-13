@@ -2502,18 +2502,23 @@ update_diags(struct panel_state *ps){
 	assert(wattrset(w,SUBDISPLAY_ATTR) == OK);
 	for(r = 0 ; r < y ; ++r){
 		char *c,tbuf[x - START_COL * 2 + 1];
+		struct tm tm;
 		size_t tb;
 		int p;
 
 		if(l[r].msg == NULL){
 			break;
 		}
-		assert(ctime_r(&l[r].when,tbuf));
-		tbuf[strlen(tbuf) - 1] = ' '; // kill newline
+		if(localtime_r(&l[r].when,&tm) == NULL){
+			break;
+		}
+		if(strftime(tbuf,sizeof(tbuf),"%F %T",&tm) == 0){
+			break;;
+		}
 		tb = sizeof(tbuf) / sizeof(*tbuf) - strlen(tbuf);
-		p = snprintf(tbuf + strlen(tbuf) - 1,tb," %s",l[r].msg);
+		p = snprintf(tbuf + strlen(tbuf),tb," %s",l[r].msg);
 		if(p < 0 || (unsigned)p >= tb){
-			tbuf[tb - 1] = '\0';
+			tbuf[sizeof(tbuf) / sizeof(*tbuf) - 1] = '\0';
 		}
 		if( (c = strchr(tbuf,'\n')) ){
 			*c = '\0';
