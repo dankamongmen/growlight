@@ -3381,7 +3381,7 @@ mount_filesystem(void){
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
-		locked_diag("Must select a block device to mount");
+		locked_diag("Must select a filesystem to mount");
 		return;
 	}
 	if(b->zone == NULL){
@@ -3402,7 +3402,7 @@ umount_filesystem(void){
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
-		locked_diag("Must select a block device to mount");
+		locked_diag("Must select a filesystem to unmount");
 		return;
 	}
 	if(b->zone == NULL){
@@ -3411,7 +3411,7 @@ umount_filesystem(void){
 	}
 	if(b->zone->p){
 		if(b->zone->p->layout != LAYOUT_PARTITION){
-			locked_diag("Cannot mount unused space");
+			locked_diag("Cannot unmount unused space");
 			return;
 		}
 		unmount(b->zone->p);
