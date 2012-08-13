@@ -572,15 +572,21 @@ fs_callback(const char *fs){
 // -------------------------------------------------------------------------
 
 static struct form_option *
-ptype_table(int *count){
+ptype_table(const device *d,int *count){
 	struct form_option *fo = NULL,*tmp;
 	const ptype *pt;
 
+	assert(d);
+	assert(d->layout == LAYOUT_NONE);
+	assert(d->blkdev.pttable);
 	*count = 0;
 	for(pt = ptypes ; pt->name ; ++pt){
 		const size_t KEYSIZE = 5; // 4 hex digit code
 		char *key,*desc;
 
+		if(!ptype_supported(d->blkdev.pttable,pt)){
+			continue;
+		}
 		if((key = malloc(KEYSIZE)) == NULL){
 			goto err;
 		}
@@ -641,7 +647,7 @@ ptype_name_callback(const char *name){
 		struct form_option *ops_ptype;
 		int opcount;
 
-		if((ops_ptype = ptype_table(&opcount)) == NULL){
+		if((ops_ptype = ptype_table(b->d,&opcount)) == NULL){
 			return;
 		}
 		// FIXME supply previous selection as default
@@ -3093,7 +3099,7 @@ new_partition(void){
 		return;
 	}
 	if(b->zone->p == NULL){
-		if((ops_ptype = ptype_table(&opcount)) == NULL){
+		if((ops_ptype = ptype_table(b->d,&opcount)) == NULL){
 			return;
 		}
 		raise_form("select a partition type",ptype_callback,ops_ptype,opcount);

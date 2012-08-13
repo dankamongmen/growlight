@@ -22,6 +22,8 @@ extern const ptype ptypes[];
 int get_gpt_guid(unsigned,void *);
 int get_mbr_code(unsigned,unsigned *);
 
+int ptype_supported(const char *,const ptype *);
+
 #ifdef __cplusplus
 }
 #endif

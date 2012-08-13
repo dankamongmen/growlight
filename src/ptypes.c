@@ -378,3 +378,21 @@ int get_mbr_code(unsigned code,unsigned *mbr){
 	}
 	return -1;
 }
+
+int ptype_supported(const char *pttype,const ptype *pt){
+	if(strcmp(pttype,"gpt") == 0){
+		static const uint8_t zguid[GUIDSIZE] = {0};
+
+		if(memcmp(pt->gpt_guid,zguid,sizeof(zguid)) == 0){
+			return 0;
+		}
+		return 1;
+	}else if(strcmp(pttype,"mbr") == 0){
+		if(pt->mbr_code == 0){
+			return 0;
+		}
+		return 1;
+	}
+	diag("No support for pttype %s\n",pttype);
+	return 0;
+}
