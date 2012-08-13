@@ -2669,14 +2669,71 @@ env_details(WINDOW *hw,int rows){
 	return OK;
 }
 
+static void
+print_mount(WINDOW *w,int row,int both,const device *d){
+	char buf[PREFIXSTRLEN + 1];
+
+	mvwprintw(w,row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
+			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+			d->mnttype,
+			d->uuid ? d->uuid : "n/a",
+			qprefix(d->mntsize,1,buf,sizeof(buf),0),
+			d->name);
+	if(!both){
+		return;
+	}
+	mvwprintw(w,row + 1,START_COL," %s %s",d->mnt,d->mntops);
+}
+
 static int
 map_details(WINDOW *hw){
-	int x,y;
+	const controller *c;
+	int y,rows;
 
-	getmaxyx(hw,y,x);
-	//FIXME
-	assert(x);
-	assert(y);
+	rows = getmaxy(hw);
+	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+	mvwprintw(hw,START_COL,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
+			FSLABELSIZ,FSLABELSIZ,"Label",
+			"Type","UUID","Bytes","Device");
+	if((y = START_COL + 1) >= rows){
+		return -1;
+	}
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			const device *p;
+
+			if(d->mnt){
+				print_mount(hw,y,y + 1 < rows,d);
+				if(++y >= rows){
+					return 0;
+				}
+			}else if(d->target){
+				/*if(print_target(p,p->target) < 0){
+					return -1;
+				}*/
+				if(++y >= rows){
+					return 0;
+				}
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(p->mnt){
+					print_mount(hw,y,y + 1 < rows,p);
+					if(++y >= rows){
+						return 0;
+					}
+				}else if(p->target){
+					/*if(print_target(p,p->target) < 0){
+						return -1;
+					}*/
+					if(++y >= rows){
+						return 0;
+					}
+				}
+			}
+		}
+	}
 	return 0;
 }
 
@@ -2706,7 +2763,7 @@ err:
 static int
 display_maps(WINDOW *mainw,struct panel_state *ps){
 	// FIXME compute based off number of maps + targets
-	unsigned rows = 2;
+	unsigned rows = getmaxy(mainw) - 15;
 
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display")){
