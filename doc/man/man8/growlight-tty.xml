@@ -138,8 +138,8 @@ Devices can be specified via any appropriate identifier (label, UUID, etc.).
 			<listitem>
 <para>Prepare the target for UEFI-based booting. A target root filesystem map
 must be defined, and this filesystem must be mounted at the chroot's toplevel.
-The filesystem must reside within a GPT partition having type ef00 and TUID
-C12A7328-F81F-11D2-BA4B-00A0C93EC93B (EFI System Partition). This GPT
+The filesystem must reside within a GPT partition having the EFI System Partition (ef00)
+TUID of C12A7328-F81F-11D2-BA4B-00A0C93EC93B. This GPT
 table must not reside on an mdadm, device-mapper, or zfs device. Preferably, no
 other devices in the system are bootable, but this is not enforced.</para>
 
@@ -158,8 +158,8 @@ disk. This might be preferable if interoperating with GPT-unaware tools.</para>
 			<listitem>
 <para>Prepare the target for BIOS-based booting. A target root filesystem map
 must be defined, and this filesystem must be mounted at the chroot's toplevel.
-The filesystem must reside either within a GPT partition having type ef02 and
-TUID 21686148-6449-6E6F-744E-656564454649 (BIOS Boot Partition), or within a
+The filesystem must reside either within a GPT partition having the BIOS Boot
+Partition (ef02) TUID of 21686148-6449-6E6F-744E-656564454649, or within a
 MBR partition having type 0x83 (Linux). The partition table must not reside
 on an mdadm, device-mapper, or zfs device. Preferably, no other devices in the
 system are bootable, but this is not enforced.
