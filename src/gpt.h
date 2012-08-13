@@ -8,6 +8,8 @@ extern "C" {
 #include <wchar.h>
 #include <stdint.h>
 
+#define GUIDSIZE 16	// 128 opaque bits
+
 struct device;
 
 // Pass the block device

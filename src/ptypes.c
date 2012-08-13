@@ -99,7 +99,7 @@ const ptype ptypes[] = {
 		.gpt_guid = "\x6D\xFD\x57\x06\xAB\xA4\xC4\x43\x84\xE5\x09\x33\xC8\x4B\x4F\x4F",
 		.mbr_code = 0x82,
 	}, {
-		.code = 0x8300,
+		.code = PARTROLE_PRIMARY,
 		.name = "Linux filesystem",
 		.gpt_guid = "\xAF\x3D\xC6\x0F\x83\x84\x72\x47\x8E\x79\x3D\x69\xD8\x47\x7D\xE4",
 		.mbr_code = 0x83,
@@ -145,8 +145,8 @@ const ptype ptypes[] = {
 		.gpt_guid = "\xB8\x7C\x6E\x51\xCF\x6E\xD6\x11\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
 		.mbr_code = 0xa5,
 	}, {
-		.code = 0xef00,
-		.name = "EFI System Partition",
+		.code = PARTROLE_ESP,
+		.name = "EFI System Partition (ESP)",
 		.gpt_guid = "\x28\x73\x2A\xC1\x1F\xF8\xD2\x11\xBA\x4B\x00\xA0\xC9\x3E\xC9\x3B",
 		.mbr_code = 0,
 	}, {

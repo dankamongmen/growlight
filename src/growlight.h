@@ -15,7 +15,9 @@ extern "C" {
 #include <string.h>
 #include <sys/types.h>
 
+#include "gpt.h"
 #include "mounts.h"
+#include "ptypes.h"
 #include "target.h"
 
 extern unsigned verbose;
@@ -25,7 +27,9 @@ void verbf(const char *,...) __attribute__ ((format (printf,1,2)));
 
 extern int sysfd,devfd;
 
-#define GUIDSIZE 16	// 128 opaque bits
+#define PARTROLE_ESP		0xef00
+#define PARTROLE_PRIMARY	0x8300
+
 #define GUIDSTRLEN 36	// 16 2-char hex pairs with 4 hyphens
 #define FSLABELSIZ 17	// 16 chars + null terminator
 
@@ -154,16 +158,11 @@ typedef struct device {
 			// The BIOS+MBR partition record (including the first
 			// byte, the 'boot flag') and GPT attributes.
 			unsigned long long flags;
-			enum { // FIXME use types from ptypes.h
-				PARTROLE_UNKNOWN,
-				PARTROLE_PRIMARY,	// BIOS+MBR
-				PARTROLE_EXTENDED,
-				PARTROLE_LOGICAL,
-				PARTROLE_EPS,		// UEFI
-				PARTROLE_GPT,
-				PARTROLE_MAC,
-				PARTROLE_PC98,
-			} partrole;
+			struct {
+				unsigned extended: 1;	// MBR extended?
+				unsigned logical: 1;	// MBR logical?
+			} ptstate;
+			unsigned ptype;		// see ptypes.h
 			struct device *parent;
 			uint64_t fsector,lsector;	// Inclusive, logical
 		} partdev;
@@ -301,15 +300,12 @@ pcie_gen(unsigned gen){
 	}
 }
 
+// FIXME do away with this. use ptypes.[hc] exclusively
 static inline const char *
-partrole_str(int partrole,uint64_t flags){
-	return ((partrole == PARTROLE_PRIMARY || partrole == PARTROLE_GPT) && (flags & 0xffu) == 0x80) ? "Boot" :
-		partrole == PARTROLE_PRIMARY ? "Pri" :
-		partrole == PARTROLE_EXTENDED ? "Ext" :
-		partrole == PARTROLE_LOGICAL ? "Log" :
-		partrole == PARTROLE_GPT ? "GPT" :
-		partrole == PARTROLE_EPS ? "ESP" :
-		"Unk";
+partrole_str(unsigned ptype,uint64_t flags){
+	return ((ptype == PARTROLE_PRIMARY) && (flags & 0xffu) == 0x80) ? "Boot" :
+		ptype == PARTROLE_ESP ? "ESP" :
+		ptype == PARTROLE_PRIMARY ? "Lnx" : "Oth";
 }
 
 static inline const char *

@@ -69,7 +69,7 @@ dos_add_partprec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,
 
 static int
 dos_set_flag(device *d,uint64_t flag,unsigned state __attribute__ ((unused))){
-	if(d->partdev.partrole != PARTROLE_PRIMARY){
+	if(d->partdev.ptype != PARTROLE_PRIMARY || d->partdev.ptstate.logical || d->partdev.ptstate.extended){
 		diag("Flags are only set on primary partitions\n");
 		return -1;
 	}

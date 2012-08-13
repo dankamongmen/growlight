@@ -926,24 +926,28 @@ create_new_device_inner(const char *name,int recurse){
 						unsigned long long flags;
 
 						flags = blkid_partition_get_flags(part);
+						// FIXME read these directly out of the PT header
 						// FIXME need find UEFI EPS partitions
 						if(strcmp(pttable,"gpt") == 0){
-							p->partdev.partrole = PARTROLE_GPT;
-							d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
+							p->partdev.ptype = PARTROLE_PRIMARY;
 							// FIXME verify bootable flag?
-						}else if(blkid_partition_is_extended(part)){
-							p->partdev.partrole = PARTROLE_EXTENDED;
-						}else if(blkid_partition_is_logical(part)){
-							p->partdev.partrole = PARTROLE_LOGICAL;
-						}else if(blkid_partition_is_primary(part)){
-							p->partdev.partrole = PARTROLE_PRIMARY;
-							d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
-							// FIXME verify bootable flag?
+						}else{
+							if(blkid_partition_is_logical(part)){
+								p->partdev.ptstate.logical = 1;
+							}
+							if(blkid_partition_is_extended(part)){
+								p->partdev.ptstate.extended = 1;
+							}
+							if(blkid_partition_is_primary(part)){
+								p->partdev.ptype = PARTROLE_PRIMARY;
+								d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
+							}
 						}
 // BIOS boot flag byte ought not be set to anything but 0 unless we're on a
 // primary partition and doing BIOS+MBR booting, in which case it must be 0x80.
 						if((flags & 0xff) != 0){
-							if(p->partdev.partrole != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)){
+							if(p->partdev.ptype != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)
+									|| p->partdev.ptstate.logical || p->partdev.ptstate.extended){
 								diag("Warning: BIOS+MBR boot byte was %02llx on %s\n",
 										flags & 0xffu,p->name);
 								clobber_device(d);
@@ -1887,7 +1891,7 @@ int prepare_bios_boot(device *d){
 		diag("%s is not mapped as the target root (%s)\n",d->name,d->target->path);
 		return -1;
 	}
-	if(d->partdev.partrole == PARTROLE_GPT || d->partdev.partrole == PARTROLE_PRIMARY){
+	if(d->partdev.ptype == PARTROLE_PRIMARY){
 		if(!(d->partdev.flags & 0x80u)){
 			diag("%s is not marked as Active (bootable, 0x80)\n",d->name);
 			return -1;
@@ -1907,11 +1911,10 @@ int prepare_uefi_boot(device *d){
 		diag("Must boot from a partition\n");
 		return -1;
 	}
-	if(d->partdev.partrole != PARTROLE_GPT){
-		diag("UEFI boots from GPT partitions only\n");
+	if(d->partdev.ptype != PARTROLE_ESP){
+		diag("UEFI boots from GPT ESP partitions only\n");
 		return -1;
 	}
-	// FIXME ensure the partition is a viable ESP
 	// FIXME ensure kernel is in ESP
 	// FIXME prepare protective MBR
 	// FIXME install grub-efi to ESP

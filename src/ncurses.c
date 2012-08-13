@@ -1705,7 +1705,7 @@ update_details(WINDOW *hw){
 					b->zone->p->name,
 					b->zone->p->partdev.pname ?
 					 b->zone->p->partdev.pname :
-					 L"unnamed",b->zone->p->partdev.partrole);
+					 L"unnamed",b->zone->p->partdev.ptype);
 			detail_fs(hw,b->zone->p,7);
 			break;
 			}

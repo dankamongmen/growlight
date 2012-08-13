@@ -389,7 +389,7 @@ print_partition(const device *p,int descend){
 			p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
 			qprefix(p->size,1,buf,sizeof(buf),0),
-				partrole_str(p->partdev.partrole,p->partdev.flags),
+				partrole_str(p->partdev.ptype,p->partdev.flags),
 				p->partdev.pname ? p->partdev.pname : L"n/a");
 	if(rr < 0){
 		return -1;
