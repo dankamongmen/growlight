@@ -3373,6 +3373,7 @@ mountpoint_callback(const char *path){
 		locked_diag("User cancelled mount operation");
 		return;
 	}
+	locked_diag("Not yet implemented, FIXME"); // FIXME
 }
 
 static void
@@ -3398,8 +3399,26 @@ mount_filesystem(void){
 
 static void
 umount_filesystem(void){
-	// FIXME get current partition, empty space, or blockobj
-	// FIXME unmount that fucker
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a block device to mount");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p){
+		if(b->zone->p->layout != LAYOUT_PARTITION){
+			locked_diag("Cannot mount unused space");
+			return;
+		}
+		unmount(b->zone->p);
+	}else{
+		unmount(b->d);
+		return;
+	}
 }
 
 // We received input while a modal freeform string input form was active.
