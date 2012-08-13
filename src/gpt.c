@@ -468,9 +468,37 @@ unmap_gpt(const device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
 }
 
 int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
-	assert(d && name && fsec && lsec && code);
-	diag("Precise GPT creation not yet supported FIXME\n");
-	return -1;
+	const size_t lbasize = LBA_SIZE;
+	unsigned char tguid[GUIDSIZE];
+	uint64_t lbas;
+
+	if(!name){
+		diag("GPT partitions ought be named!\n");
+		return -1;
+	}
+	if(d->layout != LAYOUT_NONE){
+		diag("Won't add partition to non-disk %s\n",d->name);
+		return -1;
+	}
+	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"gpt")){
+		diag("No GPT on disk %s\n",d->name);
+		return -1;
+	}
+	if(d->size % lbasize){
+		diag("Disk size is not a multiple of LBA size, aborting\n");
+		return -1;
+	}
+	lbas = d->size / lbasize;
+	if(lsec < fsec || lsec >= lbas){
+		diag("Bad sector spec (%ju:%ju) on %ju disk\n",fsec,lsec,lbas);
+		return -1;
+	}
+	if(get_gpt_guid(code,tguid)){
+		diag("Not a valid GPT typecode: %llu\n",code);
+		return -1;
+	}
+	diag("Precise GPT creation not yet supported FIXME\n"); return -1;
+	return 0;
 }
 
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
@@ -492,7 +520,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 		return -1;
 	}
 	if(d->layout != LAYOUT_NONE){
-		diag("Won't add partition table on non-disk %s\n",d->name);
+		diag("Won't add partition to non-disk %s\n",d->name);
 		return -1;
 	}
 	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"gpt")){
