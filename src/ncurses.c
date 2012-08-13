@@ -2689,6 +2689,24 @@ print_mount(WINDOW *w,int *row,int both,const device *d){
 	++*row;
 }
 
+static void
+print_target(WINDOW *w,const device *d,int *row,int both,const mntentry *m){
+	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
+			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
+			d->mnttype,
+			m->uuid ? m->uuid : "n/a",
+			"-1", // FIXME
+			m->dev);
+	++*row;
+	if(!both){
+		return;
+	}
+	wattroff(w,A_BOLD);
+	mvwprintw(w,*row,START_COL," %s %s",m->path,m->ops);
+	wattron(w,A_BOLD);
+	++*row;
+}
+
 static int
 map_details(WINDOW *hw){
 	const controller *c;
@@ -2702,6 +2720,30 @@ map_details(WINDOW *hw){
 	if((y = START_COL + 1) >= rows){
 		return -1;
 	}
+	wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			const device *p;
+
+			if(d->target){
+				print_target(hw,p,&y,y + 1 < rows,p->target);
+				if(y >= rows){
+					return 0;
+				}
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(p->target){
+					print_target(hw,p,&y,y + 1 < rows,p->target);
+					if(y >= rows){
+						return 0;
+					}
+				}
+			}
+		}
+	}
+	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -2713,25 +2755,11 @@ map_details(WINDOW *hw){
 				if(y >= rows){
 					return 0;
 				}
-			}else if(d->target){
-				/*if(print_target(p,p->target) < 0){
-					return -1;
-				}*/
-				if(++y >= rows){
-					return 0;
-				}
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if(p->mnt){
 					print_mount(hw,&y,y + 1 < rows,p);
 					if(y >= rows){
-						return 0;
-					}
-				}else if(p->target){
-					/*if(print_target(p,p->target) < 0){
-						return -1;
-					}*/
-					if(++y >= rows){
 						return 0;
 					}
 				}
