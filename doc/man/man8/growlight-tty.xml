@@ -427,6 +427,14 @@ system preparation mode (see <emphasis role="bold">target</emphasis>).</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
+			<term>unmap mountpoint</term>
+			<listitem>
+<para><emphasis role="bold">unmap</emphasis> removes the target map, and unmounts
+the associated mount. The mapping will no longer be carried into the target's
+/etc/fstab. The mountpoint is relative to the target root.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
 			<term>mounts</term>
 			<listitem>
 <para>Displays all currently-mounted filesystems. Accepts no arguments.</para>

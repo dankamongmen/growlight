@@ -51,6 +51,15 @@ void free_mntentry(mntentry *t){
 	}
 }
 
+int prepare_umount(const char *path){
+	if(path == NULL){
+		diag("Passed a NULL argument\n");
+		return -1;
+	}
+	diag("Not yet implemented FIXME\n"); return -1;
+	return 0;
+}
+
 int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 	char devname[PATH_MAX + 1],pathext[PATH_MAX + 1],*fs;
 	mntentry *m;

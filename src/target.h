@@ -11,6 +11,7 @@ struct device;
 struct mntentry;
 
 int prepare_mount(struct device *,const char *,const char *,const char *);
+int prepare_umount(const char *);
 
 int set_target(const char *);
 int finalize_target(void);

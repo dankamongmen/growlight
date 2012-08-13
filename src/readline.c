@@ -219,6 +219,17 @@ make_partition_wtable(device *d,const wchar_t *tbl){
 }
 
 static int
+prepare_wumount(const wchar_t *path){
+	char spath[PATH_MAX];
+
+	if(snprintf(spath,sizeof(spath),"%ls",path) >= (int)sizeof(spath)){
+		fprintf(stderr,"Bad path: %ls\n",path);
+		return -1;
+	}
+	return prepare_umount(spath);
+}
+
+static int
 prepare_wmount(device *d,const wchar_t *path,const wchar_t *fs,const wchar_t *ops){
 	char spath[PATH_MAX],sfs[NAME_MAX],sops[PATH_MAX];
 
@@ -1394,6 +1405,19 @@ mounts(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+unmap(wchar_t * const *args,const char *arghelp){
+	ONE_ARG_CHECK(args,arghelp);
+	if(args[1][0] != L'/'){
+		fprintf(stderr,"Not an absolute path: %ls\n",args[2]);
+		return -1;
+	}
+	if(prepare_wumount(args[1])){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 map(wchar_t * const *args,const char *arghelp){
 	device *d;
 
@@ -2002,6 +2026,7 @@ static const struct fxn {
 			"                 | no arguments prints target"),
 	FXN(map,"[ mountdev mountpoint type options ]\n"
 			"                 | no arguments prints target fstab"),
+	FXN(unmap,"mountpoint\n"),
 	FXN(mounts,""),
 	FXN(uefiboot,"root fs map must be defined in GPT partition"),
 	FXN(biosboot,"root fs map must be defined in GPT/MBR partition"),
