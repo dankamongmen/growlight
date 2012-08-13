@@ -655,33 +655,26 @@ err:
 // - partition name form, for new partition creation
 // -------------------------------------------------------------------------
 static void ptype_callback(const char *);
+static void psectors_callback(const char *);
 
-static unsigned long pending_ptype; // set when waiting for name callback
+static unsigned long pending_ptype; // set by partition type callback
+static uintmax_t pending_fsect,pending_lsect; // set by partition spec callback
 
 static void
 ptype_name_callback(const char *name){
-	unsigned long pt;
 	const char *n;
 	wchar_t *wstr;
 	mbstate_t ps;
 	blockobj *b;
 	size_t wcs;
 
-	pt = pending_ptype;
-	pending_ptype = 0;
-	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while choosing partition type");
+	if(name == NULL){ // go back to partition spec
+		// FIXME supply previous entry as default
+		raise_str_form("enter partition spec",psectors_callback);
 		return;
 	}
-	if(name == NULL){ // go back to partition type
-		struct form_option *ops_ptype;
-		int opcount;
-
-		if((ops_ptype = ptype_table(b->d,&opcount)) == NULL){
-			return;
-		}
-		// FIXME supply previous selection as default
-		raise_form("select a partition type",ptype_callback,ops_ptype,opcount);
+	if(!current_adapter || !(b = current_adapter->selected)){
+		locked_diag("Lost selection while naming partition");
 		return;
 	}
 	n = name;
@@ -700,9 +693,39 @@ ptype_name_callback(const char *name){
 		locked_diag("Error converting multibyte '%s'",name);
 		return;
 	}
-	// FIXME this won't necessarily map to the selected zone!
-	add_partition(b->d,wstr,0,pt);
+	add_partition_precise(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
+	pending_fsect = pending_lsect = 0;
+	pending_ptype = 0;
 	free(wstr);
+}
+
+static void
+psectors_callback(const char *psects){
+	blockobj *b;
+
+	if(!current_adapter || !(b = current_adapter->selected)){
+		locked_diag("Lost selection while specifying partition");
+		return;
+	}
+	if(psects == NULL){ // go back to partition type
+		struct form_option *ops_ptype;
+		int opcount;
+
+		if((ops_ptype = ptype_table(b->d,&opcount)) == NULL){
+			return;
+		}
+		// FIXME supply previous selection (pending_ptype) as default
+		raise_form("select a partition type",ptype_callback,ops_ptype,opcount);
+		return;
+	}
+	if(partitions_named_p(b->d)){
+		// FIXME pass spec via global vars pending_[fl]sect
+		raise_str_form("enter partition name",ptype_name_callback);
+		return;
+	}
+	add_partition_precise(b->d,NULL,pending_fsect,pending_lsect,pending_ptype);
+	pending_fsect = pending_lsect = 0;
+	pending_ptype = 0;
 }
 
 // -------------------------------------------------------------------------
@@ -726,13 +749,7 @@ ptype_callback(const char *ptype){
 		locked_diag("Bad partition type selection: %s",ptype);
 		return;
 	}
-	if(partitions_named_p(b->d)){
-		pending_ptype = pt;
-		raise_str_form("enter partition name",ptype_name_callback);
-		return;
-	}
-	// FIXME this won't necessarily map to the selected zone!
-	add_partition(b->d,NULL,0,pt);
+	raise_str_form("enter partition spec",psectors_callback);
 }
 
 // -------------------------------------------------------------------------
