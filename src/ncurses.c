@@ -112,7 +112,6 @@ typedef struct reelbox {
 	struct adapterstate *as;
 	int scrline,selline;
 	blockobj *selected;
-	struct partobj *pselected;
 } reelbox;
 
 typedef struct adapterstate {
@@ -2891,7 +2890,7 @@ recompute_lines(adapterstate *is,int *before,int *after){
 
 	*after = -1;
 	*before = -1;
-	newsel = 1;
+	newsel = 0;
 	for(l = is->bobjs ; l ; l = l->next){
 		unsigned lns;
 
@@ -2927,6 +2926,10 @@ recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
 	recompute_lines(is,&bef,&aft);
 	if(bef < 0 || aft < 0){
 		assert(!is->rb->selected);
+		return;
+	}
+	if(bef + aft + 1 <= newrows - 3){ // should never be less than, surely
+		is->rb->selline = bef + 2;
 		return;
 	}
 	// Account for lost/restored lines within the selection. Negative means
