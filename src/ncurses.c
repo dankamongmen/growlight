@@ -290,7 +290,7 @@ struct form_option {
 };
 
 struct form_input {
-	char *prompt;			// short prompt
+	const char *prompt;		// short prompt. currently aliases boxstr
 	char *longprompt;		// longer prompt, not currently used
 	char *buffer;			// input buffer, initialized to ""
 };
@@ -359,7 +359,6 @@ destroy_form_locked(struct form_state *fs){
 				break;
 			case FORM_STRING_INPUT:
 				free(fs->inp.buffer);
-				free(fs->inp.prompt);
 				free(fs->inp.longprompt);
 				fs->inp.longprompt = NULL;
 				fs->inp.prompt = NULL;
@@ -374,8 +373,8 @@ destroy_form_locked(struct form_state *fs){
 static void
 free_form(struct form_state *fs){
 	if(fs){
-		destroy_form_locked(fs);
 		free(fs->boxstr);
+		destroy_form_locked(fs);
 		free(fs);
 	}
 }
@@ -474,6 +473,26 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 // - string type form, for generic input
 // -------------------------------------------------------------------------
 static void
+form_string_options(struct form_state *fs){
+	WINDOW *fsw = panel_window(fs->p);
+	int cols;
+
+	if(fs->formtype != FORM_STRING_INPUT){
+		return;
+	}
+	cols = getmaxx(fsw);
+	wattron(fsw,A_BOLD);
+	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+	mvwprintw(fsw,1,START_COL,"%-*.*s: ",
+		fs->longop,fs->longop,fs->inp.prompt);
+	wattron(fsw,A_REVERSE);
+	wcolor_set(fsw,INPUT_COLOR,NULL);
+	wprintw(fsw,"%-*.*s",cols - fs->longop - START_COL * 2,
+		cols - fs->longop - START_COL * 2,fs->inp.buffer);
+	wattroff(fsw,A_BOLD);
+}
+
+static void
 raise_str_form(const char *str,void (*fxn)(const char *)){
 	struct form_state *fs;
 	WINDOW *fsw;
@@ -514,17 +533,11 @@ raise_str_form(const char *str,void (*fxn)(const char *)){
 	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
 	fs->inp.prompt = fs->boxstr;
 	fs->inp.buffer = strdup("");
+	form_string_options(fs);
 	actform = fs;
-	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-	mvwprintw(fsw,1,START_COL,"%-*.*s: ",
-		fs->longop,fs->longop,fs->inp.prompt);
-	wattron(fsw,A_REVERSE);
-	wcolor_set(fsw,INPUT_COLOR,NULL);
-	wprintw(fsw,"%-*.*s",cols - fs->longop - START_COL * 2,
-		cols - fs->longop - START_COL * 2,"");
-	wattroff(fsw,A_BOLD);
 	locked_diag(fs->boxstr); // calls screen_update()
 }
+
 // -------------------------------------------------------------------------
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
@@ -3289,13 +3302,16 @@ handle_actform_string_input(int ch){
 	}default:{
 		char *tmp;
 
-		if((tmp = malloc(strlen(fs->inp.buffer) + 1)) == NULL){
+		assert((unsigned)ch <= 255);
+		if((tmp = realloc(fs->inp.buffer,strlen(fs->inp.buffer) + 2)) == NULL){
 			locked_diag("Couldn't allocate input buffer (%s?)",strerror(errno));
 			return;
 		}
 		fs->inp.buffer = tmp;
 		fs->inp.buffer[strlen(fs->inp.buffer) + 1] = '\0';
-		fs->inp.buffer[strlen(fs->inp.buffer)] = ch;
+		fs->inp.buffer[strlen(fs->inp.buffer)] = (unsigned char)ch;
+		form_string_options(fs);
+		screen_update();
 	} }
 }
 
