@@ -625,7 +625,11 @@ static unsigned long pending_ptype; // set when waiting for name callback
 static void
 ptype_name_callback(const char *name){
 	unsigned long pt;
+	const char *n;
+	wchar_t *wstr;
+	mbstate_t ps;
 	blockobj *b;
+	size_t wcs;
 
 	pt = pending_ptype;
 	pending_ptype = 0;
@@ -640,12 +644,29 @@ ptype_name_callback(const char *name){
 		if((ops_ptype = ptype_table(&opcount)) == NULL){
 			return;
 		}
+		// FIXME supply previous selection as default
 		raise_form("select a partition type",ptype_callback,ops_ptype,opcount);
 		return;
 	}
+	n = name;
+	memset(&ps,0,sizeof(ps));
+	if((wcs = mbsrtowcs(NULL,&n,0,&ps)) == (size_t)-1){
+		locked_diag("Couldn't interpret multibyte '%s'",name);
+		return;
+	}
+	if((wstr = malloc(sizeof(*wstr) * (wcs + 1))) == NULL){
+		locked_diag("Couldn't allocate wide string");
+		return;
+	}
+	n = name;
+	memset(&ps,0,sizeof(ps));
+	if(mbsrtowcs(wstr,&n,wcs + 1,&ps) != wcs){
+		locked_diag("Error converting multibyte '%s'",name);
+		return;
+	}
 	// FIXME this won't necessarily map to the selected zone!
-	// FIXME use name! convert to wchar_t
-	add_partition(b->d,L"FIXME",0,pt);
+	add_partition(b->d,wstr,0,pt);
+	free(wstr);
 }
 
 // -------------------------------------------------------------------------
@@ -3347,15 +3368,38 @@ badblock_check(void){
 }
 
 static void
+mountpoint_callback(const char *path){
+	if(path == NULL){
+		locked_diag("User cancelled mount operation");
+		return;
+	}
+}
+
+static void
 mount_filesystem(void){
-	// FIXME get current partition, empty space, or blockobj
-	// FIXME make that fucker
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a block device to mount");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+		locked_diag("Cannot mount unused space");
+		return;
+	}else{
+		raise_str_form("enter mountpount",mountpoint_callback);
+		return;
+	}
 }
 
 static void
 umount_filesystem(void){
 	// FIXME get current partition, empty space, or blockobj
-	// FIXME make that fucker
+	// FIXME unmount that fucker
 }
 
 // We received input while a modal freeform string input form was active.
