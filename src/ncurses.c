@@ -539,6 +539,36 @@ raise_str_form(const char *str,void (*fxn)(const char *)){
 }
 
 // -------------------------------------------------------------------------
+// - target mountpoint form, for mapping within the target
+// -------------------------------------------------------------------------
+static void
+targpoint_callback(const char *path){
+	blockobj *b;
+
+	if(path == NULL){
+		locked_diag("User cancelled target operation");
+		return;
+	}
+	if(!current_adapter || !(b = current_adapter->selected)){
+		locked_diag("Lost selection while targeting");
+		return;
+	}
+	b = current_adapter->selected;
+	// FIXME need get filesystem type via lookup on device
+	if(b->zone->p == NULL){
+		prepare_mount(b->d,path,"ext4","");
+		return;
+	}else if(b->zone->p->layout != LAYOUT_PARTITION){
+		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+		return;
+	}else{
+		prepare_mount(b->zone->p,path,"ext4","");
+		return;
+	}
+	locked_diag("I'm confused. Aborting.\n");
+}
+
+// -------------------------------------------------------------------------
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
 static void
@@ -2391,12 +2421,6 @@ update_help_cond(WINDOW *w){
 }
 
 static int
-mount_target(void){
-	// FIXME
-	return 0;
-}
-
-static int
 umount_target(void){
 	// FIXME
 	return 0;
@@ -3323,6 +3347,27 @@ mount_filesystem(void){
 		return;
 	}else{
 		raise_str_form("enter mountpount",mountpoint_callback);
+		return;
+	}
+}
+
+static void
+mount_target(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a filesystem to mount");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+		locked_diag("Cannot mount unused space");
+		return;
+	}else{
+		raise_str_form("enter target mountpount",targpoint_callback);
 		return;
 	}
 }
