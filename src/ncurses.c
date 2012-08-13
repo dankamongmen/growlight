@@ -2420,12 +2420,6 @@ update_help_cond(WINDOW *w){
 	return 0;
 }
 
-static int
-umount_target(void){
-	// FIXME
-	return 0;
-}
-
 static const int DIAGROWS = 8;
 
 // Used after shutting down on error, which will clean the screen. This takes
@@ -3371,6 +3365,39 @@ mount_filesystem(void){
 		return;
 	}else{
 		raise_str_form("enter mountpount",mountpoint_callback);
+		return;
+	}
+}
+
+static void
+umount_target(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a filesystem to mount");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p){
+		if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+			locked_diag("Cannot unmount unused space");
+			return;
+		}
+		if(b->zone->p->target == NULL){
+			locked_diag("No target configured on selected partition");
+			return;
+		}
+		prepare_umount(b->zone->p->target->path);
+		return;
+	}else{
+		if(b->d->target == NULL){
+			locked_diag("No target configured on selected device");
+			return;
+		}
+		prepare_umount(b->d->target->path);
 		return;
 	}
 }
