@@ -333,6 +333,6 @@ int wipe_filesystem(device *d){
 		diag("No filesystem on %s\n",d->name);
 		return -1;
 	}
-	diag("Filesystem wipe is not yet implemented FIXME");
+	diag("Filesystem wipe is not yet implemented FIXME"); return -1;
 	return 0;
 }

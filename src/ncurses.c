@@ -3235,12 +3235,36 @@ set_partition_attrs(void){
 		locked_diag("Partition modification requires selection of a partition");
 		return;
 	}
+	// FIXME surely this doesn't work?
 	if(b->d->layout != LAYOUT_PARTITION){
 		locked_diag("Selected object is not a partition");
 		return;
 	}
 	// FIXME pop up a form allowing attr set
 	// FIXME set that fucker
+}
+
+static void
+fsck_partition(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Partition check requires selection of a partition");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p == NULL){
+		check_partition(b->d);
+		return;
+	}
+	if(b->zone->p->layout != LAYOUT_PARTITION){
+		locked_diag("Selected object is not a partition");
+		return;
+	}
+	check_partition(b->zone->p);
 }
 
 static void
@@ -3719,6 +3743,12 @@ handle_ncurses_input(WINDOW *w){
 			case 'd':{
 				pthread_mutex_lock(&bfl);
 				delete_partition();
+				pthread_mutex_unlock(&bfl);
+				break;
+			}
+			case 'F':{
+				pthread_mutex_lock(&bfl);
+				fsck_partition();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
