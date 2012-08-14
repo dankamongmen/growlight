@@ -1647,9 +1647,13 @@ detail_fs(WINDOW *hw,const device *d,int row){
 	char buf[BPREFIXSTRLEN + 1];
 
 	if(d->mnttype){
-		mvwprintw(hw,row,START_COL,BPREFIXFMT "B %s filesystem",
+		mvwprintw(hw,row,START_COL,BPREFIXFMT "B %s%s%s%s%s%s%s",
 			bprefix(d->mntsize,1,buf,sizeof(buf),1),
-				d->mnttype);
+			d->label ? "" : "unlabeled ",
+			d->mnt ? "" : "unmounted ",
+			d->mnttype,
+			d->label ? " named " : "",d->label ? d->label : "",
+			d->mnt ? " active at " : "",d->mnt ? d->mnt : "");
 	}
 }
 
