@@ -97,6 +97,11 @@ dos_set_code(device *d,unsigned long long code){
 }
 
 static uintmax_t
+first_generic(const device *d){
+	return d->physsec / d->logsec;
+}
+
+static uintmax_t
 last_generic(const device *d){
 	return d->logsec ? d->size / d->logsec : 0;
 }
@@ -113,6 +118,7 @@ static const struct ptable {
 	int (*uuid)(device *,const void *);		// Set partition UUID
 	int (*flag)(device *,uint64_t,unsigned);	// Set partition flags
 	int (*code)(device *,unsigned long long);	// Set partition code
+	uintmax_t (*first)(const device *);	// Get first usable sector
 	uintmax_t (*last)(const device *);	// Get last usable sector
 } ptables[] = {
 	{
@@ -127,6 +133,7 @@ static const struct ptable {
 		.uuid = uuid_gpt,
 		.flag = flag_gpt,
 		.code = code_gpt,
+		.first = first_gpt,
 		.last = last_gpt,
 	},
 	{
@@ -141,6 +148,7 @@ static const struct ptable {
 		.uuid = NULL,
 		.flag = dos_set_flag,
 		.code = dos_set_code,
+		.first = first_generic,
 		.last = last_generic,
 	},
 	{ .name = NULL, }
@@ -475,6 +483,23 @@ int partition_set_code(device *d,unsigned long long code){
 	}
 	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
 	return -1;
+}
+
+uintmax_t lookup_first_usable_sector(const device *d){
+	const struct ptable *pt;
+
+	if(d->logsec == 0){
+		return 0;
+	}
+	if(d->layout != LAYOUT_NONE || d->blkdev.pttable == NULL){
+		return d->size / d->logsec;
+	}
+	for(pt = ptables ; pt->name ; ++pt){
+		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+			return pt->first(d);
+		}
+	}
+	return 0;
 }
 
 uintmax_t lookup_last_usable_sector(const device *d){
