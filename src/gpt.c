@@ -469,9 +469,16 @@ unmap_gpt(const device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
 }
 
 int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
+	static const uint8_t zguid[GUIDSIZE];
 	const size_t lbasize = LBA_SIZE;
 	unsigned char tguid[GUIDSIZE];
+	gpt_header *ghead;
+	unsigned z,partno;
+	gpt_entry *gpe;
+	size_t mapsize;
 	uint64_t lbas;
+	void *map;
+	int fd;
 
 	if(!name){
 		diag("GPT partitions ought be named!\n");
@@ -494,7 +501,7 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 		return -1;
 	}
 	lbas = d->size / lbasize;
-	if(lsec < fsec || lsec >= lbas){
+	if(lsec < fsec || lsec >= last_usable_sector(d)){
 		diag("Bad sector spec (%ju:%ju) on %ju disk\n",fsec,lsec,lbas);
 		return -1;
 	}
@@ -502,7 +509,64 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 		diag("Not a valid GPT typecode: %llu\n",code);
 		return -1;
 	}
-	diag("Precise GPT creation not yet supported FIXME\n"); return -1;
+	if((map = map_gpt(d,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return -1;
+	}
+	ghead = (gpt_header *)((char *)map + LBA_SIZE);
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	// Determine the next available partition number, and verify that no
+	// existing partitions overlap with this one.
+	partno = ghead->partcount;
+	for(z = 0 ; z < ghead->partcount ; ++z){
+		// if there's any non-zero bits in either the type or partiton
+		// guid, assume it's being used.
+		if(memcmp(gpe[z].type_guid,zguid,sizeof(zguid))){
+			continue;
+		}
+		if(memcmp(gpe[z].part_guid,zguid,sizeof(zguid))){
+			continue;
+		}
+		if(partno == ghead->partcount){
+			partno = z;
+		}
+		if((gpe[z].first_lba >= fsec && gpe[z].first_lba <= lsec) ||
+				(gpe[z].last_lba <= lsec && gpe[z].last_lba >= fsec)){
+			diag("Partition overlap (%ju:%ju) (%ju:%ju)\n",fsec,lsec,
+					gpe[z].first_lba,gpe[z].last_lba);
+			return -1;
+		}
+	}
+	if(z == ghead->partcount){
+		diag("no entry for a new partition in %s\n",d->name);
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	diag("First sector: %ju last sector: %ju count: %ju size: %ju\n",
+			(uintmax_t)fsec,
+			(uintmax_t)lsec,
+			(uintmax_t)(lsec - fsec),
+			(uintmax_t)((lsec - fsec) * d->logsec));
+	memcpy(gpe[z].type_guid,tguid,sizeof(tguid));
+	if(gpt_name(name,gpe[z].name,sizeof(gpe[z].name))){
+		diag("Couldn't convert %ls for %s\n",name,d->name);
+		memset(gpe + z,0,sizeof(*gpe));
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	if(RAND_bytes(gpe[z].part_guid,GUIDSIZE) != 1){
+		diag("%s",ERR_error_string(ERR_get_error(),NULL));
+		memset(gpe + z,0,sizeof(*gpe));
+		munmap(map,mapsize);
+		close(fd);
+		return -1;
+	}
+	gpe[z].first_lba = fsec;
+	gpe[z].last_lba = lsec;
+	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
+		return -1;
+	}
 	return 0;
 }
 
