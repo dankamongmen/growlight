@@ -24,6 +24,8 @@ int name_gpt(struct device *,const wchar_t *);
 int uuid_gpt(struct device *,const void *);
 int flag_gpt(struct device *,uint64_t,unsigned);
 int code_gpt(struct device *,unsigned long long);
+
+uintmax_t first_gpt(const struct device *);
 uintmax_t last_gpt(const struct device *);
 
 #ifdef __cplusplus

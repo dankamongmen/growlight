@@ -843,6 +843,24 @@ int del_gpt(const device *p){
 	return r;
 }
 
+uintmax_t first_gpt(const device *d){
+	gpt_header *ghead;
+	size_t mapsize;
+	uintmax_t r;
+	void *map;
+	int fd;
+
+	assert(d->layout == LAYOUT_NONE);
+	if((map = const_map_gpt(d,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return 0;
+	}
+	ghead = (gpt_header *)((char *)map + LBA_SIZE);
+	r = ghead->first_usable;
+	if(const_unmap_gpt(d,map,mapsize,fd)){
+		return 0;
+	}
+	return r;
+}
 uintmax_t last_gpt(const device *d){
 	gpt_header *ghead;
 	size_t mapsize;
