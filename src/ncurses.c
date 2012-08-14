@@ -597,7 +597,7 @@ fs_callback(const char *fs){
 		return;
 	}
 	b = current_adapter->selected;
-	if(b->zone->p == NULL){
+	if(b->zone == NULL){
 		make_filesystem(b->d,fs);
 		return;
 	}else if(b->zone->p->layout != LAYOUT_PARTITION){
@@ -3360,20 +3360,21 @@ new_filesystem(void){
 		locked_diag("Filesystem creation requires a selected block device");
 		return;
 	}
-	if(b->zone == NULL){
+	if(b->d == NULL){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
-		locked_diag("Filesystems cannot be created in empty space");
-		return;
-	}else{
-		if((ops_fs = fs_table(&opcount)) == NULL){
+	if(b->zone){
+		if(!b->zone->p || b->zone->p->layout != LAYOUT_PARTITION){
+			locked_diag("Filesystems cannot be created in empty space");
 			return;
 		}
-		raise_form("select a filesystem type",fs_callback,ops_fs,opcount,-1);
+	}
+	if((ops_fs = fs_table(&opcount)) == NULL){
 		return;
 	}
+	raise_form("select a filesystem type",fs_callback,ops_fs,opcount,-1);
+	return;
 }
 
 static void
