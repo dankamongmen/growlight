@@ -30,6 +30,9 @@ int partition_set_code(struct device *,unsigned long long);
 uintmax_t lookup_last_usable_sector(const struct device *);
 int partitions_named_p(const struct device *);
 
+// Interface to kernel's BLKPG ioctl
+int blkpg_del_partition(int,long long,long long,int,const char *);
+
 #ifdef __cplusplus
 }
 #endif

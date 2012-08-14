@@ -1,7 +1,10 @@
 #include <assert.h>
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
+#include <linux/blkpg.h>
 
 #include "mbr.h"
 #include "gpt.h"
@@ -487,6 +490,31 @@ uintmax_t lookup_last_usable_sector(const device *d){
 		if(strcmp(pt->name,d->blkdev.pttable) == 0){
 			return pt->last(d);
 		}
+	}
+	return 0;
+}
+
+// Uses the BLKPG ioctl to notify the kernel that a partition has been removed
+int blkpg_del_partition(int fd,long long start,long long len,int pno,const char *name){
+	struct blkpg_partition data;
+	struct blkpg_ioctl_arg blk;
+
+	if(strlen(name) >= sizeof(data.devname)){
+		diag("Name too long for BLKPG: %s\n",name);
+		return -1;
+	}
+	memset(&blk,0,sizeof(blk));
+	memset(&data,0,sizeof(data));
+	blk.op = BLKPG_DEL_PARTITION;
+	blk.datalen = sizeof(data);
+	blk.data = &data;
+	data.start = start;
+	data.length = len;
+	data.pno = pno;
+	strcpy(data.devname,name);
+	if(ioctl(fd,BLKPG,&blk)){
+		diag("Error invoking BLKPG ioctl (%s?)\n",strerror(errno));
+		return -1;
 	}
 	return 0;
 }
