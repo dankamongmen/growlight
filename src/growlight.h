@@ -128,7 +128,12 @@ typedef struct device {
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)
+
+			// The following two are relative to the static
+			// partition table metainfo, not created partitions.
+			uint64_t first_usable;	// First usable logical sector
 			uint64_t last_usable;	// Last usable logical sector
+
 			enum {
 				SMART_NOSUPPORT,
 				SMART_STATUS_BAD,

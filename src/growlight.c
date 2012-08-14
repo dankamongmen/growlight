@@ -1003,6 +1003,7 @@ create_new_device_inner(const char *name,int recurse){
 			p->size *= p->logsec;
 		}
 		if(d->layout == LAYOUT_NONE){
+			d->blkdev.first_usable = lookup_first_usable_sector(d);
 			d->blkdev.last_usable = lookup_last_usable_sector(d);
 		}
 	}
