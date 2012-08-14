@@ -198,6 +198,32 @@ err:
 	return -1;
 }
 
+int mmount(device *d,const char *targ,const char *fs){
+	char name[PATH_MAX + 1];
+
+	if(d == NULL || targ == NULL || fs == NULL){
+		diag("Provided NULL arguments\n");
+		return -1;
+	}
+	if(d->mnt){
+		diag("%s is already mounted\n",d->name);
+		return -1;
+	}
+	if((d->mnt = strdup(fs)) == NULL){
+		return -1;
+	}
+	snprintf(name,sizeof(name),"/dev/%s",d->name);
+	if(mount(name,targ,fs,MS_NOATIME,NULL)){
+		diag("Error mounting %s at %s (%s?)\n",
+				name,targ,strerror(errno));
+		free(d->mnt);
+		d->mnt = NULL;
+		return -1;
+	}
+	diag("Mounted %s at %s\n",d->name,d->mnt);
+	return 0;
+}
+
 int unmount(device *d){
 	if(d->mnt == NULL){
 		diag("%s is not mounted\n",d->name);
