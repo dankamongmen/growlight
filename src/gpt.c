@@ -11,6 +11,7 @@
 #include "gpt.h"
 #include "crc32.h"
 #include "ptypes.h"
+#include "ptable.h"
 #include "growlight.h"
 
 #define LBA_SIZE 512u
@@ -743,13 +744,14 @@ int code_gpt(device *d,unsigned long long code){
 }
 
 int del_gpt(const device *p){
-	unsigned g = p->partdev.pnumber - 1;
 	gpt_entry *gpe;
 	size_t mapsize;
+	unsigned g;
 	void *map;
-	int fd;
+	int fd,r;
 
 	assert(p->layout == LAYOUT_PARTITION);
+	g = p->partdev.pnumber - 1;
 	if((map = map_gpt(p->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
 		return -1;
 	}
@@ -758,7 +760,18 @@ int del_gpt(const device *p){
 	if(unmap_gpt(p->partdev.parent,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
-	return 0;
+	if((fd = openat(devfd,p->partdev.parent->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+		diag("Couldn't open %s (%s?)\n",p->partdev.parent->name,strerror(errno));
+		return -1;
+	}
+	r = blkpg_del_partition(fd,p->partdev.fsector * LBA_SIZE,
+				p->size,p->partdev.pnumber,
+				p->partdev.parent->name);
+	if(close(fd)){
+		diag("Couldn't close %s (%s?)\n",p->partdev.parent->name,strerror(errno));
+		return -1;
+	}
+	return r;
 }
 
 uintmax_t last_gpt(const device *d){
