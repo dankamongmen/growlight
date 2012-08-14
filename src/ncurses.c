@@ -1797,11 +1797,18 @@ update_details(WINDOW *hw){
 	}
 	d = b->d;
 	if(d->layout == LAYOUT_NONE){
-		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) S/N: %s",d->name,
+		const char *sn = d->blkdev.serial;
+
+		if(sn){
+			while(isspace(*sn)){
+				++sn;
+			}
+		}
+		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) S/N: %-s",d->name,
 					d->model ? d->model : "n/a",
 					d->revision ? d->revision : "n/a",
 					qprefix(d->size,1,buf,sizeof(buf),0),
-					d->blkdev.serial ? d->blkdev.serial : "n/a");
+					sn ? sn : "n/a");
 		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju Transport: %s",
 					d->logsec,d->physsec,
 					d->size / (d->logsec ? d->logsec : 1),
