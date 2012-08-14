@@ -382,6 +382,7 @@ free_form(struct form_state *fs){
 		free(fs->boxstr);
 		destroy_form_locked(fs);
 		free(fs);
+		screen_update();
 	}
 }
 
@@ -3518,11 +3519,25 @@ badblock_check(void){
 
 static void
 mountpoint_callback(const char *path){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a filesystem to mount");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
 	if(path == NULL){
 		locked_diag("User cancelled mount operation");
 		return;
 	}
-	locked_diag("Not yet implemented, FIXME"); // FIXME
+	if(b->zone->p){
+		mmount(b->zone->p,path,b->zone->p->mnttype);
+		return;
+	}
+	mmount(b->d,path,b->d->mnttype);
 }
 
 static void
@@ -3537,13 +3552,26 @@ mount_filesystem(void){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
-		locked_diag("Cannot mount unused space");
-		return;
+	if(b->zone->p){
+		if(b->zone->p->layout != LAYOUT_PARTITION){
+			locked_diag("Cannot mount unused space");
+			return;
+		}
+		if(b->zone->p->mnttype == NULL){
+			locked_diag("No filesystem detected on %s",b->zone->p->name);
+			return;
+		}
 	}else{
-		raise_str_form("enter mountpount",mountpoint_callback,"/");
-		return;
+		if(b->d == NULL){
+			locked_diag("Need a block device to mount");
+			return;
+		}
+		if(b->d->mnttype == NULL){
+			locked_diag("No filesystem detected on %s",b->d->name);
+			return;
+		}
 	}
+	raise_str_form("enter mountpount",mountpoint_callback,"/");
 }
 
 static void
