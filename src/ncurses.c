@@ -2516,6 +2516,7 @@ static const wchar_t *helps[] = {
 	L"'E': view active mountpoints / installpoints",
 	L"'-': collapse adapter         '+': expand adapter",
 	L"'R': rescan selection         'S': reset selection",
+	L"'A': create aggregate         'Z': destroy aggregate",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
 	NULL
@@ -3785,6 +3786,16 @@ handle_actform_input(int ch){
 }
 
 static void
+create_aggregate(void){
+	locked_diag("Not yet implemented FIXME"); // FIXME
+}
+
+static void
+destroy_aggregate(void){
+	locked_diag("Not yet implemented FIXME"); // FIXME
+}
+
+static void
 setup_target(void){
 	if(target_mode_p()){
 		locked_diag("Already have a target at %s",growlight_target);
@@ -4059,6 +4070,16 @@ handle_ncurses_input(WINDOW *w){
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
+			case 'A':
+				pthread_mutex_lock(&bfl);
+				create_aggregate();
+				pthread_mutex_unlock(&bfl);
+				break;
+			case 'Z':
+				pthread_mutex_lock(&bfl);
+				destroy_aggregate();
+				pthread_mutex_unlock(&bfl);
+				break;
 			case 'q': case 'Q':
 				diag("User-initiated shutdown");
 				return;
