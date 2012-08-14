@@ -248,6 +248,14 @@ typedef struct controller {
 } controller;
 
 static inline uintmax_t
+first_usable_sector(const device *d){
+	if(d->layout == LAYOUT_NONE){
+		return d->blkdev.first_usable;
+	}
+	return d->physsec / d->logsec;
+}
+
+static inline uintmax_t
 last_usable_sector(const device *d){
 	if(d->layout == LAYOUT_NONE){
 		return d->blkdev.last_usable;

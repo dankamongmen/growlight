@@ -525,20 +525,17 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	for(z = 0 ; z < ghead->partcount ; ++z){
 		// if there's any non-zero bits in either the type or partiton
 		// guid, assume it's being used.
-		if(memcmp(gpe[z].type_guid,zguid,sizeof(zguid))){
-			continue;
-		}
-		if(memcmp(gpe[z].part_guid,zguid,sizeof(zguid))){
+		if(memcmp(gpe[z].type_guid,zguid,sizeof(zguid)) || memcmp(gpe[z].part_guid,zguid,sizeof(zguid))){
+			if((gpe[z].first_lba >= fsec && gpe[z].first_lba <= lsec) ||
+					(gpe[z].last_lba <= lsec && gpe[z].last_lba >= fsec)){
+				diag("Partition overlap (%ju:%ju) ([%u]%ju:%ju)\n",fsec,lsec,
+						z,gpe[z].first_lba,gpe[z].last_lba);
+				return -1;
+			}
 			continue;
 		}
 		if(partno == ghead->partcount){
 			partno = z;
-		}
-		if((gpe[z].first_lba >= fsec && gpe[z].first_lba <= lsec) ||
-				(gpe[z].last_lba <= lsec && gpe[z].last_lba >= fsec)){
-			diag("Partition overlap (%ju:%ju) (%ju:%ju)\n",fsec,lsec,
-					gpe[z].first_lba,gpe[z].last_lba);
-			return -1;
 		}
 	}
 	if(z == ghead->partcount){

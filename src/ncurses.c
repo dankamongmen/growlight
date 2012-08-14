@@ -4158,7 +4158,7 @@ update_blockobj(blockobj *b,device *d){
 		if(d->mnt){
 			++mounts;
 		}
-		if((z = create_zobj(z,0,0,last_usable_sector(d),d)) == NULL){
+		if((z = create_zobj(z,0,first_usable_sector(d),last_usable_sector(d),d)) == NULL){
 			goto err;
 		}
 		sector = last_usable_sector(d) + 1;
