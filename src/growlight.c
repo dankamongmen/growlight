@@ -860,10 +860,18 @@ create_new_device_inner(const char *name,int recurse){
 		int dfd;
 
 		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
+			int roflag;
+
 			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 				diag("Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
 				clobber_device(d);
 				return NULL;
+			}
+			if(ioctl(dfd,BLKROGET,&roflag) == 0){
+				verbf("Block R/O flag: %d (%s)\n",roflag,name);
+				if(roflag){
+					d->roflag = 1;
+				}
 			}
 			if(d->c->transport == TRANSPORT_ATA){
 				if(sg_interrogate(d,dfd)){

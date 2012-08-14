@@ -109,11 +109,12 @@ typedef struct device {
 		SWAP_INACTIVE = -1,
 		SWAP_MAXPRIO = 0,
 		SWAP_MINPRIO = 65535,
-	} swapprio;			// Priority as a swap device
-	char *uuid;			// *Filesystem* UUID
-	char *label;			// *Filesystem* label
+	} swapprio;		// Priority as a swap device
+	char *uuid;		// *Filesystem* UUID
+	char *label;		// *Filesystem* label
 	struct controller *c;
-	char *sched;			// I/O scheduler (can be NULL)
+	char *sched;		// I/O scheduler (can be NULL)
+	unsigned roflag;	// Read-only flag (hdparm -r, blockdev --getro)
 	union {
 		struct {
 			transport_e transport;

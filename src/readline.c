@@ -452,7 +452,7 @@ print_drive(const device *d,int descend){
 				d->blkdev.realdev ? '.' : 'V',
 			d->blkdev.unloaded ? 'U' : '.',
 			d->blkdev.rotate ? 'O' : '.',
-			d->blkdev.wcache ? 'W' : '.',
+			d->blkdev.wcache ? 'W' : d->roflag ? 'r' : '.',
 			d->blkdev.biosboot ? 'B' : '.',
 			d->blkdev.pttable ? d->blkdev.pttable : "none",
 			d->wwn ? d->wwn : "n/a",
@@ -466,7 +466,8 @@ print_drive(const device *d,int descend){
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'M', '.', '.', '.',
+			d->physsec, 'V', 'M', '.',
+			d->roflag ? 'r' : '.', '.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->mddev.transport)
@@ -479,7 +480,8 @@ print_drive(const device *d,int descend){
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'D', '.', '.', '.',
+			d->physsec, 'V', 'D', '.',
+			d->roflag ? 'r' : '.', '.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->dmdev.transport)
@@ -492,7 +494,8 @@ print_drive(const device *d,int descend){
 			d->model ? d->model : "n/a",
 			(uintmax_t)d->zpool.zpoolver,
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'Z', '.', '.', '.',
+			d->physsec, 'V', 'Z', '.',
+			d->roflag ? 'r' : '.', '.',
 			"spa",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->zpool.transport)
@@ -969,7 +972,7 @@ blockdev_dump(int descend){
 	}
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual,\n"
-		       "\t\t(M)dadm, (Z)pool, (D)M, r(O)tational,\n"
+		       "\t\t(M)dadm, (Z)pool, (D)M, r(O)tational, (r)ead-only,\n"
 			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
 	return 0;
 }
