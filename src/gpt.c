@@ -501,6 +501,11 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 		return -1;
 	}
 	lbas = d->size / lbasize;
+	// Align it properly
+	if(fsec % (d->physsec / d->logsec)){
+		fsec += (d->physsec / d->logsec) - (fsec % (d->physsec / d->logsec));
+		assert(fsec % (d->physsec / d->logsec) == 0);
+	}
 	if(lsec < fsec || lsec >= last_usable_sector(d)){
 		diag("Bad sector spec (%ju:%ju) on %ju disk\n",fsec,lsec,lbas);
 		return -1;
