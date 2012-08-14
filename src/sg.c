@@ -127,6 +127,7 @@ enum {					// Features for CMDS_SUPP_3 (119)
 #define TRANSPORT_MINOR         223 /* minor revision number */
 #define NMRR                    217 /* nominal media rotation rate */
 #define INTEGRITY               255 /* integrity word */
+#define WWN_SUP			0x100
 
 enum {
         SG_CDB2_TLEN_NODATA     = 0 << 0,
@@ -284,6 +285,10 @@ int sg_interrogate(device *d,int fd){
 	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
 		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
 		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
+	}
+	if(ntohs(buf[CMDS_SUPP_2]) & WWN_SUP){
+		d->blkdev.rwverify = !!(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY);
+		verbf("\tWWN: %04x%04x%04x%04x\n",buf[108],buf[109],buf[110],buf[111]);
 	}
 	if(ntohs(buf[CMDS_SUPP_3]) & FEATURE_READWRITEVERIFY){
 		d->blkdev.rwverify = !!(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY);
