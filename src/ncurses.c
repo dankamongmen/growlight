@@ -54,6 +54,11 @@ enum {
 	FORMBORDER_COLOR,
 	FORMTEXT_COLOR,
 	INPUT_COLOR,			// Form input color
+
+
+	RED_COLOR,
+	ORANGE_COLOR,
+	GREEN_COLOR,
 };
 
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -967,6 +972,10 @@ setup_colors(void){
 	assert(init_pair(FORMBORDER_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(FORMTEXT_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(INPUT_COLOR,COLOR_CYAN,-1) == OK);
+
+	assert(init_pair(RED_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
 	return 0;
 }
 
@@ -1386,6 +1395,22 @@ case LAYOUT_ZPOOL:
 	if(line + 1 < rows - !endp && line + topp + 1 >= 1){
 		if(rolestr){
 			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
+		}
+	}
+
+	// ...and now the temperature...
+	if(line + 2 < rows - !endp && line + topp + 2 >= 1){
+		if(bo->d->layout == LAYOUT_NONE){
+			if(bo->d->blkdev.celsius >= 60u){
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
+			}else if(bo->d->blkdev.celsius >= 40u){
+				wattrset(rb->win,COLOR_PAIR(ORANGE_COLOR));
+			}else{
+				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
+			}
+			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 120u){
+				mvwprintw(rb->win,line + 2,START_COL,"%9.ju°C ",bo->d->blkdev.celsius);
+			}
 		}
 	}
 

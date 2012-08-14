@@ -130,7 +130,7 @@ typedef struct device {
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)
 			uint64_t last_usable;	// Last usable logical sector
-			uint64_t kelvin;	// Last-polled temperature
+			uint64_t celsius;	// Last-polled temperature
 		} blkdev;
 		struct { // mdadm (MDRAID)
 			unsigned long disks;	// RAID disks in md

@@ -48,7 +48,7 @@ int probe_smart(device *d){
 	}
 	if(sk_disk_smart_get_temperature(sk,&kelvin) == 0){
 		verbf("Disk (%s) temperature: %ju\n",d->name,(uintmax_t)kelvin);
-		d->blkdev.kelvin = kelvin;
+		d->blkdev.celsius = kelvin / 10000;
 	}
 	sk_disk_free(sk);
 	return 0;
