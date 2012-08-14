@@ -123,13 +123,17 @@ typedef struct device {
 			unsigned rotate: 1;	// Rotational media / spinning platters
 			unsigned wcache: 1;	// Write cache enabled
 			unsigned biosboot: 1;	// Non-zero bytes in MBR code area
-			unsigned smart: 1;	// SMART support
 			unsigned rwverify: 1;	// Read-Write-Verify
 			unsigned unloaded: 1;	// No media loaded
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)
 			uint64_t last_usable;	// Last usable logical sector
+			enum {
+				SMART_NOSUPPORT,
+				SMART_STATUS_BAD,
+				SMART_STATUS_GOOD,
+			} smartgood;
 			uint64_t celsius;	// Last-polled temperature
 		} blkdev;
 		struct { // mdadm (MDRAID)

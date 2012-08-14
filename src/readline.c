@@ -442,13 +442,15 @@ print_drive(const device *d,int descend){
 		}else{
 			use_terminfo_color(COLOR_MAGENTA,1); // virtual
 		}
-		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec,
-			d->blkdev.removable ? 'R' : d->blkdev.smart ? 'S' :
+			d->blkdev.removable ? 'R' :
+				d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' :
+				d->blkdev.smartgood == SMART_STATUS_BAD ? L'✘' :
 				d->blkdev.realdev ? '.' : 'V',
 			d->blkdev.unloaded ? 'U' : '.',
 			d->blkdev.rotate ? 'O' : '.',
@@ -971,9 +973,9 @@ blockdev_dump(int descend){
 		}
 	}
 	use_terminfo_color(COLOR_WHITE,1);
-	printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual,\n"
-		       "\t\t(M)dadm, (Z)pool, (D)M, r(O)tational, (r)ead-only,\n"
-			"\t\t(W)ritecache enabled, (B)IOS bootable, (S)MART\n");
+	printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual, (M)dadm, (Z)pool,\n"
+		"\t\t(D)M, r(O)tational, (r)ead-only, (W)ritecache enabled,\n"
+		"\t\t(B)IOS bootable, ✔/✘: SMART status\n");
 	return 0;
 }
 
