@@ -1107,67 +1107,6 @@ scan_device(void *name){
 	return d;
 }
 
-// Must be an entry in /dev/disk/by-id/
-static device *
-lookup_id_inner(const char *name){
-	char path[PATH_MAX],buf[PATH_MAX];
-	device *d;
-	int rl;
-
-	if(snprintf(path,sizeof(path),"/dev/disk/by-id/%s",name) >= (int)sizeof(path)){
-		return NULL;
-	}
-	if((rl = readlink(path,buf,sizeof(buf))) < 0 || (unsigned)rl >= sizeof(buf)){
-		return NULL;
-	}
-	buf[rl] = '\0';
-	if( (d = lookup_device(buf)) ){
-		if(strncasecmp(name,"wwn-0x",6) == 0){ // World Wide Name
-			char *wwn;
-
-			if((wwn = strdup(name + 6)) == NULL){
-				return NULL;
-			}
-			free(d->wwn);
-			d->wwn = wwn;
-		}
-	}else{
-		diag("Warning: couldn't trace down %s\n",path);
-	}
-	return d;
-}
-
-static void *
-lookup_id(void *uname){
-	const char *name = uname;
-	char cwd[PATH_MAX + 1];
-	device *d;
-
-	if(getcwd(cwd,sizeof(cwd)) == NULL){
-		diag("Couldn't get working directory (%s?)\n",strerror(errno));
-		pthread_mutex_unlock(&barrier);
-		return NULL;
-	}
-	if(chdir(SYSROOT)){
-		diag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
-		pthread_mutex_unlock(&barrier);
-		return NULL;
-	}
-	assert(lock_growlight() == 0);
-	d = name ? lookup_id_inner(name) : NULL;
-	assert(unlock_growlight() == 0);
-	assert(pthread_mutex_lock(&barrier) == 0);
-	if(--thrcount == 0){
-		pthread_cond_signal(&barrier_cond);
-	}
-	assert(pthread_mutex_unlock(&barrier) == 0);
-	if(chdir(cwd)){
-		diag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
-	}
-	free(uname);
-	return d;
-}
-
 static inline int
 inotify_fd(void){
 	int fd;
@@ -1582,9 +1521,6 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if(watch_dir(fd,SYSROOT,scan_device)){
 		goto err;
 	}
-	if(watch_dir(fd,DEVBYID,lookup_id)){
-		diag("Couldn't monitor %s; won't have WWNs\n",DEVBYID);
-	}
 	if(parse_filesystems(gui,FILESYSTEMS)){
 		goto err;
 	}
@@ -1834,7 +1770,6 @@ int rescan_devices(void){
 	push_devtable(&dt);
 	ret |= scan_zpools(gui);
 	ret |= watch_dir(-1,SYSROOT,scan_device);
-	ret |= watch_dir(-1,DEVBYID,lookup_id);
 	ret |= parse_mounts(gui,MOUNTS);
 	ret |= parse_swaps(gui,SWAPS);
 	// Preserve any defined mappings, if possible. For a mapping to be

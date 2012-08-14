@@ -287,8 +287,11 @@ int sg_interrogate(device *d,int fd){
 		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
 	}
 	if(ntohs(buf[CMDS_SUPP_2]) & WWN_SUP){
-		d->blkdev.rwverify = !!(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY);
-		verbf("\tWWN: %04x%04x%04x%04x\n",buf[108],buf[109],buf[110],buf[111]);
+		free(d->wwn);
+		if((d->wwn = malloc(17)) == NULL){
+			return -1;
+		}
+		snprintf(d->wwn,17,"%04x%04x%04x%04x",buf[108],buf[109],buf[110],buf[111]);
 	}
 	if(ntohs(buf[CMDS_SUPP_3]) & FEATURE_READWRITEVERIFY){
 		d->blkdev.rwverify = !!(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY);
