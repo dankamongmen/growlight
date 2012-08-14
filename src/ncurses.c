@@ -585,11 +585,12 @@ targpoint_callback(const char *path){
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
 static struct form_option *
-fs_table(int *count){
+fs_table(int *count,const char *match,int *defidx){
 	struct form_option *fo = NULL,*tmp;
 	pttable_type *types;
 	int z;
 
+	*defidx = -1;
 	if((types = get_fs_types(count)) == NULL){
 		return NULL;
 	}
@@ -598,6 +599,15 @@ fs_table(int *count){
 
 		if((key = strdup(types[z].name)) == NULL){
 			goto err;
+		}
+		if(match){
+			if(strcmp(key,match) == 0){
+				*defidx = z;
+			}
+		}else{
+			if(fstype_default_p(key)){
+				*defidx = z;
+			}
 		}
 		if((desc = strdup(types[z].desc)) == NULL){
 			free(key);
@@ -635,21 +645,9 @@ destroy_fs_forms(void){
 }
 
 static void
-fs_named_callback(const char *name){
+fs_do(const char *name){
 	blockobj *b;
 
-	if(name == NULL){
-		struct form_option *ops_fs;
-		int opcount;
-
-		if((ops_fs = fs_table(&opcount)) == NULL){
-			destroy_fs_forms();
-			return;
-		}
-		// FIXME pass back default
-		raise_form("select a filesystem type",fs_callback,ops_fs,opcount,-1);
-		return;
-	}
 	if(!current_adapter || !(b = current_adapter->selected)){
 		locked_diag("Lost selection while targeting");
 		destroy_fs_forms();
@@ -671,17 +669,37 @@ fs_named_callback(const char *name){
 }
 
 static void
+fs_named_callback(const char *name){
+	if(name == NULL){
+		struct form_option *ops_fs;
+		int opcount,defidx;
+
+		if((ops_fs = fs_table(&opcount,pending_fstype,&defidx)) == NULL){
+			destroy_fs_forms();
+			return;
+		}
+		raise_form("select a filesystem type",fs_callback,ops_fs,opcount,defidx);
+		return;
+	}
+	fs_do(name);
+}
+
+static void
 fs_callback(const char *fs){
 	if(fs == NULL){ // user cancelled
 		locked_diag("Filesystem creation cancelled by the user");
 		return;
 	}
 	free(pending_fstype);
+	if(fstype_named_p(fs) == 0){
+		pending_fstype = NULL;
+		fs_do(NULL);
+		return;
+	}
 	if((pending_fstype = strdup(fs)) == NULL){
 		destroy_fs_forms();
 		return;
 	}
-	// FIXME verify that it supports a name
 	// FIXME come up with a good default
 	raise_str_form("enter filesystem name",fs_named_callback,NULL);
 }
@@ -3391,7 +3409,7 @@ new_partition(void){
 static void
 new_filesystem(void){
 	struct form_option *ops_fs;
-	int opcount;
+	int opcount,defidx;
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
@@ -3408,10 +3426,10 @@ new_filesystem(void){
 			return;
 		}
 	}
-	if((ops_fs = fs_table(&opcount)) == NULL){
+	if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
 		return;
 	}
-	raise_form("select a filesystem type",fs_callback,ops_fs,opcount,-1);
+	raise_form("select a filesystem type",fs_callback,ops_fs,opcount,defidx);
 	return;
 }
 
