@@ -96,6 +96,17 @@ usage(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+wmmount(device *d,const wchar_t *targ){
+	char path[PATH_MAX + 1];
+
+	if(snprintf(path,sizeof(path),"%ls",targ) >= (int)sizeof(path)){
+		fprintf(stderr,"Bad path: %ls\n",targ);
+		return -1;
+	}
+	return mmount(d,path,d->mnttype);
+}
+
+static int
 wstrtoxu(const wchar_t *wstr,unsigned *ux){
 	unsigned long long ull;
 	char buf[BUFSIZ],*e;
@@ -1564,7 +1575,7 @@ fs(wchar_t * const *args,const char *arghelp){
 			usage(args,arghelp);
 			return -1;
 		}
-		// FIXME
+		wmmount(d,args[3]);
 		return 0;
 	}else if(wcscmp(args[1],L"loop") == 0){
 		if(!args[3] || args[4]){
