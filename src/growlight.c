@@ -1735,7 +1735,7 @@ rescan(const char *name){
 }
 
 int reset_adapters(void){
-	diag("Not yet implemented.");
+	diag("Not yet implemented.\n");
 	return -1;
 }
 
