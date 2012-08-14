@@ -3452,14 +3452,14 @@ umount_target(void){
 			locked_diag("No target configured on selected partition");
 			return;
 		}
-		prepare_umount(b->zone->p->target->path);
+		prepare_umount(b->zone->p,b->zone->p->target->path);
 		return;
 	}else{
 		if(b->d->target == NULL){
 			locked_diag("No target configured on selected device");
 			return;
 		}
-		prepare_umount(b->d->target->path);
+		prepare_umount(b->d,b->d->target->path);
 		return;
 	}
 }

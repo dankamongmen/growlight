@@ -51,12 +51,33 @@ void free_mntentry(mntentry *t){
 	}
 }
 
-int prepare_umount(const char *path){
+int prepare_umount(device *d,const char *path){
+	mntentry *m;
+
 	if(path == NULL){
 		diag("Passed a NULL argument\n");
 		return -1;
 	}
-	diag("Not yet implemented FIXME\n"); return -1;
+	if(get_target() == NULL){
+		diag("No target is defined\n");
+		return -1;
+	}
+	if(!d->target){
+		diag("%s is not mapped into the target\n",d->name);
+		return -1;
+	}
+	if(strcmp(d->target->path,path)){
+		diag("%s is mapped to %s, not %s\n",d->name,d->target->path,path);
+		return -1;
+	}
+	m = d->target;
+	d->target = NULL;
+	if(umount2(path,UMOUNT_NOFOLLOW)){
+		diag("Couldn't unmount %s at %s (%s?)\n",
+				d->name,d->mnt,strerror(errno));
+		// continue anyway...
+	}
+	free_mntentry(m);
 	return 0;
 }
 

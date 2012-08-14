@@ -219,14 +219,14 @@ make_partition_wtable(device *d,const wchar_t *tbl){
 }
 
 static int
-prepare_wumount(const wchar_t *path){
+prepare_wumount(device *d,const wchar_t *path){
 	char spath[PATH_MAX];
 
 	if(snprintf(spath,sizeof(spath),"%ls",path) >= (int)sizeof(spath)){
 		fprintf(stderr,"Bad path: %ls\n",path);
 		return -1;
 	}
-	return prepare_umount(spath);
+	return prepare_umount(d,spath);
 }
 
 static int
@@ -1406,12 +1406,17 @@ mounts(wchar_t * const *args,const char *arghelp){
 
 static int
 unmap(wchar_t * const *args,const char *arghelp){
-	ONE_ARG_CHECK(args,arghelp);
-	if(args[1][0] != L'/'){
+	device *d;
+
+	TWO_ARG_CHECK(args,arghelp);
+	if((d = lookup_wdevice(args[1])) == NULL){
+		return -1;
+	}
+	if(args[2][0] != L'/'){
 		fprintf(stderr,"Not an absolute path: %ls\n",args[2]);
 		return -1;
 	}
-	if(prepare_wumount(args[1])){
+	if(prepare_wumount(d,args[1])){
 		return -1;
 	}
 	return 0;
