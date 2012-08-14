@@ -530,6 +530,8 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 					(gpe[z].last_lba <= lsec && gpe[z].last_lba >= fsec)){
 				diag("Partition overlap (%ju:%ju) ([%u]%ju:%ju)\n",fsec,lsec,
 						z,gpe[z].first_lba,gpe[z].last_lba);
+				munmap(map,mapsize);
+				close(fd);
 				return -1;
 			}
 			continue;
@@ -538,7 +540,7 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 			partno = z;
 		}
 	}
-	if(z == ghead->partcount){
+	if((z = partno) == ghead->partcount){
 		diag("no entry for a new partition in %s\n",d->name);
 		munmap(map,mapsize);
 		close(fd);
