@@ -1654,6 +1654,12 @@ detail_fs(WINDOW *hw,const device *d,int row){
 			d->mnttype,
 			d->label ? " named " : "",d->label ? d->label : "",
 			d->mnt ? " active at " : "",d->mnt ? d->mnt : "");
+	}else if(d->swapprio != SWAP_INVALID){
+		mvwprintw(hw,row,START_COL,BPREFIXFMT "B %sswap%s%s prio %d",
+			bprefix(d->mntsize,1,buf,sizeof(buf),0),
+			d->label ? "" : "unlabeled ",
+			d->label ? " named " : "n/a",d->label ? d->label : "n/a",
+			d->swapprio);
 	}
 }
 

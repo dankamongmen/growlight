@@ -1460,19 +1460,11 @@ print_swaps(const device *d,int descend){
 	if(d->swapprio == SWAP_INVALID){
 		return 0;
 	}
-	if(d->swapprio != SWAP_INACTIVE){
-		r += rr = printf("%-*.*s %-5d %-36.36s " PREFIXFMT " %s\n",
-				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-				d->swapprio,d->uuid ? d->uuid : "n/a",
-				qprefix(d->mntsize,1,buf,sizeof(buf),0),
-				d->name);
-	}else{
-		r += rr = printf("%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s\n",
-				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-				"off",d->uuid ? d->uuid : "n/a",
-				qprefix(d->mntsize,1,buf,sizeof(buf),0),
-				d->name);
-	}
+	r += rr = printf("%-*.*s %-5d %-36.36s " PREFIXFMT " %s\n",
+			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+			d->swapprio,d->uuid ? d->uuid : "n/a",
+			qprefix(d->mntsize,1,buf,sizeof(buf),0),
+			d->name);
 	if(rr < 0){
 		return -1;
 	}
