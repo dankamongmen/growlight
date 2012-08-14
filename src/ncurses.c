@@ -3967,12 +3967,18 @@ handle_ncurses_input(WINDOW *w){
 			case 'M':{
 				pthread_mutex_lock(&bfl);
 				new_filesystem();
+				update_details_cond(panel_window(details.p));
+				update_help_cond(panel_window(help.p));
+				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
 			case 'w':{
 				pthread_mutex_lock(&bfl);
 				kill_filesystem();
+				update_details_cond(panel_window(details.p));
+				update_help_cond(panel_window(help.p));
+				screen_update();
 				pthread_mutex_unlock(&bfl);
 				break;
 			}
