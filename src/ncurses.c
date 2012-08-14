@@ -728,6 +728,64 @@ ptype_name_callback(const char *name){
 	cleanup_new_partition();
 }
 
+static int
+lex_part_spec(const char *psects,zobj *z,uintmax_t *fsect,uintmax_t *lsect){
+	unsigned long long ull;
+	const char *col,*pct;
+	char *el;
+
+	// If we have a percent, it must be the last character, and there may
+	// not be a colon present, and the value must be between 1 and 100,
+	// inclusive, and the value must be an integer.
+	if( (pct = strchr(psects,'%')) ){
+		unsigned long ul;
+
+		if(pct[1]){
+			return -1;
+		}
+		if(pct - psects > 3){
+			return -1;
+		}
+		if(pct == psects){
+			return -1;
+		}
+		if((ul = strtoul(psects,&el,10)) > 100){
+			return -1;
+		}
+		*fsect = z->fsector;
+		*lsect = ((z->lsector - z->fsector) * ul) / 100 + *fsect;
+		return 0;
+	}else if( (col = strchr(psects,':')) ){
+		unsigned long long ull2;
+
+		if((ull = strtoull(psects,&el,0)) == ULLONG_MAX){
+			return -1;
+		}
+		if(*el != ':'){
+			return -1;
+		}
+		if((ull2 = strtoull(col,&el,0)) == ULLONG_MAX){
+			return -1;
+		}
+		if(*el){
+			return -1;
+		}
+		*fsect = ull;
+		*lsect = ull2;
+		return 0;
+	}
+	if( (ull = strtoull(psects,&el,0)) ){
+		return -1;
+	}
+	if(ull > (z->lsector - z->fsector + 1)){
+		locked_diag("There are only %ju sectors available\n",z->lsector - z->fsector);
+		return -1;
+	}
+	*fsect = z->fsector;
+	*lsect = z->fsector + ull - 1;
+	return 0;
+}
+
 static void
 psectors_callback(const char *psects){
 	uintmax_t fsect,lsect;
@@ -749,9 +807,12 @@ psectors_callback(const char *psects){
 		raise_form("select a partition type",ptype_callback,ops_ptype,opcount,defidx);
 		return;
 	}
-	// FIXME lex it
-	fsect = 0;
-	lsect = 0;
+	pending_spec = strdup(psects);
+	if(lex_part_spec(psects,b->zone,&fsect,&lsect)){
+		locked_diag("Not a valid partition spec: %s\n",psects);
+		raise_str_form("enter partition spec",psectors_callback,psects);
+		return;
+	}
 	if(partitions_named_p(b->d)){
 		pending_spec = strdup(psects);
 		pending_fsect = fsect;
