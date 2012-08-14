@@ -32,10 +32,14 @@ static const struct fs {
 	const char *name;
 	const char *desc;
 	int (*mkfs)(const char *,const char *);
+	char nameparam;			// parameter on cmdline to name
+	int namemax;			// max length of name, if known
 } fss[] = {
 	{
 		.name = "vfat",
 		.desc = "File Allocation Table (DOS default)",
+		.namemax = 11,
+		.nameparam = 'n',
 	},
 	{
 		.name = "swsuspend",
@@ -44,10 +48,13 @@ static const struct fs {
 	{
 		.name = "swap",
 		.desc = "Swap device",
+		.nameparam = 'L',
 	},
 	{
 		.name = "xfs",
 		.desc = "SGI's XFS (IRIX default)",
+		.namemax = 12,
+		.nameparam = 'L',
 	},
 	{
 		.name = "ext4dev",
@@ -57,14 +64,20 @@ static const struct fs {
 		.name = "ext4",
 		.desc = "Extended Filesystem 4 (Linux default)",
 		.mkfs = ext4_mkfs,
+		.namemax = 16,
+		.nameparam = 'L',
 	},
 	{
 		.name = "ext3",
 		.desc = "Extended Filesystem 3",
+		.namemax = 16,
+		.nameparam = 'L',
 	},
 	{
 		.name = "ext2",
 		.desc = "Extended Filesystem 2",
+		.namemax = 16,
+		.nameparam = 'L',
 	},
 	{
 		.name = "jbd",
@@ -81,6 +94,7 @@ static const struct fs {
 	{
 		.name = "jfs",
 		.desc = "IBM's Journaled Filesystem (AIX JFS2)",
+		.nameparam = 'L',
 	},
 	{
 		.name = "udf",
@@ -97,10 +111,12 @@ static const struct fs {
 	{
 		.name = "hfsplus",
 		.desc = "HFS+ (Mac OS Extended) (OS X default)",
+		.nameparam = 'v',
 	},
 	{
 		.name = "hfs",
 		.desc = "Hierarchal Filesystem (Mac OS Standard)",
+		.nameparam = 'v',
 	},
 	{
 		.name = "ufs",
@@ -121,6 +137,7 @@ static const struct fs {
 	{
 		.name = "ntfs",
 		.desc = "Microsoft's New Technology Filesystem (Windows default)",
+		.nameparam = 'L',
 	},
 	{
 		.name = "cramfs",
@@ -169,6 +186,7 @@ static const struct fs {
 	{
 		.name = "btrfs",
 		.desc = "Oracle's B-Tree Filesystem",
+		.nameparam = 'L',
 	},
 	{
 		.name = "ubifs",
@@ -189,6 +207,8 @@ static const struct fs {
 	{
 		.name = "nilfs2",
 		.desc = "NTT's New Implementation of Log-structued FS 2",
+		.namemax = 80,
+		.nameparam = 'L',
 	},
 	{
 		.name = "exfat",
@@ -335,5 +355,22 @@ int wipe_filesystem(device *d){
 		return -1;
 	}
 	diag("Filesystem wipe is not yet implemented FIXME"); return -1;
+	return 0;
+}
+
+int fstype_named_p(const char *fstype){
+	const struct fs *pt;
+
+	for(pt = fss ; pt->name ; ++pt){
+		if(strcmp(pt->name,fstype) == 0){
+			if(pt->namemax){
+				return pt->namemax;
+			}else if(pt->nameparam){
+				return 1;
+			}
+			return 0;
+		}
+	}
+	diag("Unknown filesystem type: %s\n",fstype);
 	return 0;
 }

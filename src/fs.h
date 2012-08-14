@@ -13,6 +13,13 @@ int make_filesystem(struct device *,const char *,const char *);
 int parse_filesystems(const struct growlight_ui *,const char *);
 int wipe_filesystem(struct device *);
 
+static inline int
+fstype_default_p(const char *fstype){
+	return !strcmp(fstype,"ext4");
+}
+
+int fstype_named_p(const char *);
+
 #ifdef __cplusplus
 }
 #endif
