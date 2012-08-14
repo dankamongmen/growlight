@@ -186,14 +186,18 @@ wstrtoull(const wchar_t *wstr,uintmax_t *ull){
 }
 
 static int
-make_wfilesystem(device *d,const wchar_t *fs){
-	char sfs[NAME_MAX];
+make_wfilesystem(device *d,const wchar_t *fs,const wchar_t *name){
+	char sfs[NAME_MAX],label[NAME_MAX];
 
 	if(snprintf(sfs,sizeof(sfs),"%ls",fs) >= (int)sizeof(sfs)){
 		fprintf(stderr,"Bad partition table type: %ls\n",fs);
 		return -1;
 	}
-	return make_filesystem(d,sfs);
+	if(snprintf(label,sizeof(label),"%ls",name) >= (int)sizeof(label)){
+		fprintf(stderr,"Bad label: %ls\n",name);
+		return -1;
+	}
+	return make_filesystem(d,sfs,label);
 }
 
 static controller *
@@ -1521,11 +1525,11 @@ fs(wchar_t * const *args,const char *arghelp){
 		return -1;
 	}
 	if(wcscmp(args[1],L"mkfs") == 0){
-		if(!args[3] || args[4]){
+		if(!args[3] || !args[4] || args[5]){
 			usage(args,arghelp);
 			return -1;
 		}
-		if(make_wfilesystem(d,args[3])){
+		if(make_wfilesystem(d,args[3],args[4])){
 			return -1;
 		}
 		return 0;

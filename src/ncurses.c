@@ -584,30 +584,106 @@ targpoint_callback(const char *path){
 // -------------------------------------------------------------------------
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
+static struct form_option *
+fs_table(int *count){
+	struct form_option *fo = NULL,*tmp;
+	pttable_type *types;
+	int z;
+
+	if((types = get_fs_types(count)) == NULL){
+		return NULL;
+	}
+	for(z = 0 ; z < *count ; ++z){
+		char *key,*desc;
+
+		if((key = strdup(types[z].name)) == NULL){
+			goto err;
+		}
+		if((desc = strdup(types[z].desc)) == NULL){
+			free(key);
+			goto err;
+		}
+		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+			free(key);
+			free(desc);
+			goto err;
+		}
+		fo = tmp;
+		fo[z].option = key;
+		fo[z].desc = desc;
+	}
+	return fo;
+
+err:
+	while(z--){
+		free(fo[z].option);
+		free(fo[z].desc);
+	}
+	free(fo);
+	*count = 0;
+	return NULL;
+}
+
+static char *pending_fstype;
+
+static void fs_callback(const char *);
+
 static void
-fs_callback(const char *fs){
+destroy_fs_forms(void){
+	free(pending_fstype);
+	pending_fstype = NULL;
+}
+
+static void
+fs_named_callback(const char *name){
 	blockobj *b;
 
+	if(name == NULL){
+		struct form_option *ops_fs;
+		int opcount;
+
+		if((ops_fs = fs_table(&opcount)) == NULL){
+			destroy_fs_forms();
+			return;
+		}
+		// FIXME pass back default
+		raise_form("select a filesystem type",fs_callback,ops_fs,opcount,-1);
+		return;
+	}
+	if(!current_adapter || !(b = current_adapter->selected)){
+		locked_diag("Lost selection while targeting");
+		destroy_fs_forms();
+		return;
+	}
+	if(b->zone == NULL){
+		make_filesystem(b->d,pending_fstype,name);
+		destroy_fs_forms();
+		return;
+	}else if(b->zone->p->layout != LAYOUT_PARTITION){
+		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+		destroy_fs_forms();
+		return;
+	}else{
+		make_filesystem(b->zone->p,pending_fstype,name);
+		destroy_fs_forms();
+		return;
+	}
+}
+
+static void
+fs_callback(const char *fs){
 	if(fs == NULL){ // user cancelled
 		locked_diag("Filesystem creation cancelled by the user");
 		return;
 	}
-	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while choosing filesystem type");
+	free(pending_fstype);
+	if((pending_fstype = strdup(fs)) == NULL){
+		destroy_fs_forms();
 		return;
 	}
-	b = current_adapter->selected;
-	if(b->zone == NULL){
-		make_filesystem(b->d,fs);
-		return;
-	}else if(b->zone->p->layout != LAYOUT_PARTITION){
-		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
-		return;
-	}else{
-		make_filesystem(b->zone->p,fs);
-		return;
-	}
-	locked_diag("I'm confused. Aborting.\n");
+	// FIXME verify that it supports a name
+	// FIXME come up with a good default
+	raise_str_form("enter filesystem name",fs_named_callback,NULL);
 }
 
 // -------------------------------------------------------------------------
@@ -3311,46 +3387,6 @@ new_partition(void){
 	// FIXME do stuff for mdadm, dm, zpool?
 }
 
-static struct form_option *
-fs_table(int *count){
-	struct form_option *fo = NULL,*tmp;
-	pttable_type *types;
-	int z;
-
-	if((types = get_fs_types(count)) == NULL){
-		return NULL;
-	}
-	for(z = 0 ; z < *count ; ++z){
-		char *key,*desc;
-
-		if((key = strdup(types[z].name)) == NULL){
-			goto err;
-		}
-		if((desc = strdup(types[z].desc)) == NULL){
-			free(key);
-			goto err;
-		}
-		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
-			free(key);
-			free(desc);
-			goto err;
-		}
-		fo = tmp;
-		fo[z].option = key;
-		fo[z].desc = desc;
-	}
-	return fo;
-
-err:
-	while(z--){
-		free(fo[z].option);
-		free(fo[z].desc);
-	}
-	free(fo);
-	*count = 0;
-	return NULL;
-}
-
 static void
 new_filesystem(void){
 	struct form_option *ops_fs;
@@ -3801,7 +3837,8 @@ setup_target(void){
 		locked_diag("Already have a target at %s",growlight_target);
 		return;
 	}
-	// FIXME 
+	// FIXME pop up a string input form and get the target path
+	locked_diag("Not yet implemented FIXME"); // FIXME 
 }
 
 static void
