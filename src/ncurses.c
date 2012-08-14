@@ -2586,7 +2586,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 // minus two for the top/bottom screen border, minus one for mandatory
 // window top padding).
 static const wchar_t *helps[] = {
-	L"(q)uit                        ctrl+'L': redraw the screen",
+	L"'q': quit                     ctrl+'L': redraw the screen",
 	L"'e': view environment details 'H': toggle this help display",
 	L"'v': view selection details   'D': view recent diagnostics",
 	L"'E': view active mountpoints / installpoints",
@@ -2614,6 +2614,7 @@ static const wchar_t *helps_block[] = {
 static const wchar_t *helps_target[] = {
 	L"'i': set target               'I': unset target",
 	L"'t': mount target             'T': unmount target",
+	L"'*' finalize UEFI / '#' finalize BIOS / '@' finalize fstab",
 	NULL
 };
 
@@ -3646,6 +3647,43 @@ umount_target(void){
 }
 
 static void
+uefiboot(void){
+	blockobj *b;
+	device *d;
+
+	if(!target_mode_p()){
+		locked_diag("Not in target mode");
+		return;
+	}
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a block device to boot");
+		return;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(b->zone->p){
+		if(b->zone->p->layout != LAYOUT_PARTITION){
+			locked_diag("Cannot boot from unused space");
+			return;
+		}
+		d = b->zone->p;
+	}else{
+		d = b->d;
+	}
+	if(d->target == NULL){
+		locked_diag("Block device %s is not a target",d->name);
+		return;
+	}
+	if(strcmp(d->target->path,"/")){
+		locked_diag("Block device %s targets %s",d->name,d->target->path);
+		return;
+	}
+	prepare_uefi_boot(d);
+}
+
+static void
 mount_target(void){
 	blockobj *b;
 
@@ -4115,6 +4153,22 @@ handle_ncurses_input(WINDOW *w){
 			case 'Z':
 				pthread_mutex_lock(&bfl);
 				destroy_aggregate();
+				pthread_mutex_unlock(&bfl);
+				break;
+// Finalization commands
+			case '*':
+				pthread_mutex_lock(&bfl);
+				uefiboot();
+				pthread_mutex_unlock(&bfl);
+				break;
+			case '#':
+				pthread_mutex_lock(&bfl);
+				locked_diag("Not yet implemented FIXME"); // FIXME finalize BIOS boot
+				pthread_mutex_unlock(&bfl);
+				break;
+			case '@':
+				pthread_mutex_lock(&bfl);
+				locked_diag("Not yet implemented FIXME"); // FIXME finalize fstab only
 				pthread_mutex_unlock(&bfl);
 				break;
 			case 'q': case 'Q':
