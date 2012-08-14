@@ -728,7 +728,7 @@ psectors_callback(const char *psects){
 	uintmax_t fsect,lsect;
 	blockobj *b;
 
-	if(!current_adapter || !(b = current_adapter->selected)){
+	if(!current_adapter || !(b = current_adapter->selected) || !b->d){
 		locked_diag("Lost selection while specifying partition");
 		cleanup_new_partition();
 		return;
@@ -747,7 +747,7 @@ psectors_callback(const char *psects){
 	// FIXME lex it
 	fsect = 0;
 	lsect = 0;
-	if(b->zone && partitions_named_p(b->zone->p)){
+	if(partitions_named_p(b->d)){
 		pending_spec = strdup(psects);
 		pending_fsect = fsect;
 		pending_lsect = lsect;

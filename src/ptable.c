@@ -343,12 +343,12 @@ int partitions_named_p(const device *d){
 		diag("Passed a NULL device\n");
 		return -1;
 	}
-	if(d->layout != LAYOUT_PARTITION){
-		diag("Can only name real partitions\n");
+	if(d->layout != LAYOUT_NONE){
+		diag("%s is not a block device\n",d->name);
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
+		if(strcmp(pt->name,d->blkdev.pttable) == 0){
 			return !!pt->pname;
 		}
 	}
