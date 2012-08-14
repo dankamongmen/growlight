@@ -476,6 +476,10 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 		diag("GPT partitions ought be named!\n");
 		return -1;
 	}
+	if(!d){
+		diag("Passed a NULL device\n");
+		return -1;
+	}
 	if(d->layout != LAYOUT_NONE){
 		diag("Won't add partition to non-disk %s\n",d->name);
 		return -1;

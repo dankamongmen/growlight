@@ -1178,6 +1178,7 @@ extract_partition_spec(const wchar_t *spec,uintmax_t **size,
 		if(wstrtoull(spec,*size)){
 			return -1;
 		}
+		return 0;
 	}
 	if(spec == sep){
 		*size = *fsec = NULL;
