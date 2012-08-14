@@ -1401,6 +1401,7 @@ case LAYOUT_ZPOOL:
 	// ...and now the temperature...
 	if(line + 2 < rows - !endp && line + topp + 2 >= 1){
 		if(bo->d->layout == LAYOUT_NONE){
+			wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			if(bo->d->blkdev.celsius >= 60u){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
 			}else if(bo->d->blkdev.celsius >= 40u){
@@ -1409,7 +1410,16 @@ case LAYOUT_ZPOOL:
 				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			}
 			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 120u){
-				mvwprintw(rb->win,line + 2,START_COL,"%9.ju°C ",bo->d->blkdev.celsius);
+				mvwprintw(rb->win,line + 2,START_COL,"%2.ju°C ",bo->d->blkdev.celsius);
+			}
+			if(bo->d->blkdev.smartgood != SMART_NOSUPPORT){
+				if(bo->d->blkdev.smartgood == SMART_STATUS_GOOD){
+					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
+				}else{
+					wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
+				}
+				mvwprintw(rb->win,line + 2,6,"smart%lc",
+					bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' : L'✘');
 			}
 		}
 	}
@@ -2762,7 +2772,7 @@ map_details(WINDOW *hw){
 	const controller *c;
 	int y,rows;
 
-	rows = getmaxy(hw);
+	rows = getmaxy(hw) - 1;
 	y = 1;
 	if(growlight_target){
 		wattrset(hw,A_BOLD|COLOR_PAIR(UHEADING_COLOR));
