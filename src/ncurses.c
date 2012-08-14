@@ -92,6 +92,8 @@ typedef struct zobj {
 	unsigned zoneno;		// in-order, but not monotonic growth (skip empties)
 	uintmax_t fsector,lsector;	// first and last logical sector, inclusive
 	device *p;			// partition/block device, NULL for empty space
+	wchar_t rep;			// character used for representation
+					//  if ->p is NULL
 	struct zobj *prev,*next;
 } zobj;
 
@@ -922,13 +924,15 @@ device_lines(int expa,const blockobj *bo){
 }
 
 static zobj *
-create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,device *p){
+create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,
+			device *p,wchar_t rep){
 	zobj *z;
 
 	if( (z = malloc(sizeof(*z))) ){
 		z->zoneno = zno;
 		z->fsector = fsector;
 		z->lsector = lsector;
+		z->rep = rep;
 		z->p = p;
 		if( (z->prev = prev) ){
 			prev->next = z;
@@ -1288,13 +1292,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}else{
 				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
 			}
-			mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),'E');
+			mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),z->rep);
 			ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
 			while(ch--){
 				if(++off >= (unsigned)ex){
 					break;
 				}
-				mvwaddch(w,y,off,L'E');
+				mvwaddch(w,y,off,z->rep);
 			}
 		}else{
 			if(selected && z != bo->zone){
@@ -1850,9 +1854,11 @@ update_details(WINDOW *hw){
 			break;
 			}
 		}else{
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u: unpartitioned space",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u: %s",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
-					b->zone->fsector,b->zone->lsector);
+					b->zone->fsector,b->zone->lsector,
+					b->zone->rep == L'P' ? "partition table metadata" :
+					"unpartitioned space");
 		}
 	}else{
 		mvwprintw(hw,6,START_COL,"Media is not loaded");
@@ -4158,7 +4164,7 @@ update_blockobj(blockobj *b,device *d){
 		if(d->mnt){
 			++mounts;
 		}
-		if((z = create_zobj(z,0,first_usable_sector(d),last_usable_sector(d),d)) == NULL){
+		if((z = create_zobj(z,0,first_usable_sector(d),last_usable_sector(d),d,L'\0')) == NULL){
 			goto err;
 		}
 		sector = last_usable_sector(d) + 1;
@@ -4166,7 +4172,7 @@ update_blockobj(blockobj *b,device *d){
 	}else{
 		zones = 0;
 		if( (sector = first_usable_sector(d)) ){
-			if((z = create_zobj(z,zones,0,sector - 1,NULL)) == NULL){
+			if((z = create_zobj(z,zones,0,sector - 1,NULL,L'P')) == NULL){
 				goto err;
 			}
 			++zones;
@@ -4180,12 +4186,12 @@ update_blockobj(blockobj *b,device *d){
 	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
-			if((z = create_zobj(z,zones,sector,p->partdev.fsector - 1,NULL)) == NULL){
+			if((z = create_zobj(z,zones,sector,p->partdev.fsector - 1,NULL,L'E')) == NULL){
 				goto err;
 			}
 			++zones;
 		}
-		if((z = create_zobj(z,zones,p->partdev.fsector,p->partdev.lsector,p)) == NULL){
+		if((z = create_zobj(z,zones,p->partdev.fsector,p->partdev.lsector,p,L'\0')) == NULL){
 			goto err;
 		}
 		++zones;
@@ -4205,10 +4211,18 @@ update_blockobj(blockobj *b,device *d){
 	}
 	if(d->logsec && d->size){
 		if(sector != last_usable_sector(d) + 1){
-			if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL)) == NULL){
+			if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL,L'E')) == NULL){
 				goto err;
 			}
 			++zones;
+			sector = last_usable_sector(d) + 1;
+		}
+		if(sector != d->size / d->logsec + 1){
+			if((z = create_zobj(z,zones,sector,d->size / d->logsec,NULL,L'P')) == NULL){
+				goto err;
+			}
+			++zones;
+			sector = d->size / d->logsec + 1;
 		}
 	}
 	free_zchain(&b->zchain);
