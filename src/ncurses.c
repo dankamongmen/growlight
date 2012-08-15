@@ -433,9 +433,6 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 		locked_diag("An input dialog is already active");
 		return;
 	}
-	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
-		return;
-	}
 	longdesc = longop = 0;
 	for(x = 0 ; x < ops ; ++x){
 		if(strlen(opstrs[x].option) > longop){
@@ -448,19 +445,25 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 	cols = longdesc + longop + 1;
 	getmaxyx(stdscr,y,x);
 	assert(x >= cols + START_COL * 2);
-	assert(y >= ops + 3);
-	assert( (fsw = newwin(ops + 2,cols + START_COL * 2,y - ops - 4,5)) );
-	if(fsw == NULL){
+	if(y <= ops + 3){
+		locked_diag("Window too small for form, uh-oh");
+		return;
+	}
+	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
+		return;
+	}
+	if((fsw = newwin(ops + 2,cols + START_COL * 2,y - ops - 4,5)) == NULL){
+		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
 	}
-	assert((fs->p = new_panel(fsw)));
-	assert(top_panel(fs->p) != ERR);
-	if(fs->p == NULL){
+	if((fs->p = new_panel(fsw)) == NULL){
+		locked_diag("Couldn't create form panel, uh-oh");
 		delwin(fsw);
 		free_form(fs);
 		return;
 	}
+	assert(top_panel(fs->p) != ERR);
 	if((fs->idx = defidx) < 0){
 		fs->idx = defidx = 0;
 	}
@@ -523,18 +526,18 @@ raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
 	getmaxyx(stdscr,y,x);
 	assert(x >= cols + START_COL * 2);
 	assert(y >= 3);
-	assert( (fsw = newwin(3,cols + START_COL * 2,y - 5,5)) );
-	if(fsw == NULL){
+	if((fsw = newwin(3,cols + START_COL * 2,y - 5,5)) == NULL){
+		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
 	}
-	assert((fs->p = new_panel(fsw)));
-	assert(top_panel(fs->p) != ERR);
-	if(fs->p == NULL){
+	if((fs->p = new_panel(fsw)) == NULL){
+		locked_diag("Couldn't create form panel, uh-oh");
 		delwin(fsw);
 		free_form(fs);
 		return;
 	}
+	assert(top_panel(fs->p) != ERR);
 	fs->ysize = 1;
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
@@ -2578,15 +2581,12 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 		locked_diag("Can't display subwindow, uh-oh");
 		return ERR;
 	}
-	if(psw == NULL){
-		return ERR;
-	}
-	assert((ps->p = new_panel(psw)));
-	assert(top_panel(ps->p) != ERR);
-	if(ps->p == NULL){
+	if((ps->p = new_panel(psw)) == NULL){
+		locked_diag("Couldn't create subpanel, uh-oh");
 		delwin(psw);
 		return ERR;
 	}
+	assert(top_panel(ps->p) != ERR);
 	ps->ysize = rows;
 	// memory leaks follow if we're compiled with NDEBUG! FIXME
 	assert(wattron(psw,A_BOLD) != ERR);
