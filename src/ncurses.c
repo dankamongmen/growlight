@@ -2574,7 +2574,10 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 	assert((x >= crightlen + START_COL * 2));
 	// Six up from the bottom, so it looks good with our logo in the
 	// installer, heh
-	assert( (psw = newwin(rows + 2,cols,y - (rows + 9),x - cols)) );
+	if((psw = newwin(rows + 2,cols,y - (rows + 9),x - cols)) == NULL){
+		locked_diag("Can't display subwindow, uh-oh");
+		return ERR;
+	}
 	if(psw == NULL){
 		return ERR;
 	}
