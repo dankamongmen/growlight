@@ -1270,7 +1270,7 @@ event_posix_thread(void *unsafe){
 						if(in->len){
 							verbf("Event on %s\n",in->name);
 						}
-						// FIXME do something with it
+						diag("FIXME unhandled inotify event"); // FIXME do something with it
 					}
 				}
 				if(s && errno != EAGAIN && errno != EWOULDBLOCK){
@@ -1305,7 +1305,7 @@ event_posix_thread(void *unsafe){
 }
 
 static int
-event_thread(int fd,int ufd){
+event_thread(int ifd,int ufd){
 	struct event_marshal *em;
 	struct epoll_event ev;
 	int r;
@@ -1321,9 +1321,9 @@ event_thread(int fd,int ufd){
 		free(em);
 		return -1;
 	}
-	ev.data.fd = fd;
-	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,fd,&ev)){
-		diag("Couldn't add %d to epoll (%s?)\n",fd,strerror(errno));
+	ev.data.fd = ifd;
+	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,ifd,&ev)){
+		diag("Couldn't add %d to epoll (%s?)\n",ifd,strerror(errno));
 		close(em->efd);
 		free(em);
 		return -1;
@@ -1335,7 +1335,7 @@ event_thread(int fd,int ufd){
 		free(em);
 		return -1;
 	}
-	em->ifd = fd;
+	em->ifd = ifd;
 	em->ufd = ufd;
 	if((em->mfd = open(MOUNTS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 		close(em->efd);

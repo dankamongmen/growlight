@@ -3815,6 +3815,19 @@ handle_actform_string_input(int ch){
 	} }
 }
 
+// We received input while a modal subwindow was active. Divert it from the
+// typical UI, and handle it according to the subwindow. If we are not
+// interested in the input, return it for further use. Otherwise, return 0 to
+// indicate intercept.
+static int
+handle_subwindow_input(int ch){
+	/*switch(ch){
+		default:
+			locked_diag("FIXME handle subwindow input");
+	}*/
+	return ch;
+}
+
 // We received input while a modal form was active. Divert it from the typical
 // UI, and handle it according to the form.
 static void
@@ -3920,6 +3933,11 @@ handle_ncurses_input(WINDOW *w){
 		if(actform){
 			handle_actform_input(ch);
 			continue;
+		}
+		if(active){
+			if((ch = handle_subwindow_input(ch)) == 0){
+				continue;
+			}
 		}
 		switch(ch){
 			case 'H':{
