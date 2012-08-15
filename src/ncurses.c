@@ -306,6 +306,12 @@ typedef enum {
 	FORM_STRING_INPUT,		// form_input
 } form_enum;
 
+// Regarding scrolling selection windows: the movement model is the same as
+// the main scrollwindow: moving up at the topmost line keeps you at the top
+// of the widget, and rotates the selections. scrolloff equals the number of
+// lines options have been rotated down, and takes values between 0 and
+// opcount - 1. All option selection windows scroll, even if they fit all their
+// options, to maintain continuity of UI.
 struct form_state {
 	PANEL *p;
 	int ysize;			// number of lines of *text* (not win)
@@ -315,7 +321,10 @@ struct form_state {
 	char *boxstr;			// string for box label
 	form_enum formtype;		// type of form
 	union {
-		struct form_option *ops;// form_option array for *this instance*
+		struct {
+			struct form_option *ops;// form_option array for *this instance*
+			int scrolloff;		// scroll offset
+		};
 		struct form_input inp;	// form_input state for this instance
 	};
 };
