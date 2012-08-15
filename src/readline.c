@@ -463,14 +463,14 @@ print_drive(const device *d,int descend){
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec,
-			d->blkdev.removable ? 'R' :
+			d->blkdev.removable ? L'R' :
 				d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' :
 				d->blkdev.smartgood == SMART_STATUS_BAD ? L'✘' :
-				d->blkdev.realdev ? '.' : 'V',
-			d->blkdev.unloaded ? 'U' : '.',
-			d->blkdev.rotate ? 'O' : '.',
-			d->blkdev.wcache ? 'W' : d->roflag ? 'r' : '.',
-			d->blkdev.biosboot ? 'B' : '.',
+				d->blkdev.realdev ? L'.' : L'V',
+			d->blkdev.unloaded ? L'U' : L'.',
+			d->blkdev.rotate ? L'O' : L'.',
+			d->blkdev.wcache ? L'W' : d->roflag ? L'r' : L'.',
+			d->blkdev.biosboot ? L'B' : L'.',
 			d->blkdev.pttable ? d->blkdev.pttable : "none",
 			d->wwn ? d->wwn : "n/a",
 			d->blkdev.realdev ? transport_str(d->blkdev.transport) : "n/a"
@@ -478,13 +478,13 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_MDADM:{
 		use_terminfo_color(COLOR_YELLOW,1);
-		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'M', '.',
-			d->roflag ? 'r' : '.', '.',
+			d->physsec, L'V', L'M', L'.',
+			d->roflag ? L'r' : L'.', L'.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->mddev.transport)
@@ -492,13 +492,13 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_DM:{
 		use_terminfo_color(COLOR_YELLOW,1);
-		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
+		r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'D', '.',
-			d->roflag ? 'r' : '.', '.',
+			d->physsec, L'V', L'D', L'.',
+			d->roflag ? L'r' : L'.', L'.',
 			"n/a",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->dmdev.transport)
@@ -506,13 +506,13 @@ print_drive(const device *d,int descend){
 		break;
 	}case LAYOUT_ZPOOL:{
 		use_terminfo_color(COLOR_RED,1);
-		r += rr = printf("%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %c%c%c%c%c %-6.6s%-16.16s %-4.4s\n",
+		r += rr = printf("%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
 			d->name,
 			d->model ? d->model : "n/a",
 			(uintmax_t)d->zpool.zpoolver,
 			qprefix(d->size,1,buf,sizeof(buf),0),
-			d->physsec, 'V', 'Z', '.',
-			d->roflag ? 'r' : '.', '.',
+			d->physsec, L'V', L'Z', L'.',
+			d->roflag ? L'r' : L'.', L'.',
 			"spa",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->zpool.transport)
