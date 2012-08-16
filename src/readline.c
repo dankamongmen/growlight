@@ -2121,6 +2121,9 @@ tty_ui(void){
 			lock_growlight();
 			z = fxn->fxn(tokes,fxn->arghelp);
 			unlock_growlight();
+			if(z < 0){
+				printf("\n");
+			}
 			use_terminfo_color(COLOR_WHITE,0);
 		}else{
 			fprintf(stderr,"Unknown command: %ls\n",tokes[0]);
