@@ -56,12 +56,14 @@ int close_blkid(void){
 int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 	char buf[PATH_MAX],*mnttype,*uuid,*label,*partuuid;
 	const char *val,*name;
+	unsigned parttype;
 	blkid_probe bp;
 	wchar_t *pname;
 	size_t len;
 	int n;
 
 	pname = NULL;
+	parttype = 0;
 	partuuid = uuid = label = mnttype = NULL;
 	if(strncmp(dev,"/dev/",5)){
 		if(snprintf(buf,sizeof(buf),"/dev/%s",dev) >= (int)sizeof(buf)){
@@ -148,6 +150,7 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 			}
 		}else if(strcmp(name,"PART_ENTRY_TYPE") == 0){
 			if(d->layout == LAYOUT_PARTITION){
+				parttype = get_str_code(val);
 			}else{
 				diag("PART_ENTRY_TYPE on non-partition %s\n",d->name);
 			}
@@ -160,6 +163,15 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 		}
 	}
 	if(d->layout == LAYOUT_PARTITION){
+		if(d->partdev.ptype == 0){
+			d->partdev.ptype = parttype;
+		}else if(!parttype || d->partdev.ptype != parttype){
+			if(d->partdev.ptype){
+				diag("Partition type changed (%04x->%04x)\n",
+					d->partdev.ptype,parttype);
+			}
+			d->partdev.ptype = parttype;
+		}
 		if(d->partdev.uuid == NULL){
 			d->partdev.uuid = partuuid;
 		}else if(!partuuid || strcmp(d->partdev.uuid,partuuid)){
