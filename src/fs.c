@@ -11,6 +11,18 @@
 #include "growlight.h"
 
 static int
+vfat_mkfs(const char *dev,const char *name){
+	// allow -c (badblock check) FIXME
+	if(name == NULL){
+		name = "SprezzaVFAT";
+	}
+	if(vspopen_drain("mkfs.vfat -F 32 -n %s %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 ext4_mkfs(const char *dev,const char *name){
 	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
 	// same for stripe_width FIXME
@@ -75,6 +87,7 @@ static const struct fs {
 	{
 		.name = "vfat",
 		.desc = "File Allocation Table (DOS default)",
+		.mkfs = vfat_mkfs,
 		.namemax = 11,
 		.nameparam = 'n',
 	},
