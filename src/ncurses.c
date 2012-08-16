@@ -47,10 +47,10 @@ enum {
 	SSD_COLOR,
 	FS_COLOR,
 	EMPTY_COLOR,			// Empty sectors
+	METADATA_COLOR,			// Partition table metadata
 	MDADM_COLOR,
 	ZPOOL_COLOR,
 	PARTITION_COLOR,
-	ZONE_COLOR,			// Selected zone
 	FORMBORDER_COLOR,
 	FORMTEXT_COLOR,
 	INPUT_COLOR,			// Form input color
@@ -1205,10 +1205,10 @@ setup_colors(void){
 	assert(init_pair(SSD_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(MDADM_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(ZPOOL_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(ZONE_COLOR,COLOR_BLACK,-1) == OK);
 	assert(init_pair(FORMBORDER_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(FORMTEXT_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(INPUT_COLOR,COLOR_CYAN,-1) == OK);
@@ -1439,7 +1439,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		if(selected){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 		}else{
-			assert(wattrset(w,COLOR_PAIR(OPTICAL_COLOR)) == OK);
+			assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 		}
 		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"No media detected in drive");
 		return;
@@ -1447,7 +1447,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		if(selected){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}else{
-			assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
+			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}
 		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
 		mvwprintw(w,y,sx,"%s %s",
@@ -1459,41 +1459,37 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		return;
 	}
 	do{
-		if(z->p == NULL){
+		int rep;
+
+		if(z->p == NULL){ // unused space among partitions, or metadata
+			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
+					COLOR_PAIR(EMPTY_COLOR);
 			if(selected && z != bo->zone){
-				assert(wattrset(w,A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
+				assert(wattrset(w,A_BOLD|A_REVERSE|co) == OK);
 			}else if(selected){
-				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
+				assert(wattrset(w,A_BOLD|co) == OK);
 			}else{
-				assert(wattrset(w,COLOR_PAIR(EMPTY_COLOR)) == OK);
+				assert(wattrset(w,co) == OK);
 			}
-			mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),z->rep);
-			ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
-			while(ch--){
-				if(++off >= (unsigned)ex){
-					break;
-				}
-				mvwaddch(w,y,off,z->rep);
-			}
-		}else{
-			if(selected && z != bo->zone){
+			rep = z->rep;
+		}else{ // dedicated partition
+			if(selected && z != bo->zone){ // partition and device are selected
 				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
-			}else if(selected){
-				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(ZONE_COLOR)) == OK);
-			}else{
+			}else if(selected){ // device is selected, partition is not
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+			}else{ // device is not selected
+				assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
 			}
-			mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),PNUMFIXME);
-			ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
-			while(ch--){
-				if(++off >= (unsigned)ex){
-					break;
-				}
-				mvwaddch(w,y,off,PNUMFIXME);
-			}
-			++PNUMFIXME;
+			rep = PNUMFIXME++;
 		}
-		//fprintf(stderr,"%s] %ju %ju\n",d->name,z->fsector,z->lsector);
+		mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),rep);
+		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
+		while(ch--){
+			if(++off >= (unsigned)ex){
+				break;
+			}
+			mvwaddch(w,y,off,rep);
+		}
 	}while((z = z->next) != bo->zchain);
 }
 
