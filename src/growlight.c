@@ -937,7 +937,6 @@ create_new_device_inner(const char *name,int recurse){
 						// FIXME read these directly out of the PT header
 						// FIXME need find UEFI EPS partitions
 						if(strcmp(pttable,"gpt") == 0){
-							p->partdev.ptype = PARTROLE_PRIMARY;
 							// FIXME verify bootable flag?
 						}else{
 							if(blkid_partition_is_logical(part)){
