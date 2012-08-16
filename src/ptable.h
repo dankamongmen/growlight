@@ -33,6 +33,7 @@ uintmax_t lookup_first_usable_sector(const struct device *);
 uintmax_t lookup_last_usable_sector(const struct device *);
 
 // Interface to kernel's BLKPG ioctl
+int blkpg_add_partition(int,long long,long long,int,const char *);
 int blkpg_del_partition(int,long long,long long,int,const char *);
 
 #ifdef __cplusplus
