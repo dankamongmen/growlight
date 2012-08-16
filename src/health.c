@@ -14,13 +14,13 @@ int badblock_scan(device *d,unsigned rw){
 	char cmd[PATH_MAX];
 
 	if(d->layout != LAYOUT_NONE){
-		fprintf(stderr,"Block scans are performed only on raw block devices\n");
+		diag("Block scans are performed only on raw block devices\n");
 		return -1;
 	}
 	// FIXME supply -b blocksize argument!
 	if(snprintf(cmd,sizeof(cmd),"badblocks -s %s /dev/%s",
 		rw ? d->mnt ? "-n" : "-w" : "",d->name) >= (int)sizeof(cmd)){
-		fprintf(stderr,"Bad name: %s\n",d->name);
+		diag("Bad name: %s\n",d->name);
 		return -1;
 	}
 	if(popen_drain(cmd)){
