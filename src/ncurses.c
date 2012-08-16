@@ -135,7 +135,7 @@ typedef struct adapterstate {
 
 #define EXPANSION_MAX EXPANSION_FULL
 
-static char statusmsg[73];
+static char statusmsg[79];
 static unsigned count_adapters;
 // dequeue + single selection
 static reelbox *current_adapter,*top_reelbox,*last_reelbox;
@@ -282,21 +282,30 @@ err:
 }
 
 static void
-locked_diag(const char *fmt,...){
-	va_list v;
+locked_vdiag(const char *fmt,va_list v){
 	char *nl;
 
-	va_start(v,fmt);
-	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
-	va_end(v);
+	vsnprintf(statusmsg,sizeof(statusmsg) - 1,fmt,v);
 	if( (nl = strchr(statusmsg,'\n')) ){
 		*nl = '\0';
+	}
+	while( (nl = strchr(statusmsg,'\t')) ){
+		*nl = ' ';
 	}
 	draw_main_window(stdscr);
 	if(diags.p){
 		update_diags(&diags);
 	}
 	screen_update();
+}
+
+static void
+locked_diag(const char *fmt,...){
+	va_list v;
+
+	va_start(v,fmt);
+	locked_vdiag(fmt,v);
+	va_end(v);
 }
 
 // -------------------------------------------------------------------------
@@ -4712,18 +4721,8 @@ adapter_free(void *cv){
 
 static void
 vdiag(const char *fmt,va_list v){
-	char *nl;
-
 	pthread_mutex_lock(&bfl);
-	vsnprintf(statusmsg,sizeof(statusmsg),fmt,v);
-	if( (nl = strchr(statusmsg,'\n')) ){
-		*nl = '\0';
-	}
-	draw_main_window(stdscr);
-	if(diags.p){
-		update_diags(&diags);
-	}
-	screen_update();
+	locked_vdiag(fmt,v);
 	pthread_mutex_unlock(&bfl);
 }
 
