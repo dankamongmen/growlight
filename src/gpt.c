@@ -478,7 +478,7 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	size_t mapsize;
 	uint64_t lbas;
 	void *map;
-	int fd;
+	int fd,r;
 
 	if(!name){
 		diag("GPT partitions ought be named!\n");
@@ -571,7 +571,17 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
-	return 0;
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	r = blkpg_add_partition(fd,fsec * (d->physsec / d->logsec),
+		(lsec - fsec + 1) * (d->physsec / d->logsec),z + 1,d->name);
+	if(close(fd)){
+		diag("Couldn't close %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	return r;
 }
 
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
@@ -584,7 +594,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	gpt_entry *gpe;
 	size_t mapsize;
 	void *map;
-	int fd;
+	int fd,r;
 
 	assert(pgsize && pgsize % LBA_SIZE == 0);
 	salign = d->logsec ? d->physsec / d->logsec : 1;
@@ -717,7 +727,17 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
-	return 0;
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	r = blkpg_add_partition(fd,flarge * (d->physsec / d->logsec),
+		(llarge - flarge + 1) * (d->physsec / d->logsec),z + 1,d->name);
+	if(close(fd)){
+		diag("Couldn't close %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	return r;
 }
 
 int name_gpt(device *d,const wchar_t *name){

@@ -538,7 +538,7 @@ int blkpg_add_partition(int fd,long long start,long long len,int pno,const char 
 	data.pno = pno;
 	strcpy(data.devname,name);
 	if(ioctl(fd,BLKPG,&blk)){
-		diag("Error invoking BLKPG ioctl (%s?)\n",strerror(errno));
+		diag("Error invoking BLKPG ioctl for %d (%s?)\n",pno,strerror(errno));
 		return -1;
 	}
 	return 0;
