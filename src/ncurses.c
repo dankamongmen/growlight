@@ -262,7 +262,7 @@ draw_main_window(WINDOW *w){
 	getmaxyx(w,rows,cols);
 	assert(cols >= 80);
 	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
-	if(bevel(w) != OK){
+	if(bevel_top(w) != OK){
 		goto err;
 	}
 	scol = START_COL * 4;
@@ -1997,7 +1997,8 @@ update_details(WINDOW *hw){
 					transport_str(d->blkdev.transport));
 	}else{
 		mvwprintw(hw,3,START_COL,"%s: %s %s (%s)",d->name,
-					d->model,d->revision,
+					d->model ? d->model : "n/a",
+					d->revision ? d->revision : "n/a",
 					qprefix(d->size,1,buf,sizeof(buf),0));
 		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju",
 					d->logsec,d->physsec,
