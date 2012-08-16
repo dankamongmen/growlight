@@ -154,6 +154,25 @@ selection_active(void){
 	return 1;
 }
 
+/* Action interface -- always require a selection */
+static adapterstate *
+get_selected_adapter(void){
+	if(!current_adapter){
+		return NULL;
+	}
+	return current_adapter->as;
+}
+
+static blockobj *
+get_selected_blockobj(void){
+	reelbox *rb;
+
+	if((rb = current_adapter) == NULL){
+		return NULL;
+	}
+	return rb->selected;
+}
+
 static int
 bevel_bottom(WINDOW *w){
 	static const cchar_t bchr[] = {
@@ -811,6 +830,37 @@ cleanup_new_partition(void){
 	pending_ptype = 0;
 }
 
+// Verify that the current selection is a place suitable for partition creation.
+// Returns the selected blockobj, or NULL.
+static blockobj *
+partition_base_p(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Partition creation requires selection of a block device");
+		return NULL;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return NULL;
+	}
+	if(b->d->layout == LAYOUT_NONE){
+		if(b->d->blkdev.pttable == NULL){
+			locked_diag("Partition creation requires a partition table");
+			return NULL;
+		}
+	}
+	if(b->zone->rep == 'P'){
+		locked_diag("Remove partition table on %s to reclaim metadata",b->d->name);
+		return NULL;
+	}
+	if(b->zone->p){
+		locked_diag("Partition %s exists; remove it first",b->zone->p->name);
+		return NULL;
+	}
+	return b;
+}
+
 static void
 ptype_name_callback(const char *name){
 	const char *n;
@@ -823,9 +873,7 @@ ptype_name_callback(const char *name){
 		raise_str_form("enter partition spec",psectors_callback,pending_spec);
 		return;
 	}
-	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while naming partition");
-		cleanup_new_partition();
+	if((b = partition_base_p()) == NULL){
 		return;
 	}
 	n = name;
@@ -915,9 +963,7 @@ psectors_callback(const char *psects){
 	uintmax_t fsect,lsect;
 	blockobj *b;
 
-	if(!current_adapter || !(b = current_adapter->selected) || !b->d){
-		locked_diag("Lost selection while specifying partition");
-		cleanup_new_partition();
+	if((b = partition_base_p()) == NULL){
 		return;
 	}
 	if(psects == NULL){ // go back to partition type
@@ -954,16 +1000,10 @@ psectors_callback(const char *psects){
 static void
 ptype_callback(const char *ptype){
 	unsigned long pt;
-	blockobj *b;
 	char *pend;
 
 	if(ptype == NULL){ // user cancelled
 		locked_diag("Partition creation cancelled by the user");
-		cleanup_new_partition();
-		return;
-	}
-	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while choosing partition type");
 		cleanup_new_partition();
 		return;
 	}
@@ -975,6 +1015,22 @@ ptype_callback(const char *ptype){
 	pending_ptype = pt;
 	raise_str_form("enter partition spec",psectors_callback,
 			pending_spec ? pending_spec : "100%");
+}
+
+static void
+new_partition(void){
+	struct form_option *ops_ptype;
+	blockobj *b;
+	int opcount;
+	int defidx;
+
+	if((b = partition_base_p()) == NULL){
+		return;
+	}
+	if((ops_ptype = ptype_table(b->d,&opcount,-1,&defidx)) == NULL){
+		return;
+	}
+	raise_form("select a partition type",ptype_callback,ops_ptype,opcount,defidx);
 }
 
 // -------------------------------------------------------------------------
@@ -3279,25 +3335,6 @@ select_adapter(void){
 	return select_adapter_dev(rb,rb->as->bobjs,2);
 }
 
-/* Action interface -- always require a selection */
-static adapterstate *
-get_selected_adapter(void){
-	if(!current_adapter){
-		return NULL;
-	}
-	return current_adapter->as;
-}
-
-static blockobj *
-get_selected_blockobj(void){
-	reelbox *rb;
-
-	if((rb = current_adapter) == NULL){
-		return NULL;
-	}
-	return rb->selected;
-}
-
 static void
 enslave_disk(void){
 	blockobj *b;
@@ -3402,47 +3439,6 @@ make_ptable(void){
 		return;
 	}
 	raise_form("select a table type",pttype_callback,ops_ptype,opcount,-1);
-}
-
-static void
-new_partition(void){
-	struct form_option *ops_ptype;
-	int opcount;
-	blockobj *b;
-
-	if((b = get_selected_blockobj()) == NULL){
-		locked_diag("Partition creation requires selection of a block device");
-		return;
-	}
-	if(b->zone == NULL){
-		locked_diag("Media is not loaded on %s",b->d->name);
-		return;
-	}
-	if(b->d->layout != LAYOUT_NONE){
-		// FIXME for blockdev.pttable check below. remove!
-		locked_diag("Partition tables can only be made on block devices");
-		return;
-	}
-	if(b->d->blkdev.pttable == NULL){
-		locked_diag("Partition creation requires a partition table");
-		return;
-	}
-	if(b->zone->p == NULL){
-		int defidx;
-
-		if((ops_ptype = ptype_table(b->d,&opcount,-1,&defidx)) == NULL){
-			return;
-		}
-		raise_form("select a partition type",ptype_callback,ops_ptype,opcount,defidx);
-		return;
-	}else if(b->zone->p->layout == LAYOUT_NONE){
-		locked_diag("A partition table needs be created on %s",b->d->name);
-		return;
-	}else if(b->zone->p->layout == LAYOUT_PARTITION){
-		locked_diag("Partition %s exists; remove it first",b->zone->p->name);
-		return;
-	}
-	// FIXME do stuff for mdadm, dm, zpool?
 }
 
 static void
