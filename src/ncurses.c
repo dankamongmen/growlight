@@ -1922,8 +1922,9 @@ detail_fs(WINDOW *hw,const device *d,int row){
 	char buf[BPREFIXSTRLEN + 1];
 
 	if(d->mnttype){
-		mvwprintw(hw,row,START_COL,BPREFIXFMT "B %s%s%s%s%s%s%s",
-			bprefix(d->mntsize,1,buf,sizeof(buf),1),
+		mvwprintw(hw,row,START_COL,BPREFIXFMT "%c %s%s%s%s%s%s%s",
+			d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
+			d->mntsize ? 'B' : ' ',
 			d->label ? "" : "unlabeled ",
 			d->mnt ? "" : "unmounted ",
 			d->mnttype,
