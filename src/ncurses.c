@@ -260,7 +260,6 @@ draw_main_window(WINDOW *w){
 	int rows,cols,scol;
 
 	getmaxyx(w,rows,cols);
-	assert(cols >= 80);
 	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
 	if(bevel_top(w) != OK){
 		goto err;
@@ -273,10 +272,8 @@ draw_main_window(WINDOW *w){
 	assert(wattrset(w,COLOR_PAIR(BORDER_COLOR)) != ERR);
 	assert(wprintw(w,"]") != ERR);
 	assert(wattron(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
-	// addstr() doesn't interpret format strings, so this is safe. It will
-	// fail, however, if the string can't fit on the window, which will for
-	// instance happen if there's an embedded newline.
-	assert(mvwaddstr(w,rows - 1,START_COL * 2,statusmsg) != ERR);
+	assert(mvwprintw(w,rows - 1,START_COL,"%-*.*s",cols - START_COL * 2,
+			cols - START_COL * 2,statusmsg) != ERR);
 	assert(wattroff(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
 	return OK;
 
@@ -2053,6 +2050,106 @@ update_details_cond(WINDOW *w){
 	return 0;
 }
 
+// When this text is being displayed, the help window is the active window.
+// Thus we refer to other window commands as "viewing", while 'H' here is
+// described as "toggling". When other windows come up, they list their
+// own command as "toggling." We want to avoid having to scroll the help
+// synopsis, so keep it under 22 lines (25 lines on an ANSI standard terminal,
+// minus two for the top/bottom screen border, minus one for mandatory
+// window top padding).
+static const wchar_t *helps[] = {
+	L"'q': quit                     ctrl+'L': redraw the screen",
+	L"'e': view environment details 'H': toggle this help display",
+	L"'v': view selection details   'D': view recent diagnostics",
+	L"'E': view active mountpoints / installpoints",
+	L"'-': collapse adapter         '+': expand adapter",
+	L"'R': rescan selection         'S': reset selection",
+	L"'A': create aggregate         'Z': destroy aggregate",
+	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
+	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
+	NULL
+};
+
+static const wchar_t *helps_block[] = {
+	L"'h'/'←': navigate left        'l'/'→': navigate right",
+	L"'m': make partition table     'r': remove partition table",
+	L"'W': wipe master boot record  'B': bad blocks check",
+	L"'n': new partition            'd': delete partition",
+	L"'s': set partition attributes 'M': make new filesystem",
+	L"'F': fsck filesystem          'w': wipe filesystem",
+	L"'U': set UUID                 'L': set label/name",
+	L"'b': bind to aggregate        'f': free from aggregate",
+	L"'o': mount filesystem         'O': unmount filesystem",
+	NULL
+};
+
+static const wchar_t *helps_target[] = {
+	L"'i': set target               'I': unset target",
+	L"'t': mount target             'T': unmount target",
+	L"'*' finalize UEFI / '#' finalize BIOS / '@' finalize fstab",
+	NULL
+};
+
+static size_t
+max_helpstr_len(const wchar_t **h){
+	size_t max = 0;
+
+	while(*h){
+		if(wcslen(*h) > max){
+			max = wcslen(*h);
+		}
+		++h;
+	}
+	return max;
+}
+
+static int
+helpstrs(WINDOW *hw,int row){
+	const wchar_t *hs;
+	int z,rows;
+
+	rows = getmaxy(hw);
+	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
+		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
+	}
+	row += z;
+	if(!current_adapter || !current_adapter->selected){
+		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
+	}else{
+		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	}
+	for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
+		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
+	}
+	row += z;
+	if(!target_mode_p()){
+		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
+	}else{
+		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	}
+	for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
+		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
+	}
+	return OK;
+}
+
+static int
+update_help_cond(WINDOW *w){
+	if(help.p){
+		return helpstrs(w,1);
+	}
+	return 0;
+}
+
+static void
+unlock_ncurses(void){
+	update_details_cond(panel_window(details.p));
+	update_help_cond(panel_window(help.p));
+	screen_update();
+	assert(pthread_mutex_unlock(&bfl) == 0);
+}	
+
 static void pull_adapters_down(reelbox *,int,int,int);
 
 // Pass a NULL puller to move all adapters up
@@ -2690,98 +2787,6 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 	assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
 	assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),crightstr) != ERR);
 	return OK;
-}
-
-// When this text is being displayed, the help window is the active window.
-// Thus we refer to other window commands as "viewing", while 'H' here is
-// described as "toggling". When other windows come up, they list their
-// own command as "toggling." We want to avoid having to scroll the help
-// synopsis, so keep it under 22 lines (25 lines on an ANSI standard terminal,
-// minus two for the top/bottom screen border, minus one for mandatory
-// window top padding).
-static const wchar_t *helps[] = {
-	L"'q': quit                     ctrl+'L': redraw the screen",
-	L"'e': view environment details 'H': toggle this help display",
-	L"'v': view selection details   'D': view recent diagnostics",
-	L"'E': view active mountpoints / installpoints",
-	L"'-': collapse adapter         '+': expand adapter",
-	L"'R': rescan selection         'S': reset selection",
-	L"'A': create aggregate         'Z': destroy aggregate",
-	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
-	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
-	NULL
-};
-
-static const wchar_t *helps_block[] = {
-	L"'h'/'←': navigate left        'l'/'→': navigate right",
-	L"'m': make partition table     'r': remove partition table",
-	L"'W': wipe master boot record  'B': bad blocks check",
-	L"'n': new partition            'd': delete partition",
-	L"'s': set partition attributes 'M': make new filesystem",
-	L"'F': fsck filesystem          'w': wipe filesystem",
-	L"'U': set UUID                 'L': set label/name",
-	L"'b': bind to aggregate        'f': free from aggregate",
-	L"'o': mount filesystem         'O': unmount filesystem",
-	NULL
-};
-
-static const wchar_t *helps_target[] = {
-	L"'i': set target               'I': unset target",
-	L"'t': mount target             'T': unmount target",
-	L"'*' finalize UEFI / '#' finalize BIOS / '@' finalize fstab",
-	NULL
-};
-
-static size_t
-max_helpstr_len(const wchar_t **h){
-	size_t max = 0;
-
-	while(*h){
-		if(wcslen(*h) > max){
-			max = wcslen(*h);
-		}
-		++h;
-	}
-	return max;
-}
-
-static int
-helpstrs(WINDOW *hw,int row){
-	const wchar_t *hs;
-	int z,rows;
-
-	rows = getmaxy(hw);
-	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
-	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
-		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
-	}
-	row += z;
-	if(!current_adapter || !current_adapter->selected){
-		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
-	}else{
-		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
-	}
-	for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
-		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
-	}
-	row += z;
-	if(!target_mode_p()){
-		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
-	}else{
-		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
-	}
-	for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
-		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
-	}
-	return OK;
-}
-
-static int
-update_help_cond(WINDOW *w){
-	if(help.p){
-		return helpstrs(w,1);
-	}
-	return 0;
 }
 
 static const int DIAGROWS = 8;
@@ -4039,71 +4044,57 @@ handle_ncurses_input(WINDOW *w){
 			case 'H':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&help,display_help);
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'D':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&diags,display_diags);
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'v':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&details,display_details);
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'e':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&environment,display_enviroment);
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'E':{
 				pthread_mutex_lock(&bfl);
 				toggle_panel(w,&maps,display_maps);
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case KEY_BACKSPACE: case KEY_ESC:
 				pthread_mutex_lock(&bfl);
 				deselect_adapter_locked();
-				update_details_cond(panel_window(details.p));
-				update_help_cond(panel_window(help.p));
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case '\r': case '\n': case KEY_ENTER:
 				pthread_mutex_lock(&bfl);
 				select_adapter();
-				update_details_cond(panel_window(details.p));
-				update_help_cond(panel_window(help.p));
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case 12: // CTRL+L FIXME
 				pthread_mutex_lock(&bfl);
 				wrefresh(curscr);
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case '+':
 				pthread_mutex_lock(&bfl);
 				expand_adapter_locked();
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case '-':{
 				pthread_mutex_lock(&bfl);
 				collapse_adapter_locked();
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case KEY_RIGHT: case 'l':{
@@ -4112,9 +4103,7 @@ handle_ncurses_input(WINDOW *w){
 					use_next_zone(current_adapter->selected);
 				}
 				redraw_adapter(current_adapter);
-				update_details_cond(panel_window(details.p));
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case KEY_LEFT: case 'h':{
@@ -4123,9 +4112,7 @@ handle_ncurses_input(WINDOW *w){
 					use_prev_zone(current_adapter->selected);
 				}
 				redraw_adapter(current_adapter);
-				update_details_cond(panel_window(details.p));
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case KEY_UP: case 'k':{
@@ -4135,10 +4122,7 @@ handle_ncurses_input(WINDOW *w){
 				}else{
 					use_prev_device();
 				}
-				update_details_cond(panel_window(details.p));
-				update_help_cond(panel_window(help.p));
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case KEY_DOWN: case 'j':{
@@ -4148,147 +4132,138 @@ handle_ncurses_input(WINDOW *w){
 				}else{
 					use_next_device();
 				}
-				update_details_cond(panel_window(details.p));
-				update_help_cond(panel_window(help.p));
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'm':{
 				pthread_mutex_lock(&bfl);
 				make_ptable();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'r':{
 				pthread_mutex_lock(&bfl);
 				remove_ptable();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'W':{
 				pthread_mutex_lock(&bfl);
 				wipe_mbr();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'B':{
 				pthread_mutex_lock(&bfl);
 				badblock_check();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'R':{
 				pthread_mutex_lock(&bfl);
 				rescan_selection();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'S':{
 				pthread_mutex_lock(&bfl);
 				reset_selection();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'n':{
 				pthread_mutex_lock(&bfl);
 				new_partition();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'd':{
 				pthread_mutex_lock(&bfl);
 				delete_partition();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'F':{
 				pthread_mutex_lock(&bfl);
 				fsck_partition();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 's':{
 				pthread_mutex_lock(&bfl);
 				set_partition_attrs();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'M':{
 				pthread_mutex_lock(&bfl);
 				new_filesystem();
-				update_details_cond(panel_window(details.p));
-				update_help_cond(panel_window(help.p));
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'w':{
 				pthread_mutex_lock(&bfl);
 				kill_filesystem();
-				update_details_cond(panel_window(details.p));
-				update_help_cond(panel_window(help.p));
-				screen_update();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'o':{
 				pthread_mutex_lock(&bfl);
 				mount_filesystem();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'O':{
 				pthread_mutex_lock(&bfl);
 				umount_filesystem();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 't':{
 				pthread_mutex_lock(&bfl);
 				mount_target();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'T':{
 				pthread_mutex_lock(&bfl);
 				umount_target();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'b':{
 				pthread_mutex_lock(&bfl);
 				enslave_disk();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'f':{
 				pthread_mutex_lock(&bfl);
 				liberate_disk();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'i':{
 				pthread_mutex_lock(&bfl);
 				setup_target();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'I':{
 				pthread_mutex_lock(&bfl);
 				unset_target();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			}
 			case 'A':
 				pthread_mutex_lock(&bfl);
 				create_aggregate();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case 'Z':
 				pthread_mutex_lock(&bfl);
 				destroy_aggregate();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 // Finalization commands
 			case '*':
@@ -4296,21 +4271,21 @@ handle_ncurses_input(WINDOW *w){
 				if(uefiboot() == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case '#':
 				pthread_mutex_lock(&bfl);
 				if(biosboot() == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case '@':
 				pthread_mutex_lock(&bfl);
 				if(finalize_target() == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case 'q': case 'Q':
 				diag("User-initiated shutdown");
