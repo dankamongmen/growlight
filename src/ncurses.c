@@ -2588,20 +2588,32 @@ static int
 new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar_t *hstr){
 	const wchar_t crightstr[] = L"http://nick-black.com/dankwiki/index.php/Growlight";
 	const int crightlen = wcslen(crightstr);
+	int ybelow,yabove;
 	WINDOW *psw;
 	int x,y;
 
+	// Desired space above and below, which will be impugned upon as needed
+	ybelow = 9;
+	yabove = 5;
 	getmaxyx(w,y,x);
 	if(cols == 0){
 		cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
 	}else{
 		assert(x >= cols + START_COL * 2);
 	}
-	assert(y >= rows + 3);
+	if(rows + ybelow + yabove >= y){
+		if(rows + ybelow >= y){
+			yabove = 0;
+		}else{
+			yabove -= rows + ybelow - y;
+		}
+	}else{
+		yabove += y - (rows + ybelow + yabove);
+	}
 	assert((x >= crightlen + START_COL * 2));
 	// Six up from the bottom, so it looks good with our logo in the
 	// installer, heh
-	if((psw = newwin(rows + 2,cols,y - (rows + 9),x - cols)) == NULL){
+	if((psw = newwin(rows + 2,cols,yabove,x - cols)) == NULL){
 		locked_diag("Can't display subwindow, uh-oh");
 		return ERR;
 	}
