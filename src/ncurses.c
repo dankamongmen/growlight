@@ -3734,7 +3734,14 @@ biosboot(void){
 		locked_diag("Block device %s targets %s",d->name,d->target->path);
 		return -1;
 	}
-	return prepare_bios_boot(d);
+	if(prepare_bios_boot(d)){
+		return -1;
+	}
+	if(finalize_target()){
+		return -1;
+	}
+	locked_diag("Successfully prepared BIOS boot");
+	return 0;
 }
 
 static int
@@ -3771,7 +3778,14 @@ uefiboot(void){
 		locked_diag("Block device %s targets %s",d->name,d->target->path);
 		return -1;
 	}
-	return prepare_uefi_boot(d);
+	if(prepare_uefi_boot(d)){
+		return -1;
+	}
+	if(finalize_target()){
+		return -1;
+	}
+	locked_diag("Successfully prepared UEFI boot");
+	return 0;
 }
 
 static void
@@ -4280,14 +4294,14 @@ handle_ncurses_input(WINDOW *w){
 			case '*':
 				pthread_mutex_lock(&bfl);
 				if(uefiboot() == 0){
-					locked_diag("Successfully prepared UEFI boot");
+					locked_diag("Successfully finalized target /etc/fstab");
 				}
 				pthread_mutex_unlock(&bfl);
 				break;
 			case '#':
 				pthread_mutex_lock(&bfl);
 				if(biosboot() == 0){
-					locked_diag("Successfully prepared BIOS boot");
+					locked_diag("Successfully finalized target /etc/fstab");
 				}
 				pthread_mutex_unlock(&bfl);
 				break;
