@@ -1705,16 +1705,30 @@ int rescan_device(const char *name){
 	}while(s);
 	for(c = controllers ; c ; c = c->next){
 		for(lnk = &c->blockdevs ; *lnk ; lnk = &(*lnk)->next){
-			if(strcmp(name,(*lnk)->name) == 0){
-				device *d = *lnk;
-				*lnk = d->next;
-				clobber_device(d);
-				// FIXME update aggregates, also
-				if(rescan(name) == NULL){
-					return -1;
+			if(strcmp(name,(*lnk)->name)){
+				if((*lnk)->layout == LAYOUT_NONE){
+					const device *p;
+
+					for(p = (*lnk)->parts ; p ; p = p->next){
+						if(strcmp(name,p->name) == 0){
+							break;
+						}
+					}
+					if(p == NULL){
+						continue;
+					}
+				}else{
+					continue;
 				}
-				return 0;
+			} // if we get here, we've matched up
+			device *d = *lnk;
+			*lnk = d->next;
+			clobber_device(d);
+			// FIXME update aggregates, also
+			if(rescan(name) == NULL){
+				return -1;
 			}
+			return 0;
 		}
 	}
 	if(create_new_device(name,0) == NULL){
