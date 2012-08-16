@@ -17,11 +17,12 @@ ext4_mkfs(const char *dev,const char *name){
 	// need -F for non-partition or block special FIXME
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
+	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
 	// allow -c (badblock check) FIXME
 	if(name == NULL){
 		name = "SprezzaEXT4";
 	}
-	if(vspopen_drain("mkfs -t ext4 -b -2048 -o SprezzOS -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
+	if(vspopen_drain("mkfs -t ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
 		return -1;
 	}
 	return 0;
