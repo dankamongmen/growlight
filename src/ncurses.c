@@ -324,6 +324,7 @@ struct form_state {
 		struct {
 			struct form_option *ops;// form_option array for *this instance*
 			int scrolloff;		// scroll offset
+			int opcount;		// total number of ops
 		};
 		struct form_input inp;	// form_input state for this instance
 	};
@@ -399,7 +400,6 @@ static void
 form_options(struct form_state *fs){
 	const struct form_option *opstrs = fs->ops;
 	WINDOW *fsw = panel_window(fs->p);
-	const int ops = fs->ysize;
 	int z,cols;
 
 	if(fs->formtype != FORM_SELECT){
@@ -407,16 +407,20 @@ form_options(struct form_state *fs){
 	}
 	cols = getmaxx(fsw);
 	wattron(fsw,A_BOLD);
-	for(z = 0 ; z < ops ; ++z){
+	for(z = 0 ; z < fs->ysize ; ++z){
+		int op = (z + fs->scrolloff) % fs->opcount;
+
+		assert(op >= 0);
+		assert(op < fs->opcount);
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 		mvwprintw(fsw,z + 1,START_COL,"%-*.*s ",
-			fs->longop,fs->longop,opstrs[z].option);
+			fs->longop,fs->longop,opstrs[op].option);
 		if(z == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
 		wcolor_set(fsw,INPUT_COLOR,NULL);
 		wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 2,
-			cols - fs->longop - 1 - START_COL * 2,opstrs[z].desc);
+			cols - fs->longop - 1 - START_COL * 2,opstrs[op].desc);
 		if(z == fs->idx){
 			wattroff(fsw,A_REVERSE);
 		}
@@ -426,12 +430,14 @@ form_options(struct form_state *fs){
 // -------------------------------------------------------------------------
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
+#define FORM_Y_OFFSET 5
+#define FORM_X_OFFSET 5
 static void
 raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops,int defidx){
 	size_t longop,longdesc;
 	struct form_state *fs;
+	int cols,rows;
 	WINDOW *fsw;
-	int cols;
 	int x,y;
 
 	if(opstrs == NULL || !ops){
@@ -452,16 +458,23 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 		}
 	}
 	cols = longdesc + longop + 1;
+	rows = ops + 2;
 	getmaxyx(stdscr,y,x);
-	assert(x >= cols + START_COL * 2);
-	if(y <= ops + 3){
-		locked_diag("Window too small for form, uh-oh");
+	if(x < cols + START_COL * 2){
+		locked_diag("Window too thin for form, uh-oh");
 		return;
+	}
+	if(y < FORM_X_OFFSET + 2 + 1){ // two boundaries, at least 1 selection
+		locked_diag("Window too short for form, uh-oh");
+		return;
+	}
+	if(y <= rows){
+		rows = y - FORM_Y_OFFSET;
 	}
 	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
 		return;
 	}
-	if((fsw = newwin(ops + 2,cols + START_COL * 2,y - ops - 4,5)) == NULL){
+	if((fsw = newwin(rows,cols + START_COL * 2,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
@@ -473,10 +486,12 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 		return;
 	}
 	assert(top_panel(fs->p) != ERR);
+	// FIXME adapt for scrolling
 	if((fs->idx = defidx) < 0){
 		fs->idx = defidx = 0;
 	}
-	fs->ysize = ops;
+	fs->opcount = ops;
+	fs->ysize = rows - 2;
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
@@ -3765,6 +3780,7 @@ handle_actform_string_input(int ch){
 	struct form_state *fs = actform;
 	void (*cb)(const char *);
 
+	cb = actform->fxn;
 	switch(ch){
 	case 12: // CTRL+L FIXME
 		pthread_mutex_lock(&bfl);
@@ -3776,7 +3792,6 @@ handle_actform_string_input(int ch){
 		char *str;
 
 		pthread_mutex_lock(&bfl);
-		cb = actform->fxn;
 		assert(str = strdup(actform->inp.buffer));
 		free_form(actform);
 		actform = NULL;
@@ -3787,7 +3802,6 @@ handle_actform_string_input(int ch){
 		break;
 	}case KEY_ESC:{
 		pthread_mutex_lock(&bfl);
-		cb = actform->fxn;
 		free_form(actform);
 		actform = NULL;
 		curs_set(0);
@@ -3848,6 +3862,7 @@ handle_actform_input(int ch){
 		handle_actform_string_input(ch);
 		return;
 	}
+	cb = actform->fxn;
 	switch(ch){
 		case 12: // CTRL+L FIXME
 			pthread_mutex_lock(&bfl);
@@ -3857,10 +3872,11 @@ handle_actform_input(int ch){
 			break;
 		case '\r': case '\n': case KEY_ENTER:{
 			char *optstr;
+			int op;
 
 			pthread_mutex_lock(&bfl);
-			assert(optstr = strdup(actform->ops[actform->idx].option));
-			cb = actform->fxn;
+		       	op = (actform->idx + fs->scrolloff) % fs->opcount;
+			assert(optstr = strdup(actform->ops[op].option));
 			free_form(actform);
 			actform = NULL;
 			cb(optstr);
@@ -3869,7 +3885,6 @@ handle_actform_input(int ch){
 			break;
 		}case KEY_ESC:
 			pthread_mutex_lock(&bfl);
-			cb = actform->fxn;
 			free_form(actform);
 			actform = NULL;
 			cb(NULL);
@@ -3877,8 +3892,14 @@ handle_actform_input(int ch){
 			break;
 		case KEY_UP: case 'k':{
 			pthread_mutex_lock(&bfl);
-			if(fs->idx-- == 0){
-				fs->idx = fs->ysize - 1;
+			if(fs->idx == 0){
+				if(fs->scrolloff <= 0){
+					fs->scrolloff = fs->opcount - 1;
+				}else{
+					--fs->scrolloff;
+				}
+			}else{
+				--fs->idx;
 			}
 			form_options(fs);
 			screen_update();
@@ -3887,8 +3908,14 @@ handle_actform_input(int ch){
 		}
 		case KEY_DOWN: case 'j':{
 			pthread_mutex_lock(&bfl);
-			if(fs->idx++ >= fs->ysize - 1){
-				fs->idx = 0;
+			if(fs->idx >= fs->ysize - 1){
+				if(fs->scrolloff >= fs->opcount){
+					fs->scrolloff = 0;
+				}else{
+					++fs->scrolloff;
+				}
+			}else{
+				++fs->idx;
 			}
 			form_options(fs);
 			screen_update();
