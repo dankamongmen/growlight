@@ -3700,27 +3700,27 @@ umount_target(void){
 	}
 }
 
-static void
-uefiboot(void){
+static int
+biosboot(void){
 	blockobj *b;
 	device *d;
 
 	if(!target_mode_p()){
 		locked_diag("Not in target mode");
-		return;
+		return -1;
 	}
 	if((b = get_selected_blockobj()) == NULL){
 		locked_diag("Must select a block device to boot");
-		return;
+		return -1;
 	}
 	if(b->zone == NULL){
 		locked_diag("Media is not loaded on %s",b->d->name);
-		return;
+		return -1;
 	}
 	if(b->zone->p){
 		if(b->zone->p->layout != LAYOUT_PARTITION){
 			locked_diag("Cannot boot from unused space");
-			return;
+			return -1;
 		}
 		d = b->zone->p;
 	}else{
@@ -3728,13 +3728,50 @@ uefiboot(void){
 	}
 	if(d->target == NULL){
 		locked_diag("Block device %s is not a target",d->name);
-		return;
+		return -1;
 	}
 	if(strcmp(d->target->path,"/")){
 		locked_diag("Block device %s targets %s",d->name,d->target->path);
-		return;
+		return -1;
 	}
-	prepare_uefi_boot(d);
+	return prepare_bios_boot(d);
+}
+
+static int
+uefiboot(void){
+	blockobj *b;
+	device *d;
+
+	if(!target_mode_p()){
+		locked_diag("Not in target mode");
+		return -1;
+	}
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a block device to boot");
+		return -1;
+	}
+	if(b->zone == NULL){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return -1;
+	}
+	if(b->zone->p){
+		if(b->zone->p->layout != LAYOUT_PARTITION){
+			locked_diag("Cannot boot from unused space");
+			return -1;
+		}
+		d = b->zone->p;
+	}else{
+		d = b->d;
+	}
+	if(d->target == NULL){
+		locked_diag("Block device %s is not a target",d->name);
+		return -1;
+	}
+	if(strcmp(d->target->path,"/")){
+		locked_diag("Block device %s targets %s",d->name,d->target->path);
+		return -1;
+	}
+	return prepare_uefi_boot(d);
 }
 
 static void
@@ -4242,17 +4279,23 @@ handle_ncurses_input(WINDOW *w){
 // Finalization commands
 			case '*':
 				pthread_mutex_lock(&bfl);
-				uefiboot();
+				if(uefiboot() == 0){
+					locked_diag("Successfully prepared UEFI boot");
+				}
 				pthread_mutex_unlock(&bfl);
 				break;
 			case '#':
 				pthread_mutex_lock(&bfl);
-				locked_diag("Not yet implemented FIXME"); // FIXME finalize BIOS boot
+				if(biosboot() == 0){
+					locked_diag("Successfully prepared BIOS boot");
+				}
 				pthread_mutex_unlock(&bfl);
 				break;
 			case '@':
 				pthread_mutex_lock(&bfl);
-				locked_diag("Not yet implemented FIXME"); // FIXME finalize fstab only
+				if(finalize_target() == 0){
+					locked_diag("Successfully finalized target /etc/fstab");
+				}
 				pthread_mutex_unlock(&bfl);
 				break;
 			case 'q': case 'Q':
