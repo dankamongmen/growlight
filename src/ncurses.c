@@ -4005,7 +4005,7 @@ handle_actform_input(int ch){
 			pthread_mutex_lock(&bfl);
 			if(fs->idx >= fs->ysize - 1){
 				if(fs->scrolloff >= fs->opcount){
-					fs->scrolloff = 0;
+					fs->scrolloff = 1;
 				}else{
 					++fs->scrolloff;
 				}
