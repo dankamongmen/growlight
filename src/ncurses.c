@@ -898,7 +898,8 @@ ptype_name_callback(const char *name){
 }
 
 static int
-lex_part_spec(const char *psects,zobj *z,uintmax_t *fsect,uintmax_t *lsect){
+lex_part_spec(const char *psects,zobj *z,size_t sectsize,
+			uintmax_t *fsect,uintmax_t *lsect){
 	unsigned long long ull;
 	const char *col,*pct;
 	char *el;
@@ -943,9 +944,41 @@ lex_part_spec(const char *psects,zobj *z,uintmax_t *fsect,uintmax_t *lsect){
 		*lsect = ull2;
 		return 0;
 	}
-	if( (ull = strtoull(psects,&el,0)) ){
+	while(isspace(*psects)){
+		++psects;
+	}
+	if(*psects == '-'){ // reject negative numbers
 		return -1;
 	}
+	if((ull = strtoull(psects,&el,0)) == ULLONG_MAX && errno == ERANGE){
+		return -1;
+	}
+	if(*el){
+		if(el[1]){
+			return -1;
+		}
+		switch(*el){
+			case 'E': case 'e':
+                                ull *= 1024llu * 1024 * 1024 * 1024 * 1024 * 1024; break;
+                        case 'P': case 'p':
+                                ull *= 1024llu * 1024 * 1024 * 1024 * 1024; break;
+                        case 'T': case 't':
+                                ull *= 1024llu * 1024 * 1024 * 1024; break;
+                        case 'G': case 'g':
+                                ull *= 1024llu * 1024 * 1024; break;
+                        case 'M': case 'm':
+                                ull *= 1024llu * 1024; break;
+                        case 'K': case 'k':
+                                ull *= 1024llu; break;
+                        default:
+                        return -1;
+		}
+	}
+	if(ull % sectsize){
+		locked_diag("%llu is not a multiple of %zu",ull,sectsize);
+		return -1;
+	}
+	ull /= sectsize;
 	if(ull > (z->lsector - z->fsector + 1)){
 		locked_diag("There are only %ju sectors available\n",z->lsector - z->fsector);
 		return -1;
@@ -975,7 +1008,7 @@ psectors_callback(const char *psects){
 		return;
 	}
 	pending_spec = strdup(psects);
-	if(lex_part_spec(psects,b->zone,&fsect,&lsect)){
+	if(lex_part_spec(psects,b->zone,b->d->logsec,&fsect,&lsect)){
 		locked_diag("Not a valid partition spec: %s\n",psects);
 		raise_str_form("enter partition spec",psectors_callback,psects);
 		return;
@@ -1208,7 +1241,7 @@ setup_colors(void){
 	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(MDADM_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(ZPOOL_COLOR,COLOR_MAGENTA,-1) == OK);
-	assert(init_pair(PARTITION_COLOR,COLOR_BLUE,-1) == OK);
+	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FORMBORDER_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(FORMTEXT_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(INPUT_COLOR,COLOR_CYAN,-1) == OK);
