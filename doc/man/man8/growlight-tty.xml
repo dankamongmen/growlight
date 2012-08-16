@@ -281,7 +281,7 @@ unset the specified flag on the specified partition.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term>fs mkfs [ blockdev fstype ]</term>
+			<term>fs mkfs [ blockdev fstype label ]</term>
 		</varlistentry>
 		<varlistentry>
 			<term>fs wipefs blockdev</term>
@@ -310,17 +310,18 @@ unset the specified flag on the specified partition.</para>
 <para>Passed no arguments, <emphasis role="bold">fs</emphasis> concisely lists all
 detected possible filesystems, irrespective of mount status or viability. The
 "mkfs" subcommand will create a filesystem on the specified block device of the
-specified type. "mkfs" with no arguments lists supported filesystem types.
-"wipefs" will attempt to destroy the specified filesystem's superblocks, to the
-degree that <emphasis>libblkid(3)</emphasis> does not detect them. "setuuid"
-will set the UUID of the filesystem on blockdev, assuming that filesystem
-supports UUIDs. "setlabel" will set the volume label of the filesystem on
-blockdev, assuming that filesystem supports volume labels. "mount" will attempt
-to mount the block device as a mnttype-type filesystem at mountpoint. This mount
-will not be added to either the host or target's /etc/fstab, and will thus not
-persist across reboots. "loop" will attempt to mount the file as a mnttype-type
-filesystem at mountpoint using a loop device. "umount" will attempt to unmount the filesystem underlain
-by blockdev. "fsck" will check the filesystem for correctness.</para>
+specified type, having the specified label (possibly truncated). "mkfs" with no
+arguments lists supported filesystem types. "wipefs" will attempt to destroy
+the specified filesystem's superblocks, to the degree that
+<emphasis>libblkid(3)</emphasis> does not detect them. "setuuid" will set the
+UUID of the filesystem on blockdev, assuming that filesystem supports UUIDs.
+"setlabel" will set the volume label of the filesystem on blockdev, assuming
+that filesystem supports volume labels. "mount" will attempt to mount the block
+device as a mnttype-type filesystem at mountpoint. This mount will not be added
+to either the host or target's /etc/fstab, and will thus not persist across
+reboots. "loop" will attempt to mount the file as a mnttype-type filesystem at
+mountpoint using a loop device. "umount" will attempt to unmount the filesystem
+underlain by blockdev. "fsck" will check the filesystem for correctness.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>

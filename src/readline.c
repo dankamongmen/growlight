@@ -2019,7 +2019,7 @@ static const struct fxn {
 			"                 | [ \"setflag\" [ partition \"on\"|\"off\" flag ] ]\n"
 			"                    | no arguments to list supported flags\n"
 			"                 | [ -v ] no arguments to list all partitions"),
-	FXN(fs,"[ \"mkfs\" [ partition fstype ] ]\n"
+	FXN(fs,"[ \"mkfs\" [ partition fstype name ] ]\n"
 			"                 | no arguments to list supported fs types\n"
 			"                 | [ \"fsck\" ks ]\n"
 			"                 | [ \"wipefs\" fs ]\n"
