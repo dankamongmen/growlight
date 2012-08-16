@@ -22,7 +22,43 @@ ext4_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaEXT4";
 	}
-	if(vspopen_drain("mkfs -t ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
+	if(vspopen_drain("mkfs.ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
+ext3_mkfs(const char *dev,const char *name){
+	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
+	// same for stripe_width FIXME
+	// need -F for non-partition or block special FIXME
+	// pass -M with mount point FIXME
+	// allow a UUID to be supplied FIXME
+	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
+	// allow -c (badblock check) FIXME
+	if(name == NULL){
+		name = "SprezzaEXT3";
+	}
+	if(vspopen_drain("mkfs.ext3 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
+ext2_mkfs(const char *dev,const char *name){
+	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
+	// same for stripe_width FIXME
+	// need -F for non-partition or block special FIXME
+	// pass -M with mount point FIXME
+	// allow a UUID to be supplied FIXME
+	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
+	// allow -c (badblock check) FIXME
+	if(name == NULL){
+		name = "SprezzaEXT2";
+	}
+	if(vspopen_drain("mkfs.ext2 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -63,20 +99,22 @@ static const struct fs {
 	},
 	{
 		.name = "ext4",
-		.desc = "Extended Filesystem 4 (Linux default)",
+		.desc = "Extended Filesystem v4 (Linux default)",
 		.mkfs = ext4_mkfs,
 		.namemax = 16,
 		.nameparam = 'L',
 	},
 	{
 		.name = "ext3",
-		.desc = "Extended Filesystem 3",
+		.desc = "Extended Filesystem v3",
+		.mkfs = ext3_mkfs,
 		.namemax = 16,
 		.nameparam = 'L',
 	},
 	{
 		.name = "ext2",
-		.desc = "Extended Filesystem 2",
+		.desc = "Extended Filesystem v2",
+		.mkfs = ext2_mkfs,
 		.namemax = 16,
 		.nameparam = 'L',
 	},
@@ -86,11 +124,11 @@ static const struct fs {
 	},
 	{
 		.name = "reiserfs",
-		.desc = "ReiserFS",
+		.desc = "ReiserFS v3",
 	},
 	{
 		.name = "reiser4",
-		.desc = "ReiserFS 4",
+		.desc = "ReiserFS v4",
 	},
 	{
 		.name = "jfs",
@@ -154,19 +192,19 @@ static const struct fs {
        	},
 	{
 		.name = "gfs",
-		.desc = "Red Hat's Global Filesystem",
+		.desc = "Red Hat's Global Filesystem v1",
 	},
 	{
 		.name = "gfs2",
-		.desc = "Red Hat's Global Filesystem 2",
+		.desc = "Red Hat's Global Filesystem v2",
 	},
 	{
 		.name = "ocfs",
-		.desc = "Oracle Cluster Filesystem",
+		.desc = "Oracle Cluster Filesystem v1",
 	},
 	{
 		.name = "ocfs2",
-		.desc = "Oracle Cluster Filesystem 2",
+		.desc = "Oracle Cluster Filesystem v2",
 	},
 	{
 		.name = "oracleasm",
@@ -207,7 +245,7 @@ static const struct fs {
 	},
 	{
 		.name = "nilfs2",
-		.desc = "NTT's New Implementation of Log-structued FS 2",
+		.desc = "NTT's New Implementation of Log-structued FS v2",
 		.namemax = 80,
 		.nameparam = 'L',
 	},
