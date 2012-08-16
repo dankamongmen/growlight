@@ -35,7 +35,7 @@ int explore_dm_sysfs(device *d,int dirfd){
 		int r;
 
 		if(snprintf(buf,sizeof(buf),"rd%lu",rd) >= (int)sizeof(buf)){
-			fprintf(stderr,"Couldn't look up raid device %lu\n",rd);
+			diag("Couldn't look up raid device %lu\n",rd);
 			errno = ENAMETOOLONG;
 			return -1;
 		}
@@ -43,7 +43,7 @@ int explore_dm_sysfs(device *d,int dirfd){
 		if((r < 0 && errno != ENOENT) || r >= (int)sizeof(lbuf)){
 			int e = errno;
 
-			fprintf(stderr,"Couldn't look up slave %s (%s?)\n",buf,strerror(errno));
+			diag("Couldn't look up slave %s (%s?)\n",buf,strerror(errno));
 			errno = e;
 			return -1;
 		}else if(r < 0 && errno == ENOENT){
@@ -52,7 +52,7 @@ int explore_dm_sysfs(device *d,int dirfd){
 		}
 		lbuf[r] = '\0';
 		if(strncmp(lbuf,"dev-",4)){
-			fprintf(stderr,"Couldn't get device from %s\n",lbuf);
+			diag("Couldn't get device from %s\n",lbuf);
 			return -1;
 		}
 		if((c = strdup(lbuf + 4)) == NULL){
@@ -101,7 +101,7 @@ int explore_dm_sysfs(device *d,int dirfd){
 				}
 				break;
 			default:
-				fprintf(stderr,"Unknown layout %d on %s\n",subd->layout,subd->name);
+				diag("Unknown layout %d on %s\n",subd->layout,subd->name);
 				break;
 		}
 	}
