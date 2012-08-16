@@ -25,6 +25,9 @@ extern const ptype ptypes[];
 int get_gpt_guid(unsigned,void *);
 int get_mbr_code(unsigned,unsigned *);
 
+// Pass in a libblkid-style string representation, and get the common code
+unsigned get_str_code(const char *);
+
 static inline int
 ptype_default_p(unsigned code){
 	return code == PARTROLE_PRIMARY;

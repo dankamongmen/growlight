@@ -146,6 +146,11 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 			}else{
 				diag("PART_ENTRY_NAME on non-partition %s\n",d->name);
 			}
+		}else if(strcmp(name,"PART_ENTRY_TYPE") == 0){
+			if(d->layout == LAYOUT_PARTITION){
+			}else{
+				diag("PART_ENTRY_TYPE on non-partition %s\n",d->name);
+			}
 		}else if(strcmp(name,"LOGICAL_SECTOR_SIZE") == 0){
 			d->logsec = strtoull(val,NULL,0);
 		}else if(strcmp(name,"PHYSICAL_SECTOR_SIZE") == 0){

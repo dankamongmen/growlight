@@ -396,3 +396,21 @@ int ptype_supported(const char *pttype,const ptype *pt){
 	diag("No support for pttype %s\n",pttype);
 	return 0;
 }
+
+unsigned get_str_code(const char *str){
+	const ptype *pt;
+
+	for(pt = ptypes ; pt->name ; ++pt){
+		char tstr[GUIDSTRLEN + 1];
+
+		guidstr_be(pt->gpt_guid,tstr);
+		if(strcmp(tstr,str) == 0){
+			return pt->code;
+		}
+		sprintf(tstr,"%02x",pt->mbr_code);
+		if(strcmp(tstr,str) == 0){
+			return pt->code;
+		}
+	}
+	return 0;
+}
