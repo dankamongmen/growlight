@@ -81,6 +81,30 @@ int prepare_umount(device *d,const char *path){
 	return 0;
 }
 
+static int
+make_parent_directories(const char *path){
+	char dir[PATH_MAX + 1];
+	char *next;
+
+	assert(strlen(path) < sizeof(dir));
+	strcpy(dir,path);
+	next = dir;
+	while(*next && (next = strchr(next,'/')) ){
+		*next = '\0';
+		if(mkdir(dir,0775) && errno != EEXIST){
+			diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
+			return -1;
+		}
+		*next = '/';
+		++next;
+	}
+	if(mkdir(dir,0775) && errno != EEXIST){
+		diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 	char devname[PATH_MAX + 1],pathext[PATH_MAX + 1],*fs;
 	mntentry *m;
@@ -119,7 +143,8 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 			return -1;
 		}
 		if(mount(devname,pathext,fs,MS_NOATIME,NULL)){
-			diag("Couldn't mount %s at %s for %s\n",devname,pathext,fs);
+			diag("Couldn't mount %s at %s for %s (%s?)\n",
+					devname,pathext,fs,strerror(errno));
 			free(fs);
 			return -1;
 		}
@@ -149,10 +174,14 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 		d->mnttype = fs;
 		return 0;
 	}
+	if(make_parent_directories(path)){
+		free(fs);
+		return -1;
+	}
 	// no need to check for preexisting mount at this point -- the mount(2)
 	// will fail if one's there.
 	if(mount(devname,path,fs,MS_NOATIME,NULL)){
-		diag("Couldn't mount %s at %s for %s\n",devname,path,fs);
+		diag("Couldn't mount %s at %s for %s (%s?)\n",devname,path,fs,strerror(errno));
 		free(fs);
 		return -1;
 	}

@@ -619,15 +619,14 @@ targpoint_callback(const char *path){
 		return;
 	}
 	b = current_adapter->selected;
-	// FIXME need get filesystem type via lookup on device
 	if(b->zone->p == NULL){
-		prepare_mount(b->d,path,"ext4","");
+		prepare_mount(b->d,path,b->d->mnttype,"");
 		return;
 	}else if(b->zone->p->layout != LAYOUT_PARTITION){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		prepare_mount(b->zone->p,path,"ext4","");
+		prepare_mount(b->zone->p,path,b->zone->p->mnttype,"");
 		return;
 	}
 	locked_diag("I'm confused. Aborting.\n");

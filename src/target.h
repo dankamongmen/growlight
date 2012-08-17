@@ -17,7 +17,7 @@ int set_target(const char *);
 int finalize_target(void);
 int dump_targets(FILE *);
 
-// don't go mucking around with me externally. use set_target().
+// don't muck around with me externally. use set_target() and get_target().
 extern const char *growlight_target;
 
 static inline const char *
