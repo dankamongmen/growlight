@@ -178,14 +178,14 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 		d->mnttype = fs;
 		return 0;
 	}
-	if(make_parent_directories(path)){
+	if(make_parent_directories(pathext)){
 		free(fs);
 		return -1;
 	}
 	// no need to check for preexisting mount at this point -- the mount(2)
 	// will fail if one's there.
 	if(mount(devname,pathext,fs,MS_NOATIME,NULL)){
-		diag("Couldn't mount %s at %s for %s (%s?)\n",devname,path,fs,strerror(errno));
+		diag("Couldn't mount %s at %s for %s (%s?)\n",devname,pathext,fs,strerror(errno));
 		free(fs);
 		return -1;
 	}
