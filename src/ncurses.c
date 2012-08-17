@@ -3489,6 +3489,27 @@ make_ptable(void){
 }
 
 static void
+confirm_callback(const char *conf){
+	locked_diag("%s FIXME",conf); // FIXME
+}
+
+static int
+confirm_operation(const char *op){
+	struct form_option ops_confirm[] = {
+		{
+			.option = "do it",
+			.desc = strdup(op),
+		},{
+			.option = "abort",
+			.desc = "do not perform the operation",
+		},
+	};
+	raise_form("confirm operation",confirm_callback,ops_confirm,
+		sizeof(ops_confirm) / sizeof(*ops_confirm),1);
+	return 0;
+}
+
+static void
 new_filesystem(void){
 	struct form_option *ops_fs;
 	int opcount,defidx;
