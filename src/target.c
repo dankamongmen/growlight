@@ -90,6 +90,10 @@ make_parent_directories(const char *path){
 	strcpy(dir,path);
 	next = dir;
 	while(*next && (next = strchr(next,'/')) ){
+		if(next == dir){
+			++next;
+			continue;
+		}
 		*next = '\0';
 		if(mkdir(dir,0775) && errno != EEXIST){
 			diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
