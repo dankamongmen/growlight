@@ -95,14 +95,14 @@ make_parent_directories(const char *path){
 			continue;
 		}
 		*next = '\0';
-		if(mkdir(dir,0775) && errno != EEXIST){
+		if(mkdir(dir,0755) && errno != EEXIST){
 			diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
 			return -1;
 		}
 		*next = '/';
 		++next;
 	}
-	if(mkdir(dir,0775) && errno != EEXIST){
+	if(mkdir(dir,0755) && errno != EEXIST){
 		diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
 		return -1;
 	}
@@ -159,7 +159,7 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 			return -1;
 		}
 		strcat(pathext,"/etc");
-		if(mkdir(pathext,0777) && errno != EEXIST){
+		if(mkdir(pathext,0755) && errno != EEXIST){
 			diag("Couldn't mkdir %s (%s?)\n",pathext,strerror(errno));
 			close(targfd);
 			targfd = -1;
@@ -184,7 +184,7 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 	}
 	// no need to check for preexisting mount at this point -- the mount(2)
 	// will fail if one's there.
-	if(mount(devname,path,fs,MS_NOATIME,NULL)){
+	if(mount(devname,pathext,fs,MS_NOATIME,NULL)){
 		diag("Couldn't mount %s at %s for %s (%s?)\n",devname,path,fs,strerror(errno));
 		free(fs);
 		return -1;

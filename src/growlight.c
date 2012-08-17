@@ -1869,10 +1869,16 @@ int prepare_uefi_boot(device *d){
 		diag("UEFI boots from GPT ESP partitions only\n");
 		return -1;
 	}
+	if(d->target == NULL){
+		diag("%s is not mapped as a target filesystem\n",d->name);
+		return -1;
+	}
 	// FIXME ensure kernel is in ESP
-	// FIXME prepare protective MBR
-	// FIXME install grub-efi to ESP
+	if(vspopen_drain("/usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s",
+				d->mnt,d->target->path,d->name)){
+		return -1;
+	}
 	// FIXME point grub-efi at kernel
-	diag("FIXME %s not yet implemented\n",d->name);
-	return -1;
+	// FIXME set boot flag
+	return 0;
 }
