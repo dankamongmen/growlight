@@ -9,6 +9,7 @@
 #include "popen.h"
 #include "growlight.h"
 
+#define REDIRECTERR " 2>&1"
 static char *
 sanitize_cmd(const char *cmd){
 	char *tmp,*san = NULL;
@@ -47,12 +48,12 @@ sanitize_cmd(const char *cmd){
 		len += conv;
 		cmd += conv;
 	}while(conv);
-	if((tmp = realloc(san,sizeof(*san) * (len + 1))) == NULL){
+	if((tmp = realloc(san,sizeof(*san) * (len + 1 + strlen(REDIRECTERR)))) == NULL){
 		free(san);
 		return NULL;
 	}
 	san = tmp;
-	san[len] = '\0';
+	strcpy(san + len,REDIRECTERR);
 	return san;
 }
 
@@ -63,6 +64,7 @@ int popen_drain(const char *cmd){
 	if((safecmd = sanitize_cmd(cmd)) == NULL){
 		return -1;
 	}
+	diag("Running \"%s\"...\n",safecmd);
 	if((fd = popen(safecmd,"re")) == NULL){
 		diag("Couldn't run %s (%s?)\n",safecmd,strerror(errno));
 		free(safecmd);
