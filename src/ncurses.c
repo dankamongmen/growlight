@@ -289,7 +289,7 @@ locked_vdiag(const char *fmt,va_list v){
 	if( (nl = strchr(statusmsg,'\n')) ){
 		*nl = '\0';
 	}
-	while( (nl = strchr(statusmsg,'\t')) ){
+	while( (nl = strchr(statusmsg,'\b')) || (nl = strchr(statusmsg,'\t')) ){
 		*nl = ' ';
 	}
 	draw_main_window(stdscr);
@@ -2892,6 +2892,9 @@ update_diags(struct panel_state *ps){
 		}
 		if( (c = strchr(tbuf,'\n')) ){
 			*c = '\0';
+		}
+		while( (c = strchr(tbuf,'\b')) ){
+			*c = ' ';
 		}
 		assert(mvwprintw(w,y - r,START_COL,"%s",tbuf) != ERR);
 		free(l[r].msg);
