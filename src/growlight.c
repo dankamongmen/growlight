@@ -934,8 +934,6 @@ create_new_device_inner(const char *name,int recurse){
 						unsigned long long flags;
 
 						flags = blkid_partition_get_flags(part);
-						// FIXME read these directly out of the PT header
-						// FIXME need find UEFI EPS partitions
 						if(strcmp(pttable,"gpt") == 0){
 							// FIXME verify bootable flag?
 						}else{
@@ -946,7 +944,6 @@ create_new_device_inner(const char *name,int recurse){
 								p->partdev.ptstate.extended = 1;
 							}
 							if(blkid_partition_is_primary(part)){
-								p->partdev.ptype = PARTROLE_PRIMARY;
 								d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
 							}
 						}
