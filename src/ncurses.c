@@ -3838,6 +3838,10 @@ static void
 mount_target(void){
 	blockobj *b;
 
+	if(!target_mode_p()){
+		locked_diag("Not in target mode");
+		return;
+	}
 	if((b = get_selected_blockobj()) == NULL){
 		locked_diag("Must select a filesystem to mount");
 		return;
