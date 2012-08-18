@@ -279,8 +279,18 @@ typedef struct pttable_type {
 
 // Supported partition table, partition, and filesystem types
 pttable_type *get_ptable_types(int *);
-pttable_type *get_fs_types(int *);
 void free_ptable_types(pttable_type *,int);
+
+pttable_type *get_fs_types(int *);
+
+// Supported aggregate types
+typedef struct aggregate_type {
+	char *name;
+	char *desc;
+	int mindisks;
+} aggregate_type;
+
+const aggregate_type *get_aggregate_types(int *);
 
 int make_partition_table(device *,const char *);
 
