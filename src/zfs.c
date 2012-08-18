@@ -291,7 +291,7 @@ int scan_zpools(const glightui *gui __attribute__ ((unused))){
 	return 0;
 }
 
-int destroy_zpool(device *d){
+int destroy_zpool(device *d __attribute__ ((unused))){
 	diag("No ZFS support in this build.\n");
 	return 0;
 }
