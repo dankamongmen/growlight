@@ -98,12 +98,12 @@ dos_set_code(device *d,unsigned long long code){
 }
 
 static uintmax_t
-first_generic(const device *d){
-	return d->physsec / d->logsec;
+first_dos(const device *d __attribute__ ((unused))){
+	return 1;
 }
 
 static uintmax_t
-last_generic(const device *d){
+last_dos(const device *d){
 	return d->logsec ? d->size / d->logsec : 0;
 }
 
@@ -149,8 +149,8 @@ static const struct ptable {
 		.uuid = NULL,
 		.flag = dos_set_flag,
 		.code = dos_set_code,
-		.first = first_generic,
-		.last = last_generic,
+		.first = first_dos,
+		.last = last_dos,
 	},
 	{ .name = NULL, }
 };
