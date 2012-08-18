@@ -1997,16 +1997,6 @@ detail_fs(WINDOW *hw,const device *d,int row){
 	}
 }
 
-static uintmax_t
-alignment(uintmax_t val){
-	uintmax_t a = 1;
-
-	do{
-		a <<= 1u;
-	}while(val % a == 0);
-	return a >> 1u;
-}
-
 static int
 update_details(WINDOW *hw){
 	const controller *c = get_current_adapter();
@@ -2076,7 +2066,7 @@ update_details(WINDOW *hw){
 		char buf[BPREFIXSTRLEN + 1];
 
 		if(b->zone->p){
-			bprefix(alignment(b->zone->fsector * d->logsec),1,align,sizeof(align),1);
+			bprefix(b->zone->p->partdev.alignment,1,align,sizeof(align),1);
 			switch(b->zone->p->layout){
 			case LAYOUT_NONE:
 			case LAYOUT_MDADM:
@@ -2103,6 +2093,9 @@ update_details(WINDOW *hw){
 			break;
 			}
 		}else{
+			// FIXME print alignment for unpartitioned space as well,
+			// but not until we implement zones in core (bug 252)
+			// or we'll need recreate alignment() etc here
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u %s ",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
