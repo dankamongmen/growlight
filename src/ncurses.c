@@ -3063,7 +3063,8 @@ env_details(WINDOW *hw,int rows){
 
 static void
 print_mount(WINDOW *w,int *row,int both,const device *d){
-	char buf[PREFIXSTRLEN + 1];
+	char buf[PREFIXSTRLEN + 1],b[256];
+	int cols = getmaxx(w),r;
 
 	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
@@ -3076,27 +3077,34 @@ print_mount(WINDOW *w,int *row,int both,const device *d){
 		return;
 	}
 	wattroff(w,A_BOLD);
-	// FIXME need limit the length here!
-	mvwprintw(w,*row,START_COL," %s %s",d->mnt,d->mntops);
+	if((r = snprintf(b,sizeof(b)," %s %s",d->mnt,d->mntops)) >= (int)sizeof(b)){
+		b[sizeof(b) - 1] = '\0';
+	}
+	mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
 	wattron(w,A_BOLD);
 	++*row;
 }
 
 static void
 print_target(WINDOW *w,const device *d,int *row,int both,const mntentry *m){
+	char buf[PREFIXSTRLEN + 1],b[256]; // FIXME uhhhh
+	int cols = getmaxx(w),r;
+
 	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
 			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
 			d->mnttype,
 			m->uuid ? m->uuid : "n/a",
-			"-1", // FIXME
+			qprefix(d->mntsize,1,buf,sizeof(buf),0),
 			m->dev);
 	++*row;
 	if(!both){
 		return;
 	}
 	wattroff(w,A_BOLD);
-	// FIXME need limit the length here!
-	mvwprintw(w,*row,START_COL," %s %s",m->path,m->ops);
+	if((r = snprintf(b,sizeof(b)," %s %s",m->path,m->ops)) >= (int)sizeof(b)){
+		b[sizeof(b) - 1] = '\0';
+	}
+	mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
 	wattron(w,A_BOLD);
 	++*row;
 }
