@@ -3421,7 +3421,7 @@ liberate_disk(void){
 
 static int
 approvedp(const char *op){
-	if(strcasecmp(op,"yes") == 0){
+	if(strcasecmp(op,"do it") == 0){
 		return 1;
 	}
 	return 0;
@@ -3643,6 +3643,29 @@ fsck_partition(void){
 }
 
 static void
+delete_partition_confirm(const char *op){
+	if(op && approvedp(op)){
+		blockobj *b;
+
+		if((b = get_selected_blockobj()) == NULL){
+			locked_diag("Partition deletion requires selection of a partition");
+			return;
+		}
+		if(b->zone == NULL){
+			locked_diag("Media is not loaded on %s",b->d->name);
+			return;
+		}
+		if(b->zone->p == NULL){
+			locked_diag("Space is already unpartitioned");
+			return;
+		}
+		wipe_partition(b->zone->p);
+		return;
+	}
+	locked_diag("partition deletion was cancelled");
+}
+
+static void
 delete_partition(void){
 	blockobj *b;
 
@@ -3657,14 +3680,8 @@ delete_partition(void){
 	if(b->zone->p == NULL){
 		locked_diag("Space is already unpartitioned");
 		return;
-	}else if(b->zone->p->layout == LAYOUT_NONE){
-		locked_diag("No partition table exists on %s",b->d->name);
-		return;
-	}else if(b->zone->p->layout == LAYOUT_PARTITION){
-		wipe_partition(b->zone->p);
-		return;
 	}
-	// FIXME do stuff for mdadm, dm, zpool?
+	confirm_operation("delete the partition",delete_partition_confirm);
 }
 
 static void
