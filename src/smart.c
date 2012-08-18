@@ -53,8 +53,8 @@ int probe_smart(device *d){
 		d->blkdev.smartgood = SMART_NOSUPPORT;
 	}
 	if(sk_disk_smart_get_temperature(sk,&kelvin) == 0){
-		verbf("Disk (%s) temperature: %ju\n",d->name,(uintmax_t)kelvin);
-		d->blkdev.celsius = kelvin / 10000;
+		d->blkdev.celsius = (kelvin - 273150) / 1000;
+		verbf("Disk (%s) temperature: %ju\n",d->name,d->blkdev.celsius);
 	}
 	sk_disk_free(sk);
 	return 0;
