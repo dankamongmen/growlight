@@ -9,6 +9,7 @@
 
 #include "fs.h"
 #include "mbr.h"
+#include "zfs.h"
 #include "mdadm.h"
 #include "config.h"
 #include "health.h"
@@ -4230,7 +4231,7 @@ destroy_aggregate_confirm(const char *op){
 		return;
 	}
 	if(b->d->layout == LAYOUT_ZPOOL){
-		locked_diag("Not yet implemented FIXME"); // FIXME
+		destroy_zpool(b->d);
 	}else if(b->d->layout == LAYOUT_MDADM){
 		destroy_mdadm(b->d);
 	}else if(b->d->layout == LAYOUT_DM){
