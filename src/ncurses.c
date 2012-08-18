@@ -961,6 +961,9 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
 	if((ull = strtoull(psects,&el,0)) == ULLONG_MAX && errno == ERANGE){
 		return -1;
 	}
+	if(el == psects){
+		return -1;
+	}
 	if(*el){
 		if(el[1]){
 			return -1;
@@ -1017,7 +1020,7 @@ psectors_callback(const char *psects){
 	}
 	pending_spec = strdup(psects);
 	if(lex_part_spec(psects,b->zone,b->d->logsec,&fsect,&lsect)){
-		locked_diag("Not a valid partition spec: %s\n",psects);
+		locked_diag("Not a valid partition spec: \"%s\"\n",psects);
 		raise_str_form("enter partition spec",psectors_callback,psects);
 		return;
 	}
@@ -3973,11 +3976,17 @@ handle_actform_string_input(int ch){
 
 	cb = actform->fxn;
 	switch(ch){
-	case 12: // CTRL+L FIXME
+	case 12: // CTRL+L, redraw screen FIXME
 		pthread_mutex_lock(&bfl);
 		wrefresh(curscr);
 		screen_update();
 		pthread_mutex_unlock(&bfl);
+		break;
+	case 21: // CTRL+u, clear input line FIXME
+		pthread_mutex_lock(&bfl);
+		fs->inp.buffer[0] = '\0';
+		form_string_options(fs);
+		unlock_ncurses();
 		break;
 	case '\r': case '\n': case KEY_ENTER:{
 		char *str;
@@ -3989,7 +3998,7 @@ handle_actform_string_input(int ch){
 		curs_set(0);
 		cb(str);
 		free(str);
-		pthread_mutex_unlock(&bfl);
+		unlock_ncurses();
 		break;
 	}case KEY_ESC:{
 		pthread_mutex_lock(&bfl);
@@ -3997,16 +4006,15 @@ handle_actform_string_input(int ch){
 		actform = NULL;
 		curs_set(0);
 		cb(NULL);
-		pthread_mutex_unlock(&bfl);
+		unlock_ncurses();
 		break;
 	}case KEY_BACKSPACE:{
 		pthread_mutex_lock(&bfl);
 		if(strlen(fs->inp.buffer)){
 			fs->inp.buffer[strlen(fs->inp.buffer) - 1] = '\0';
 			form_string_options(fs);
-			screen_update();
 		}
-		pthread_mutex_unlock(&bfl);
+		unlock_ncurses();
 		break;
 	}default:{
 		char *tmp;
@@ -4024,8 +4032,7 @@ handle_actform_string_input(int ch){
 		fs->inp.buffer[strlen(fs->inp.buffer) + 1] = '\0';
 		fs->inp.buffer[strlen(fs->inp.buffer)] = (unsigned char)ch;
 		form_string_options(fs);
-		screen_update();
-		pthread_mutex_unlock(&bfl);
+		unlock_ncurses();
 	} }
 }
 
