@@ -1097,6 +1097,21 @@ pttype_callback(const char *pttype){
 // -------------------------------------------------------------------------
 // -- end partition table type form
 // -------------------------------------------------------------------------
+static int
+confirm_operation(const char *op,void (*confirmcb)(const char *)){
+	struct form_option *ops_confirm;
+
+	if((ops_confirm = malloc(sizeof(*ops_confirm) * 2)) == NULL){
+		return -1;
+	}
+	ops_confirm[0].option = strdup("do it");
+	ops_confirm[0].desc = strdup(op);
+	ops_confirm[1].option = strdup("abort");
+	ops_confirm[1].desc = strdup("do not perform the operation");
+	// FIXME check values
+	raise_form("confirm operation",confirmcb,ops_confirm,2,1);
+	return 0;
+}
 // -------------------------------------------------------------------------
 // -- end form API
 // -------------------------------------------------------------------------
@@ -3404,6 +3419,33 @@ liberate_disk(void){
 	// FIXME liberate it
 }
 
+static int
+approvedp(const char *op){
+	if(strcasecmp(op,"yes") == 0){
+		return 1;
+	}
+	return 0;
+}
+
+static void
+remove_ptable_confirm(const char *op){
+	if(op && approvedp(op)){
+		blockobj *b;
+
+		if((b = get_selected_blockobj()) == NULL){
+			locked_diag("Partition table removal requires selection of a block device");
+			return;
+		}
+		if(b->d->layout != LAYOUT_NONE){
+			locked_diag("Not a partitionable block device");
+			return;
+		}
+		wipe_ptable(b->d,NULL);
+		return;
+	}
+	locked_diag("partition table removal was cancelled");
+}
+
 static void
 remove_ptable(void){
 	blockobj *b;
@@ -3416,7 +3458,7 @@ remove_ptable(void){
 		locked_diag("Not a partitionable block device");
 		return;
 	}
-	wipe_ptable(b->d,NULL);
+	confirm_operation("remove the partition table",remove_ptable_confirm);
 }
 
 static struct form_option *
@@ -3486,27 +3528,6 @@ make_ptable(void){
 		return;
 	}
 	raise_form("select a table type",pttype_callback,ops_ptype,opcount,-1);
-}
-
-static void
-confirm_callback(const char *conf){
-	locked_diag("%s FIXME",conf); // FIXME
-}
-
-static int
-confirm_operation(const char *op){
-	struct form_option ops_confirm[] = {
-		{
-			.option = "do it",
-			.desc = strdup(op),
-		},{
-			.option = "abort",
-			.desc = "do not perform the operation",
-		},
-	};
-	raise_form("confirm operation",confirm_callback,ops_confirm,
-		sizeof(ops_confirm) / sizeof(*ops_confirm),1);
-	return 0;
 }
 
 static void
