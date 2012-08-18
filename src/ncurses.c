@@ -1542,6 +1542,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}else{ // device is not selected
 				assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
 			}
+			/*if(z->p->partdev.alignment < d->physsec){
+				assert(wattrset(w,A_BOLD|COLOR_PAIR(BORDER_COLOR)) == OK);
+			}*/
 			rep = PNUMFIXME++;
 		}
 		mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),rep);
@@ -2060,7 +2063,8 @@ update_details(WINDOW *hw){
 					d->logsec,d->physsec,
 					d->size / (d->logsec ? d->logsec : 1));
 	}
-	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
+	mvwprintw(hw,5,START_COL,"Partitioning: %s I/O scheduler: %s",
+			d->blkdev.pttable ? d->blkdev.pttable : NULL,d->sched);
 	if(b->zone){
 		char align[BPREFIXSTRLEN + 1];
 		char buf[BPREFIXSTRLEN + 1];
@@ -2805,9 +2809,9 @@ use_next_device(void){
 // Only one can currently be active at a time. Window decoration and placement
 // is managed here; only the rows needed for display ought be provided.
 static int
-new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar_t *hstr){
-	const wchar_t crightstr[] = L"http://nick-black.com/dankwiki/index.php/Growlight";
-	const int crightlen = wcslen(crightstr);
+new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
+			const wchar_t *hstr,const wchar_t *bstr){
+	const int crightlen = bstr ? wcslen(bstr) : 0;
 	int ybelow,yabove;
 	WINDOW *psw;
 	int x,y;
@@ -2830,7 +2834,6 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 	}else{
 		yabove += y - (rows + ybelow + yabove);
 	}
-	assert((x >= crightlen + START_COL * 2));
 	// Six up from the bottom, so it looks good with our logo in the
 	// installer, heh
 	if((psw = newwin(rows + 2,cols,yabove,x - cols)) == NULL){
@@ -2851,7 +2854,9 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,const wchar
 	assert(wattroff(psw,A_BOLD) != ERR);
 	assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
 	assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
-	assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),crightstr) != ERR);
+	if(bstr){
+		assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),bstr) != ERR);
+	}
 	return OK;
 }
 
@@ -2933,7 +2938,7 @@ update_diags(struct panel_state *ps){
 static int
 display_diags(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics")){
+	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics",NULL)){
 		goto err;
 	}
 	if(update_diags(ps)){
@@ -2958,7 +2963,7 @@ static const int DETAILROWS = 7; // FIXME make it dynamic based on selections
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details")){
+	if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details",NULL)){
 		goto err;
 	}
 	if(current_adapter){
@@ -2996,7 +3001,8 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 	}
 	helpcols += 4; // spacing + borders
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help")){
+	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help",
+			L"http://nick-black.com/dankwiki/index.php/Growlight")){
 		goto err;
 	}
 	if(helpstrs(panel_window(ps->p),1)){
@@ -3189,7 +3195,7 @@ map_details(WINDOW *hw){
 static int
 display_enviroment(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display")){
+	if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display",NULL)){
 		goto err;
 	}
 	if(env_details(panel_window(ps->p),ps->ysize)){
@@ -3215,7 +3221,7 @@ display_maps(WINDOW *mainw,struct panel_state *ps){
 	unsigned rows = getmaxy(mainw) - 15;
 
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display")){
+	if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display",NULL)){
 		goto err;
 	}
 	if(map_details(panel_window(ps->p))){
