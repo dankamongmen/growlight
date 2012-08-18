@@ -173,6 +173,8 @@ typedef struct device {
 			unsigned ptype;		// see ptypes.h
 			struct device *parent;
 			uint64_t fsector,lsector;	// Inclusive, logical
+			uintmax_t alignment;	/* alignment of partition
+						 (largest 2^n dividing size) */
 		} partdev;
 		struct {
 			transport_e transport;

@@ -435,6 +435,16 @@ free_devtable(devtable *dt){
 	}
 }
 
+static uintmax_t
+alignment(uintmax_t val){
+	uintmax_t a = 1;
+
+	do{
+		a <<= 1u;
+	}while(val % a == 0);
+	return a >> 1u;
+}
+
 static device *
 add_partition_inner(device *d,const char *name,dev_t devno,unsigned pnum,
 				uint64_t fsect,uintmax_t sz){
@@ -997,6 +1007,7 @@ create_new_device_inner(const char *name,int recurse){
 			p->logsec = d->logsec;
 			p->physsec = d->physsec;
 			p->size *= p->logsec;
+			p->partdev.alignment = alignment(p->partdev.fsector * p->logsec);
 		}
 		if(d->layout == LAYOUT_NONE){
 			d->blkdev.first_usable = lookup_first_usable_sector(d);
