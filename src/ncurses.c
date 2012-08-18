@@ -3076,6 +3076,7 @@ print_mount(WINDOW *w,int *row,int both,const device *d){
 		return;
 	}
 	wattroff(w,A_BOLD);
+	// FIXME need limit the length here!
 	mvwprintw(w,*row,START_COL," %s %s",d->mnt,d->mntops);
 	wattron(w,A_BOLD);
 	++*row;
@@ -3094,6 +3095,7 @@ print_target(WINDOW *w,const device *d,int *row,int both,const mntentry *m){
 		return;
 	}
 	wattroff(w,A_BOLD);
+	// FIXME need limit the length here!
 	mvwprintw(w,*row,START_COL," %s %s",m->path,m->ops);
 	wattron(w,A_BOLD);
 	++*row;
