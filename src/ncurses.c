@@ -1997,6 +1997,16 @@ detail_fs(WINDOW *hw,const device *d,int row){
 	}
 }
 
+static uintmax_t
+alignment(uintmax_t val){
+	uintmax_t a = 1;
+
+	do{
+		a <<= 1u;
+	}while(val % a == 0);
+	return a >> 1u;
+}
+
 static int
 update_details(WINDOW *hw){
 	const controller *c = get_current_adapter();
@@ -2062,34 +2072,38 @@ update_details(WINDOW *hw){
 	}
 	mvwprintw(hw,5,START_COL,"I/O scheduler: %s",d->sched);
 	if(b->zone){
+		char align[BPREFIXSTRLEN + 1];
 		char buf[BPREFIXSTRLEN + 1];
 
 		if(b->zone->p){
+			bprefix(alignment(b->zone->fsector * d->logsec),1,align,sizeof(align),1);
 			switch(b->zone->p->layout){
 			case LAYOUT_NONE:
 			case LAYOUT_MDADM:
 			case LAYOUT_ZPOOL:
 			case LAYOUT_DM:
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u: %s",
+			// FIXME limit length!
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u %s %sB align",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
-					b->zone->p->name);
+					b->zone->p->name,align);
 			detail_fs(hw,b->zone->p,7);
 			break;
 			case LAYOUT_PARTITION:
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B P%02x LBA %u→%u: %s (%ls) type %04x",
+			// FIXME limit length!
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B P%02x LBA %u→%u %s (%ls) type %04x %sB align",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->p->partdev.pnumber,
 					b->zone->fsector,b->zone->lsector,
 					b->zone->p->name,
 					b->zone->p->partdev.pname ?
 					 b->zone->p->partdev.pname :
-					 L"unnamed",b->zone->p->partdev.ptype);
+					 L"unnamed",b->zone->p->partdev.ptype,align);
 			detail_fs(hw,b->zone->p,7);
 			break;
 			}
 		}else{
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u: %s",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u %s ",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
 					b->zone->rep == L'P' ? "partition table metadata" :
