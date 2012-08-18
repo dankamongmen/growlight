@@ -197,6 +197,7 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 	}
 	free(d->mnttype);
 	d->mnttype = fs;
+	d->target = m;
 	return 0;
 }
 
