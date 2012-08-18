@@ -180,11 +180,7 @@ static const struct fs {
 	},
 	{
 		.name = "sysv",
-		.desc = "System V Filesystem (S5FS)",
-	},
-	{
-		.name = "xenix",
-		.desc = "XENIX Filesystem (XENIX default)",
+		.desc = "System V Filesystem (S5FS) (XENIX default)",
 	},
 	{
 		.name = "ntfs",
