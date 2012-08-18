@@ -11,6 +11,32 @@
 #include "growlight.h"
 
 static int
+jfs_mkfs(const char *dev,const char *name){
+	// allow -c (badblock check) FIXME
+	if(name == NULL){
+		name = "SprezzaJFS";
+	}
+	// FIXME what about external journals?
+	if(vspopen_drain("mkfs.jfs -L %s %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
+xfs_mkfs(const char *dev,const char *name){
+	// allow -c (badblock check) FIXME
+	if(name == NULL){
+		name = "SprezzaXFS";
+	}
+	// FIXME set -s to the physical sector size
+	if(vspopen_drain("mkfs.xfs -f -L %s %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 vfat_mkfs(const char *dev,const char *name){
 	// allow -c (badblock check) FIXME
 	if(name == NULL){
@@ -103,6 +129,7 @@ static const struct fs {
 	{
 		.name = "xfs",
 		.desc = "SGI's XFS (IRIX default)",
+		.mkfs = xfs_mkfs,
 		.namemax = 12,
 		.nameparam = 'L',
 	},
@@ -146,6 +173,7 @@ static const struct fs {
 	{
 		.name = "jfs",
 		.desc = "IBM's Journaled Filesystem (AIX JFS2)",
+		.mkfs = jfs_mkfs,
 		.nameparam = 'L',
 	},
 	{
