@@ -30,7 +30,7 @@ xfs_mkfs(const char *dev,const char *name){
 		name = "SprezzaXFS";
 	}
 	// FIXME set -s to the physical sector size
-	if(vspopen_drain("mkfs.xfs -f -L %s %s",name,dev)){
+	if(vspopen_drain("mkfs.xfs -L %s %s",name,dev)){
 		return -1;
 	}
 	return 0;
