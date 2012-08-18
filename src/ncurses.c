@@ -1542,9 +1542,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}else{ // device is not selected
 				assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
 			}
-			/*if(z->p->partdev.alignment < d->physsec){
-				assert(wattrset(w,A_BOLD|COLOR_PAIR(BORDER_COLOR)) == OK);
-			}*/
+			if(z->p->partdev.alignment < d->physsec){ // misaligned!
+				assert(wattrset(w,A_BOLD|COLOR_PAIR(RED_COLOR)) == OK);
+			}
 			rep = PNUMFIXME++;
 		}
 		mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),rep);
