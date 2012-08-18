@@ -259,9 +259,22 @@ int print_zfs_version(FILE *fp){
 	return fprintf(fp,"LLNL ZoL: ZPL version %s, SPA version %s\n",
 			ZPL_VERSION_STRING,SPA_VERSION_STRING);
 }
+
+int destroy_zpool(device *d){
+	if(d == NULL){
+		diag("Passed a NULL zpool\n");
+		return -1;
+	}
+	if(d->layout != LAYOUT_ZPOOL){
+		diag("%s is not a zpool\n",d->name);
+		return -1;
+	}
+	diag("Not yet implemented FIXME\n"); // FIXME
+	return -1;
+}
 #else
 int init_zfs_support(const glightui *gui __attribute__ ((unused))){
-	verbf("No ZFS support in this build.\n");
+	diag("No ZFS support in this build.\n");
 	return 0;
 }
 
@@ -275,6 +288,11 @@ int print_zfs_version(FILE *fp){
 
 int scan_zpools(const glightui *gui __attribute__ ((unused))){
 	verbf("No ZFS support in this build.\n");
+	return 0;
+}
+
+int destroy_zpool(device *d){
+	diag("No ZFS support in this build.\n");
 	return 0;
 }
 #endif

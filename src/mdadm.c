@@ -8,6 +8,7 @@
 
 #include "sysfs.h"
 #include "mdadm.h"
+#include "popen.h"
 #include "growlight.h"
 
 int explore_md_sysfs(device *d,int dirfd){
@@ -108,6 +109,21 @@ int explore_md_sysfs(device *d,int dirfd){
 				diag("Unknown layout %d on %s\n",subd->layout,subd->name);
 				break;
 		}
+	}
+	return 0;
+}
+
+int destroy_mdadm(device *d){
+	if(d == NULL){
+		diag("Passed a NULL device\n");
+		return -1;
+	}
+	if(d->layout != LAYOUT_MDADM){
+		diag("%s is not an MD device\n",d->name);
+		return -1;
+	}
+	if(vspopen_drain("mdadm --misc %s --stop",d->name)){
+		return -1;
 	}
 	return 0;
 }

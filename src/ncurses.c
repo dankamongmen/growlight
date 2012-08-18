@@ -9,6 +9,7 @@
 
 #include "fs.h"
 #include "mbr.h"
+#include "mdadm.h"
 #include "config.h"
 #include "health.h"
 #include "ptable.h"
@@ -4133,8 +4134,45 @@ create_aggregate(void){
 }
 
 static void
+destroy_aggregate_confirm(const char *op){
+	blockobj *b;
+
+	if(!op || !approvedp(op)){
+		locked_diag("aggregate destruction was cancelled");
+		return;
+	}
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Aggregate destruction requires selection of an aggregate");
+		return;
+	}
+	if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
+		locked_diag("%s is not an aggregate",b->d->name);
+		return;
+	}
+	if(b->d->layout == LAYOUT_ZPOOL){
+		locked_diag("Not yet implemented FIXME"); // FIXME
+	}else if(b->d->layout == LAYOUT_MDADM){
+		destroy_mdadm(b->d);
+	}else if(b->d->layout == LAYOUT_DM){
+		locked_diag("Not yet implemented FIXME"); // FIXME
+	}else{
+		locked_diag("Unknown layout type %d on %s",b->d->layout,b->d->name);
+	}
+}
+
+static void
 destroy_aggregate(void){
-	locked_diag("Not yet implemented FIXME"); // FIXME
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Aggregate destruction requires selection of an aggregate");
+		return;
+	}
+	if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
+		locked_diag("%s is not an aggregate",b->d->name);
+		return;
+	}
+	confirm_operation("destroy the aggregate",destroy_aggregate_confirm);
 }
 
 static void
