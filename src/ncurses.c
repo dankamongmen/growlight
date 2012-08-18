@@ -3558,6 +3558,32 @@ new_filesystem(void){
 }
 
 static void
+kill_filesystem_confirm(const char *op){
+	if(op && approvedp(op)){
+		blockobj *b;
+
+		if((b = get_selected_blockobj()) == NULL){
+			locked_diag("Filesystem wipe requires a selected block device");
+			return;
+		}
+		if(b->zone == NULL){
+			locked_diag("Media is not loaded on %s",b->d->name);
+			return;
+		}
+		if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+			locked_diag("Filesystems cannot be wiped from empty space");
+			return;
+		}
+		if(b->zone->p){
+			wipe_filesystem(b->zone->p);
+		}else{
+			wipe_filesystem(b->d);
+		}
+	}
+	locked_diag("filesystem wipe was cancelled");
+}
+
+static void
 kill_filesystem(void){
 	blockobj *b;
 
@@ -3573,11 +3599,7 @@ kill_filesystem(void){
 		locked_diag("Filesystems cannot be wiped from empty space");
 		return;
 	}
-	if(b->zone->p){
-		wipe_filesystem(b->zone->p);
-	}else{
-		wipe_filesystem(b->d);
-	}
+	confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
 }
 
 static void
