@@ -701,6 +701,7 @@ destroy_fs_forms(void){
 static void
 fs_do(const char *name){
 	blockobj *b;
+	int r;
 
 	if(!current_adapter || !(b = current_adapter->selected)){
 		locked_diag("Lost selection while targeting");
@@ -708,18 +709,18 @@ fs_do(const char *name){
 		return;
 	}
 	if(b->zone == NULL){
-		make_filesystem(b->d,pending_fstype,name);
-		destroy_fs_forms();
-		return;
+		r = make_filesystem(b->d,pending_fstype,name);
 	}else if(b->zone->p->layout != LAYOUT_PARTITION){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		destroy_fs_forms();
 		return;
 	}else{
-		make_filesystem(b->zone->p,pending_fstype,name);
-		destroy_fs_forms();
-		return;
+		r = make_filesystem(b->zone->p,pending_fstype,name);
 	}
+	if(r == 0){
+		locked_diag("Successfully created %s filesystem",pending_fstype);
+	}
+	destroy_fs_forms();
 }
 
 static void
@@ -3894,10 +3895,8 @@ biosboot(void){
 		locked_diag("Block device %s is not a target",d->name);
 		return -1;
 	}
-	if(strcmp(d->target->path,"/")){
-		locked_diag("Block device %s targets %s",d->name,d->target->path);
-		return -1;
 	}
+	// Do not enforce a check against the path for '/'; it can be in /boot
 	if(prepare_bios_boot(d)){
 		return -1;
 	}
@@ -3938,10 +3937,7 @@ uefiboot(void){
 		locked_diag("Block device %s is not a target",d->name);
 		return -1;
 	}
-	if(strcmp(d->target->path,"/")){
-		locked_diag("Block device %s targets %s",d->name,d->target->path);
-		return -1;
-	}
+	// Do not enforce a check against the path for '/'; it can be in /boot
 	if(prepare_uefi_boot(d)){
 		return -1;
 	}
@@ -4885,7 +4881,7 @@ block_free(void *cv,void *bv){
 		recompute_selection(as,old,oldrows,getmaxy(rb->win));
 		redraw_adapter(as->rb);
 	}
-	unlock_ncurses(&bfl);
+	unlock_ncurses();
 }
 
 static void
