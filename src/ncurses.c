@@ -3466,7 +3466,11 @@ remove_ptable_confirm(const char *op){
 			return;
 		}
 		if(b->d->layout != LAYOUT_NONE){
-			locked_diag("Not a partitionable block device");
+			locked_diag("%s is not partitionable",b->d->name);
+			return;
+		}
+		if(b->d->blkdev.pttable == NULL){
+			locked_diag("%s has no partition table",b->d->name);
 			return;
 		}
 		wipe_ptable(b->d,NULL);
@@ -3484,7 +3488,11 @@ remove_ptable(void){
 		return;
 	}
 	if(b->d->layout != LAYOUT_NONE){
-		locked_diag("Not a partitionable block device");
+		locked_diag("%s is not partitionable",b->d->name);
+		return;
+	}
+	if(b->d->blkdev.pttable == NULL){
+		locked_diag("%s has no partition table",b->d->name);
 		return;
 	}
 	confirm_operation("remove the partition table",remove_ptable_confirm);
