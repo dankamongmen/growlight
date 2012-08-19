@@ -4884,9 +4884,8 @@ block_free(void *cv,void *bv){
 		resize_adapter(as->rb);
 		recompute_selection(as,old,oldrows,getmaxy(rb->win));
 		redraw_adapter(as->rb);
-		screen_update();
 	}
-	pthread_mutex_unlock(&bfl);
+	unlock_ncurses(&bfl);
 }
 
 static void
@@ -4941,7 +4940,6 @@ adapter_free(void *cv){
 				pull_adapters_up(NULL,scrrows,scrcols,ts);
 			}
 		}
-		screen_update();
 		free_reelbox(rb);
 	}else{
 		as->next->prev = as->prev;
@@ -4950,7 +4948,7 @@ adapter_free(void *cv){
 	free_adapter_state(as); // clears subentries
 	--count_adapters;
 	draw_main_window(stdscr); // Update the device count
-	pthread_mutex_unlock(&bfl);
+	unlock_ncurses();
 }
 
 static void
