@@ -957,6 +957,12 @@ create_new_device_inner(const char *name,int recurse){
 								d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
 							}
 						}
+						p->partdev.flags = flags;
+						if(probe_blkid_superblock(p->name,NULL,p)){
+							clobber_device(d);
+							blkid_free_probe(pr);
+							return NULL;
+						}
 // BIOS boot flag byte ought not be set to anything but 0 unless we're on a
 // primary partition and doing BIOS+MBR booting, in which case it must be 0x80.
 						if((flags & 0xff) != 0){
@@ -965,12 +971,6 @@ create_new_device_inner(const char *name,int recurse){
 								diag("Warning: BIOS+MBR boot byte was %02llx on %s (0x%u)\n",
 										flags & 0xffu,p->name,p->partdev.ptype);
 							}
-						}
-						p->partdev.flags = flags;
-						if(probe_blkid_superblock(p->name,NULL,p)){
-							clobber_device(d);
-							blkid_free_probe(pr);
-							return NULL;
 						}
 					}
 				}
