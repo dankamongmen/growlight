@@ -3895,7 +3895,6 @@ biosboot(void){
 		locked_diag("Block device %s is not a target",d->name);
 		return -1;
 	}
-	}
 	// Do not enforce a check against the path for '/'; it can be in /boot
 	if(prepare_bios_boot(d)){
 		return -1;
