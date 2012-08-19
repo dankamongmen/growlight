@@ -136,8 +136,7 @@ static const struct ptable {
 		.code = code_gpt,
 		.first = first_gpt,
 		.last = last_gpt,
-	},
-	{
+	}, {
 		.name = "dos",
 		.desc = "IBMPC (DOS) / Master Boot Record",
 		.make = dos_make_table,
