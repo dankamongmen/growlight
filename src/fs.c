@@ -430,18 +430,8 @@ int wipe_filesystem(device *d){
 		diag("No filesystem on %s\n",d->name);
 		return -1;
 	}
-	if(strcmp(d->mnttype,d->target->fs) == 0 || !d->target->fs){
-		if(vspopen_drain("wipefs -t %s %s",d->mnttype,d->name)){
-			return -1;
-		}
-	}else if(!d->mnttype){
-		if(vspopen_drain("wipefs -t %s %s",d->target->fs,d->name)){
-			return -1;
-		}
-	}else{
-		if(vspopen_drain("wipefs -t %s,%s %s",d->target->fs,d->mnttype,d->name)){
-			return -1;
-		}
+	if(vspopen_drain("wipefs -t %s %s",d->mnttype,d->name)){
+		return -1;
 	}
 	// FIXME update fs/mnttype?
 	return 0;
