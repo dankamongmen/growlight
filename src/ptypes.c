@@ -1,11 +1,12 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include "ptypes.h"
 #include "growlight.h"
 
 const ptype ptypes[] = {
 	{
 		.code = 0x0005,
-		.name = "MBR Extended",
+		.name = "DOS extended",
 		.gpt_guid = {0},
 		.mbr_code = 0x5,
 	}, {
@@ -39,6 +40,11 @@ const ptype ptypes[] = {
 		.gpt_guid = {0},
 		.mbr_code = 0x0e,
 	}, {
+		.code = 0x0085,
+		.name = "Linux extended",
+		.gpt_guid = {0},
+		.mbr_code = 0x85,
+	}, {
 		.code = 0x00a6,
 		.name = "OpenBSD",
 		.gpt_guid = {0},
@@ -48,6 +54,11 @@ const ptype ptypes[] = {
 		.name = "MBR Protective",
 		.gpt_guid = {0},
 		.mbr_code = 0xee,
+	}, {
+		.code = 0x00ef,
+		.name = "EFI FAT",
+		.gpt_guid = {0},
+		.mbr_code = 0xef,
 	}, {
 		.code = 0x0700,
 		.name = "Microsoft basic data",
@@ -324,7 +335,7 @@ const ptype ptypes[] = {
 		" 2  XENIX root      39  Plan 9          c4  DRDOS/2 smFAT16 \n"
 		" 3  XENIX usr       3c  PMagic recovery c6  DRDOS/2 FAT16   \n"
 		" 4  Small FAT16     40  Venix 80286     84  OS/2 hidden C:  c7  Syrinx          \n"
-		" 41  PPC PReP Boot   85  Linux extended  da  Non-FS data     \n"
+		" 41  PPC PReP Boot   da  Non-FS data     \n"
 		" 42  SFS             86  NTFS volume set db  CP/M / CTOS     \n"
 		" 7  HPFS/NTFS       4d  QNX4.x          87  NTFS volume set de  Dell Utility    \n"
 		" 4e  QNX4.x 2nd part 88  Linux plaintext df  BootIt          \n"
@@ -333,7 +344,7 @@ const ptype ptypes[] = {
 		" 51  OnTrackDM6 Aux1 94  Amoeba BBT      e4  SpeedStor       \n"
 		" 52  CP/M            9f  BSD/OS          eb  BeOS fs         \n"
 		" 53  OnTrackDM6 Aux3 a0  Thinkpad hib    \n"
-		" f  Extended LBA    54  OnTrack DM6     ef  EFI FAT         \n"
+		" f  Extended LBA    54  OnTrack DM6     \n"
 		" 10 OPUS            55  EZ Drive        f0  Lnx/PA-RISC bt  \n"
 		" 11 Hidden FAT12    56  Golden Bow      a7  NeXTSTEP        f1  SpeedStor       \n"
 		" 12 Compaq diag     5c  Priam Edisk     f2  DOS secondary   \n"
@@ -398,8 +409,15 @@ int ptype_supported(const char *pttype,const ptype *pt){
 }
 
 unsigned get_str_code(const char *str){
+	unsigned long ul;
 	const ptype *pt;
+	char *e;
 
+	// libblkid (currently) uses "0x%2x" as a format specifier. by using
+	// strtoul, we ought be fairly future-proof.
+	if((ul = strtoul(str,&e,0)) > 0xff){
+		ul = 0;
+	}
 	for(pt = ptypes ; pt->name ; ++pt){
 		char tstr[GUIDSTRLEN + 1];
 
@@ -407,8 +425,7 @@ unsigned get_str_code(const char *str){
 		if(strcmp(tstr,str) == 0){
 			return pt->code;
 		}
-		sprintf(tstr,"%02x",pt->mbr_code);
-		if(strcmp(tstr,str) == 0){
+		if(ul && ul == pt->mbr_code){
 			return pt->code;
 		}
 	}
