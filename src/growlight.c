@@ -962,11 +962,8 @@ create_new_device_inner(const char *name,int recurse){
 						if((flags & 0xff) != 0){
 							if(p->partdev.ptype != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)
 									|| p->partdev.ptstate.logical || p->partdev.ptstate.extended){
-								diag("Warning: BIOS+MBR boot byte was %02llx on %s\n",
-										flags & 0xffu,p->name);
-								clobber_device(d);
-								blkid_free_probe(pr);
-								return NULL;
+								diag("Warning: BIOS+MBR boot byte was %02llx on %s (0x%u)\n",
+										flags & 0xffu,p->name,p->partdev.ptype);
 							}
 						}
 						p->partdev.flags = flags;
