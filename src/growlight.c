@@ -1862,10 +1862,10 @@ int prepare_bios_boot(device *d){
 		// FIXME restore this once we can set flags in UI!
 		// FIXME return -1;
 	}
-	if(vspopen_drain("chroot %s apt-get install -y grub-pc",growlight_target)){
+	if(vvtopen_drain("chroot %s apt-get install -y grub-pc",growlight_target)){
 		return -1;
 	}
-	if(vspopen_drain("chroot %s grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
+	if(vvtopen_drain("chroot %s grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
 			growlight_target,d->mnt,d->name)){
 		return -1;
 	}
@@ -1886,10 +1886,10 @@ int prepare_uefi_boot(device *d){
 		return -1;
 	}
 	// FIXME ensure kernel is in ESP?
-	if(vspopen_drain("chroot %s apt-get install -y grub-efi-amd64",growlight_target)){
+	if(vvtopen_drain("chroot %s apt-get install -y grub-efi-amd64",growlight_target)){
 		return -1;
 	}
-	if(vspopen_drain("chroot %s /usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s",
+	if(vvtopen_drain("chroot %s /usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s",
 				growlight_target,d->mnt,d->target->path,d->name)){
 		return -1;
 	}
