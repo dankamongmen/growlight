@@ -588,12 +588,12 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 		locked_diag("Window too thin for form, uh-oh");
 		return;
 	}
-	if(y < FORM_X_OFFSET + 2 + 1){ // two boundaries, at least 1 selection
+	if(y < FORM_Y_OFFSET + 2 + 1){ // two boundaries, at least 1 selection
 		locked_diag("Window too short for form, uh-oh");
 		return;
 	}
-	if(y <= rows){
-		rows = y - FORM_Y_OFFSET;
+	if(y <= rows + FORM_Y_OFFSET){
+		rows = y - FORM_Y_OFFSET - 1;
 	}
 	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
 		return;
