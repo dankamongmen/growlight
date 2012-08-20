@@ -338,7 +338,7 @@ int finalize_target(void){
 		close(fd);
 		return -1;
 	}
-	if(vspopen_drain("openvt -s -w -- udpkg --configure --force-configure bootstrap-base")){
+	if(vtopen_drain("udpkg --configure --force-configure bootstrap-base")){
 		diag("Error installing the base system");
 		return -1;
 	}
