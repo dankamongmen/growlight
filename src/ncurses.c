@@ -719,13 +719,14 @@ targpoint_callback(const char *path){
 	}
 	b = current_adapter->selected;
 	if(b->zone->p == NULL){
-		prepare_mount(b->d,path,b->d->mnttype,b->d->uuid,"");
+		prepare_mount(b->d,path,b->d->mnttype,b->d->uuid,b->d->label,"");
 		return;
 	}else if(b->zone->p->layout != LAYOUT_PARTITION){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		prepare_mount(b->zone->p,path,b->zone->p->mnttype,b->zone->p->uuid,"");
+		prepare_mount(b->zone->p,path,b->zone->p->mnttype,
+			b->zone->p->uuid,b->zone->p->label,"");
 		return;
 	}
 	locked_diag("I'm confused. Aborting.\n");

@@ -260,7 +260,7 @@ prepare_wmount(device *d,const wchar_t *path,const wchar_t *fs,const wchar_t *op
 		fprintf(stderr,"Bad filesystem options: %ls\n",ops);
 		return -1;
 	}
-	return prepare_mount(d,spath,sfs,d->uuid,sops);
+	return prepare_mount(d,spath,sfs,d->uuid,d->label,sops);
 }
 
 #define ZERO_ARG_CHECK(args,arghelp) \
