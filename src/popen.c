@@ -117,3 +117,73 @@ int vspopen_drain(const char *fmt,...){
 	va_end(va);
 	return popen_drain(buf);
 }
+
+// Do not perform redirection of stderr, unlike sanitize_cmd().
+static char *
+sanitize_vtcmd(const char *cmd){
+	char *tmp,*san = NULL;
+	size_t left,len = 0;
+	mbstate_t ps;
+	size_t conv;
+
+	memset(&ps,0,sizeof(ps));
+	left = strlen(cmd);
+	if((san = strdup("openvt -s -w -- ")) == NULL){
+		return NULL;
+	}
+	len = strlen(san);
+	do{
+		unsigned escape;
+		wchar_t w;
+
+		if((conv = mbrtowc(&w,cmd,left,&ps)) == (size_t)-1){
+			diag("Error converting multibyte: %s\n",cmd);
+			free(san);
+		}
+		left -= conv;
+		if(w == L'(' || w == L')'){
+			escape = 1;
+		}else if(w == '$'){
+			escape = 1;
+		}else{
+			escape = 0;
+		}
+		if((tmp = realloc(san,sizeof(*san) * (len + conv + escape) + 1)) == NULL){
+			free(san);
+			return NULL;
+		}
+		san = tmp;
+		if(escape){
+			san[len] = '\\';
+			++len;
+		}
+		memcpy(san + len,cmd,conv);
+		len += conv;
+		cmd += conv;
+	}while(conv);
+	san[len] = '\0';
+	return san;
+}
+
+int vtopen_drain(const char *cmd){
+	char *safecmd;
+	int r;
+
+
+	if((safecmd = sanitize_vtcmd(cmd)) == NULL){
+		return -1;
+	}
+	diag("Running \"%s\"...\n",safecmd);
+	if((r = system(safecmd)) < 0){ // FIXME ghetttttttttttttttttttooooooo
+		diag("Couldn't run %s (%s?)\n",safecmd,strerror(errno));
+		free(safecmd);
+		return -1;
+	}
+	if(WEXITSTATUS(r)){
+		diag("%s returned %d\n",safecmd,WEXITSTATUS(r));
+		free(safecmd);
+		return -1;
+	}
+	free(safecmd);
+	return 0;
+}
