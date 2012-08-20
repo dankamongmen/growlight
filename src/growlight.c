@@ -1840,6 +1840,33 @@ int rescan_devices(void){
 	return ret;
 }
 
+#define GROWLIGHT_SCRIPT "/usr/lib/post-base-installer.d/growlight"
+static int
+write_postbase_hook(const char *fmt,...) __attribute__ ((format (printf,1,2)));
+
+static int
+write_postbase_hook(const char *fmt,...){
+	va_list va;
+	FILE *fp;
+
+	if((fp = fopen(GROWLIGHT_SCRIPT,"w")) == NULL){
+		diag("Error opening %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		return -1;
+	}
+	va_start(va,fmt);
+	if(vfprintf(fp,fmt,va) < 0){
+		va_end(va);
+		diag("Error writing %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		fclose(fp);
+		return -1;
+	}
+	va_end(va);
+	if(fclose(fp)){
+		diag("Error closing %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		return -1;
+	}
+	return 0;
+}
 int prepare_bios_boot(device *d){
 	if(d->layout != LAYOUT_PARTITION){
 		diag("Must boot from a partition\n");
@@ -1862,11 +1889,9 @@ int prepare_bios_boot(device *d){
 		// FIXME restore this once we can set flags in UI!
 		// FIXME return -1;
 	}
-	if(vvtopen_drain("chroot %s apt-get install -y grub-pc",growlight_target)){
-		return -1;
-	}
-	if(vvtopen_drain("chroot %s grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
-			growlight_target,d->mnt,d->name)){
+	if(write_postbase_hook("chroot %s apt-get install -y grub-pc\n"
+		"chroot %s grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s\n",
+		growlight_target,growlight_target,d->mnt,d->name)){
 		return -1;
 	}
 	return 0;
@@ -1886,11 +1911,9 @@ int prepare_uefi_boot(device *d){
 		return -1;
 	}
 	// FIXME ensure kernel is in ESP?
-	if(vvtopen_drain("chroot %s apt-get install -y grub-efi-amd64",growlight_target)){
-		return -1;
-	}
-	if(vvtopen_drain("chroot %s /usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s",
-				growlight_target,d->mnt,d->target->path,d->name)){
+	if(write_postbase_hook("chroot %s apt-get install -y grub-efi-amd64\n"
+	"chroot %s /usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s\n",
+		growlight_target,growlight_target,d->mnt,d->target->path,d->name)){
 		return -1;
 	}
 	// FIXME point grub-efi at kernel
