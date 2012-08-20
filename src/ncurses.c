@@ -3360,6 +3360,9 @@ static void
 recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
 	int newsel,bef,aft;
 
+	if(newrows == oldrows){
+		return;
+	}
 	// Calculate the maximum new line -- we can't leave space at the top or
 	// bottom, so we can't be after the true number of lines of output that
 	// precede us, or before the true number that follow us.
