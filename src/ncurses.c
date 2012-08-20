@@ -3759,7 +3759,7 @@ delete_partition(void){
 		locked_diag("Space is already unpartitioned");
 		return;
 	}
-	if(b->zone->p->mnt || (b->zone->p->target && b->zone->p->target->path)){
+	if(b->zone->p->mnt || b->zone->p->target){
 		locked_diag("%s contains a mounted filesystem",b->zone->p->name);
 		return;
 	}
