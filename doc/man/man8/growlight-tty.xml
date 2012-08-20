@@ -100,7 +100,7 @@ variant.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term>-t|--target path</term>
+			<term>-t|--target=path</term>
 			<listitem>
 <para>Run in system installation mode, using <emphasis role="bold">path</emphasis> as the temporary mountpoint
 for the target's root filesystem. "map" commands will populate the hierarchy
