@@ -2323,6 +2323,7 @@ static void
 unlock_ncurses(void){
 	update_details_cond(panel_window(details.p));
 	update_help_cond(panel_window(help.p));
+	wrefresh(curscr);
 	screen_update();
 	assert(pthread_mutex_unlock(&bfl) == 0);
 }	
@@ -4401,7 +4402,6 @@ handle_ncurses_input(WINDOW *w){
 				break;
 			case 12: // CTRL+L FIXME
 				pthread_mutex_lock(&bfl);
-				wrefresh(curscr);
 				unlock_ncurses();
 				break;
 			case '+':
