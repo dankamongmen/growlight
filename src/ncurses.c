@@ -2913,7 +2913,7 @@ use_next_device(void){
 	select_adapter_dev(rb,rb->selected->next,delta);
 }
 
-static const int DIAGROWS = 8;
+static const int DIAGROWS = 14;
 
 // Used after shutting down on error, which will clean the screen. This takes
 // the last few diagnostics and prints them to stderr.
