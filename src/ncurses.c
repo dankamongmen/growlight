@@ -311,6 +311,99 @@ locked_diag(const char *fmt,...){
 	va_end(v);
 }
 
+// Create a panel at the bottom of the window, referred to as the "subdisplay".
+// Only one can currently be active at a time. Window decoration and placement
+// is managed here; only the rows needed for display ought be provided.
+static int
+new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
+			const wchar_t *hstr,const wchar_t *bstr){
+	const int crightlen = bstr ? wcslen(bstr) : 0;
+	int ybelow,yabove;
+	WINDOW *psw;
+	int x,y;
+
+	// Desired space above and below, which will be impugned upon as needed
+	ybelow = 9;
+	yabove = 5;
+	getmaxyx(w,y,x);
+	if(cols == 0){
+		cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
+	}else{
+		assert(x >= cols + START_COL * 2);
+	}
+	if(rows + ybelow + yabove >= y){
+		if(rows + ybelow >= y){
+			yabove = 0;
+		}else{
+			yabove -= rows + ybelow - y;
+		}
+	}else{
+		yabove += y - (rows + ybelow + yabove);
+	}
+	// Six up from the bottom, so it looks good with our logo in the
+	// installer, heh
+	if((psw = newwin(rows + 2,cols,yabove,x - cols)) == NULL){
+		locked_diag("Can't display subwindow, uh-oh");
+		return ERR;
+	}
+	if((ps->p = new_panel(psw)) == NULL){
+		locked_diag("Couldn't create subpanel, uh-oh");
+		delwin(psw);
+		return ERR;
+	}
+	assert(top_panel(ps->p) != ERR);
+	ps->ysize = rows;
+	// memory leaks follow if we're compiled with NDEBUG! FIXME
+	assert(wattron(psw,A_BOLD) != ERR);
+	assert(wcolor_set(psw,PBORDER_COLOR,NULL) == OK);
+	assert(bevel(psw) == OK);
+	assert(wattroff(psw,A_BOLD) != ERR);
+	assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
+	if(hstr){
+		assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
+	}
+	if(bstr){
+		assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),bstr) != ERR);
+	}
+	return OK;
+}
+
+static void
+hide_panel_locked(struct panel_state *ps){
+	if(ps){
+		WINDOW *psw;
+
+		psw = panel_window(ps->p);
+		hide_panel(ps->p);
+		assert(del_panel(ps->p) == OK);
+		ps->p = NULL;
+		assert(delwin(psw) == OK);
+		ps->ysize = -1;
+	}
+}
+
+// -------------------------------------------------------------------------
+// -- splash API. splashes are displayed during long operations, especially
+//    those requiring an external program.
+// -------------------------------------------------------------------------
+static struct panel_state *
+show_splash(const char *msg){
+	struct panel_state *ps;
+
+	if((ps = malloc(sizeof(*ps))) == NULL){
+		return NULL;
+	}
+	memset(ps,0,sizeof(*ps));
+	if(new_display_panel(stdscr,ps,3,strlen(msg) + 2,NULL,NULL)){
+		free(ps);
+		return NULL;
+	}
+	return ps;
+}
+// -------------------------------------------------------------------------
+// -- end splash API
+// -------------------------------------------------------------------------
+
 // -------------------------------------------------------------------------
 // -- begin form API
 // -------------------------------------------------------------------------
@@ -698,6 +791,20 @@ destroy_fs_forms(void){
 	pending_fstype = NULL;
 }
 
+static int
+fs_do_internal(device *d,const char *fst,const char *name){
+	struct panel_state *ps;
+	int r;
+
+	ps = show_splash("Creating filesystem...");
+	r = make_filesystem(d,fst,name);
+	if(ps){
+		hide_panel_locked(ps);
+		free(ps);
+	}
+	return r;
+}
+
 static void
 fs_do(const char *name){
 	blockobj *b;
@@ -709,13 +816,13 @@ fs_do(const char *name){
 		return;
 	}
 	if(b->zone == NULL){
-		r = make_filesystem(b->d,pending_fstype,name);
+		r = fs_do_internal(b->d,pending_fstype,name);
 	}else if(b->zone->p->layout != LAYOUT_PARTITION){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		destroy_fs_forms();
 		return;
 	}else{
-		r = make_filesystem(b->zone->p,pending_fstype,name);
+		r = fs_do_internal(b->zone->p,pending_fstype,name);
 	}
 	if(r == 0){
 		locked_diag("Successfully created %s filesystem",pending_fstype);
@@ -2805,61 +2912,6 @@ use_next_device(void){
 	select_adapter_dev(rb,rb->selected->next,delta);
 }
 
-// Create a panel at the bottom of the window, referred to as the "subdisplay".
-// Only one can currently be active at a time. Window decoration and placement
-// is managed here; only the rows needed for display ought be provided.
-static int
-new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
-			const wchar_t *hstr,const wchar_t *bstr){
-	const int crightlen = bstr ? wcslen(bstr) : 0;
-	int ybelow,yabove;
-	WINDOW *psw;
-	int x,y;
-
-	// Desired space above and below, which will be impugned upon as needed
-	ybelow = 9;
-	yabove = 5;
-	getmaxyx(w,y,x);
-	if(cols == 0){
-		cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
-	}else{
-		assert(x >= cols + START_COL * 2);
-	}
-	if(rows + ybelow + yabove >= y){
-		if(rows + ybelow >= y){
-			yabove = 0;
-		}else{
-			yabove -= rows + ybelow - y;
-		}
-	}else{
-		yabove += y - (rows + ybelow + yabove);
-	}
-	// Six up from the bottom, so it looks good with our logo in the
-	// installer, heh
-	if((psw = newwin(rows + 2,cols,yabove,x - cols)) == NULL){
-		locked_diag("Can't display subwindow, uh-oh");
-		return ERR;
-	}
-	if((ps->p = new_panel(psw)) == NULL){
-		locked_diag("Couldn't create subpanel, uh-oh");
-		delwin(psw);
-		return ERR;
-	}
-	assert(top_panel(ps->p) != ERR);
-	ps->ysize = rows;
-	// memory leaks follow if we're compiled with NDEBUG! FIXME
-	assert(wattron(psw,A_BOLD) != ERR);
-	assert(wcolor_set(psw,PBORDER_COLOR,NULL) == OK);
-	assert(bevel(psw) == OK);
-	assert(wattroff(psw,A_BOLD) != ERR);
-	assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
-	assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
-	if(bstr){
-		assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),bstr) != ERR);
-	}
-	return OK;
-}
-
 static const int DIAGROWS = 8;
 
 // Used after shutting down on error, which will clean the screen. This takes
@@ -3239,20 +3291,6 @@ err:
 	}
 	memset(ps,0,sizeof(*ps));
 	return ERR;
-}
-
-static void
-hide_panel_locked(struct panel_state *ps){
-	if(ps){
-		WINDOW *psw;
-
-		psw = panel_window(ps->p);
-		hide_panel(ps->p);
-		assert(del_panel(ps->p) == OK);
-		ps->p = NULL;
-		assert(delwin(psw) == OK);
-		ps->ysize = -1;
-	}
 }
 
 static void
