@@ -117,12 +117,12 @@ specification.</para>
 	</refsect1>
 	<refsect1 id="commands">
 		<title>USAGE</title>
-<para><emphasis>Growlight</emphasis> is primarily intended for interactive use at the command line via GNU
-Readline. Commands are entered; a newline causes input to be interpreted, and 
+		<para><emphasis>growlight-tty</emphasis> implements an interactive command line
+driven via GNU Readline. Commands are entered; a newline causes input to be interpreted, and
 output resulting from this interpretation is displayed to the user. Unlike
 programs such as <emphasis role="bold">fdisk(8)</emphasis> and <emphasis role="bold">gdisk(8)</emphasis>,
-<emphasis>&dhpackage;</emphasis> acts on commands immediately, rather than requiring an explicit
-commit step.</para>
+<emphasis>&dhpackage;</emphasis> acts on commands immediately: it neither requires
+nor provides an explicit commit step (though several commands do require confirmation).</para>
 
 <para>An argument specified as <emphasis>blockdev</emphasis> can be either a
 real block device, a virtual block device, or a partition. An argument
