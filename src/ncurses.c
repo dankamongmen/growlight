@@ -2078,10 +2078,9 @@ update_details(WINDOW *hw){
 			case LAYOUT_ZPOOL:
 			case LAYOUT_DM:
 			// FIXME limit length!
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u %s %sB align",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u %s",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
-					b->zone->fsector,b->zone->lsector,
-					b->zone->p->name,align);
+					b->zone->fsector,b->zone->lsector);
 			detail_fs(hw,b->zone->p,7);
 			break;
 			case LAYOUT_PARTITION:
