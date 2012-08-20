@@ -60,7 +60,7 @@ ext4_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaEXT4";
 	}
-	if(vspopen_drain("mkfs.ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
+	if(vspopen_drain("mkfs.ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -353,6 +353,12 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 		diag("Won't create fs on active mount %s (%s)\n",
 				d->name,d->mnt);
 		return -1;
+	}
+	if(name){
+		if(strchr(name,'"')){
+			diag("Illegal character '\"' in name '%s'\n",name);
+			return -1;
+		}
 	}
 	for(pt = fss ; pt->name ; ++pt){
 		if(strcmp(pt->name,ptype) == 0){
