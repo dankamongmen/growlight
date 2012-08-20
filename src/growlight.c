@@ -1213,7 +1213,7 @@ version(const char *name){
 static void
 usage(const char *name){
 	diag("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
-				"\t\t[ -t|--target path ]\n",basename(name));
+				"\t\t[ -t|--target=path ]\n",basename(name));
 }
 
 static int
