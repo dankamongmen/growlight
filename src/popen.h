@@ -14,6 +14,7 @@ int vspopen_drain(const char *,...) __attribute__ ((format (printf,1,2)));
 // Requires openvt. There are so many things wrong with this function I cannot
 // begin to enumerate them. FIXME
 int vtopen_drain(const char *);
+int vvtopen_drain(const char *,...) __attribute__ ((format (printf,1,2)));
 
 #ifdef __cplusplus
 }

@@ -187,3 +187,17 @@ int vtopen_drain(const char *cmd){
 	free(safecmd);
 	return 0;
 }
+
+int vvtopen_drain(const char *fmt,...){
+	char buf[BUFSIZ];
+	va_list va;
+
+	va_start(va,fmt);
+	if(vsnprintf(buf,sizeof(buf),fmt,va) >= (int)sizeof(buf)){
+		va_end(va);
+		diag("Bad command: %s ...\n",fmt);
+		return -1;
+	}
+	va_end(va);
+	return vtopen_drain(buf);
+}
