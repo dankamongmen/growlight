@@ -3943,10 +3943,10 @@ biosboot(void){
 		return -1;
 	}
 	// Do not enforce a check against the path for '/'; it can be in /boot
-	if(prepare_bios_boot(d)){
+	if(finalize_target()){
 		return -1;
 	}
-	if(finalize_target()){
+	if(prepare_bios_boot(d)){
 		return -1;
 	}
 	locked_diag("Successfully prepared BIOS boot");
@@ -3984,10 +3984,10 @@ uefiboot(void){
 		return -1;
 	}
 	// Do not enforce a check against the path for '/'; it can be in /boot
-	if(prepare_uefi_boot(d)){
+	if(finalize_target()){
 		return -1;
 	}
-	if(finalize_target()){
+	if(prepare_uefi_boot(d)){
 		return -1;
 	}
 	locked_diag("Successfully prepared UEFI boot");

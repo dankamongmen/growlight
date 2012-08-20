@@ -1853,16 +1853,20 @@ int prepare_bios_boot(device *d){
 		diag("%s is not mapped as the target root (%s)\n",d->name,d->target->path);
 		return -1;
 	}
-	if(d->partdev.ptype == PARTROLE_PRIMARY){
-		if(!(d->partdev.flags & 0x80u)){
-			diag("%s is not marked as Active (bootable, 0x80)\n",d->name);
-			return -1;
-		}
-		if(vspopen_drain("grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",d->mnt,d->name)){
-			return -1;
-		}
-	}else{
+	if(d->partdev.ptype != PARTROLE_PRIMARY){
 		diag("BIOS boots from GPT or MSDOS 'Primary' partitions only\n");
+		return -1;
+	}
+	if(!(d->partdev.flags & 0x80u)){
+		diag("Warning: %s is not marked as Active (bootable, 0x80)\n",d->name);
+		// FIXME restore this once we can set flags in UI!
+		// FIXME return -1;
+	}
+	if(vspopen_drain("chroot %s apt-get install -y grub-pc",growlight_target);
+		return -1;
+	}
+	if(vspopen_drain("chroot %s grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s",
+			growlight_target,d->mnt,d->name)){
 		return -1;
 	}
 	return 0;
@@ -1881,9 +1885,12 @@ int prepare_uefi_boot(device *d){
 		diag("%s is not mapped as a target filesystem\n",d->name);
 		return -1;
 	}
-	// FIXME ensure kernel is in ESP
-	if(vspopen_drain("/usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s",
-				d->mnt,d->target->path,d->name)){
+	// FIXME ensure kernel is in ESP?
+	if(vspopen_drain("chroot %s apt-get install -y grub-efi-amd64",growlight_target);
+		return -1;
+	}
+	if(vspopen_drain("chroot %s /usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s",
+				growlight_target,d->mnt,d->target->path,d->name)){
 		return -1;
 	}
 	// FIXME point grub-efi at kernel
