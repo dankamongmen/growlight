@@ -4006,13 +4006,17 @@ mount_target(void){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
-		locked_diag("Cannot mount unused space");
-		return;
-	}else{
-		raise_str_form("enter target mountpount",targpoint_callback,"/");
-		return;
+	if(b->zone->p){
+		if(b->zone->p->layout != LAYOUT_PARTITION){
+			locked_diag("Cannot mount unused space");
+			return;
+		}
+		if(b->zone->p->target){
+			locked_diag("%s is already a target",b->zone->p->name);
+			return;
+		}
 	}
+	raise_str_form("enter target mountpount",targpoint_callback,"/");
 }
 
 static void
