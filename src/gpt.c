@@ -323,12 +323,14 @@ gpt_name(const wchar_t *name,void *name16le,size_t olen){
 	}
 	n16 = name16le;
 	len = wcslen(name) * sizeof(*name);
+	errno = 0;
 	if(iconv(icv,(char **)&name,&len,&n16,&olen) == (size_t)-1 && errno){
 		diag("Error converting name (%s? %zu, %zu left)\n",strerror(errno),len,olen);
 		iconv_close(icv);
 		return -1;
 	}
 	if(iconv_close(icv)){
+		diag("Error closing iconv (%s?)\n",strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -553,7 +555,6 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 			(uintmax_t)((lsec - fsec) * d->logsec));
 	memcpy(gpe[z].type_guid,tguid,sizeof(tguid));
 	if(gpt_name(name,gpe[z].name,sizeof(gpe[z].name))){
-		diag("Couldn't convert %ls for %s\n",name,d->name);
 		memset(gpe + z,0,sizeof(*gpe));
 		munmap(map,mapsize);
 		close(fd);
@@ -699,7 +700,6 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 			(uintmax_t)((llarge - flarge) * d->logsec));
 	memcpy(gpe[z].type_guid,tguid,sizeof(tguid));
 	if(gpt_name(name,gpe[z].name,sizeof(gpe[z].name))){
-		diag("Couldn't convert %ls for %s\n",name,d->name);
 		memset(gpe + z,0,sizeof(*gpe));
 		munmap(map,mapsize);
 		close(fd);
