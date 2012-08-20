@@ -4684,6 +4684,11 @@ update_blockobj(blockobj *b,device *d){
 	device *p;
 
 	fs = mounts = 0;
+	if(d->blkdev.unloaded){
+		free_zchain(&b->zchain);
+		b->zone = NULL;
+		return;
+	}
 	if(b->zone){
 		zonesel = b->zone->zoneno;
 	}else{
