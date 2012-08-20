@@ -719,13 +719,13 @@ targpoint_callback(const char *path){
 	}
 	b = current_adapter->selected;
 	if(b->zone->p == NULL){
-		prepare_mount(b->d,path,b->d->mnttype,"");
+		prepare_mount(b->d,path,b->d->mnttype,b->d->uuid,"");
 		return;
 	}else if(b->zone->p->layout != LAYOUT_PARTITION){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		prepare_mount(b->zone->p,path,b->zone->p->mnttype,"");
+		prepare_mount(b->zone->p,path,b->zone->p->mnttype,b->zone->p->uuid,"");
 		return;
 	}
 	locked_diag("I'm confused. Aborting.\n");
@@ -3194,6 +3194,7 @@ map_details(WINDOW *hw){
 	if((y = START_COL + 1) >= rows){
 		return -1;
 	}
+	// First we list the targets
 	wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
@@ -3217,6 +3218,7 @@ map_details(WINDOW *hw){
 			}
 		}
 	}
+	// Now list the existing maps, a superset of the targets
 	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;

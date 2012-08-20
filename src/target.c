@@ -19,7 +19,7 @@ char real_target[PATH_MAX + 1]; // Only used when we set or unset the target
 static int targfd = -1; // reference to target root, once defined
 
 static mntentry *
-create_target(const char *path,const char *dev,const char *ops){
+create_target(const char *path,const char *dev,const char *uuid,const char *ops){
 	mntentry *t;
 
 	if( (t = malloc(sizeof(*t))) ){
@@ -27,6 +27,7 @@ create_target(const char *path,const char *dev,const char *ops){
 		t->path = strdup(path);
 		t->dev = strdup(dev);
 		t->ops = strdup(ops);
+		t->uuid = uuid ? strdup(uuid) : NULL;
 		if(!t->path || !t->dev || !t->ops){
 			free(t->path);
 			free(t->dev);
@@ -113,7 +114,7 @@ make_parent_directories(const char *path){
 // Used to map an on-disk filesystem (which may or may not already be mounted)
 // into the target fstab. If already mounted outside the target, the mount is
 // preserved in the target definition.
-int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
+int prepare_mount(device *d,const char *path,const char *cfs,const char *uuid,const char *ops){
 	char devname[PATH_MAX + 1],pathext[PATH_MAX + 1],*fs;
 	mntentry *m;
 
@@ -172,7 +173,7 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 			return -1;
 		}
 		d->swapprio = SWAP_INVALID;
-		if((d->target = create_target(path,d->name,ops)) == NULL){
+		if((d->target = create_target(path,d->name,uuid,ops)) == NULL){
 			close(targfd);
 			targfd = -1;
 			free(fs);
@@ -194,7 +195,7 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *ops){
 		return -1;
 	}
 	d->swapprio = SWAP_INVALID;
-	if((m = create_target(path,d->name,ops)) == NULL){
+	if((m = create_target(path,d->name,uuid,ops)) == NULL){
 		umount2(devname,UMOUNT_NOFOLLOW);
 		free(fs);
 		return -1;
@@ -223,7 +224,7 @@ use_new_target(const char *path){
 					continue;
 				}
 				if(strncmp(path,p->mnt,strlen(path))){
-					if((p->target = create_target(target_path(p->mnt,path),p->name,p->mntops)) == NULL){
+					if((p->target = create_target(target_path(p->mnt,path),p->name,p->uuid,p->mntops)) == NULL){
 						goto err;
 					}
 				}
@@ -232,7 +233,7 @@ use_new_target(const char *path){
 				continue;
 			}
 			if(strncmp(path,d->mnt,strlen(path))){
-				if((d->target = create_target(target_path(d->mnt,path),d->name,d->mntops)) == NULL){
+				if((d->target = create_target(target_path(d->mnt,path),d->name,d->uuid,d->mntops)) == NULL){
 					goto err;
 				}
 			}
