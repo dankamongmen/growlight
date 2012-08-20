@@ -17,7 +17,7 @@ jfs_mkfs(const char *dev,const char *name){
 		name = "SprezzaJFS";
 	}
 	// FIXME what about external journals?
-	if(vspopen_drain("mkfs.jfs -L %s %s",name,dev)){
+	if(vspopen_drain("mkfs.jfs -L \"%s\" %s",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -30,7 +30,7 @@ xfs_mkfs(const char *dev,const char *name){
 		name = "SprezzaXFS";
 	}
 	// FIXME set -s to the physical sector size
-	if(vspopen_drain("mkfs.xfs -L %s %s",name,dev)){
+	if(vspopen_drain("mkfs.xfs -L \"%s\" %s",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -78,7 +78,7 @@ ext3_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaEXT3";
 	}
-	if(vspopen_drain("mkfs.ext3 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
+	if(vspopen_drain("mkfs.ext3 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -96,7 +96,7 @@ ext2_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaEXT2";
 	}
-	if(vspopen_drain("mkfs.ext2 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L %s -O dir_index,extent,^uninit_bg %s",name,dev)){
+	if(vspopen_drain("mkfs.ext2 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",name,dev)){
 		return -1;
 	}
 	return 0;
