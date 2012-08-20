@@ -387,17 +387,20 @@ hide_panel_locked(struct panel_state *ps){
 //    those requiring an external program.
 // -------------------------------------------------------------------------
 static struct panel_state *
-show_splash(const char *msg){
+show_splash(const wchar_t *msg){
 	struct panel_state *ps;
 
 	if((ps = malloc(sizeof(*ps))) == NULL){
 		return NULL;
 	}
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(stdscr,ps,3,strlen(msg) + 2,NULL,NULL)){
+	// FIXME gross, clean all of this up
+	if(new_display_panel(stdscr,ps,3,wcslen(msg) + 4,NULL,NULL)){
 		free(ps);
 		return NULL;
 	}
+	mvwaddwstr(panel_window(ps->p),2,2,msg);
+	move_panel(ps->p,3,3);
 	return ps;
 }
 // -------------------------------------------------------------------------
@@ -796,7 +799,7 @@ fs_do_internal(device *d,const char *fst,const char *name){
 	struct panel_state *ps;
 	int r;
 
-	ps = show_splash("Creating filesystem...");
+	ps = show_splash(L"Creating filesystem...");
 	r = make_filesystem(d,fst,name);
 	if(ps){
 		hide_panel_locked(ps);
