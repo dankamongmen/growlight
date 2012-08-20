@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 
+#include "popen.h"
 #include "target.h"
 #include "growlight.h"
 
