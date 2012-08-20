@@ -1637,19 +1637,15 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR);
-			if(selected && z != bo->zone){
-				assert(wattrset(w,A_BOLD|A_REVERSE|co) == OK);
-			}else if(selected){
-				assert(wattrset(w,A_BOLD|co) == OK);
+			if(selected && z == bo->zone){
+				assert(wattrset(w,A_BOLD|A_UNDERLINE|co) == OK);
 			}else{
 				assert(wattrset(w,co) == OK);
 			}
 			rep = z->rep;
 		}else{ // dedicated partition
-			if(selected && z != bo->zone){ // partition and device are selected
-				assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
-			}else if(selected){ // device is selected, partition is not
-				assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+			if(selected && z == bo->zone){ // partition and device are selected
+				assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(PARTITION_COLOR)) == OK);
 			}else{ // device is not selected
 				assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
 			}
