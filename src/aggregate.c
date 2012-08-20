@@ -8,6 +8,16 @@ static const aggregate_type aggregates[] = {
 		.mindisks = 2,
 		.maxfaulted = -1,
 	},{
+		.name = "mdddf",
+		.desc = "SNIA Data Disk Format container",
+		.mindisks = 2,
+		.maxfaulted = 0,
+	},{
+		.name = "mdimsm",
+		.desc = "Intel® Matrix Storage Manager container",
+		.mindisks = 2,
+		.maxfaulted = 0,
+	},{
 		.name = "mdcontain",
 		.desc = "Linear disk combination with metadata",
 		.mindisks = 2,
@@ -34,7 +44,7 @@ static const aggregate_type aggregates[] = {
 		.maxfaulted = 1,
 	},{
 		.name = "mdraid6",
-		.desc = "Block striping with dual distributed parity",
+		.desc = "Block striping with 2x distributed parity",
 		.mindisks = 4,
 		.maxfaulted = 2,
 	},{
@@ -49,17 +59,17 @@ static const aggregate_type aggregates[] = {
 		.maxfaulted = 1,
 	},{
 		.name = "raidz1",
-		.desc = "ZFS RAID with single parity",
+		.desc = "ZFS RAID with distributed parity",
 		.mindisks = 3,
 		.maxfaulted = 1,
 	},{
 		.name = "raidz2",
-		.desc = "ZFS RAID with double parity",
+		.desc = "ZFS RAID with 2x distributed parity",
 		.mindisks = 4,
 		.maxfaulted = 2,
 	},{
 		.name = "raidz3",
-		.desc = "ZFS RAID with triple parity",
+		.desc = "ZFS RAID with 3x distributed parity",
 		.mindisks = 5,
 		.maxfaulted = 3,
 	},{
