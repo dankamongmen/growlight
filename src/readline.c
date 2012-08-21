@@ -1709,9 +1709,7 @@ rescan(wchar_t * const *args,const char *arghelp){
 	int r;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	assert(unlock_growlight() == 0);
 	r = rescan_devices();
-	assert(lock_growlight() == 0);
 	return r;
 }
 
@@ -1720,9 +1718,7 @@ reset(wchar_t * const *args,const char *arghelp){
 	int r;
 
 	ZERO_ARG_CHECK(args,arghelp);
-	assert(unlock_growlight() == 0);
 	r = reset_adapters();
-	assert(lock_growlight() == 0);
 	return r;
 }
 
