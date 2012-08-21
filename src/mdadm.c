@@ -118,7 +118,9 @@ int explore_md_sysfs(device *d,int dirfd){
 	}
 	if(d->mddev.degraded != degraded){
 		diag("%s had %lu degraded, %u missing\n",d->name,d->mddev.degraded,degraded);
-		d->mddev.degraded = degraded;
+		if(d->mddev.degraded < degraded){
+			d->mddev.degraded = degraded;
+		}
 	}
 	return 0;
 }
