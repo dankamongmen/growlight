@@ -1871,7 +1871,7 @@ case LAYOUT_ZPOOL:
 		}else if(bo->d->layout == LAYOUT_MDADM){
 			if(bo->d->mddev.degraded){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-				mvwprintw(rb->win,line + 2,START_COL,"%2.2lu-degraded",bo->d->mddev.degraded);
+				mvwprintw(rb->win,line + 2,START_COL,"%2lu-degraded",bo->d->mddev.degraded);
 			}else{
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR));
 				mvwprintw(rb->win,line + 2,START_COL,"     active");
