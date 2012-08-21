@@ -148,6 +148,7 @@ typedef struct device {
 			char *uuid;
 			char *mdname;
 			transport_e transport;
+			unsigned long degraded;	// number of missing devices
 		} mddev;
 		struct { // Device Manager
 			unsigned long disks;	// RAID disks in md

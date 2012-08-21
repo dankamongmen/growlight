@@ -12,6 +12,7 @@
 #include "growlight.h"
 
 int explore_md_sysfs(device *d,int dirfd){
+	unsigned degraded = 0;
 	unsigned long rd;
 	mdslave **enqm;
 
@@ -20,6 +21,9 @@ int explore_md_sysfs(device *d,int dirfd){
 	if(get_sysfs_uint(dirfd,"raid_disks",&d->mddev.disks)){
 		verbf("Warning: no 'raid_disks' content in mdadm device %s\n",d->name);
 		d->mddev.disks = 0;
+	}
+	if(get_sysfs_uint(dirfd,"degraded",&d->mddev.degraded)){
+		verbf("Warning: no 'degraded' content in mdadm device %s\n",d->name);
 	}
 	if((d->mddev.level = get_sysfs_string(dirfd,"level")) == NULL){
 		verbf("Warning: no 'level' content in mdadm device %s\n",d->name);
@@ -51,8 +55,8 @@ int explore_md_sysfs(device *d,int dirfd){
 			diag("Couldn't look up slave %s (%s?)\n",buf,strerror(errno));
 			errno = e;
 			return -1;
-		}else if(r < 0 && errno == ENOENT){
-			// missing/faulted device -- represent somehow?
+		}else if(r < 0 && errno == ENOENT){ // missing/faulted device
+			++degraded;
 			continue;
 		}
 		lbuf[r] = '\0';
@@ -111,6 +115,10 @@ int explore_md_sysfs(device *d,int dirfd){
 				break;
 		}
 		*/
+	}
+	if(d->mddev.degraded != degraded){
+		diag("%s had %lu degraded, %u missing\n",d->name,d->mddev.degraded,degraded);
+		d->mddev.degraded = degraded;
 	}
 	return 0;
 }
