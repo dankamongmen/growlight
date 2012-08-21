@@ -145,7 +145,7 @@ static unsigned count_adapters;
 static reelbox *current_adapter,*top_reelbox,*last_reelbox;
 
 #define START_COL 1		// Room to leave for borders
-#define PAD_COLS(cols) ((cols) - START_COL * 2)
+#define PAD_COLS(cols) ((cols))
 
 static int
 selection_active(void){
@@ -259,15 +259,13 @@ bevel(WINDOW *w){
 	return OK;
 }
 
-static int
+static void
 draw_main_window(WINDOW *w){
 	int rows,cols,scol;
 
 	getmaxyx(w,rows,cols);
 	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
-	if(bevel_top(w) != OK){
-		goto err;
-	}
+	mvwhline(w,0,START_COL,ACS_HLINE,cols - START_COL * 2);
 	scol = START_COL * 4;
 	assert(mvwprintw(w,0,scol,"[") != ERR);
 	assert(wattron(w,A_BOLD | COLOR_PAIR(HEADER_COLOR)) != ERR);
@@ -279,10 +277,6 @@ draw_main_window(WINDOW *w){
 	assert(mvwprintw(w,rows - 1,START_COL,"%-*.*s",cols - START_COL * 2,
 			cols - START_COL * 2,statusmsg) != ERR);
 	assert(wattroff(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
-	return OK;
-
-err:
-	return ERR;
 }
 
 static void
@@ -1448,10 +1442,7 @@ ncurses_setup(void){
 		errstr = "Couldn't disable cursor\n";
 		goto err;
 	}
-	if(draw_main_window(w) != OK){
-		errstr = "Couldn't draw main window\n";
-		goto err;
-	}
+	draw_main_window(w);
 	refresh();
 	return w;
 
@@ -1472,7 +1463,7 @@ create_reelbox(adapterstate *as,int rows,int scrline,int cols){
 		l = rows - scrline - 1;
 	}
 	if( (ret = malloc(sizeof(*ret))) ){
-		if((ret->win = newwin(l,PAD_COLS(cols),scrline,START_COL)) == NULL){
+		if((ret->win = newwin(l,PAD_COLS(cols),scrline,0)) == NULL){
 			exit(0);
 		}
 		assert( (ret->panel = new_panel(ret->win)) );
@@ -2023,7 +2014,7 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 	assert(werase(rb->win) != ERR);
 	screen_update();
 	if(adapter_wholly_visible_p(rows,rb)){
-		assert(move_panel(rb->panel,targ,1) != ERR);
+		assert(move_panel(rb->panel,targ,0) != ERR);
 		if(getmaxy(rb->win) != adapter_lines_bounded(as,rows)){
 			assert(wresize(rb->win,adapter_lines_bounded(as,rows),PAD_COLS(cols)) == OK);
 			if(panel_hidden(rb->panel)){
@@ -2056,13 +2047,13 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 		assert(hide_panel(rb->panel) != ERR);
 		return;
 	}else if(nlines > rr){
-		assert(move_panel(rb->panel,targ,1) == OK);
+		assert(move_panel(rb->panel,targ,0) == OK);
 		assert(wresize(rb->win,nlines,PAD_COLS(cols)) == OK);
 	}else if(nlines < rr){
 		assert(wresize(rb->win,nlines,PAD_COLS(cols)) == OK);
-		assert(move_panel(rb->panel,targ,1) == OK);
+		assert(move_panel(rb->panel,targ,0) == OK);
 	}else{
-		assert(move_panel(rb->panel,targ,1) == OK);
+		assert(move_panel(rb->panel,targ,0) == OK);
 	}
 	assert(redraw_adapter(rb) == OK);
 	assert(show_panel(rb->panel) == OK);
@@ -2361,7 +2352,6 @@ static void
 unlock_ncurses(void){
 	update_details_cond(panel_window(details.p));
 	update_help_cond(panel_window(help.p));
-	wrefresh(curscr);
 	screen_update();
 	assert(pthread_mutex_unlock(&bfl) == 0);
 }	
@@ -2504,7 +2494,7 @@ resize_adapter(reelbox *rb){
 		replace_panel(rb->panel,rb->win);
 		if(rb->scrline < current_adapter->scrline){
 			rb->scrline += subrows - nlines;
-			move_panel(rb->panel,rb->scrline,1);
+			move_panel(rb->panel,rb->scrline,0);
 			pull_adapters_down(rb,rows,cols,subrows - nlines);
 		}else{
 			pull_adapters_up(rb,rows,cols,subrows - nlines);
@@ -2537,7 +2527,7 @@ resize_adapter(reelbox *rb){
 			delta = -delta;
 			rb->scrline += delta;
 			push_adapters_above(rb,rows,cols,delta);
-			move_panel(rb->panel,rb->scrline,1);
+			move_panel(rb->panel,rb->scrline,0);
 		}
 		wresize(rb->win,nlines,PAD_COLS(cols));
 		replace_panel(rb->panel,rb->win);
