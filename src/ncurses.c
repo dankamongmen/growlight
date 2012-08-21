@@ -1758,7 +1758,7 @@ case LAYOUT_NONE:
 	}
 		break;
 case LAYOUT_MDADM:
-	rolestr = "mdraid";
+	rolestr = bo->d->mddev.level;
 	if(bo->d->mddev.degraded){
 		co = A_BOLD|COLOR_PAIR(FUCKED_COLOR);
 	}else{
