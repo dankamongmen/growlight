@@ -53,11 +53,12 @@ enum {
 	METADATA_COLOR,			// Partition table metadata
 	MDADM_COLOR,
 	ZPOOL_COLOR,
-	PARTITION_COLOR,
+	PARTITION_COLOR,		// A defined but unused partition
 	FORMBORDER_COLOR,
 	FORMTEXT_COLOR,
 	INPUT_COLOR,			// Form input color
-
+	MOUNT_COLOR,			// Mounted, untargeted filesystems
+	TARGET_COLOR,			// Targeted filesystems
 
 	RED_COLOR,
 	ORANGE_COLOR,
@@ -1386,6 +1387,8 @@ setup_colors(void){
 	assert(init_pair(FORMBORDER_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(FORMTEXT_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(INPUT_COLOR,COLOR_CYAN,-1) == OK);
+	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
 
 	assert(init_pair(RED_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
@@ -1648,9 +1651,21 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			rep = z->rep;
 		}else{ // dedicated partition
 			if(selected && z == bo->zone){ // partition and device are selected
-				assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+				if(z->p->target){
+					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(TARGET_COLOR)) == OK);
+				}else if(z->p->mnt){
+					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(MOUNT_COLOR)) == OK);
+				}else{
+					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+				}
 			}else{ // device is not selected
-				assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
+				if(z->p->target){
+					assert(wattrset(w,COLOR_PAIR(TARGET_COLOR)) == OK);
+				}else if(z->p->mnt){
+					assert(wattrset(w,COLOR_PAIR(MOUNT_COLOR)) == OK);
+				}else{
+					assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
+				}
 			}
 			if(z->p->partdev.alignment < d->physsec){ // misaligned!
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(RED_COLOR)) == OK);
