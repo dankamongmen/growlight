@@ -1307,6 +1307,7 @@ targpoint_callback(const char *path){
 	b = current_adapter->selected;
 	if(b->zone->p == NULL){
 		prepare_mount(b->d,path,b->d->mnttype,b->d->uuid,b->d->label,"");
+		redraw_adapter(current_adapter);
 		return;
 	}else if(b->zone->p->layout != LAYOUT_PARTITION){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
@@ -1314,6 +1315,7 @@ targpoint_callback(const char *path){
 	}else{
 		prepare_mount(b->zone->p,path,b->zone->p->mnttype,
 			b->zone->p->uuid,b->zone->p->label,"");
+		redraw_adapter(current_adapter);
 		return;
 	}
 	locked_diag("I'm confused. Aborting.\n");
@@ -3703,8 +3705,10 @@ kill_filesystem_confirm(const char *op){
 		}
 		if(b->zone->p){
 			wipe_filesystem(b->zone->p);
+			redraw_adapter(current_adapter);
 		}else{
 			wipe_filesystem(b->d);
+			redraw_adapter(current_adapter);
 		}
 	}
 	locked_diag("filesystem wipe was cancelled");
@@ -3958,6 +3962,7 @@ umount_target(void){
 			return;
 		}
 		prepare_umount(b->zone->p,b->zone->p->target->path);
+		redraw_adapter(current_adapter);
 		return;
 	}else{
 		if(b->d->target == NULL){
@@ -3965,6 +3970,7 @@ umount_target(void){
 			return;
 		}
 		prepare_umount(b->d,b->d->target->path);
+		redraw_adapter(current_adapter);
 		return;
 	}
 }
