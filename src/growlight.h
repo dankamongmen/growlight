@@ -304,8 +304,8 @@ int rescan_blockdev(const device *);
 int benchmark_blockdev(const device *);
 
 // Very coarse locking
-int lock_growlight(void);
-int unlock_growlight(void);
+void lock_growlight(void);
+void unlock_growlight(void);
 
 int rescan_device(const char *);
 

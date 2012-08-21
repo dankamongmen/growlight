@@ -62,7 +62,10 @@ int devfd = -1; // Hold a reference to DEVROOT
 static unsigned usepci;
 static const glightui *gui;
 static struct pci_access *pciacc;
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+
+// See bug 157. Upon initiation of discovery, a device shell is thrown up
+static pthread_cond_t discovery_cond = PTHREAD_COND_INITIALIZER;
 
 static unsigned thrcount;
 static pthread_mutex_t barrier = PTHREAD_MUTEX_INITIALIZER;
@@ -774,36 +777,39 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 static controller *
 parse_bus_topology(const char *fn){
 	unsigned long domain,bus,dev,func;
-	char buf[PATH_MAX],*module,*sysfs;
+	char *buf,*module,*sysfs;
 	controller *c;
 
 	if(strstr(fn,"/devices/virtual/")){
 		return &virtual_bus;
 	}
-	if(realpath(fn,buf) == NULL){
+	if((buf = realpath(fn,NULL)) == NULL){
 		diag("Couldn't canonicalize %s\n",fn);
 		return NULL;
 	}
 	if((sysfs = parse_pci_busid(buf,&domain,&bus,&dev,&func,&module)) == NULL){
 		verbf("Couldn't extract PCI address from %s\n",buf);
+		free(buf);
 		return &virtual_bus;
 	}
 	if((c = find_pcie_controller(domain,bus,dev,func,module,sysfs)) == NULL){
 		free(module);
 		free(sysfs);
+		free(buf);
 		return NULL;
 	}
+	free(buf);
 	return c;
 }
 
 // Used by systems which don't properly populate sysfs (*cough* zfs *cough*)
 void add_new_virtual_blockdev(device *d){
-	assert(lock_growlight() == 0);
+	lock_growlight();
 		d->c = &virtual_bus;
 		d->next = virtual_bus.blockdevs;
 		virtual_bus.blockdevs = d;
 		d->uistate = gui->block_event(d,d->uistate);
-	assert(unlock_growlight() == 0);
+	unlock_growlight();
 }
 
 static device *
@@ -823,10 +829,6 @@ create_new_device_inner(const char *name,int recurse){
 	memset(d,0,sizeof(*d));
 	strcpy(d->name,name);
 	d->swapprio = SWAP_INVALID;
-	if(strlen(name) >= sizeof(d->name)){
-		diag("Name too long: %s\n",name);
-		return NULL;
-	}
 	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
 		diag("Couldn't read link at %s%s (%s?)\n",
 			SYSROOT,name,strerror(errno));
@@ -834,10 +836,12 @@ create_new_device_inner(const char *name,int recurse){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
+	lock_growlight();
 	if((d->c = parse_bus_topology(buf)) == NULL){
-		diag("Couldn't get physical bus topology for %s\n",name);
+		unlock_growlight();
 		return NULL;
 	}else{
+		unlock_growlight();
 		verbf("\tController: %s\n",d->c->name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
@@ -1011,29 +1015,56 @@ create_new_device_inner(const char *name,int recurse){
 			d->blkdev.last_usable = lookup_last_usable_sector(d);
 		}
 	}
+	lock_growlight();
 	d->next = d->c->blockdevs;
 	d->c->blockdevs = d;
 	d->uistate = gui->block_event(d,d->uistate);
+	unlock_growlight();
 	return d;
+}
+
+struct dlist {
+	char *name;
+	struct dlist *next;
+};
+
+static struct dlist *discovery_active;
+
+static void
+add_to_discovery_list(const char *name){
+	struct dlist *d;
+
+	assert( (d = malloc(sizeof(*d))) );
+	assert( (d->name = strdup(name)) );
+	d->next = discovery_active;
+	discovery_active = d;
+}
+
+static void
+del_from_discovery_list(const char *name){
+	struct dlist **pre;
+
+	for(pre = &discovery_active ; *pre ; pre = &(*pre)->next){
+		if(strcmp((*pre)->name,name) == 0){
+			struct dlist *c = *pre;
+
+			*pre = c->next;
+			free(c->name);
+			free(c);
+			break;
+		}
+	}
 }
 
 static device *
 create_new_device(const char *name,int recurse){
-	char cwd[PATH_MAX + 1];
 	device *d;
 
-	if(getcwd(cwd,sizeof(cwd)) == NULL){
-		diag("Couldn't get working directory (%s?)\n",strerror(errno));
-		return NULL;
-	}
-	if(chdir(SYSROOT)){
-		diag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
-		return NULL;
-	}
+	add_to_discovery_list(name);
+	unlock_growlight();
 	d = create_new_device_inner(name,recurse);
-	if(chdir(cwd)){
-		diag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
-	}
+	lock_growlight();
+	del_from_discovery_list(name);
 	return d;
 }
 
@@ -1052,11 +1083,21 @@ controller *lookup_controller(const char *name){
 }
 
 // name must be an entry in /sys/class/block, and also one in /dev
+// growlight must be locked on entry!
 device *lookup_device(const char *name){
+	struct dlist *dl;
 	controller *c;
 	device *d;
 	size_t s;
 
+	do{
+		for(dl = discovery_active ; dl ; dl = dl->next){
+			if(strcmp(name,dl->name) == 0){
+				pthread_cond_wait(&discovery_cond,&lock);
+				break;
+			}
+		}
+	}while(dl);
 	do{
 		if(strncmp(name,"/",1) == 0){
 			s = 1;
@@ -1085,37 +1126,26 @@ device *lookup_device(const char *name){
 			}
 		}
 	}
-	return create_new_device(name,1);
+	if( (d = create_new_device(name,1)) ){
+		pthread_cond_signal(&discovery_cond);
+	}
+	return d;
 }
 
 static void *
 scan_device(void *name){
-	char cwd[PATH_MAX + 1];
 	device *d;
 	int sig;
 
-	if(getcwd(cwd,sizeof(cwd)) == NULL){
-		diag("Couldn't get working directory (%s?)\n",strerror(errno));
-		pthread_mutex_unlock(&barrier);
-		return NULL;
-	}
-	if(chdir(SYSROOT)){
-		diag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
-		pthread_mutex_unlock(&barrier);
-		return NULL;
-	}
-	assert(lock_growlight() == 0);
+	lock_growlight();
 	d = name ? lookup_device(name) : NULL;
-	assert(unlock_growlight() == 0);
+	unlock_growlight();
 	assert(pthread_mutex_lock(&barrier) == 0);
 	sig = --thrcount == 0;
 	if(sig){
 		pthread_cond_signal(&barrier_cond);
 	}
 	assert(pthread_mutex_unlock(&barrier) == 0);
-	if(chdir(cwd)){
-		diag("Warning: couldn't return to %s (%s?)\n",cwd,strerror(errno));
-	}
 	free(name);
 	return d;
 }
@@ -1518,6 +1548,10 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	}else{
 		usepci = 1;
 	}
+	if(chdir(SYSROOT)){
+		diag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		goto err;
+	}
 	if((sysfd = get_dir_fd(SYSROOT)) < 0){
 		goto err;
 	}
@@ -1660,22 +1694,12 @@ success:
 	return 0;
 }
 
-int lock_growlight(void){
-	int r;
-
-	if( (r = pthread_mutex_lock(&lock)) ){
-		diag("Error locking mutex (%s?)\n",strerror(errno));
-	}
-	return r;
+void lock_growlight(void){
+	assert(pthread_mutex_lock(&lock) == 0);
 }
 
-int unlock_growlight(void){
-	int r;
-
-	if( (r = pthread_mutex_unlock(&lock)) ){
-		diag("Error unlocking mutex (%s?)\n",strerror(errno));
-	}
-	return r;
+void unlock_growlight(void){
+	assert(pthread_mutex_unlock(&lock) == 0);
 }
 
 static inline device *
@@ -1693,6 +1717,7 @@ int rescan_device(const char *name){
 	controller *c;
 	size_t s;
 
+	lock_growlight();
 	do{
 		if(strncmp(name,"/",1) == 0){
 			s = 1;
@@ -1730,14 +1755,17 @@ int rescan_device(const char *name){
 			clobber_device(d);
 			// FIXME update aggregates, also
 			if(rescan(name) == NULL){
+				unlock_growlight();
 				return -1;
 			}
 			return 0;
 		}
 	}
 	if(create_new_device(name,0) == NULL){
+		unlock_growlight();
 		return -1;
 	}
+	unlock_growlight();
 	return 0;
 }
 

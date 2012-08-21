@@ -13,7 +13,7 @@
 
 int explore_md_sysfs(device *d,int dirfd){
 	unsigned long rd;
-	mdslave **enqm;
+	//mdslave **enqm;
 
 	// These files will be empty on incomplete arrays like the md0 that
 	// sometimes pops up.
@@ -31,9 +31,10 @@ int explore_md_sysfs(device *d,int dirfd){
 	if((d->model = strdup("Linux mdadm")) == NULL){
 		return -1;
 	}
-	enqm = &d->mddev.slaves;
+	//enqm = &d->mddev.slaves;
 	d->mddev.transport = AGGREGATE_UNKNOWN;
 	for(rd = 0 ; rd < d->mddev.disks ; ++rd){
+		/*
 		char buf[NAME_MAX],lbuf[NAME_MAX],*c;
 		device *subd;
 		mdslave *m;
@@ -63,10 +64,13 @@ int explore_md_sysfs(device *d,int dirfd){
 		if((c = strdup(lbuf + 4)) == NULL){
 			return -1;
 		}
+		unlock_growlight();
 		if((subd = lookup_device(c)) == NULL){
+			lock_growlight();
 			free(c);
 			return -1;
 		}
+		lock_growlight();
 		if((m = malloc(sizeof(*m))) == NULL){
 			free(c);
 			return -1;
@@ -109,6 +113,7 @@ int explore_md_sysfs(device *d,int dirfd){
 				diag("Unknown layout %d on %s\n",subd->layout,subd->name);
 				break;
 		}
+	*/
 	}
 	return 0;
 }
