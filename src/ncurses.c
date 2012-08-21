@@ -307,6 +307,94 @@ locked_diag(const char *fmt,...){
 	va_end(v);
 }
 
+// This is the number of l we'd have in an optimal world; we might have
+// fewer available to us on this screen at this time.
+static int
+lines_for_adapter(const struct adapterstate *as){
+	int l = 2;
+
+	if(as->expansion != EXPANSION_NONE){
+		l += as->devdisps * 3;
+		l += as->devs;
+	}
+	return l;
+}
+
+static int
+device_lines(int expa,const blockobj *bo){
+	int l = 0;
+
+	if(expa != EXPANSION_NONE){
+		if(bo->d->size){
+			l += 3;
+		}
+		++l;
+	}
+	return l;
+}
+
+static zobj *
+create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,
+			device *p,wchar_t rep){
+	zobj *z;
+
+	if( (z = malloc(sizeof(*z))) ){
+		z->zoneno = zno;
+		z->fsector = fsector;
+		z->lsector = lsector;
+		z->rep = rep;
+		z->p = p;
+		if( (z->prev = prev) ){
+			prev->next = z;
+		}
+		z->next = NULL;
+	}
+	return z;
+}
+
+static inline int
+adapter_lines_bounded(const adapterstate *as,int rows){
+	int l = lines_for_adapter(as);
+
+	if(l > rows - 2){ // top and bottom border
+		l = rows - 2;
+	}
+	return l;
+}
+
+static inline int
+adapter_lines_unbounded(const adapterstate *is){
+	return adapter_lines_bounded(is,INT_MAX);
+}
+
+// Is the adapter window entirely visible? We can't draw it otherwise, as it
+// will obliterate the global bounding box.
+static int
+adapter_wholly_visible_p(int rows,const reelbox *rb){
+	const adapterstate *as = rb->as;
+
+	if(rb->scrline + adapter_lines_bounded(as,rows) >= rows){
+		return 0;
+	}else if(rb->scrline < 1){
+		return 0;
+	}else if(rb->scrline == 1 && adapter_lines_bounded(as,rows) != getmaxy(rb->win)){
+		return 0;
+	}
+	return 1;
+}
+
+// Returns the amount of space available at the bottom.
+static inline int
+bottom_space_p(int rows){
+	if(!last_reelbox){
+		return rows - 1;
+	}
+	if(getmaxy(last_reelbox->win) + getbegy(last_reelbox->win) >= rows - 2){
+		return 0;
+	}
+	return (rows - 1) - (getmaxy(last_reelbox->win) + getbegy(last_reelbox->win));
+}
+
 // Create a panel at the bottom of the window, referred to as the "subdisplay".
 // Only one can currently be active at a time. Window decoration and placement
 // is managed here; only the rows needed for display ought be provided.
@@ -376,6 +464,497 @@ hide_panel_locked(struct panel_state *ps){
 		assert(delwin(psw) == OK);
 		ps->ysize = -1;
 	}
+}
+
+static inline unsigned
+sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos){
+	unsigned u = ((sec * d->logsec) / (float)d->size) * (ex - sx - 1) + sx;
+
+	if(u > ++*sectpos){
+		*sectpos = u;
+	}
+	if(*sectpos >= ex){
+		*sectpos = ex - 1;
+	}
+	return *sectpos;
+}
+
+// Print the contents of the block device in a horizontal bar of arbitrary size
+static void
+print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
+	char pre[PREFIXSTRLEN + 1];
+	const device *d = bo->d;
+	unsigned off = sx - 1;
+	const zobj *z;
+
+	int PNUMFIXME = '0';
+	if(d->mnttype){
+		if(selected){
+			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
+		}else{
+			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
+		}
+		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
+		mvwprintw(w,y,sx,"%s%s%s%s filesystem%s%s",
+				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
+				d->mntsize ? " " : "",
+				d->label ? "" : "unlabeled ", d->mnttype,
+				d->label ? " named " : "",
+				d->label ? d->label : "");
+		return;
+	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
+		if(selected){
+			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+		}else{
+			assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+		}
+		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"No media detected in drive");
+		return;
+	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
+		if(selected){
+			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
+		}else{
+			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
+		}
+		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
+		mvwprintw(w,y,sx,"%s %s",
+				qprefix(d->size,1,pre,sizeof(pre),1),
+				"unpartitioned space");
+		return;
+	}
+	if((z = bo->zchain) == NULL){
+		return;
+	}
+	do{
+		const char *str = NULL;
+		unsigned ch,och;
+		int rep,x;
+
+		x = sectpos(d,z->fsector,sx,ex,&off);
+		if(z->p == NULL){ // unused space among partitions, or metadata
+			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
+					COLOR_PAIR(EMPTY_COLOR);
+			if(selected && z == bo->zone){
+				assert(wattrset(w,A_BOLD|co) == OK);
+				if(x < ex / 2){
+					mvwaddwstr(w,y - 1,x,L"╒═══");
+				}else{
+					mvwaddwstr(w,y - 1,x - 3,L"═══╕");
+				}
+				wattron(w,A_UNDERLINE);
+			}else{
+				assert(wattrset(w,co) == OK);
+			}
+			rep = z->rep;
+		}else{ // dedicated partition
+			if(selected && z == bo->zone){ // partition and device are selected
+				if(z->p->target){
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(TARGET_COLOR)) == OK);
+				}else if(z->p->mnt){
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(MOUNT_COLOR)) == OK);
+				}else{
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+				}
+				if(x < ex / 2){
+					mvwaddwstr(w,y - 1,x,L"╒═══");
+				}else{
+					mvwaddwstr(w,y - 1,x - 3,L"═══╕");
+				}
+				wattron(w,A_UNDERLINE);
+			}else{ // device is not selected
+				if(z->p->target){
+					assert(wattrset(w,COLOR_PAIR(TARGET_COLOR)) == OK);
+				}else if(z->p->mnt){
+					assert(wattrset(w,COLOR_PAIR(MOUNT_COLOR)) == OK);
+				}else{
+					assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
+				}
+			}
+			if(z->p->partdev.alignment < d->physsec){ // misaligned!
+				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
+			}
+			str = z->p->mnttype;
+			rep = PNUMFIXME++;
+		}
+		mvwaddch(w,y,x,rep);
+		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
+		och = ch;
+		while(ch--){
+			if(++off >= (unsigned)ex){
+				break;
+			}
+			mvwaddch(w,y,off,rep);
+		}
+		if(str && och >= strlen(str) + 2){
+			wattron(w,A_BOLD);
+			mvwaddstr(w,y,off - ((och + strlen(str)) / 2),str);
+			mvwaddch(w,y,off - ((och + strlen(str)) / 2) - 1,' ');
+			mvwaddch(w,y,off - och / 2 + strlen(str) / 2,' ');
+		}
+	}while((z = z->next) != bo->zchain);
+}
+
+static void
+print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
+			unsigned cols,unsigned topp,unsigned endp){
+	char buf[PREFIXSTRLEN + 1];
+	const char *rolestr;
+	int selected,co;
+
+	if(line >= rows - !endp){
+		return;
+	}
+	rolestr = NULL;
+	selected = line == rb->selline;
+	switch(bo->d->layout){
+case LAYOUT_NONE:
+	if(bo->d->blkdev.realdev){
+		if(bo->d->blkdev.removable){
+			if(selected){
+				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+			}else{
+				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+			}
+			rolestr = "removable";
+		}else if(bo->d->blkdev.rotate){
+			if(selected){
+				assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(ROTATE_COLOR)) == OK);
+			}else{
+				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
+			}
+			rolestr = "ferromag";
+		}else{
+			if(selected){
+				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(SSD_COLOR)) == OK);
+			}else{
+				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
+			}
+			rolestr = "solidstate";
+		}
+	}else{
+		if(selected){
+			assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(VIRTUAL_COLOR)) == OK);
+		}else{
+			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
+		}
+		rolestr = "virtual";
+	}
+	if(line + topp >= 1){
+	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+				bo->d->name,
+				bo->d->model ? bo->d->model : "n/a",
+				bo->d->revision ? bo->d->revision : "n/a",
+				qprefix(bo->d->size,1,buf,sizeof(buf),0),
+				bo->d->physsec,
+				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
+				bo->d->wwn ? bo->d->wwn : "n/a",
+				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
+				cols - 78,cols - 78,"");
+	}
+		break;
+case LAYOUT_MDADM:
+	rolestr = bo->d->mddev.level;
+	if(bo->d->mddev.degraded){
+		co = A_BOLD|COLOR_PAIR(FUCKED_COLOR);
+	}else{
+		co = A_BOLD|COLOR_PAIR(MDADM_COLOR);
+	}
+	if(selected){
+		assert(wattrset(rb->win,A_REVERSE|co) == OK);
+	}else{
+		assert(wattrset(rb->win,co) == OK);
+	}
+	if(line + topp >= 1){
+	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+				bo->d->name,
+				bo->d->model ? bo->d->model : "n/a",
+				bo->d->revision ? bo->d->revision : "n/a",
+				qprefix(bo->d->size,1,buf,sizeof(buf),0),
+				bo->d->physsec,
+				"n/a",
+				bo->d->wwn ? bo->d->wwn : "n/a",
+				transport_str(bo->d->mddev.transport),
+				cols - 78,cols - 78,"");
+	}
+		break;
+case LAYOUT_DM:
+	rolestr = "dm";
+	if(selected){
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
+	}else{
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
+	}
+	if(line + topp >= 1){
+	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+				bo->d->name,
+				bo->d->model ? bo->d->model : "n/a",
+				bo->d->revision ? bo->d->revision : "n/a",
+				qprefix(bo->d->size,1,buf,sizeof(buf),0),
+				bo->d->physsec,
+				"n/a",
+				bo->d->wwn ? bo->d->wwn : "n/a",
+				transport_str(bo->d->dmdev.transport),
+				cols - 78,cols - 78,"");
+	}
+		break;
+case LAYOUT_PARTITION:
+		break;
+case LAYOUT_ZPOOL:
+	rolestr = "zpool";
+	if(selected){
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(ZPOOL_COLOR)) == OK);
+	}else{
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
+	}
+	if(line + topp >= 1){
+	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+				bo->d->name,
+				bo->d->model ? bo->d->model : "n/a",
+				(uintmax_t)bo->d->zpool.zpoolver,
+				qprefix(bo->d->size,1,buf,sizeof(buf),0),
+				bo->d->physsec,
+				"spa",
+				bo->d->wwn ? bo->d->wwn : "n/a",
+				transport_str(bo->d->zpool.transport),
+				cols - 78,cols - 78,"");
+		break;
+	}
+	}
+	if(++line >= rows - !endp){
+		return;
+	}
+	if(bo->d->size == 0){
+		return;
+	}
+
+	if(line + topp >= 1){
+		mvwprintw(rb->win,line,START_COL,"%11.11s",bo->d->name);
+		if(line - 1 >= 1){
+			mvwprintw(rb->win,line - 1,START_COL,"%11.11s","");
+		}
+	}
+	// Print summary below device name, in the same color
+	if(line + 1 < rows - !endp && line + topp + 1 >= 1){
+		if(rolestr){
+			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
+		}
+	}
+
+	// ...and now the temperature...
+	if(line + 2 < rows - !endp && line + topp + 2 >= 1){
+		if(bo->d->layout == LAYOUT_NONE){
+			wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
+			if(bo->d->blkdev.celsius >= 60u){
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
+			}else if(bo->d->blkdev.celsius >= 40u){
+				wattrset(rb->win,COLOR_PAIR(ORANGE_COLOR));
+			}else{
+				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
+			}
+			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 120u){
+				mvwprintw(rb->win,line + 2,START_COL,"%2.ju°C ",bo->d->blkdev.celsius);
+			}
+			if(bo->d->blkdev.smartgood != SMART_NOSUPPORT){
+				if(bo->d->blkdev.smartgood == SMART_STATUS_GOOD){
+					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
+				}else{
+					wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
+				}
+				mvwprintw(rb->win,line + 2,6,"smart%lc",
+					bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' : L'✘');
+			}
+		}else if(bo->d->layout == LAYOUT_MDADM){
+			if(bo->d->mddev.degraded){
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+				mvwprintw(rb->win,line + 2,START_COL,"%2lu-degraded",bo->d->mddev.degraded);
+			}else{
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR));
+				mvwprintw(rb->win,line + 2,START_COL,"     active");
+			}
+		}
+	}
+
+	if(selected){
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+	}else{
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+	}
+	if(line + topp >= 1){
+		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
+		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
+	}
+	if(++line >= rows - !endp){
+		return;
+	}
+	if(line + topp >= 1){
+		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
+		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
+					cols - START_COL - 1,selected);
+	}
+	if(selected){
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+	}else{
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+	}
+	if(line + topp >= 1){
+		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
+	}
+	if(++line >= rows - !endp){
+		return;
+	}
+	if(line + topp >= 1){
+		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_LLCORNER);
+		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
+	}
+	++line;
+}
+
+static void
+print_adapter_devs(const adapterstate *as,int rows,int cols,
+				unsigned topp,unsigned endp){
+	// If the interface is down, we don't lead with the summary line
+	const blockobj *cur;
+	const reelbox *rb;
+	long line;
+
+	if((rb = as->rb) == NULL){
+		return;
+	}
+	if(as->expansion == EXPANSION_NONE){
+		return;
+	}
+	// First, print the selected device (if there is one), and those above
+	cur = rb->selected;
+	line = rb->selline;
+	while(cur && line + (long)device_lines(as->expansion,cur) >= !!topp){
+		print_dev(rb,cur,line,rows,cols,topp,endp);
+		// here we traverse, then account...
+		if( (cur = cur->prev) ){
+			line -= device_lines(as->expansion,cur);
+		}
+	}
+	line = rb->selected ? (rb->selline +
+		(long)device_lines(as->expansion,rb->selected)) : -(long)topp + 1;
+	cur = (rb->selected ? rb->selected->next : as->bobjs);
+	while(cur && line < rows){
+		print_dev(rb,cur,line,rows,cols,topp,endp);
+		// here, we account before we traverse. this is correct.
+		line += device_lines(as->expansion,cur);
+		cur = cur->next;
+	}
+}
+
+// Abovetop: lines hidden at the top of the screen
+// Belowend: lines hidden at the bottom of the screen
+static void
+adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
+						unsigned belowend){
+	int current = as->rb == current_adapter;
+	int bcolor,hcolor,rows,cols;
+	int attrs;
+
+	getmaxyx(w,rows,cols);
+	bcolor = UBORDER_COLOR;
+	hcolor = UHEADING_COLOR;
+	attrs = current ? A_REVERSE : A_BOLD;
+	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
+	if(abovetop == 0){
+		if(belowend == 0){
+			assert(bevel(w) == OK);
+		}else{
+			assert(bevel_top(w) == OK);
+		}
+	}else{
+		if(belowend == 0){
+			assert(bevel_bottom(w) == OK);
+		} // otherwise it has no top or bottom visible
+	}
+	assert(wattroff(w,A_REVERSE) == OK);
+
+	if(abovetop == 0){
+		if(current){
+			assert(wattron(w,A_BOLD) == OK);
+		}
+		assert(mvwprintw(w,0,5,"[") != ERR);
+		assert(wcolor_set(w,hcolor,NULL) == OK);
+		if(current){
+			assert(wattron(w,A_BOLD) == OK);
+		}else{
+			assert(wattroff(w,A_BOLD) == OK);
+		}
+		assert(waddstr(w,as->c->ident) != ERR);
+		if(as->c->bandwidth){
+			char buf[PREFIXSTRLEN + 1];
+
+			wprintw(w," (%sbps)",qprefix(as->c->bandwidth,1,buf,sizeof(buf),1));
+		}
+		assert(wcolor_set(w,bcolor,NULL) != ERR);
+		if(current){
+			assert(wattron(w,A_BOLD) == OK);
+		}
+		assert(wprintw(w,"]") != ERR);
+		assert(wmove(w,0,cols - 4) != ERR);
+		assert(wattron(w,A_BOLD) == OK);
+		waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
+		assert(wattron(w,attrs) != ERR);
+		assert(wattroff(w,A_REVERSE) != ERR);
+	}
+	if(belowend == 0){
+		if(as->c->bus == BUS_PCIe){
+			assert(mvwprintw(w,rows - 1,2,"[") != ERR);
+			assert(wcolor_set(w,hcolor,NULL) != ERR);
+			if(current){
+				assert(wattron(w,A_BOLD) == OK);
+			}else{
+				assert(wattroff(w,A_BOLD) == OK);
+			}
+			if(as->c->pcie.lanes_neg == 0){
+				wprintw(w,"Southbridge device %04hx:%02x.%02x.%x",
+					as->c->pcie.domain,as->c->pcie.bus,
+					as->c->pcie.dev,as->c->pcie.func);
+			}else{
+				wprintw(w,"PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)",
+						as->c->pcie.domain,as->c->pcie.bus,
+						as->c->pcie.dev,as->c->pcie.func,
+						as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
+			}
+			assert(wcolor_set(w,bcolor,NULL) != ERR);
+			if(current){
+				assert(wattron(w,A_BOLD) == OK);
+			}
+			assert(wprintw(w,"]") != ERR);
+		}
+	}
+}
+
+static int
+redraw_adapter(const reelbox *rb){
+	const adapterstate *as = rb->as;
+	int scrrows,scrcols,rows,cols;
+	unsigned topp,endp;
+
+	if(panel_hidden(rb->panel)){
+		return OK;
+	}
+	getmaxyx(stdscr,scrrows,scrcols);
+	assert(scrcols); // FIXME
+	if(adapter_wholly_visible_p(scrrows,rb) || active){ // completely vasible
+		topp = endp = 0;
+	}else if(getbegy(rb->win) == 1){ // no top
+		topp = adapter_lines_unbounded(as) - getmaxy(rb->win);
+		endp = 0;
+	}else{
+		topp = 0;
+		endp = 1; // no bottom FIXME
+	}
+	getmaxyx(rb->win,rows,cols);
+	assert(cols); // FIXME
+	assert(werase(rb->win) != ERR);
+	adapter_box(as,rb->win,topp,endp);
+	print_adapter_devs(as,rows,cols,topp,endp);
+	return OK;
 }
 
 // -------------------------------------------------------------------------
@@ -504,6 +1083,18 @@ destroy_form_locked(struct form_state *fs){
 		fs->ysize = -1;
 		actform = NULL;
 	}
+}
+
+static inline void
+screen_update(void){
+	if(active){
+		assert(top_panel(active->p) != ERR);
+	}
+	if(actform){
+		assert(top_panel(actform->p) != ERR);
+	}
+	update_panels();
+	assert(doupdate() == OK);
 }
 
 static void
@@ -827,6 +1418,7 @@ fs_do(const char *name){
 	if(r == 0){
 		locked_diag("Successfully created %s filesystem",pending_fstype);
 	}
+	redraw_adapter(current_adapter);
 	destroy_fs_forms();
 }
 
@@ -1230,106 +1822,6 @@ confirm_operation(const char *op,void (*confirmcb)(const char *)){
 // -- end form API
 // -------------------------------------------------------------------------
 
-static inline void
-screen_update(void){
-	if(active){
-		assert(top_panel(active->p) != ERR);
-	}
-	if(actform){
-		assert(top_panel(actform->p) != ERR);
-	}
-	update_panels();
-	assert(doupdate() == OK);
-}
-
-// This is the number of l we'd have in an optimal world; we might have
-// fewer available to us on this screen at this time.
-static int
-lines_for_adapter(const struct adapterstate *as){
-	int l = 2;
-
-	if(as->expansion != EXPANSION_NONE){
-		l += as->devdisps * 3;
-		l += as->devs;
-	}
-	return l;
-}
-
-static int
-device_lines(int expa,const blockobj *bo){
-	int l = 0;
-
-	if(expa != EXPANSION_NONE){
-		if(bo->d->size){
-			l += 3;
-		}
-		++l;
-	}
-	return l;
-}
-
-static zobj *
-create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,
-			device *p,wchar_t rep){
-	zobj *z;
-
-	if( (z = malloc(sizeof(*z))) ){
-		z->zoneno = zno;
-		z->fsector = fsector;
-		z->lsector = lsector;
-		z->rep = rep;
-		z->p = p;
-		if( (z->prev = prev) ){
-			prev->next = z;
-		}
-		z->next = NULL;
-	}
-	return z;
-}
-
-static inline int
-adapter_lines_bounded(const adapterstate *as,int rows){
-	int l = lines_for_adapter(as);
-
-	if(l > rows - 2){ // top and bottom border
-		l = rows - 2;
-	}
-	return l;
-}
-
-static inline int
-adapter_lines_unbounded(const adapterstate *is){
-	return adapter_lines_bounded(is,INT_MAX);
-}
-
-// Is the adapter window entirely visible? We can't draw it otherwise, as it
-// will obliterate the global bounding box.
-static int
-adapter_wholly_visible_p(int rows,const reelbox *rb){
-	const adapterstate *as = rb->as;
-
-	if(rb->scrline + adapter_lines_bounded(as,rows) >= rows){
-		return 0;
-	}else if(rb->scrline < 1){
-		return 0;
-	}else if(rb->scrline == 1 && adapter_lines_bounded(as,rows) != getmaxy(rb->win)){
-		return 0;
-	}
-	return 1;
-}
-
-// Returns the amount of space available at the bottom.
-static inline int
-bottom_space_p(int rows){
-	if(!last_reelbox){
-		return rows - 1;
-	}
-	if(getmaxy(last_reelbox->win) + getbegy(last_reelbox->win) >= rows - 2){
-		return 0;
-	}
-	return (rows - 1) - (getmaxy(last_reelbox->win) + getbegy(last_reelbox->win));
-}
-
 static int
 ncurses_cleanup(WINDOW **w){
 	int ret = 0;
@@ -1486,497 +1978,6 @@ get_current_adapter(void){
 		return current_adapter->as->c;
 	}
 	return NULL;
-}
-
-// Abovetop: lines hidden at the top of the screen
-// Belowend: lines hidden at the bottom of the screen
-static void
-adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
-						unsigned belowend){
-	int current = as->rb == current_adapter;
-	int bcolor,hcolor,rows,cols;
-	int attrs;
-
-	getmaxyx(w,rows,cols);
-	bcolor = UBORDER_COLOR;
-	hcolor = UHEADING_COLOR;
-	attrs = current ? A_REVERSE : A_BOLD;
-	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
-	if(abovetop == 0){
-		if(belowend == 0){
-			assert(bevel(w) == OK);
-		}else{
-			assert(bevel_top(w) == OK);
-		}
-	}else{
-		if(belowend == 0){
-			assert(bevel_bottom(w) == OK);
-		} // otherwise it has no top or bottom visible
-	}
-	assert(wattroff(w,A_REVERSE) == OK);
-
-	if(abovetop == 0){
-		if(current){
-			assert(wattron(w,A_BOLD) == OK);
-		}
-		assert(mvwprintw(w,0,5,"[") != ERR);
-		assert(wcolor_set(w,hcolor,NULL) == OK);
-		if(current){
-			assert(wattron(w,A_BOLD) == OK);
-		}else{
-			assert(wattroff(w,A_BOLD) == OK);
-		}
-		assert(waddstr(w,as->c->ident) != ERR);
-		if(as->c->bandwidth){
-			char buf[PREFIXSTRLEN + 1];
-
-			wprintw(w," (%sbps)",qprefix(as->c->bandwidth,1,buf,sizeof(buf),1));
-		}
-		assert(wcolor_set(w,bcolor,NULL) != ERR);
-		if(current){
-			assert(wattron(w,A_BOLD) == OK);
-		}
-		assert(wprintw(w,"]") != ERR);
-		assert(wmove(w,0,cols - 4) != ERR);
-		assert(wattron(w,A_BOLD) == OK);
-		waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
-		assert(wattron(w,attrs) != ERR);
-		assert(wattroff(w,A_REVERSE) != ERR);
-	}
-	if(belowend == 0){
-		if(as->c->bus == BUS_PCIe){
-			assert(mvwprintw(w,rows - 1,2,"[") != ERR);
-			assert(wcolor_set(w,hcolor,NULL) != ERR);
-			if(current){
-				assert(wattron(w,A_BOLD) == OK);
-			}else{
-				assert(wattroff(w,A_BOLD) == OK);
-			}
-			if(as->c->pcie.lanes_neg == 0){
-				wprintw(w,"Southbridge device %04hx:%02x.%02x.%x",
-					as->c->pcie.domain,as->c->pcie.bus,
-					as->c->pcie.dev,as->c->pcie.func);
-			}else{
-				wprintw(w,"PCI Express device %04hx:%02x.%02x.%x (x%u, gen %s)",
-						as->c->pcie.domain,as->c->pcie.bus,
-						as->c->pcie.dev,as->c->pcie.func,
-						as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
-			}
-			assert(wcolor_set(w,bcolor,NULL) != ERR);
-			if(current){
-				assert(wattron(w,A_BOLD) == OK);
-			}
-			assert(wprintw(w,"]") != ERR);
-		}
-	}
-}
-
-static inline unsigned
-sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos){
-	unsigned u = ((sec * d->logsec) / (float)d->size) * (ex - sx - 1) + sx;
-		       
-	if(u > ++*sectpos){
-		*sectpos = u;
-	}
-	if(*sectpos >= ex){
-		*sectpos = ex - 1;
-	}
-	return *sectpos;
-}
-
-// Print the contents of the block device in a horizontal bar of arbitrary size
-static void
-print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
-	char pre[PREFIXSTRLEN + 1];
-	const device *d = bo->d;
-	unsigned off = sx - 1;
-	const zobj *z;
-
-	int PNUMFIXME = '0';
-	if(d->mnttype){
-		if(selected){
-			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
-		}else{
-			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
-		}
-		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
-		mvwprintw(w,y,sx,"%s%s%s%s filesystem%s%s",
-				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
-				d->mntsize ? " " : "",
-				d->label ? "" : "unlabeled ", d->mnttype,
-				d->label ? " named " : "",
-				d->label ? d->label : "");
-		return;
-	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
-		if(selected){
-			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-		}else{
-			assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-		}
-		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"No media detected in drive");
-		return;
-	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
-		if(selected){
-			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
-		}else{
-			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
-		}
-		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
-		mvwprintw(w,y,sx,"%s %s",
-				qprefix(d->size,1,pre,sizeof(pre),1),
-				"unpartitioned space");
-		return;
-	}
-	if((z = bo->zchain) == NULL){
-		return;
-	}
-	do{
-		const char *str = NULL;
-		unsigned ch,och;
-		int rep,x;
-
-		x = sectpos(d,z->fsector,sx,ex,&off);
-		if(z->p == NULL){ // unused space among partitions, or metadata
-			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
-					COLOR_PAIR(EMPTY_COLOR);
-			if(selected && z == bo->zone){
-				assert(wattrset(w,A_BOLD|co) == OK);
-				if(x < ex / 2){
-					mvwaddwstr(w,y - 1,x,L"╒═══");
-				}else{
-					mvwaddwstr(w,y - 1,x - 3,L"═══╕");
-				}
-				wattron(w,A_UNDERLINE);
-			}else{
-				assert(wattrset(w,co) == OK);
-			}
-			rep = z->rep;
-		}else{ // dedicated partition
-			if(selected && z == bo->zone){ // partition and device are selected
-				if(z->p->target){
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(TARGET_COLOR)) == OK);
-				}else if(z->p->mnt){
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(MOUNT_COLOR)) == OK);
-				}else{
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
-				}
-				if(x < ex / 2){
-					mvwaddwstr(w,y - 1,x,L"╒═══");
-				}else{
-					mvwaddwstr(w,y - 1,x - 3,L"═══╕");
-				}
-				wattron(w,A_UNDERLINE);
-			}else{ // device is not selected
-				if(z->p->target){
-					assert(wattrset(w,COLOR_PAIR(TARGET_COLOR)) == OK);
-				}else if(z->p->mnt){
-					assert(wattrset(w,COLOR_PAIR(MOUNT_COLOR)) == OK);
-				}else{
-					assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
-				}
-			}
-			if(z->p->partdev.alignment < d->physsec){ // misaligned!
-				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
-			}
-			str = z->p->mnttype;
-			rep = PNUMFIXME++;
-		}
-		mvwaddch(w,y,x,rep);
-		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
-		och = ch;
-		while(ch--){
-			if(++off >= (unsigned)ex){
-				break;
-			}
-			mvwaddch(w,y,off,rep);
-		}
-		if(str && och >= strlen(str) + 2){
-			wattron(w,A_BOLD);
-			mvwaddstr(w,y,off - ((och + strlen(str)) / 2),str);
-			mvwaddch(w,y,off - ((och + strlen(str)) / 2) - 1,' ');
-			mvwaddch(w,y,off - och / 2 + strlen(str) / 2,' ');
-		}
-	}while((z = z->next) != bo->zchain);
-}
-
-static void
-print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
-			unsigned cols,unsigned topp,unsigned endp){
-	char buf[PREFIXSTRLEN + 1];
-	const char *rolestr;
-	int selected,co;
-
-	if(line >= rows - !endp){
-		return;
-	}
-	rolestr = NULL;
-	selected = line == rb->selline;
-	switch(bo->d->layout){
-case LAYOUT_NONE:
-	if(bo->d->blkdev.realdev){
-		if(bo->d->blkdev.removable){
-			if(selected){
-				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-			}else{
-				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-			}
-			rolestr = "removable";
-		}else if(bo->d->blkdev.rotate){
-			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(ROTATE_COLOR)) == OK);
-			}else{
-				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
-			}
-			rolestr = "ferromag";
-		}else{
-			if(selected){
-				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(SSD_COLOR)) == OK);
-			}else{
-				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
-			}
-			rolestr = "solidstate";
-		}
-	}else{
-		if(selected){
-			assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(VIRTUAL_COLOR)) == OK);
-		}else{
-			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
-		}
-		rolestr = "virtual";
-	}
-	if(line + topp >= 1){
-	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
-				bo->d->name,
-				bo->d->model ? bo->d->model : "n/a",
-				bo->d->revision ? bo->d->revision : "n/a",
-				qprefix(bo->d->size,1,buf,sizeof(buf),0),
-				bo->d->physsec,
-				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
-				bo->d->wwn ? bo->d->wwn : "n/a",
-				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
-				cols - 78,cols - 78,"");
-	}
-		break;
-case LAYOUT_MDADM:
-	rolestr = bo->d->mddev.level;
-	if(bo->d->mddev.degraded){
-		co = A_BOLD|COLOR_PAIR(FUCKED_COLOR);
-	}else{
-		co = A_BOLD|COLOR_PAIR(MDADM_COLOR);
-	}
-	if(selected){
-		assert(wattrset(rb->win,A_REVERSE|co) == OK);
-	}else{
-		assert(wattrset(rb->win,co) == OK);
-	}
-	if(line + topp >= 1){
-	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
-				bo->d->name,
-				bo->d->model ? bo->d->model : "n/a",
-				bo->d->revision ? bo->d->revision : "n/a",
-				qprefix(bo->d->size,1,buf,sizeof(buf),0),
-				bo->d->physsec,
-				"n/a",
-				bo->d->wwn ? bo->d->wwn : "n/a",
-				transport_str(bo->d->mddev.transport),
-				cols - 78,cols - 78,"");
-	}
-		break;
-case LAYOUT_DM:
-	rolestr = "dm";
-	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
-	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
-	}
-	if(line + topp >= 1){
-	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
-				bo->d->name,
-				bo->d->model ? bo->d->model : "n/a",
-				bo->d->revision ? bo->d->revision : "n/a",
-				qprefix(bo->d->size,1,buf,sizeof(buf),0),
-				bo->d->physsec,
-				"n/a",
-				bo->d->wwn ? bo->d->wwn : "n/a",
-				transport_str(bo->d->dmdev.transport),
-				cols - 78,cols - 78,"");
-	}
-		break;
-case LAYOUT_PARTITION:
-		break;
-case LAYOUT_ZPOOL:
-	rolestr = "zpool";
-	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(ZPOOL_COLOR)) == OK);
-	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
-	}
-	if(line + topp >= 1){
-	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
-				bo->d->name,
-				bo->d->model ? bo->d->model : "n/a",
-				(uintmax_t)bo->d->zpool.zpoolver,
-				qprefix(bo->d->size,1,buf,sizeof(buf),0),
-				bo->d->physsec,
-				"spa",
-				bo->d->wwn ? bo->d->wwn : "n/a",
-				transport_str(bo->d->zpool.transport),
-				cols - 78,cols - 78,"");
-		break;
-	}
-	}
-	if(++line >= rows - !endp){
-		return;
-	}
-	if(bo->d->size == 0){
-		return;
-	}
-
-	if(line + topp >= 1){
-		mvwprintw(rb->win,line,START_COL,"%11.11s",bo->d->name);
-		if(line - 1 >= 1){
-			mvwprintw(rb->win,line - 1,START_COL,"%11.11s","");
-		}
-	}
-	// Print summary below device name, in the same color
-	if(line + 1 < rows - !endp && line + topp + 1 >= 1){
-		if(rolestr){
-			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
-		}
-	}
-
-	// ...and now the temperature...
-	if(line + 2 < rows - !endp && line + topp + 2 >= 1){
-		if(bo->d->layout == LAYOUT_NONE){
-			wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-			if(bo->d->blkdev.celsius >= 60u){
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
-			}else if(bo->d->blkdev.celsius >= 40u){
-				wattrset(rb->win,COLOR_PAIR(ORANGE_COLOR));
-			}else{
-				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-			}
-			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 120u){
-				mvwprintw(rb->win,line + 2,START_COL,"%2.ju°C ",bo->d->blkdev.celsius);
-			}
-			if(bo->d->blkdev.smartgood != SMART_NOSUPPORT){
-				if(bo->d->blkdev.smartgood == SMART_STATUS_GOOD){
-					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-				}else{
-					wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
-				}
-				mvwprintw(rb->win,line + 2,6,"smart%lc",
-					bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' : L'✘');
-			}
-		}else if(bo->d->layout == LAYOUT_MDADM){
-			if(bo->d->mddev.degraded){
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-				mvwprintw(rb->win,line + 2,START_COL,"%2lu-degraded",bo->d->mddev.degraded);
-			}else{
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR));
-				mvwprintw(rb->win,line + 2,START_COL,"     active");
-			}
-		}
-	}
-
-	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
-	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
-	}
-	if(line + topp >= 1){
-		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
-		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
-		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
-	}
-	if(++line >= rows - !endp){
-		return;
-	}
-	if(line + topp >= 1){
-		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
-		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
-					cols - START_COL - 1,selected);
-	}
-	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
-	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
-	}
-	if(line + topp >= 1){
-		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
-	}
-	if(++line >= rows - !endp){
-		return;
-	}
-	if(line + topp >= 1){
-		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_LLCORNER);
-		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
-		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
-	}
-	++line;
-}
-
-static void
-print_adapter_devs(const adapterstate *as,int rows,int cols,
-				unsigned topp,unsigned endp){
-	// If the interface is down, we don't lead with the summary line
-	const blockobj *cur;
-	const reelbox *rb;
-	long line;
-
-	if((rb = as->rb) == NULL){
-		return;
-	}
-	if(as->expansion == EXPANSION_NONE){
-		return;
-	}
-	// First, print the selected device (if there is one), and those above
-	cur = rb->selected;
-	line = rb->selline;
-	while(cur && line + (long)device_lines(as->expansion,cur) >= !!topp){
-		print_dev(rb,cur,line,rows,cols,topp,endp);
-		// here we traverse, then account...
-		if( (cur = cur->prev) ){
-			line -= device_lines(as->expansion,cur);
-		}
-	}
-	line = rb->selected ? (rb->selline +
-		(long)device_lines(as->expansion,rb->selected)) : -(long)topp + 1;
-	cur = (rb->selected ? rb->selected->next : as->bobjs);
-	while(cur && line < rows){
-		print_dev(rb,cur,line,rows,cols,topp,endp);
-		// here, we account before we traverse. this is correct.
-		line += device_lines(as->expansion,cur);
-		cur = cur->next;
-	}
-}
-
-static int
-redraw_adapter(const reelbox *rb){
-	const adapterstate *as = rb->as;
-	int scrrows,scrcols,rows,cols;
-	unsigned topp,endp;
-
-	if(panel_hidden(rb->panel)){
-		return OK;
-	}
-	getmaxyx(stdscr,scrrows,scrcols);
-	assert(scrcols); // FIXME
-	if(adapter_wholly_visible_p(scrrows,rb) || active){ // completely vasible
-		topp = endp = 0;
-	}else if(getbegy(rb->win) == 1){ // no top
-		topp = adapter_lines_unbounded(as) - getmaxy(rb->win);
-		endp = 0;
-	}else{
-		topp = 0;
-		endp = 1; // no bottom FIXME
-	}
-	getmaxyx(rb->win,rows,cols);
-	assert(cols); // FIXME
-	assert(werase(rb->win) != ERR);
-	adapter_box(as,rb->win,topp,endp);
-	print_adapter_devs(as,rows,cols,topp,endp);
-	return OK;
 }
 
 static int
