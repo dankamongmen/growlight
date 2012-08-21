@@ -1590,8 +1590,8 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	char pre[PREFIXSTRLEN + 1];
-	unsigned off = sx - 1,ch;
 	const device *d = bo->d;
+	unsigned off = sx - 1;
 	const zobj *z;
 
 	int PNUMFIXME = '0';
@@ -1633,6 +1633,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		return;
 	}
 	do{
+		const char *str = NULL;
+		unsigned ch,och;
 		int rep;
 
 		if(z->p == NULL){ // unused space among partitions, or metadata
@@ -1653,15 +1655,23 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			if(z->p->partdev.alignment < d->physsec){ // misaligned!
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(RED_COLOR)) == OK);
 			}
+			str = z->p->mnttype;
 			rep = PNUMFIXME++;
 		}
 		mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),rep);
 		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
+		och = ch;
 		while(ch--){
 			if(++off >= (unsigned)ex){
 				break;
 			}
 			mvwaddch(w,y,off,rep);
+		}
+		if(str && och >= strlen(str) + 2){
+			wattron(w,A_BOLD);
+			mvwaddstr(w,y,off - ((och + strlen(str)) / 2),str);
+			mvwaddch(w,y,off - ((och + strlen(str)) / 2) - 1,' ');
+			mvwaddch(w,y,off - och / 2 + strlen(str) / 2,' ');
 		}
 	}while((z = z->next) != bo->zchain);
 }
