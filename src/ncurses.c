@@ -59,6 +59,7 @@ enum {
 	INPUT_COLOR,			// Form input color
 	MOUNT_COLOR,			// Mounted, untargeted filesystems
 	TARGET_COLOR,			// Targeted filesystems
+	FUCKED_COLOR,			// Things that warrant attention
 
 	RED_COLOR,
 	ORANGE_COLOR,
@@ -1358,6 +1359,8 @@ ncurses_cleanup(WINDOW **w){
 	return ret;
 }
 
+#define COLOR_LIGHTRED 9
+
 static int
 setup_colors(void){
 	assert(init_pair(BORDER_COLOR,COLOR_GREEN,-1) == OK);
@@ -1383,6 +1386,7 @@ setup_colors(void){
 	assert(init_pair(INPUT_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == OK);
 
 	assert(init_pair(RED_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
@@ -1672,7 +1676,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				}
 			}
 			if(z->p->partdev.alignment < d->physsec){ // misaligned!
-				assert(wattrset(w,A_BOLD|COLOR_PAIR(RED_COLOR)) == OK);
+				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
 			str = z->p->mnttype;
 			rep = PNUMFIXME++;
@@ -1700,7 +1704,7 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 			unsigned cols,unsigned topp,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
 	const char *rolestr;
-	int selected;
+	int selected,co;
 
 	if(line >= rows - !endp){
 		return;
@@ -1755,10 +1759,15 @@ case LAYOUT_NONE:
 		break;
 case LAYOUT_MDADM:
 	rolestr = "mdraid";
-	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
+	if(bo->d->mddev.degraded){
+		co = A_BOLD|COLOR_PAIR(FUCKED_COLOR);
 	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
+		co = A_BOLD|COLOR_PAIR(MDADM_COLOR);
+	}
+	if(selected){
+		assert(wattrset(rb->win,A_REVERSE|co) == OK);
+	}else{
+		assert(wattrset(rb->win,co) == OK);
 	}
 	if(line + topp >= 1){
 	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
@@ -1858,6 +1867,14 @@ case LAYOUT_ZPOOL:
 				}
 				mvwprintw(rb->win,line + 2,6,"smart%lc",
 					bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' : L'✘');
+			}
+		}else if(bo->d->layout == LAYOUT_MDADM){
+			if(bo->d->mddev.degraded){
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+				mvwprintw(rb->win,line + 2,START_COL,"%2.2lu-degraded",bo->d->mddev.degraded);
+			}else{
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR));
+				mvwprintw(rb->win,line + 2,START_COL,"     active");
 			}
 		}
 	}
