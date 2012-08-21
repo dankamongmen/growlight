@@ -599,7 +599,7 @@ print_dm(const device *d,int prefix,int descend){
 			d->uuid ? d->uuid : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec, "n/a",
-			d->dmdev.disks,d->dmdev.level
+			d->dmdev.disks,d->dmdev.level ? d->dmdev.level : "n/a"
 			);
 	if(rr < 0){
 		return -1;
@@ -646,8 +646,7 @@ print_mdadm(const device *d,int prefix,int descend){
 			d->uuid ? d->uuid : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec, "n/a",
-			d->mddev.disks,d->mddev.level
-			);
+			d->mddev.disks,d->mddev.level ? d->mddev.level : "n/a");
 	if(rr < 0){
 		return -1;
 	}
