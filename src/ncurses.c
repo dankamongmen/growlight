@@ -3850,14 +3850,25 @@ wipe_mbr(void){
 }
 
 static void
-badblock_check(void){
+badblock_do_internal(void){
+	struct panel_state *ps;
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
 		locked_diag("Block check requires selection of a block device");
 		return;
 	}
+	ps = show_splash(L"Performing block check...");
 	badblock_scan(b->d,0); // FIXME allow destructive badblock check
+	if(ps){
+		hide_panel_locked(ps);
+		free(ps);
+	}
+}
+
+static void
+badblock_check(void){
+	badblock_do_internal();
 }
 
 static void
