@@ -1638,13 +1638,20 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	do{
 		const char *str = NULL;
 		unsigned ch,och;
-		int rep;
+		int rep,x;
 
+		x = sectpos(d,z->fsector,sx,ex,&off);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR);
 			if(selected && z == bo->zone){
-				assert(wattrset(w,A_BOLD|A_UNDERLINE|co) == OK);
+				assert(wattrset(w,A_BOLD|co) == OK);
+				if(x < ex / 2){
+					mvwaddwstr(w,y - 1,x,L"╒═══");
+				}else{
+					mvwaddwstr(w,y - 1,x - 3,L"═══╕");
+				}
+				wattron(w,A_UNDERLINE);
 			}else{
 				assert(wattrset(w,co) == OK);
 			}
@@ -1652,12 +1659,18 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{ // dedicated partition
 			if(selected && z == bo->zone){ // partition and device are selected
 				if(z->p->target){
-					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(TARGET_COLOR)) == OK);
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(TARGET_COLOR)) == OK);
 				}else if(z->p->mnt){
-					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(MOUNT_COLOR)) == OK);
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(MOUNT_COLOR)) == OK);
 				}else{
-					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 				}
+				if(x < ex / 2){
+					mvwaddwstr(w,y - 1,x,L"╒═══");
+				}else{
+					mvwaddwstr(w,y - 1,x - 3,L"═══╕");
+				}
+				wattron(w,A_UNDERLINE);
 			}else{ // device is not selected
 				if(z->p->target){
 					assert(wattrset(w,COLOR_PAIR(TARGET_COLOR)) == OK);
@@ -1673,7 +1686,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			str = z->p->mnttype;
 			rep = PNUMFIXME++;
 		}
-		mvwaddch(w,y,sectpos(d,z->fsector,sx,ex,&off),rep);
+		mvwaddch(w,y,x,rep);
 		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
 		och = ch;
 		while(ch--){
