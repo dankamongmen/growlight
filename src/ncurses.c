@@ -4669,10 +4669,13 @@ handle_ncurses_input(WINDOW *w){
 				break;
 			case '@':
 				pthread_mutex_lock(&bfl);
-				if(finalize_target() == 0){
+				if((r = finalize_target()) == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
 				unlock_ncurses();
+				if(r == 0){
+					return;
+				}
 				break;
 			case 'q': case 'Q':
 				diag("User-initiated shutdown");
