@@ -4410,7 +4410,7 @@ unset_target(void){
 
 static void
 handle_ncurses_input(WINDOW *w){
-	int ch;
+	int ch,r;
 
 	while((ch = getch()) != ERR){
 		if(actform){
@@ -4649,17 +4649,23 @@ handle_ncurses_input(WINDOW *w){
 // Finalization commands
 			case '*':
 				pthread_mutex_lock(&bfl);
-				if(uefiboot() == 0){
+				if((r = uefiboot()) == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
 				unlock_ncurses();
+				if(r == 0){
+					return;
+				}
 				break;
 			case '#':
 				pthread_mutex_lock(&bfl);
-				if(biosboot() == 0){
+				if((r = biosboot()) == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
 				unlock_ncurses();
+				if(r == 0){
+					return;
+				}
 				break;
 			case '@':
 				pthread_mutex_lock(&bfl);
