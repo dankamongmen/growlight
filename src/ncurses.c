@@ -593,7 +593,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			wattron(w,A_BOLD);
 			mvwaddstr(w,y,off - ((och + strlen(str)) / 2),str);
 			mvwaddch(w,y,off - ((och + strlen(str)) / 2) - 1,' ');
-			mvwaddch(w,y,off - och / 2 + strlen(str) / 2,' ');
+			mvwaddch(w,y,off - ((och + strlen(str)) / 2) + strlen(str),' ');
 		}
 	}while((z = z->next) != bo->zchain);
 }
