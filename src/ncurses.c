@@ -1306,7 +1306,7 @@ targpoint_callback(const char *path){
 	}
 	b = current_adapter->selected;
 	if(b->zone->p == NULL){
-		prepare_mount(b->d,path,b->d->mnttype,b->d->uuid,b->d->label,"");
+		prepare_mount(b->d,path,b->d->mnttype,b->d->uuid,b->d->label,"defaults");
 		redraw_adapter(current_adapter);
 		return;
 	}else if(b->zone->p->layout != LAYOUT_PARTITION){
@@ -1314,7 +1314,7 @@ targpoint_callback(const char *path){
 		return;
 	}else{
 		prepare_mount(b->zone->p,path,b->zone->p->mnttype,
-			b->zone->p->uuid,b->zone->p->label,"");
+			b->zone->p->uuid,b->zone->p->label,"defaults");
 		redraw_adapter(current_adapter);
 		return;
 	}
