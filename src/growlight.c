@@ -1568,15 +1568,20 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if(watch_dir(fd,SYSROOT,scan_device)){
 		goto err;
 	}
+	lock_growlight();
 	if(parse_filesystems(gui,FILESYSTEMS)){
+		unlock_growlight();
 		goto err;
 	}
 	if(parse_mounts(gui,MOUNTS)){
+		unlock_growlight();
 		goto err;
 	}
 	if(parse_swaps(gui,SWAPS)){
+		unlock_growlight();
 		goto err;
 	}
+	unlock_growlight();
 	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
