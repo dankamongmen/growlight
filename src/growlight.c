@@ -1606,9 +1606,15 @@ int growlight_stop(void){
 	close(sysfd); sysfd = -1;
 	close(devfd); devfd = -1;
 	if(growlight_target){
-		return (finalized && !r) ? 0 : -1;
+		if(!finalized){
+			diag("Didn't finalize target before exiting, uh-oh!\n");
+			return -1;
+		}
 	}
-	return r;
+	if(r){
+		return -1;
+	}
+	return 0;
 }
 
 int rescan_controller(controller *c){
