@@ -487,7 +487,6 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	unsigned off = sx - 1;
 	const zobj *z;
 
-	int PNUMFIXME = '0';
 	if(d->mnttype){
 		if(selected){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
@@ -574,7 +573,12 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
 			str = z->p->mnttype;
-			rep = PNUMFIXME++;
+			rep = z->p->partdev.pnumber % 16;
+			if(rep >= 10){
+				rep = 'a' + (rep - 10); // FIXME lame
+			}else{
+				rep = '0' + rep;	// FIXME lame
+			}
 		}
 		mvwaddch(w,y,x,rep);
 		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
@@ -3844,7 +3848,8 @@ rescan_selection(void){
 		return;
 	}
 	locked_diag("Rescanning block device %s",b->d->name);
-	rescan_blockdev(b->d);
+	rescan_blockdev(b->d); // first, have the kernel rescan
+	rescan_device(b->d->name); // then, force us to rescan the kernel
 }
 
 static void

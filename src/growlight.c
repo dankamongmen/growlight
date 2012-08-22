@@ -1665,6 +1665,10 @@ int benchmark_blockdev(const device *d){
 	return 0;
 }
 
+// Tell the kernel to rescan the device. This shouldn't really ever be
+// necessary except (a) on initialization, if the kernel doesn't have an
+// understanding equivalent to what we detect or (b) if some external process
+// modifies the partitioning and doesn't notify the kernel itself.
 int rescan_blockdev(const device *d){
 	char buf[PATH_MAX];
 	unsigned t;
