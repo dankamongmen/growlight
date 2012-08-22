@@ -26,7 +26,7 @@ create_target(const char *path,const char *dev,const char *uuid,
 	if( (t = malloc(sizeof(*t))) ){
 		t->path = strdup(path);
 		t->dev = strdup(dev);
-		t->ops = strcmp(ops);
+		t->ops = strdup(ops);
 		t->uuid = uuid ? strdup(uuid) : NULL;
 		t->label = label ? strdup(label) : NULL;
 		if(!t->path || !t->dev || !t->ops || (label && !t->label)
