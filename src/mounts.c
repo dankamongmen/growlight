@@ -139,31 +139,34 @@ int parse_mounts(const glightui *gui,const char *fn){
 			goto err;
 		}
 		idx += r;
-		if(*dev != '/'){
-			verbf("virtfs %s at %s\n",fs,mnt);
-			continue;
-		}
 		if(statvfs(mnt,&vfs)){
 			diag("Couldn't stat fs %s (%s?)\n",dev,strerror(errno));
 			return -1;
 		}
-		rp = dev;
-		if(lstat(rp,&st) == 0){
-			if(S_ISLNK(st.st_mode)){
-				if((r = readlink(dev,buf,sizeof(buf))) < 0){
-					diag("Couldn't deref %s (%s?)\n",dev,strerror(errno));
-					goto err;
-				}
-				if((size_t)r >= sizeof(buf)){
-					diag("Name too long for %s (%d?)\n",dev,r);
-					goto err;
-				}
-				buf[r] = '\0';
-				rp = buf;
+		if(*dev != '/'){ // have to get zfs's etc
+			if((d = lookup_device(dev)) == NULL){
+				verbf("virtfs %s at %s\n",fs,mnt);
+				continue;
 			}
-		}
-		if((d = lookup_device(rp)) == NULL){
-			continue;
+		}else{
+			rp = dev;
+			if(lstat(rp,&st) == 0){
+				if(S_ISLNK(st.st_mode)){
+					if((r = readlink(dev,buf,sizeof(buf))) < 0){
+						diag("Couldn't deref %s (%s?)\n",dev,strerror(errno));
+						goto err;
+					}
+					if((size_t)r >= sizeof(buf)){
+						diag("Name too long for %s (%d?)\n",dev,r);
+						goto err;
+					}
+					buf[r] = '\0';
+					rp = buf;
+				}
+			}
+			if((d = lookup_device(rp)) == NULL){
+				continue;
+			}
 		}
 		if(d->mnt){
 			if(strcmp(d->mnt,mnt)){
