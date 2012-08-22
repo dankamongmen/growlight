@@ -14,7 +14,7 @@
 #define ulong_t unsigned long
 #define boolean_t bool
 #include <stdbool.h>
-#include <libzfs.h>
+//#include <libzfs.h>
 
 static libzfs_handle_t *zht;
 static char history[HIS_MAX_RECORD_LEN];

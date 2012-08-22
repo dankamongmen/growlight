@@ -19,6 +19,7 @@ extern "C" {
 #include "mounts.h"
 #include "ptypes.h"
 #include "target.h"
+#include "config.h"
 
 extern unsigned verbose;
 extern unsigned finalized;
@@ -454,6 +455,12 @@ static inline int
 target_mode_p(void){
 	return !!growlight_target;
 }
+
+#ifdef HAVE_LIBZFS
+#include <libzfs.h>
+#else
+#define POOL_STATE_ACTIVE 0
+#endif
 
 #ifdef __cplusplus
 }
