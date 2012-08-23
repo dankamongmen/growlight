@@ -3049,7 +3049,7 @@ update_diags(struct panel_state *ps){
 		while( (c = strchr(tbuf,'\b')) ){
 			*c = ' ';
 		}
-		assert(mvwprintw(w,y - r,START_COL,"%s",tbuf) != ERR);
+		assert(mvwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf) != ERR);
 		free(l[r].msg);
 	}
 	return 0;
