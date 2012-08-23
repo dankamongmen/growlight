@@ -121,7 +121,6 @@ typedef struct device {
 			transport_e transport;
 			unsigned realdev: 1;	// Is itself a real block device
 			unsigned removable: 1;	// Removable media
-			unsigned rotate: 1;	// Rotational media / spinning platters
 			unsigned wcache: 1;	// Write cache enabled
 			unsigned biosboot: 1;	// Non-zero bytes in MBR code area
 			unsigned rwverify: 1;	// Read-Write-Verify
@@ -129,6 +128,8 @@ typedef struct device {
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)
+			int32_t rotation;	// Rotation rate:
+						// 0 == unknown, -1 == SSD
 
 			// The following two are relative to the static
 			// partition table metainfo, not created partitions.

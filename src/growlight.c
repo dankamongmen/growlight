@@ -571,7 +571,11 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 		if(get_sysfs_bool(fd,"queue/rotational",&b)){
 			diag("Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
 		}else{
-			d->blkdev.rotate = !!b;
+			if(!b){
+				d->blkdev.rotation = -1;
+			}else{
+				d->blkdev.rotation = 0;
+			}
 		}
 	}
 	if((d->sched = get_sysfs_string(fd,"queue/scheduler")) == NULL){

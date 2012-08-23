@@ -282,6 +282,11 @@ int sg_interrogate(device *d,int fd){
 	}else if(!(conf & CONFIG_ATAPI)){
 	}
 	*/
+	if((d->blkdev.rotation = buf[NMRR]) == 1){
+		d->blkdev.rotation = -1; // non-rotating store
+	}else if(d->blkdev.rotation <= 0x401){
+		d->blkdev.rotation = 0; // unknown rate
+	}
 	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
 		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
 		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");

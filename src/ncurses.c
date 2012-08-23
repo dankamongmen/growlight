@@ -602,13 +602,13 @@ static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 			unsigned cols,unsigned topp,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
-	const char *rolestr;
+	char rolestr[12]; // taken from %-11.11s below
 	int selected,co;
 
 	if(line >= rows - !endp){
 		return;
 	}
-	rolestr = NULL;
+	strcpy(rolestr,"");
 	selected = line == rb->selline;
 	switch(bo->d->layout){
 case LAYOUT_NONE:
@@ -619,21 +619,25 @@ case LAYOUT_NONE:
 			}else{
 				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 			}
-			rolestr = "removable";
-		}else if(bo->d->blkdev.rotate){
+			strncpy(rolestr,"removable",sizeof(rolestr));
+		}else if(bo->d->blkdev.rotation >= 0){
 			if(selected){
 				assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(ROTATE_COLOR)) == OK);
 			}else{
 				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
 			}
-			rolestr = "ferromag";
+			if(bo->d->blkdev.rotation > 0){
+				snprintf(rolestr,sizeof(rolestr),"%d rpm",bo->d->blkdev.rotation);
+			}else{
+				strncpy(rolestr,"ferromag",sizeof(rolestr));
+			}
 		}else{
 			if(selected){
 				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(SSD_COLOR)) == OK);
 			}else{
 				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
 			}
-			rolestr = "solidstate";
+			strncpy(rolestr,"solidstate",sizeof(rolestr));
 		}
 	}else{
 		if(selected){
@@ -641,7 +645,7 @@ case LAYOUT_NONE:
 		}else{
 			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
 		}
-		rolestr = "virtual";
+		strncpy(rolestr,"virtual",sizeof(rolestr));
 	}
 	if(line + topp >= 1){
 	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
@@ -657,7 +661,9 @@ case LAYOUT_NONE:
 	}
 		break;
 case LAYOUT_MDADM:
-	rolestr = bo->d->mddev.level;
+	if(bo->d->mddev.level){
+		strncpy(rolestr,bo->d->mddev.level,sizeof(rolestr));
+	}
 	if(bo->d->mddev.degraded){
 		co = A_BOLD|COLOR_PAIR(FUCKED_COLOR);
 	}else{
@@ -682,7 +688,7 @@ case LAYOUT_MDADM:
 	}
 		break;
 case LAYOUT_DM:
-	rolestr = "dm";
+	strncpy(rolestr,"dm",sizeof(rolestr));
 	if(selected){
 		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
 	}else{
@@ -704,7 +710,7 @@ case LAYOUT_DM:
 case LAYOUT_PARTITION:
 		break;
 case LAYOUT_ZPOOL:
-	rolestr = "zpool";
+	strncpy(rolestr,"zpool",sizeof(rolestr));
 	if(selected){
 		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	}else{
@@ -739,7 +745,7 @@ case LAYOUT_ZPOOL:
 	}
 	// Print summary below device name, in the same color
 	if(line + 1 < rows - !endp && line + topp + 1 >= 1){
-		if(rolestr){
+		if(strlen(rolestr)){
 			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
 		}
 	}

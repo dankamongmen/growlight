@@ -447,7 +447,7 @@ print_drive(const device *d,int descend){
 		if(d->blkdev.removable){
 			use_terminfo_color(COLOR_WHITE,0); // optical/usb
 		}else if(d->blkdev.realdev){
-			if(d->blkdev.rotate){
+			if(d->blkdev.rotation >= 0){
 				use_terminfo_color(COLOR_YELLOW,0); // disk
 			}else{
 				use_terminfo_color(COLOR_CYAN,1); // ssd
@@ -466,7 +466,7 @@ print_drive(const device *d,int descend){
 				d->blkdev.smartgood == SMART_STATUS_BAD ? L'✘' :
 				d->blkdev.realdev ? L'.' : L'V',
 			d->blkdev.unloaded ? L'U' : L'.',
-			d->blkdev.rotate ? L'O' : L'.',
+			d->blkdev.rotation >= 0 ? L'O' : L'.',
 			d->blkdev.wcache ? L'W' : d->roflag ? L'r' : L'.',
 			d->blkdev.biosboot ? L'B' : L'.',
 			d->blkdev.pttable ? d->blkdev.pttable : "none",
