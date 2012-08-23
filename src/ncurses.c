@@ -1872,6 +1872,13 @@ ncurses_cleanup(WINDOW **w){
 }
 
 #define COLOR_LIGHTRED 9
+#define COLOR_LIGHTGREEN 10
+#define COLOR_LIGHTYELLOW 11
+#define COLOR_LIGHTBLUE 12
+#define COLOR_LIGHTMAGENTA 13 // (pink)
+#define COLOR_LIGHTCYAN 14
+#define COLOR_LIGHTWHITE 15
+#define COLOR_HIDDEN 16
 
 static int
 setup_colors(void){
@@ -1884,14 +1891,14 @@ setup_colors(void){
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == OK);
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
-	assert(init_pair(SSD_COLOR,COLOR_CYAN,-1) == OK);
+	assert(init_pair(SSD_COLOR,COLOR_LIGHTGREEN,-1) == OK);
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
-	assert(init_pair(MDADM_COLOR,COLOR_MAGENTA,-1) == OK);
-	assert(init_pair(ZPOOL_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(MDADM_COLOR,COLOR_LIGHTYELLOW,-1) == OK);
+	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FORMBORDER_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(FORMTEXT_COLOR,COLOR_MAGENTA,-1) == OK);
@@ -2983,7 +2990,7 @@ use_next_device(void){
 static const int DIAGROWS = 14;
 
 // Used after shutting down on error, which will clean the screen. This takes
-// the last few diagnostics and prints them to stderr.
+// the last few diagnostics and prints them, unmutilated, to stderr.
 static int
 dump_diags(void){
 	logent l[10];
@@ -2994,16 +3001,12 @@ dump_diags(void){
 		return -1;
 	}
 	for(r = 0 ; r < y ; ++r){
-		char tbuf[27],*c;
+		char tbuf[27];
 
 		if(l[r].msg == NULL){
 			break;
 		}
 		assert(ctime_r(&l[r].when,tbuf));
-		tbuf[strlen(tbuf) - 1] = ' '; // kill newline
-		while( (c = strchr(l[r].msg,'\n')) || (c = strchr(l[r].msg,'\t')) ){
-			*c = ' ';
-		}
 		fprintf(stderr,"%s %s\n",tbuf,l[r].msg);
 		free(l[r].msg);
 	}
@@ -3024,7 +3027,7 @@ update_diags(struct panel_state *ps){
 	}
 	assert(wattrset(w,SUBDISPLAY_ATTR) == OK);
 	for(r = 0 ; r < y ; ++r){
-		char *c,tbuf[x - START_COL * 2 + 1];
+		char *c,tbuf[x];
 		struct tm tm;
 		size_t tb;
 		int p;
@@ -3039,14 +3042,16 @@ update_diags(struct panel_state *ps){
 			break;;
 		}
 		tb = sizeof(tbuf) / sizeof(*tbuf) - strlen(tbuf);
-		p = snprintf(tbuf + strlen(tbuf),tb," %s",l[r].msg);
+		p = snprintf(tbuf + strlen(tbuf),tb," %-*.*s",
+				(int)tb - 2,(int)tb - 2,l[r].msg);
 		if(p < 0 || (unsigned)p >= tb){
 			tbuf[sizeof(tbuf) / sizeof(*tbuf) - 1] = '\0';
 		}
 		if( (c = strchr(tbuf,'\n')) ){
 			*c = '\0';
 		}
-		while( (c = strchr(tbuf,'\b')) ){
+		c = tbuf;
+		while((c = strchr(c,'\b')) || (c = strchr(c,'\t'))){
 			*c = ' ';
 		}
 		assert(mvwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf) != ERR);
@@ -3856,6 +3861,7 @@ rescan_selection(void){
 	locked_diag("Rescanning block device %s",b->d->name);
 	rescan_blockdev(b->d); // first, have the kernel rescan
 	rescan_device(b->d->name); // then, force us to rescan the kernel
+	redraw_adapter(current_adapter);
 }
 
 static void
