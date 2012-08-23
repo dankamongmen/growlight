@@ -15,7 +15,9 @@ doc/growlight.ent
 growlight-curses
 growlight-tty
 growlight-curses.8
+growlight-curses.xhtml
 growlight-tty.8
+growlight-tty.xhtml
 growlight-*.tar.bz2
 growlight-*.tar.gz
 install-sh
