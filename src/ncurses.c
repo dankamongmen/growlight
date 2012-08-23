@@ -3051,7 +3051,7 @@ update_diags(struct panel_state *ps){
 			*c = '\0';
 		}
 		c = tbuf;
-		while((c = strchr(c,'\b')) || (c = strchr(c,'\t'))){
+		while((c = strchr(tbuf,'\b')) || (c = strchr(tbuf,'\t'))){
 			*c = ' ';
 		}
 		assert(mvwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf) != ERR);
