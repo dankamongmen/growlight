@@ -474,6 +474,7 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	static const uint8_t zguid[GUIDSIZE];
 	const size_t lbasize = LBA_SIZE;
 	unsigned char tguid[GUIDSIZE];
+	char cname[BUFSIZ];
 	gpt_header *ghead;
 	unsigned z,partno;
 	gpt_entry *gpe;
@@ -572,7 +573,9 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
 		return -1;
 	}
-	return 0;
+	snprintf(cname,sizeof(cname) - 1,"%ls",name);
+	return blkpg_add_partition(fd,fsec * LBA_SIZE,
+			(lsec - fsec + 1) * LBA_SIZE,z,cname);
 }
 
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
