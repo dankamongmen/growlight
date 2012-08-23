@@ -519,6 +519,43 @@ uintmax_t lookup_last_usable_sector(const device *d){
 	return 0;
 }
 
+// Uses the BLKPG ioctl to notify the kernel that a partition has been added
+int blkpg_add_partition(int fd,long long start,long long len,int pno,const char *name){
+	struct blkpg_partition data;
+	struct blkpg_ioctl_arg blk;
+	unsigned t;
+
+	if(strlen(name) >= sizeof(data.devname)){
+		diag("Name too long for BLKPG: %s\n",name);
+		return -1;
+	}
+	memset(&blk,0,sizeof(blk));
+	memset(&data,0,sizeof(data));
+	blk.op = BLKPG_ADD_PARTITION;
+	blk.datalen = sizeof(data);
+	blk.data = &data;
+	data.start = start;
+	data.length = len;
+	data.pno = pno;
+	strcpy(data.devname,name);
+	for(t = 0 ; t < 2 ; ++t){
+		if(ioctl(fd,BLKPG,&blk) == 0){
+			goto success;
+		}
+		diag("Error invoking BLKPG ioctl on %d (%s?), retrying in 3s\n",pno,strerror(errno));
+		sleep(3);
+	}
+	if(ioctl(fd,BLKPG,&blk) == 0){
+		goto success;
+	}
+	diag("Error invoking BLKPG ioctl on %d (%s?)\n",pno,strerror(errno));
+	return -1;
+
+success:
+	diag("Informed kernel of partition %d's creation\n",pno);
+	return 0;
+}
+
 // Uses the BLKPG ioctl to notify the kernel that a partition has been removed
 int blkpg_del_partition(int fd,long long start,long long len,int pno,const char *name){
 	struct blkpg_partition data;
@@ -552,6 +589,6 @@ int blkpg_del_partition(int fd,long long start,long long len,int pno,const char 
 	return -1;
 
 success:
-	diag("Informed kernel of new partition %d\n",pno);
+	diag("Informed kernel of partition %d's deletion\n",pno);
 	return 0;
 }
