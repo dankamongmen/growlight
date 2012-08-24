@@ -460,13 +460,6 @@ unmap_gpt(const device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
 		errno = e;
 		return -1;
 	}
-	if(close(fd)){
-		int e = errno;
-
-		diag("Error closing %s (%s?)\n",parent->name,strerror(errno));
-		errno = e;
-		return -1;
-	}
 	return 0;
 }
 
@@ -481,7 +474,7 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	size_t mapsize;
 	uint64_t lbas;
 	void *map;
-	int fd;
+	int fd,r;
 
 	if(!name){
 		diag("GPT partitions ought be named!\n");
@@ -571,11 +564,20 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	gpe[z].first_lba = fsec;
 	gpe[z].last_lba = lsec;
 	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
+		close(fd);
 		return -1;
 	}
 	snprintf(cname,sizeof(cname) - 1,"%ls",name);
-	return blkpg_add_partition(fd,fsec * LBA_SIZE,
+	r = blkpg_add_partition(fd,fsec * LBA_SIZE,
 			(lsec - fsec + 1) * LBA_SIZE,z,cname);
+	if(close(fd)){
+		int e = errno;
+
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
+		errno = e;
+		return -1;
+	}
+	return r;
 }
 
 int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
@@ -718,6 +720,11 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code
 	gpe[z].first_lba = flarge;
 	gpe[z].last_lba = llarge;
 	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
+		close(fd);
+		return -1;
+	}
+	if(close(fd)){
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -740,6 +747,11 @@ int name_gpt(device *d,const wchar_t *name){
 		return -1;
 	}
 	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		close(fd);
+		return -1;
+	}
+	if(close(fd)){
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -758,6 +770,11 @@ int uuid_gpt(device *d,const void *uuid){
 	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
 	memcpy(gpe[d->partdev.pnumber].name,uuid,GUIDSIZE);
 	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		close(fd);
+		return -1;
+	}
+	if(close(fd)){
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -780,6 +797,11 @@ int flag_gpt(device *d,uint64_t flag,unsigned status){
 		gpe[d->partdev.pnumber].flags &= ~flag;
 	}
 	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		close(fd);
+		return -1;
+	}
+	if(close(fd)){
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -805,10 +827,16 @@ int code_gpt(device *d,unsigned long long code){
 	if(gpe[g].first_lba == 0 && gpe[g].last_lba == 0){
 		diag("Not a valid GPT partition: %s\n",d->name);
 		unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE);
+		close(fd);
 		return -1;
 	}
 	memcpy(gpe[g].type_guid,tguid,sizeof(tguid));
 	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		close(fd);
+		return -1;
+	}
+	if(close(fd)){
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -829,10 +857,7 @@ int del_gpt(const device *p){
 	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
 	memset(&gpe[g],0,sizeof(*gpe));
 	if(unmap_gpt(p->partdev.parent,map,mapsize,fd,LBA_SIZE)){
-		return -1;
-	}
-	if((fd = openat(devfd,p->partdev.parent->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
-		diag("Couldn't open %s (%s?)\n",p->partdev.parent->name,strerror(errno));
+		close(fd);
 		return -1;
 	}
 	r = blkpg_del_partition(fd,p->partdev.fsector * LBA_SIZE,
@@ -859,6 +884,10 @@ uintmax_t first_gpt(const device *d){
 	ghead = (gpt_header *)((char *)map + LBA_SIZE);
 	r = ghead->first_usable;
 	if(const_unmap_gpt(d,map,mapsize,fd)){
+		close(fd);
+		return 0;
+	}
+	if(close(fd)){
 		return 0;
 	}
 	return r;
@@ -877,6 +906,10 @@ uintmax_t last_gpt(const device *d){
 	ghead = (gpt_header *)((char *)map + LBA_SIZE);
 	r = ghead->last_usable;
 	if(const_unmap_gpt(d,map,mapsize,fd)){
+		close(fd);
+		return 0;
+	}
+	if(close(fd)){
 		return 0;
 	}
 	return r;
