@@ -3714,6 +3714,7 @@ static void
 kill_filesystem_confirm(const char *op){
 	if(op && approvedp(op)){
 		blockobj *b;
+		device *d;
 
 		if((b = get_selected_blockobj()) == NULL){
 			locked_diag("Filesystem wipe requires a selected block device");
@@ -3728,12 +3729,14 @@ kill_filesystem_confirm(const char *op){
 			return;
 		}
 		if(b->zone->p){
-			wipe_filesystem(b->zone->p);
-			redraw_adapter(current_adapter);
+			d = b->zone->p;
 		}else{
-			wipe_filesystem(b->d);
-			redraw_adapter(current_adapter);
+			d = b->d;
 		}
+		wipe_filesystem(d);
+		redraw_adapter(current_adapter);
+		locked_diag("Wiped filesystem on %s",d->name);
+		return;
 	}
 	locked_diag("filesystem wipe was cancelled");
 }
