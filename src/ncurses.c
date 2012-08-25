@@ -1123,7 +1123,7 @@ free_form(struct form_state *fs){
 static void
 multiform_options(struct form_state *fs){
 	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"┬", },
+		{ .attr = 0, .chars = L"╮", },
 		{ .attr = 0, .chars = L"╯", },
 		{ .attr = 0, .chars = L"│", },
 	};
@@ -1135,18 +1135,17 @@ multiform_options(struct form_state *fs){
 		return;
 	}
 	cols = getmaxx(fsw);
+	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+	mvwadd_wch(fsw,1,fs->longop,&bchr[0]);
 	wattron(fsw,A_BOLD);
-	mvwadd_wch(fsw,0,fs->longop,&bchr[0]);
 	for(z = 1 ; z < fs->ysize - 1 ; ++z){
 		int op = (z + fs->scrolloff) % fs->opcount;
 
 		assert(op >= 0);
 		assert(op < fs->opcount);
-		wcolor_set(fsw,INPUT_COLOR,NULL);
 		if(fs->selectno >= z){
+			wcolor_set(fsw,INPUT_COLOR,NULL);
 			mvwprintw(fsw,z + 1,START_COL * 2,"%d",z);
-		}else if(fs->selectno + 1 == z){
-			mvwadd_wch(fsw,z + 1,fs->longop,&bchr[1]);
 		}
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop,"%-*.*s ",
@@ -1161,6 +1160,8 @@ multiform_options(struct form_state *fs){
 			wattroff(fsw,A_REVERSE);
 		}
 	}
+	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+	mvwadd_wch(fsw,fs->selectno + 2,fs->longop,&bchr[1]);
 }
 
 static void
@@ -1226,7 +1227,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 		}
 	}
 	cols = longdesc + longop * 2 + 3;
-	rows = ops + 4;
+	rows = (ops > selectno ? ops : selectno) + 4;
 	getmaxyx(stdscr,y,x);
 	if(x < cols + START_COL * 4){
 		locked_diag("Window too thin for form, uh-oh");

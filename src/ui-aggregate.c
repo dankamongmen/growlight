@@ -97,6 +97,7 @@ err:
 static void
 agg_callback(const char *fn){
 	struct form_option *comps_agg;
+	const aggregate_type *at;
 	int opcount,defidx;
 
 	if(fn == NULL){
@@ -107,8 +108,8 @@ agg_callback(const char *fn){
 		destroy_agg_forms();
 		return;
 	}
-	// FIXME handle aggregate type
-	raise_multiform("select aggregate components",agg_callback,comps_agg,opcount,3);
+	at = get_aggregate(fn);
+	raise_multiform("select aggregate components",agg_callback,comps_agg,opcount,at->mindisks);
 	locked_diag("not yet implemented FIXME");
 }
 
