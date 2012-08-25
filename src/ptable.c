@@ -29,28 +29,7 @@ dos_zap_table(device *d){
 }
 
 static int
-dos_add_part(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
-	unsigned mbrcode;
-
-	if(name){
-		diag("Names are not supported for MBR partitions!\n");
-		return -1;
-	}
-	if(size > 2ull * 1000ull * 1000ull * 1000ull * 1000ull){
-		diag("MBR partitions may not exceed 2TB\n");
-		return -1;
-	}
-	if(get_mbr_code(code,&mbrcode)){
-		diag("Illegal code for DOS/BIOS/MBR: %llu\n",code);
-		return -1;
-	}
-	// FIXME
-	diag("FIXME: I don't like dos partitions! %s\n",d->name);
-	return -1;
-}
-
-static int
-dos_add_partprec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,
+dos_add_part(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,
 					unsigned long long code){
 	unsigned mbrcode;
 
@@ -112,8 +91,7 @@ static const struct ptable {
 	const char *desc;
 	int (*make)(device *);				// Make partition table
 	int (*zap)(device *);				// Zap partition table
-	int (*add)(device *,const wchar_t *,uintmax_t,unsigned long long);
-	int (*addprec)(device *,const wchar_t *,uintmax_t,uintmax_t,unsigned long long);
+	int (*add)(device *,const wchar_t *,uintmax_t,uintmax_t,unsigned long long);
 	int (*del)(const device *);			// Delete partition
 	int (*pname)(device *,const wchar_t *);		// Set partition name
 	int (*uuid)(device *,const void *);		// Set partition UUID
@@ -128,7 +106,6 @@ static const struct ptable {
 		.make = new_gpt,
 		.zap = zap_gpt,
 		.add = add_gpt,
-		.addprec = add_gpt_prec,
 		.del = del_gpt,
 		.pname = name_gpt,
 		.uuid = uuid_gpt,
@@ -142,7 +119,6 @@ static const struct ptable {
 		.make = dos_make_table,
 		.zap = dos_zap_table,
 		.add = dos_add_part,
-		.addprec = dos_add_partprec,
 		.del = NULL,
 		.pname = NULL,
 		.uuid = NULL,
@@ -260,7 +236,7 @@ int wipe_ptable(device *d,const char *ptype){
 	return -1;
 }
 
-int add_partition(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
+int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
 	const struct ptable *pt;
 
 	if(d == NULL){
@@ -277,37 +253,7 @@ int add_partition(device *d,const wchar_t *name,uintmax_t size,unsigned long lon
 	}
 	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,d->blkdev.pttable) == 0){
-			if(pt->add(d,name,size,code)){
-				return -1;
-			}
-			if(rescan_blockdev(d)){
-				return -1;
-			}
-			return 0;
-		}
-	}
-	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
-	return -1;
-}
-
-int add_partition_precise(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
-	const struct ptable *pt;
-
-	if(d == NULL){
-		diag("Passed NULL device\n");
-		return -1;
-	}
-	if(d->layout != LAYOUT_NONE){
-		diag("Will only add partitions to real block devices\n");
-		return -1;
-	}
-	if(d->blkdev.pttable == NULL){
-		diag("No partition table on %s\n",d->name);
-		return -1;
-	}
-	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->blkdev.pttable) == 0){
-			if(pt->addprec(d,name,fsec,lsec,code)){
+			if(pt->add(d,name,fsec,lsec,code)){
 				return -1;
 			}
 			if(rescan_blockdev(d)){

@@ -1325,11 +1325,10 @@ partition(wchar_t * const *args,const char *arghelp){
 				return -1;
 			}
 			if(s){
-				if(add_partition(d,args[4],size,code)){
-					return -1;
-				}
+				fprintf(stderr,"Size-based creation is not yet implemented FIXME\n");
+				return -1;
 			}else{
-				if(add_partition_precise(d,args[4],fsec,lsec,code)){
+				if(add_partition(d,args[4],fsec,lsec,code)){
 					return -1;
 				}
 			}

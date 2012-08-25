@@ -15,8 +15,7 @@ struct device;
 // Pass the block device
 int new_gpt(struct device *);
 int zap_gpt(struct device *);
-int add_gpt(struct device *,const wchar_t *,uintmax_t,unsigned long long);
-int add_gpt_prec(struct device *,const wchar_t *,uintmax_t,uintmax_t,unsigned long long);
+int add_gpt(struct device *,const wchar_t *,uintmax_t,uintmax_t,unsigned long long);
 
 // Pass the partition
 int del_gpt(const struct device *);

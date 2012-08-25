@@ -17,20 +17,7 @@
 #include "ptypes.h"
 #include "growlight.h"
 #include "aggregate.h"
-
-#ifdef HAVE_NCURSESW_H
-#include <term.h>
-#include <panel.h>
-#include <ncurses.h>
-#else
-#ifdef HAVE_NCURSESW_CURSES_H
-#include <ncursesw/term.h>
-#include <ncursesw/panel.h>
-#include <ncursesw/curses.h>
-#else
-#error "Couldn't find working cursesw headers"
-#endif
-#endif
+#include "ui-aggregate.h"
 
 #define KEY_ESC 27
 
@@ -298,8 +285,7 @@ locked_vdiag(const char *fmt,va_list v){
 	screen_update();
 }
 
-static void
-locked_diag(const char *fmt,...){
+void locked_diag(const char *fmt,...){
 	va_list v;
 
 	va_start(v,fmt);
@@ -1628,7 +1614,7 @@ ptype_name_callback(const char *name){
 		cleanup_new_partition();
 		return;
 	}
-	add_partition_precise(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
+	add_partition(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
 	free(wstr);
 	cleanup_new_partition();
 }
@@ -1759,7 +1745,7 @@ psectors_callback(const char *psects){
 		raise_str_form("enter partition name",ptype_name_callback,NULL);
 		return;
 	}
-	add_partition_precise(b->d,NULL,fsect,lsect,pending_ptype);
+	add_partition(b->d,NULL,fsect,lsect,pending_ptype);
 	cleanup_new_partition();
 }
 
@@ -4305,80 +4291,6 @@ handle_actform_input(int ch){
 }
 
 static void
-agg_callback(const char *fn){
-	if(fn == NULL){
-		locked_diag("aggregate creation was cancelled");
-		return;
-	}
-	// FIXME handle aggregate type
-	locked_diag("not yet implemented FIXME");
-}
-
-static char *pending_aggtype;
-
-static struct form_option *
-agg_table(int *count,char *match,int *defidx){
-	struct form_option *fo = NULL,*tmp;
-	const aggregate_type *types;
-	int z;
-
-	*defidx = -1;
-	if((types = get_aggregate_types(count)) == NULL){
-		return NULL;
-	}
-	for(z = 0 ; z < *count ; ++z){
-		char *key,*desc;
-
-		if((key = strdup(types[z].name)) == NULL){
-			goto err;
-		}
-		if(match){
-			if(strcmp(key,match) == 0){
-				*defidx = z;
-			}
-		}else{
-			if(aggregate_default_p(key)){
-				*defidx = z;
-			}
-		}
-		if((desc = strdup(types[z].desc)) == NULL){
-			free(key);
-			goto err;
-		}
-		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
-			free(key);
-			free(desc);
-			goto err;
-		}
-		fo = tmp;
-		fo[z].option = key;
-		fo[z].desc = desc;
-	}
-	return fo;
-
-err:
-	while(z--){
-		free(fo[z].option);
-		free(fo[z].desc);
-	}
-	free(fo);
-	*count = 0;
-	return NULL;
-}
-
-static void
-create_aggregate(void){
-	struct form_option *ops_agg;
-	int opcount,defidx;
-
-	if((ops_agg = agg_table(&opcount,pending_aggtype,&defidx)) == NULL){
-		destroy_fs_forms();
-		return;
-	}
-	raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
-}
-
-static void
 destroy_aggregate_confirm(const char *op){
 	blockobj *b;
 
@@ -4672,7 +4584,7 @@ handle_ncurses_input(WINDOW *w){
 			}
 			case 'A':
 				pthread_mutex_lock(&bfl);
-				create_aggregate();
+				raise_aggregate_form(stdscr);
 				unlock_ncurses();
 				break;
 			case 'Z':

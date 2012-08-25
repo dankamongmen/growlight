@@ -459,7 +459,7 @@ unmap_gpt(const device *parent,void *map,size_t mapsize,int fd,size_t lbasize){
 	return 0;
 }
 
-int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
+int add_gpt(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
 	static const uint8_t zguid[GUIDSIZE];
 	const size_t lbasize = LBA_SIZE;
 	unsigned char tguid[GUIDSIZE];
@@ -561,6 +561,9 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 		return -1;
 	}
 	snprintf(cname,sizeof(cname) - 1,"%ls",name);
+	if(fsync(fd)){
+		diag("Couldn't sync %d for %s\n",fd,d->name);
+	}
 	r = blkpg_add_partition(fd,fsec * LBA_SIZE,
 			(lsec - fsec + 1) * LBA_SIZE,z + 1,cname);
 	if(close(fd)){
@@ -571,156 +574,6 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 		return -1;
 	}
 	return r;
-}
-
-int add_gpt(device *d,const wchar_t *name,uintmax_t size,unsigned long long code){
-	uint64_t flba,llba,flarge,llarge,nextgap;
-	static const uint8_t zguid[GUIDSIZE];
-	unsigned char tguid[GUIDSIZE];
-	int pgsize = getpagesize();
-	unsigned z,x,maxent,salign;
-	gpt_header *ghead;
-	gpt_entry *gpe;
-	size_t mapsize;
-	void *map;
-	int fd;
-
-	assert(pgsize && pgsize % LBA_SIZE == 0);
-	salign = d->logsec ? d->physsec / d->logsec : 1;
-	if(!name){
-		diag("GPT partitions ought be named!\n");
-		return -1;
-	}
-	if(d->layout != LAYOUT_NONE){
-		diag("Won't add partition to non-disk %s\n",d->name);
-		return -1;
-	}
-	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"gpt")){
-		diag("No GPT on disk %s\n",d->name);
-		return -1;
-	}
-	if(size % d->logsec){
-		diag("Size %ju is not a mulitple of sector %u\n",size,d->logsec);
-		return -1;
-	}
-	if(get_gpt_guid(code,tguid)){
-		diag("Not a valid GPT typecode: %llu\n",code);
-		return -1;
-	}
-	if((map = map_gpt(d,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
-		return -1;
-	}
-	ghead = (gpt_header *)((char *)map + LBA_SIZE);
-	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
-	// First, we find the next available partition number. We also get the
-	// maximum used index, to bound the space-discovery loop below.
-	maxent = 0;
-	x = ghead->partcount;
-	for(z = 0 ; z < ghead->partcount ; ++z){
-		// If there's any non-zero bits in either the type or partiton
-		// GUID, assume it's being used.
-		if(memcmp(gpe[z].type_guid,zguid,GUIDSIZE)){
-			continue;
-		}
-		if(memcmp(gpe[z].part_guid,zguid,GUIDSIZE)){
-			continue;
-		}
-		if(x == ghead->partcount){
-			x = z;
-		}
-		maxent = z;
-	}
-	if(x == ghead->partcount){
-		diag("No entry for a new partition in %s\n",d->name);
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}
-	// X is the first available partition number. For historical reasons,
-	// we henceforth call it z.
-	z = x;
-	// For now, we only support using the largest free space for the new
-	// partition. We'll want to add more control FIXME.
-	flba = ghead->first_usable;
-	flarge = flba = salign * (flba / salign + !!(flba % salign));
-	llarge = llba = ghead->last_usable;
-	// FIXME quadratic algorithm. ought do linear time with single sweep
-	// over partitions followed by single sweep over gap set. instead, we
-	// search for all successive regions ("greedy search" that always picks
-	// the lower rather than the larger, allowing successive searches)
-	// nextgap is not always actually a gap, but we're certain there's no
-	// gap between llba and nextgap. this is all probably broken. terrible.
-	while(flba < ghead->last_usable){
-		nextgap = llba + 1;
-		for(x = 0 ; x <= maxent ; ++x){
-			// Don't check unused partition entries
-			if(memcmp(gpe[x].type_guid,zguid,GUIDSIZE) == 0 &&
-				memcmp(gpe[x].part_guid,zguid,GUIDSIZE) == 0){
-				continue;
-			}
-			if(gpe[x].first_lba <= flba && gpe[x].last_lba >= flba){
-				flba = gpe[x].last_lba + 1; // shrink gap on left
-			}else if(gpe[x].first_lba >= flba && gpe[x].last_lba <= llba){
-				llba = gpe[x].first_lba - 1; // take left side
-				nextgap = gpe[x].last_lba + 1;
-			}else if(gpe[x].first_lba <= llba){
-				llba = gpe[x].first_lba - 1; // shrink gap on right
-				nextgap = gpe[x].last_lba + 1; // loss of info
-			}
-			if(llba <= flba){
-				break;
-			}
-			if(llba < llarge || llba - flba > llarge - flarge){
-				llarge = llba;
-				flarge = flba;
-			}
-		}
-		flba = salign * (llba / salign + !!(llba % salign));
-		llba = nextgap;
-	}
-	if(llarge == 0){
-		diag("No room for new partition in %s\n",d->name);
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}else if((llarge - flarge) * d->logsec < size){
-		diag("No room for new %juB partition in %s\n",size,d->name);
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}else if(size){
-		llarge = flarge + size / d->logsec - 1;
-	}
-	diag("First sector: %ju last sector: %ju count: %ju size: %ju\n",
-			(uintmax_t)flarge,
-			(uintmax_t)llarge,
-			(uintmax_t)(llarge - flarge),
-			(uintmax_t)((llarge - flarge) * d->logsec));
-	memcpy(gpe[z].type_guid,tguid,sizeof(tguid));
-	if(gpt_name(name,gpe[z].name,sizeof(gpe[z].name))){
-		memset(gpe + z,0,sizeof(*gpe));
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}
-	if(RAND_bytes(gpe[z].part_guid,GUIDSIZE) != 1){
-		diag("%s",ERR_error_string(ERR_get_error(),NULL));
-		memset(gpe + z,0,sizeof(*gpe));
-		munmap(map,mapsize);
-		close(fd);
-		return -1;
-	}
-	gpe[z].first_lba = flarge;
-	gpe[z].last_lba = llarge;
-	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
-		close(fd);
-		return -1;
-	}
-	if(close(fd)){
-		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
-		return -1;
-	}
-	return 0;
 }
 
 int name_gpt(device *d,const wchar_t *name){
@@ -852,6 +705,9 @@ int del_gpt(const device *p){
 	if(unmap_gpt(p->partdev.parent,map,mapsize,fd,LBA_SIZE)){
 		close(fd);
 		return -1;
+	}
+	if(fsync(fd)){
+		diag("Couldn't sync %d for %s\n",fd,p->name);
 	}
 	r = blkpg_del_partition(fd,p->partdev.fsector * LBA_SIZE,
 				p->size,p->partdev.pnumber,
