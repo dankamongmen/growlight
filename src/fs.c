@@ -329,6 +329,9 @@ static struct fs virtfss[] = {
 		.name = "devpts",
 		.desc = "Pseudoterminal devices",
 	},{
+		.name = "devtmpfs",
+		.desc = "Early static /dev filesystem",
+	},{
 		.name = "rootfs",
 		.desc = "Early trivial filesystem mounted at /",
 	},{
