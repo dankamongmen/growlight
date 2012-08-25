@@ -4869,6 +4869,9 @@ update_blockobj(blockobj *b,device *d){
 			}
 			++zones;
 		}
+		if(strcmp(d->name,"sdi") == 0){
+			assert(sector);
+		}
 	}
 	if(d->target){
 		++mounts;

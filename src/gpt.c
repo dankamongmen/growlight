@@ -141,6 +141,7 @@ initialize_gpt(gpt_header *gh,size_t lbasize,uint64_t backuplba,uint64_t firstus
 	// ->crc is set by update_crc()
 	gh->backuplba = backuplba;
 	gh->first_usable = firstusable;
+	assert(gh->first_usable);
 	gh->last_usable = backuplba - (firstusable - 1);
 	if(RAND_bytes(gh->disk_guid,GUIDSIZE) != 1){
 		diag("%s",ERR_error_string(ERR_get_error(),NULL));
@@ -890,6 +891,7 @@ uintmax_t first_gpt(const device *d){
 	if(close(fd)){
 		return 0;
 	}
+	assert(r);
 	return r;
 }
 uintmax_t last_gpt(const device *d){

@@ -62,10 +62,7 @@ int devfd = -1; // Hold a reference to DEVROOT
 static unsigned usepci;
 static const glightui *gui;
 static struct pci_access *pciacc;
-static pthread_mutex_t lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-
-// See bug 157. Upon initiation of discovery, a device shell is thrown up
-static pthread_cond_t discovery_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 static unsigned thrcount;
 static pthread_mutex_t barrier = PTHREAD_MUTEX_INITIALIZER;
@@ -840,12 +837,9 @@ create_new_device_inner(const char *name,int recurse){
 	}else{
 		verbf("%s -> %s\n",name,buf);
 	}
-	lock_growlight();
 	if((d->c = parse_bus_topology(buf)) == NULL){
-		unlock_growlight();
 		return NULL;
 	}else{
-		unlock_growlight();
 		verbf("\tController: %s\n",d->c->name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
@@ -1014,16 +1008,15 @@ create_new_device_inner(const char *name,int recurse){
 			p->size *= p->logsec;
 			p->partdev.alignment = alignment(p->partdev.fsector * p->logsec);
 		}
-		if(d->layout == LAYOUT_NONE){
-			d->blkdev.first_usable = lookup_first_usable_sector(d);
-			d->blkdev.last_usable = lookup_last_usable_sector(d);
-		}
 	}
-	lock_growlight();
+	if(d->layout == LAYOUT_NONE){
+		d->blkdev.first_usable = lookup_first_usable_sector(d);
+		fprintf(stderr,"hrmm %s %ju\n",d->name,d->blkdev.first_usable);
+		d->blkdev.last_usable = lookup_last_usable_sector(d);
+	}
 	d->next = d->c->blockdevs;
 	d->c->blockdevs = d;
 	d->uistate = gui->block_event(d,d->uistate);
-	unlock_growlight();
 	return d;
 }
 
@@ -1032,43 +1025,11 @@ struct dlist {
 	struct dlist *next;
 };
 
-static struct dlist *discovery_active;
-
-static void
-add_to_discovery_list(const char *name){
-	struct dlist *d;
-
-	assert( (d = malloc(sizeof(*d))) );
-	assert( (d->name = strdup(name)) );
-	d->next = discovery_active;
-	discovery_active = d;
-}
-
-static void
-del_from_discovery_list(const char *name){
-	struct dlist **pre;
-
-	for(pre = &discovery_active ; *pre ; pre = &(*pre)->next){
-		if(strcmp((*pre)->name,name) == 0){
-			struct dlist *c = *pre;
-
-			*pre = c->next;
-			free(c->name);
-			free(c);
-			break;
-		}
-	}
-}
-
 static device *
 create_new_device(const char *name,int recurse){
 	device *d;
 
-	add_to_discovery_list(name);
-	unlock_growlight();
 	d = create_new_device_inner(name,recurse);
-	lock_growlight();
-	del_from_discovery_list(name);
 	return d;
 }
 
@@ -1089,19 +1050,11 @@ controller *lookup_controller(const char *name){
 // name must be an entry in /sys/class/block, and also one in /dev
 // growlight must be locked on entry!
 device *lookup_device(const char *name){
-	struct dlist *dl;
 	controller *c;
 	device *d;
 	size_t s;
 
-	do{
-		for(dl = discovery_active ; dl ; dl = dl->next){
-			if(strcmp(name,dl->name) == 0){
-				pthread_cond_wait(&discovery_cond,&lock);
-				break;
-			}
-		}
-	}while(dl);
+	lock_growlight();
 	do{
 		if(strncmp(name,"/",1) == 0){
 			s = 1;
@@ -1121,18 +1074,19 @@ device *lookup_device(const char *name){
 			device *p;
 
 			if(strcmp(name,d->name) == 0){
+				unlock_growlight();
 				return d;
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if(strcmp(name,p->name) == 0){
+				unlock_growlight();
 					return p;
 				}
 			}
 		}
 	}
-	if( (d = create_new_device(name,1)) ){
-		pthread_cond_signal(&discovery_cond);
-	}
+	d = create_new_device(name,1);
+				unlock_growlight();
 	return d;
 }
 
@@ -1141,9 +1095,7 @@ scan_device(void *name){
 	device *d;
 	int sig;
 
-	lock_growlight();
 	d = name ? lookup_device(name) : NULL;
-	unlock_growlight();
 	assert(pthread_mutex_lock(&barrier) == 0);
 	sig = --thrcount == 0;
 	if(sig){
@@ -1572,7 +1524,6 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if(watch_dir(fd,SYSROOT,scan_device)){
 		goto err;
 	}
-	lock_growlight();
 	if(parse_filesystems(gui,FILESYSTEMS)){
 		unlock_growlight();
 		goto err;
@@ -1585,7 +1536,6 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		unlock_growlight();
 		goto err;
 	}
-	unlock_growlight();
 	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
@@ -1774,17 +1724,14 @@ int rescan_device(const char *name){
 			clobber_device(d);
 			// FIXME update aggregates, also
 			if(rescan(name) == NULL){
-				unlock_growlight();
 				return -1;
 			}
 			return 0;
 		}
 	}
 	if(create_new_device(name,0) == NULL){
-		unlock_growlight();
 		return -1;
 	}
-	unlock_growlight();
 	return 0;
 }
 

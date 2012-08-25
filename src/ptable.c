@@ -492,7 +492,7 @@ uintmax_t lookup_first_usable_sector(const device *d){
 		return 0;
 	}
 	if(d->layout != LAYOUT_NONE || d->blkdev.pttable == NULL){
-		return d->size / d->logsec;
+		return d->physsec / d->logsec;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,d->blkdev.pttable) == 0){
