@@ -525,6 +525,10 @@ int blkpg_add_partition(int fd,long long start,long long len,int pno,const char 
 	struct blkpg_ioctl_arg blk;
 	unsigned t;
 
+	if(pno < 1){
+		diag("Invalid partition number: %d\n",pno);
+		return -1;
+	}
 	if(strlen(name) >= sizeof(data.devname)){
 		diag("Name too long for BLKPG: %s\n",name);
 		return -1;
@@ -542,13 +546,13 @@ int blkpg_add_partition(int fd,long long start,long long len,int pno,const char 
 		if(ioctl(fd,BLKPG,&blk) == 0){
 			goto success;
 		}
-		diag("Error invoking BLKPG ioctl on %d (%s?), retrying in 3s\n",pno,strerror(errno));
+		diag("Error invoking BLKPG ioctl on %d p%d (%s?), retrying in 3s\n",fd,pno,strerror(errno));
 		sleep(3);
 	}
 	if(ioctl(fd,BLKPG,&blk) == 0){
 		goto success;
 	}
-	diag("Error invoking BLKPG ioctl on %d (%s?)\n",pno,strerror(errno));
+	diag("Error invoking BLKPG ioctl on %d p%d (%s?)\n",fd,pno,strerror(errno));
 	return -1;
 
 success:
@@ -562,6 +566,10 @@ int blkpg_del_partition(int fd,long long start,long long len,int pno,const char 
 	struct blkpg_ioctl_arg blk;
 	unsigned t;
 
+	if(pno < 1){
+		diag("Invalid partition number: %d\n",pno);
+		return -1;
+	}
 	if(strlen(name) >= sizeof(data.devname)){
 		diag("Name too long for BLKPG: %s\n",name);
 		return -1;
