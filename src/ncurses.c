@@ -1074,7 +1074,7 @@ destroy_form_locked(struct form_state *fs){
 		assert(delwin(fsw) == OK);
 		switch(fs->formtype){
 			case FORM_SELECT:
-				for(z = 0 ; z < fs->ysize ; ++z){
+				for(z = 0 ; z < fs->opcount ; ++z){
 					free(fs->ops[z].option);
 					free(fs->ops[z].desc);
 				}
@@ -1127,20 +1127,20 @@ form_options(struct form_state *fs){
 	}
 	cols = getmaxx(fsw);
 	wattron(fsw,A_BOLD);
-	for(z = 0 ; z < fs->ysize ; ++z){
+	for(z = 1 ; z < fs->ysize - 1 ; ++z){
 		int op = (z + fs->scrolloff) % fs->opcount;
 
 		assert(op >= 0);
 		assert(op < fs->opcount);
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-		mvwprintw(fsw,z + 1,START_COL,"%-*.*s ",
+		mvwprintw(fsw,z + 1,START_COL * 2,"%-*.*s ",
 			fs->longop,fs->longop,opstrs[op].option);
 		if(z == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
 		wcolor_set(fsw,INPUT_COLOR,NULL);
-		wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 2,
-			cols - fs->longop - 1 - START_COL * 2,opstrs[op].desc);
+		wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 4,
+			cols - fs->longop - 1 - START_COL * 4,opstrs[op].desc);
 		if(z == fs->idx){
 			wattroff(fsw,A_REVERSE);
 		}
@@ -1178,23 +1178,23 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 		}
 	}
 	cols = longdesc + longop + 1;
-	rows = ops + 2;
+	rows = ops + 4;
 	getmaxyx(stdscr,y,x);
-	if(x < cols + START_COL * 2){
+	if(x < cols + START_COL * 4){
 		locked_diag("Window too thin for form, uh-oh");
-		return;
-	}
-	if(y < FORM_Y_OFFSET + 2 + 1){ // two boundaries, at least 1 selection
-		locked_diag("Window too short for form, uh-oh");
 		return;
 	}
 	if(y <= rows + FORM_Y_OFFSET){
 		rows = y - FORM_Y_OFFSET - 1;
+		if(y < FORM_Y_OFFSET + 4 + 1){ // two boundaries + empties, at least 1 selection
+			locked_diag("Window too short for form, uh-oh");
+			return;
+		}
 	}
 	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
 		return;
 	}
-	if((fsw = newwin(rows,cols + START_COL * 2,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
+	if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
@@ -1891,9 +1891,9 @@ setup_colors(void){
 	assert(init_pair(MDADM_COLOR,COLOR_LIGHTYELLOW,-1) == OK);
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
-	assert(init_pair(FORMBORDER_COLOR,COLOR_RED,-1) == OK);
-	assert(init_pair(FORMTEXT_COLOR,COLOR_MAGENTA,-1) == OK);
-	assert(init_pair(INPUT_COLOR,COLOR_CYAN,-1) == OK);
+	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,-1) == OK);
+	assert(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == OK);
 	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == OK);
@@ -2310,6 +2310,7 @@ static const wchar_t *helps[] = {
 	L"'A': create aggregate         'Z': destroy aggregate",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
+	L"'/': search",
 	NULL
 };
 
@@ -4253,7 +4254,7 @@ handle_actform_input(int ch){
 			break;
 		case KEY_UP: case 'k':{
 			pthread_mutex_lock(&bfl);
-			if(fs->idx == 0){
+			if(fs->idx <= 1){
 				if(fs->scrolloff <= 0){
 					fs->scrolloff = fs->opcount - 1;
 				}else{
@@ -4269,7 +4270,7 @@ handle_actform_input(int ch){
 		}
 		case KEY_DOWN: case 'j':{
 			pthread_mutex_lock(&bfl);
-			if(fs->idx >= fs->ysize - 1){
+			if(fs->idx >= fs->ysize - 2){
 				if(fs->scrolloff >= fs->opcount){
 					fs->scrolloff = 1;
 				}else{
@@ -4330,6 +4331,20 @@ destroy_aggregate(void){
 		return;
 	}
 	confirm_operation("destroy the aggregate",destroy_aggregate_confirm);
+}
+
+static void
+search_callback(const char *term){
+	if(term == NULL){
+		locked_diag("Search was cancelled");
+		return;
+	}
+	locked_diag("Search not yet implemented FIXME");
+}
+
+static void
+start_search(void){
+	raise_str_form("start typing an identifier",search_callback,NULL);
 }
 
 static void
@@ -4576,6 +4591,11 @@ handle_ncurses_input(WINDOW *w){
 				unlock_ncurses();
 				break;
 			}
+			case '/':
+				pthread_mutex_lock(&bfl);
+				start_search();
+				unlock_ncurses();
+				break;
 			case 'I':{
 				pthread_mutex_lock(&bfl);
 				unset_target();
@@ -4584,7 +4604,11 @@ handle_ncurses_input(WINDOW *w){
 			}
 			case 'A':
 				pthread_mutex_lock(&bfl);
-				raise_aggregate_form(stdscr);
+				if(actform){
+					locked_diag("An input dialog is already active");
+				}else{
+					raise_aggregate_form(stdscr);
+				}
 				unlock_ncurses();
 				break;
 			case 'Z':
