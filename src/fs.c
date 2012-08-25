@@ -11,6 +11,28 @@
 #include "growlight.h"
 
 static int
+hfs_mkfs(const char *dev,const char *name){
+	if(name == NULL){
+		name = "SprezzaHFS";
+	}
+	if(vspopen_drain("mkfs.hfs -h -v \"%s\" %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
+hfsplus_mkfs(const char *dev,const char *name){
+	if(name == NULL){
+		name = "SprezzaHFS+";
+	}
+	if(vspopen_drain("mkfs.hfsplus -s -J -v \"%s\" %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 jfs_mkfs(const char *dev,const char *name){
 	// allow -c (badblock check) FIXME
 	if(name == NULL){
@@ -37,11 +59,22 @@ xfs_mkfs(const char *dev,const char *name){
 }
 
 static int
+create_ntfs(const char *dev,const char *name){
+	if(name == NULL){
+		name = "SprezzaNTFS";
+	}
+	if(vspopen_drain("mkfs.ntfs -U -L \"%s\" %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 cramfs_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaCram";
 	}
-	if(vspopen_drain("mkcramfs -E -n %s %s",name,dev)){
+	if(vspopen_drain("mkcramfs -E -n \"%s\" %s",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -53,7 +86,7 @@ vfat_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaVFAT";
 	}
-	if(vspopen_drain("mkfs.vfat -F 32 -n %s %s",name,dev)){
+	if(vspopen_drain("mkfs.vfat -F 32 -n \"%s\" %s",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -68,7 +101,7 @@ ufs_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaUFS";
 	}
-	if(vspopen_drain("mkfs.ufs -L %s %s",name,dev)){
+	if(vspopen_drain("mkfs.ufs -L \"%s\" %s",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -217,11 +250,13 @@ static const struct fs {
 	{
 		.name = "hfsplus",
 		.desc = "HFS+ (Mac OS Extended) (OS X default)",
+		.mkfs = hfsplus_mkfs,
 		.nameparam = 'v',
 	},
 	{
 		.name = "hfs",
 		.desc = "Hierarchal Filesystem (Mac OS Standard)",
+		.mkfs = hfs_mkfs,
 		.nameparam = 'v',
 	},
 	{
@@ -242,6 +277,7 @@ static const struct fs {
 	{
 		.name = "ntfs",
 		.desc = "Microsoft's New Technology Filesystem (Windows default)",
+		.mkfs = create_ntfs,
 		.nameparam = 'L',
 	},
 	{
