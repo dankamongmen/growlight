@@ -24,7 +24,12 @@ extern "C" {
 struct form_option;
 
 void locked_diag(const char *,...);
+
+// Scrolling single select form
 void raise_form(const char *,void (*)(const char *),struct form_option *,int,int);
+
+// Multiselect form with side panel
+void raise_multiform(const char *,void (*)(const char *),struct form_option *,int,int);
 
 #ifdef __cplusplus
 }

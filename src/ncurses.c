@@ -1117,6 +1117,41 @@ free_form(struct form_state *fs){
 }
 
 static void
+multiform_options(struct form_state *fs,int selectno){
+	const struct form_option *opstrs = fs->ops;
+	WINDOW *fsw = panel_window(fs->p);
+	int z,cols;
+
+	if(fs->formtype != FORM_SELECT){
+		return;
+	}
+	cols = getmaxx(fsw);
+	wattron(fsw,A_BOLD);
+	for(z = 1 ; z < fs->ysize - 1 ; ++z){
+		int op = (z + fs->scrolloff) % fs->opcount;
+
+		assert(op >= 0);
+		assert(op < fs->opcount);
+		wcolor_set(fsw,INPUT_COLOR,NULL);
+		if(selectno >= z){
+			mvwprintw(fsw,z + 1,START_COL * 2,"%d",z);
+		}
+		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop,"%-*.*s ",
+			fs->longop,fs->longop,opstrs[op].option);
+		if(z == fs->idx){
+			wattron(fsw,A_REVERSE);
+		}
+		wcolor_set(fsw,INPUT_COLOR,NULL);
+		wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 1 - START_COL * 4,
+			cols - fs->longop * 2 - 1 - START_COL * 4,opstrs[op].desc);
+		if(z == fs->idx){
+			wattroff(fsw,A_REVERSE);
+		}
+	}
+}
+
+static void
 form_options(struct form_state *fs){
 	const struct form_option *opstrs = fs->ops;
 	WINDOW *fsw = panel_window(fs->p);
@@ -1147,11 +1182,86 @@ form_options(struct form_state *fs){
 	}
 }
 
+#define FORM_Y_OFFSET 5
+#define FORM_X_OFFSET 5
+void raise_multiform(const char *str,void (*fxn)(const char *),
+		struct form_option *opstrs,int ops,int selectno){
+	size_t longop,longdesc;
+	struct form_state *fs;
+	int cols,rows;
+	WINDOW *fsw;
+	int x,y;
+
+	if(selectno < 1){
+		locked_diag("Need a positive number of selections");
+		return;
+	}
+	if(opstrs == NULL || !ops){
+		locked_diag("Passed empty %u-option string table",ops);
+		return;
+	}
+	if(actform){
+		locked_diag("An input dialog is already active");
+		return;
+	}
+	longdesc = longop = 0;
+	for(x = 0 ; x < ops ; ++x){
+		if(strlen(opstrs[x].option) > longop){
+			longop = strlen(opstrs[x].option);
+		}
+		if(strlen(opstrs[x].desc) > longdesc){
+			longdesc = strlen(opstrs[x].desc);
+		}
+	}
+	cols = longdesc + longop * 2 + 1;
+	rows = ops + 4;
+	getmaxyx(stdscr,y,x);
+	if(x < cols + START_COL * 4){
+		locked_diag("Window too thin for form, uh-oh");
+		return;
+	}
+	if(y <= rows + FORM_Y_OFFSET){
+		rows = y - FORM_Y_OFFSET - 1;
+		if(y < FORM_Y_OFFSET + 4 + 1){ // two boundaries + empties, at least 1 selection
+			locked_diag("Window too short for form, uh-oh");
+			return;
+		}
+	}
+	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
+		return;
+	}
+	if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
+		locked_diag("Couldn't create form window, uh-oh");
+		free_form(fs);
+		return;
+	}
+	if((fs->p = new_panel(fsw)) == NULL){
+		locked_diag("Couldn't create form panel, uh-oh");
+		delwin(fsw);
+		free_form(fs);
+		return;
+	}
+	assert(top_panel(fs->p) != ERR);
+	fs->idx = 0;
+	fs->opcount = ops;
+	fs->ysize = rows - 2;
+	wattroff(fsw,A_BOLD);
+	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+	bevel(fsw);
+	wattron(fsw,A_BOLD);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
+	wattroff(fsw,A_BOLD);
+	fs->longop = longop;
+	fs->ops = opstrs;
+	multiform_options(fs,selectno);
+	actform = fs;
+	screen_update();
+}
+
 // -------------------------------------------------------------------------
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
-#define FORM_Y_OFFSET 5
-#define FORM_X_OFFSET 5
 void raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops,int defidx){
 	size_t longop,longdesc;
 	struct form_state *fs;

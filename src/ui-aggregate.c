@@ -107,8 +107,8 @@ agg_callback(const char *fn){
 		destroy_agg_forms();
 		return;
 	}
-	raise_form("select aggregate components",agg_callback,comps_agg,opcount,defidx);
 	// FIXME handle aggregate type
+	raise_multiform("select aggregate components",agg_callback,comps_agg,opcount,3);
 	locked_diag("not yet implemented FIXME");
 }
 
