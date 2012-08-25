@@ -37,6 +37,17 @@ xfs_mkfs(const char *dev,const char *name){
 }
 
 static int
+cramfs_mkfs(const char *dev,const char *name){
+	if(name == NULL){
+		name = "SprezzaCram";
+	}
+	if(vspopen_drain("mkcramfs -E -n %s %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 vfat_mkfs(const char *dev,const char *name){
 	// allow -c (badblock check) FIXME
 	if(name == NULL){
@@ -236,6 +247,8 @@ static const struct fs {
 	{
 		.name = "cramfs",
 		.desc = "Compressed Read-Only Filesystem",
+		.mkfs = cramfs_mkfs,
+		.nameparam = 'n',
 	},
 	{
 		.name = "romfs",
@@ -319,13 +332,16 @@ static struct fs virtfss[] = {
 		.name = "sysfs",
 		.desc = "Linux device/driver relationships",
 	},{
+		.name = "tmpfs",
+		.desc = "RAM-backed filesystem",
+	},{
 		.name = NULL,
 	}
 };
 
 pttable_type *get_fs_types(int *count){
 	pttable_type *pt;
-	int z;
+	int z,t;
 
 	*count = (sizeof(fss) / sizeof(*fss)) - 1;
 	if(*count <= 0){
@@ -336,20 +352,25 @@ pttable_type *get_fs_types(int *count){
 		*count = 0;
 		return NULL;
 	}
+	t = 0;
 	for(z = 0 ; z < *count ; ++z){
-		if((pt[z].name = strdup(fss[z].name)) == NULL){
+		if(fss[z].mkfs == NULL){
+			continue;
+		}
+		if((pt[t].name = strdup(fss[z].name)) == NULL){
 			goto err;
 		}
 		if(fss[z].desc == NULL){
-			// FIXME they all ought have descriptions
-			pt[z].desc = strdup("FIXME Need description");
+			pt[t].desc = strdup("FIXME Need description");
 		}else{
-			if((pt[z].desc = strdup(fss[z].desc)) == NULL){
-				free(pt[z].name);
+			if((pt[t].desc = strdup(fss[z].desc)) == NULL){
+				free(pt[t].name);
 				goto err;
 			}
 		}
+		++t;
 	}
+	*count = t;
 	return pt;
 
 err:
