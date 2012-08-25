@@ -1011,7 +1011,6 @@ create_new_device_inner(const char *name,int recurse){
 	}
 	if(d->layout == LAYOUT_NONE){
 		d->blkdev.first_usable = lookup_first_usable_sector(d);
-		fprintf(stderr,"hrmm %s %ju\n",d->name,d->blkdev.first_usable);
 		d->blkdev.last_usable = lookup_last_usable_sector(d);
 	}
 	d->next = d->c->blockdevs;
