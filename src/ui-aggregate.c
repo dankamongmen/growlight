@@ -39,11 +39,74 @@ struct form_state {
 };
 
 static void
+destroy_agg_forms(void){
+}
+
+static struct form_option *
+component_table(int *count,char *match,int *defidx){
+	struct form_option *fo = NULL,*tmp;
+	const controller *c;
+
+	*count = 0;
+	*defidx = -1;
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			char *key,*desc;
+
+			if((key = strdup(d->name)) == NULL){
+				goto err;
+			}
+			if(match){
+				if(strcmp(key,match) == 0){
+					*defidx = *count;
+				}
+			}else{
+				if(aggregate_default_p(key)){
+					*defidx = *count;
+				}
+			}
+			if((desc = strdup(d->name)) == NULL){
+				free(key);
+				goto err;
+			}
+			if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+				free(key);
+				free(desc);
+				goto err;
+			}
+			fo = tmp;
+			fo[*count].option = key;
+			fo[*count].desc = desc;
+			++*count;
+		}
+	}
+	return fo;
+
+err:
+	while(*count--){
+		free(fo[*count].option);
+		free(fo[*count].desc);
+	}
+	free(fo);
+	return NULL;
+}
+
+static void
 agg_callback(const char *fn){
+	struct form_option *comps_agg;
+	int opcount,defidx;
+
 	if(fn == NULL){
 		locked_diag("aggregate creation was cancelled");
 		return;
 	}
+	if((comps_agg = component_table(&opcount,NULL,&defidx)) == NULL){
+		destroy_agg_forms();
+		return;
+	}
+	raise_form("select aggregate components",agg_callback,comps_agg,opcount,defidx);
 	// FIXME handle aggregate type
 	locked_diag("not yet implemented FIXME");
 }
@@ -98,10 +161,6 @@ err:
 	free(fo);
 	*count = 0;
 	return NULL;
-}
-
-static void
-destroy_agg_forms(void){
 }
 
 int raise_aggregate_form(WINDOW *w){
