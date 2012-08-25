@@ -483,6 +483,7 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	char pre[PREFIXSTRLEN + 1];
+	const char *selstr = "";
 	const device *d = bo->d;
 	unsigned off = sx - 1;
 	const zobj *z;
@@ -516,9 +517,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}
 		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
-		mvwprintw(w,y,sx,"%s %s",
-				qprefix(d->size,1,pre,sizeof(pre),1),
-				"unpartitioned space");
+		mvwprintw(w,y,sx,"%s %s",qprefix(d->size,1,pre,sizeof(pre),1),selstr);
 		return;
 	}
 	if((z = bo->zchain) == NULL){
@@ -534,12 +533,18 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR);
 			if(selected && z == bo->zone){
+				selstr = bo->zone->rep == L'P' ?
+					"partition table metadata" :
+					"unpartitioned space";
 				assert(wattrset(w,A_BOLD|co) == OK);
+				assert(wattron(w,A_REVERSE) == OK);
 				if(x < ex / 2){
-					mvwaddwstr(w,y - 1,x,L"⇗⇨⇨⇨");
+					mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
 				}else{
-					mvwaddwstr(w,y - 1,x - 3,L"⇦⇦⇦⇖");
+					mvwprintw(w,y - 1,x - (strlen(selstr) + 3),"%.*s⇦⇦⇦⇖",
+							ex - (x + strlen(selstr) + 10 + 4),selstr);
 				}
+				assert(wattroff(w,A_REVERSE) == OK);
 				wattron(w,A_UNDERLINE);
 			}else{
 				assert(wattrset(w,co) == OK);
@@ -554,11 +559,14 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				}else{
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 				}
+				assert(wattron(w,A_REVERSE) == OK);
 				if(x < ex / 2){
-					mvwaddwstr(w,y - 1,x,L"⇗⇨⇨⇨");
+					mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",ex - (x + strlen(z->p->name)),z->p->name);
 				}else{
-					mvwaddwstr(w,y - 1,x - 3,L"⇦⇦⇦⇖");
+					mvwprintw(w,y - 1,x - (strlen(z->p->name) + 3),"%.*s⇦⇦⇦⇖",
+							ex - (x + strlen(z->p->name) + 10 + 4),z->p->name);
 				}
+				assert(wattroff(w,A_REVERSE) == OK);
 				wattron(w,A_UNDERLINE);
 			}else{ // device is not selected
 				if(z->p->target){
