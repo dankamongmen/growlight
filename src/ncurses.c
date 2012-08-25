@@ -181,8 +181,8 @@ get_selected_blockobj(void){
 static int
 bevel_bottom(WINDOW *w){
 	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"└", },
-		{ .attr = 0, .chars = L"┘", },
+		{ .attr = 0, .chars = L"╰", },
+		{ .attr = 0, .chars = L"╯", },
 		{ .attr = 0, .chars = L"─", },
 		{ .attr = 0, .chars = L"│", },
 	};
@@ -204,8 +204,8 @@ bevel_bottom(WINDOW *w){
 static int
 bevel_top(WINDOW *w){
 	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"┌", },
-		{ .attr = 0, .chars = L"┐", },
+		{ .attr = 0, .chars = L"╭", },
+		{ .attr = 0, .chars = L"╮", },
 		{ .attr = 0, .chars = L"─", },
 		{ .attr = 0, .chars = L"│", },
 	};
@@ -228,10 +228,10 @@ bevel_top(WINDOW *w){
 static int
 bevel(WINDOW *w){
 	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"┌", },
-		{ .attr = 0, .chars = L"┐", },
-		{ .attr = 0, .chars = L"└", },
-		{ .attr = 0, .chars = L"┘", },
+		{ .attr = 0, .chars = L"╭", },
+		{ .attr = 0, .chars = L"╮", },
+		{ .attr = 0, .chars = L"╰", },
+		{ .attr = 0, .chars = L"╯", },
 		{ .attr = 0, .chars = L"│", },
 		{ .attr = 0, .chars = L"─", },
 	};
@@ -536,9 +536,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			if(selected && z == bo->zone){
 				assert(wattrset(w,A_BOLD|co) == OK);
 				if(x < ex / 2){
-					mvwaddwstr(w,y - 1,x,L"╒═══");
+					mvwaddwstr(w,y - 1,x,L"⇗⇨⇨⇨");
 				}else{
-					mvwaddwstr(w,y - 1,x - 3,L"═══╕");
+					mvwaddwstr(w,y - 1,x - 3,L"⇦⇦⇦⇖");
 				}
 				wattron(w,A_UNDERLINE);
 			}else{
@@ -555,9 +555,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 				}
 				if(x < ex / 2){
-					mvwaddwstr(w,y - 1,x,L"╒═══");
+					mvwaddwstr(w,y - 1,x,L"⇗⇨⇨⇨");
 				}else{
-					mvwaddwstr(w,y - 1,x - 3,L"═══╕");
+					mvwaddwstr(w,y - 1,x - 3,L"⇦⇦⇦⇖");
 				}
 				wattron(w,A_UNDERLINE);
 			}else{ // device is not selected
