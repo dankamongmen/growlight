@@ -1247,7 +1247,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 	if((fs = create_form(str,fxn,FORM_MULTISELECT)) == NULL){
 		return;
 	}
-	if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
+	if((fsw = newwin(rows,cols,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
