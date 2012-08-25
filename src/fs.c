@@ -49,6 +49,21 @@ vfat_mkfs(const char *dev,const char *name){
 }
 
 static int
+ufs_mkfs(const char *dev,const char *name){
+	// allow -E (erase content for SSD)
+	// allow -J (journaling)
+	// allow -O1 (UFS1)
+	// allow -U (soft updates)
+	if(name == NULL){
+		name = "SprezzaUFS";
+	}
+	if(vspopen_drain("mkfs.ufs -L %s %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 ext4_mkfs(const char *dev,const char *name){
 	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
 	// same for stripe_width FIXME
@@ -200,7 +215,10 @@ static const struct fs {
 	},
 	{
 		.name = "ufs",
-		.desc = "UNIX Filesystem (BFFS) (BSD default)",
+		.desc = "UNIX Filesystem 2 (BFFS) (BSD default)",
+		.nameparam = 'L',
+		.mkfs = ufs_mkfs,
+
 	},
 	{
 		.name = "hpfs",
@@ -291,6 +309,18 @@ static const struct fs {
 		.desc = "Microsoft's Extented File Allocation Table",
 	},
 	{ .name = NULL, }
+};
+
+static struct fs virtfss[] = {
+	{
+		.name = "devpts",
+		.desc = "Pseudoterminal devices",
+	},{
+		.name = "sysfs",
+		.desc = "Linux device/driver relationships",
+	},{
+		.name = NULL,
+	}
 };
 
 pttable_type *get_fs_types(int *count){
@@ -457,5 +487,17 @@ int fstype_named_p(const char *fstype){
 		}
 	}
 	diag("Unknown filesystem type: %s\n",fstype);
+	return 0;
+}
+
+// Is the filesystem virtual (not backed by a single device entry)?
+int fstype_virt_p(const char *fs){
+	const struct fs *pt;
+
+	for(pt = virtfss ; pt->name ; ++pt){
+		if(strcmp(pt->name,fs) == 0){
+			return 1;
+		}
+	}
 	return 0;
 }

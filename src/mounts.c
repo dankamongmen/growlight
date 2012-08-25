@@ -144,6 +144,9 @@ int parse_mounts(const glightui *gui,const char *fn){
 			return -1;
 		}
 		if(*dev != '/'){ // have to get zfs's etc
+			if(fstype_virt_p(fs)){
+				continue;
+			}
 			if((d = lookup_device(dev)) == NULL){
 				verbf("virtfs %s at %s\n",fs,mnt);
 				continue;
