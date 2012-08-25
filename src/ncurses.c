@@ -1125,6 +1125,8 @@ multiform_options(struct form_state *fs){
 	static const cchar_t bchr[] = {
 		{ .attr = 0, .chars = L"╮", },
 		{ .attr = 0, .chars = L"╯", },
+		{ .attr = 0, .chars = L"╭", },
+		{ .attr = 0, .chars = L"╰", },
 		{ .attr = 0, .chars = L"│", },
 	};
 	const struct form_option *opstrs = fs->ops;
@@ -1136,7 +1138,8 @@ multiform_options(struct form_state *fs){
 	}
 	cols = getmaxx(fsw);
 	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-	mvwadd_wch(fsw,1,fs->longop,&bchr[0]);
+	mvwadd_wch(fsw,1,1,&bchr[2]);
+	mvwadd_wch(fsw,1,fs->longop + 4,&bchr[0]);
 	wattron(fsw,A_BOLD);
 	for(z = 1 ; z < fs->ysize - 1 ; ++z){
 		int op = (z + fs->scrolloff) % fs->opcount;
@@ -1148,20 +1151,21 @@ multiform_options(struct form_state *fs){
 			mvwprintw(fsw,z + 1,START_COL * 2,"%d",z);
 		}
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop,"%-*.*s ",
+		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
 			fs->longop,fs->longop,opstrs[op].option);
 		if(z == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
 		wcolor_set(fsw,INPUT_COLOR,NULL);
-		wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 1 - START_COL * 4,
-			cols - fs->longop * 2 - 1 - START_COL * 4,opstrs[op].desc);
+		wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 4 - START_COL * 4,
+			cols - fs->longop * 2 - 4 - START_COL * 4,opstrs[op].desc);
 		if(z == fs->idx){
 			wattroff(fsw,A_REVERSE);
 		}
 	}
 	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-	mvwadd_wch(fsw,fs->selectno + 2,fs->longop,&bchr[1]);
+	mvwadd_wch(fsw,fs->selectno + 2,1,&bchr[3]);
+	mvwadd_wch(fsw,fs->selectno + 2,fs->longop + 4,&bchr[1]);
 }
 
 static void
