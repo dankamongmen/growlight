@@ -129,10 +129,21 @@ form_options(struct form_state *fs){
 	}
 }
 
+static void
+agg_callback(const char *fn){
+	if(fn == NULL){
+		locked_diag("aggregate creation was cancelled");
+		return;
+	}
+	// FIXME handle aggregate type
+	locked_diag("not yet implemented FIXME");
+}
+
 #define FORM_Y_OFFSET 5
 #define FORM_X_OFFSET 5
 static void
-raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops,int defidx){
+raise_agg_form(struct form_option *opstrs,int ops,int defidx){
+	const char *str = "select an aggregate type";
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;
@@ -166,7 +177,7 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 	if(y <= rows + FORM_Y_OFFSET){
 		rows = y - FORM_Y_OFFSET - 1;
 	}
-	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
+	if((fs = create_form(str,agg_callback,FORM_SELECT)) == NULL){
 		return;
 	}
 	if((fsw = newwin(rows,cols + 2,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
@@ -199,16 +210,6 @@ raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
 	form_options(fs);
 	//actform = fs;
 	//screen_update();
-}
-
-static void
-agg_callback(const char *fn){
-	if(fn == NULL){
-		locked_diag("aggregate creation was cancelled");
-		return;
-	}
-	// FIXME handle aggregate type
-	locked_diag("not yet implemented FIXME");
 }
 
 static char *pending_aggtype;
@@ -275,7 +276,7 @@ int raise_aggregate_form(WINDOW *w){
 		destroy_agg_forms();
 		return -1;
 	}
-	raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
+	raise_agg_form(ops_agg,opcount,defidx);
 	assert(w);
 	return -1;
 }
