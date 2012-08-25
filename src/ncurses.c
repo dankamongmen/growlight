@@ -1012,6 +1012,7 @@ struct form_input {
 typedef enum {
 	FORM_SELECT,			// form_option[]
 	FORM_STRING_INPUT,		// form_input
+	FORM_MULTISELECT,		// form_options[]
 } form_enum;
 
 // Regarding scrolling selection windows: the movement model is the same as
@@ -1033,6 +1034,7 @@ struct form_state {
 			struct form_option *ops;// form_option array for *this instance*
 			int scrolloff;		// scroll offset
 			int opcount;		// total number of ops
+			int selectno;		// number of selections
 		};
 		struct form_input inp;	// form_input state for this instance
 	};
@@ -1052,6 +1054,7 @@ create_form(const char *str,void (*fxn)(const char *),form_enum ftype){
 			free(fs);
 			return NULL;
 		}
+		fs->selectno = 1;
 		fs->formtype = ftype;
 		fs->fxn = fxn;
 	}else{
@@ -1074,6 +1077,7 @@ destroy_form_locked(struct form_state *fs){
 		assert(delwin(fsw) == OK);
 		switch(fs->formtype){
 			case FORM_SELECT:
+			case FORM_MULTISELECT:
 				for(z = 0 ; z < fs->opcount ; ++z){
 					free(fs->ops[z].option);
 					free(fs->ops[z].desc);
@@ -1117,24 +1121,32 @@ free_form(struct form_state *fs){
 }
 
 static void
-multiform_options(struct form_state *fs,int selectno){
+multiform_options(struct form_state *fs){
+	static const cchar_t bchr[] = {
+		{ .attr = 0, .chars = L"┬", },
+		{ .attr = 0, .chars = L"╯", },
+		{ .attr = 0, .chars = L"│", },
+	};
 	const struct form_option *opstrs = fs->ops;
 	WINDOW *fsw = panel_window(fs->p);
 	int z,cols;
 
-	if(fs->formtype != FORM_SELECT){
+	if(fs->formtype != FORM_MULTISELECT){
 		return;
 	}
 	cols = getmaxx(fsw);
 	wattron(fsw,A_BOLD);
+	mvwadd_wch(fsw,0,fs->longop,&bchr[0]);
 	for(z = 1 ; z < fs->ysize - 1 ; ++z){
 		int op = (z + fs->scrolloff) % fs->opcount;
 
 		assert(op >= 0);
 		assert(op < fs->opcount);
 		wcolor_set(fsw,INPUT_COLOR,NULL);
-		if(selectno >= z){
+		if(fs->selectno >= z){
 			mvwprintw(fsw,z + 1,START_COL * 2,"%d",z);
+		}else if(fs->selectno + 1 == z){
+			mvwadd_wch(fsw,z + 1,fs->longop,&bchr[1]);
 		}
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop,"%-*.*s ",
@@ -1213,7 +1225,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 			longdesc = strlen(opstrs[x].desc);
 		}
 	}
-	cols = longdesc + longop * 2 + 1;
+	cols = longdesc + longop * 2 + 3;
 	rows = ops + 4;
 	getmaxyx(stdscr,y,x);
 	if(x < cols + START_COL * 4){
@@ -1227,7 +1239,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 			return;
 		}
 	}
-	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
+	if((fs = create_form(str,fxn,FORM_MULTISELECT)) == NULL){
 		return;
 	}
 	if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
@@ -1254,7 +1266,8 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
 	fs->ops = opstrs;
-	multiform_options(fs,selectno);
+	fs->selectno = selectno;
+	multiform_options(fs);
 	actform = fs;
 	screen_update();
 }
@@ -4372,7 +4385,11 @@ handle_actform_input(int ch){
 			}else{
 				--fs->idx;
 			}
-			form_options(fs);
+			if(fs->formtype == FORM_MULTISELECT){
+				multiform_options(fs);
+			}else{
+				form_options(fs);
+			}
 			screen_update();
 			pthread_mutex_unlock(&bfl);
 			break;
@@ -4388,7 +4405,11 @@ handle_actform_input(int ch){
 			}else{
 				++fs->idx;
 			}
-			form_options(fs);
+			if(fs->formtype == FORM_MULTISELECT){
+				multiform_options(fs);
+			}else{
+				form_options(fs);
+			}
 			screen_update();
 			pthread_mutex_unlock(&bfl);
 			break;

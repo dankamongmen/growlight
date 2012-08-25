@@ -105,6 +105,17 @@ static const aggregate_type aggregates[] = {
 	}
 };
 
+const aggregate_type *get_aggregate(const char *name){
+	unsigned z;
+
+	for(z = 0 ; z < sizeof(aggregates) / sizeof(*aggregates) ; ++z){
+		if(strcmp(aggregates[z].name,name) == 0){
+			return &aggregates[z];
+		}
+	}
+	return NULL;
+}
+
 const aggregate_type *get_aggregate_types(int *count){
 	*count = sizeof(aggregates) / sizeof(*aggregates);
 	return aggregates;
