@@ -368,6 +368,7 @@ const_map_gpt(const device *d,size_t *mapsize,int *fd,size_t lbasize){
 	assert(*mapsize % pgsize == 0);
 	map = mmap(NULL,*mapsize,PROT_READ,MAP_SHARED,*fd,0);
 	if(map == MAP_FAILED){
+		diag("Couldn't map GPT header (%s?)\n",strerror(errno));
 		close(*fd);
 		return map;
 	}
@@ -406,6 +407,7 @@ map_gpt(device *d,size_t *mapsize,int *fd,size_t lbasize){
 	assert(*mapsize % pgsize == 0);
 	map = mmap(NULL,*mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,*fd,0);
 	if(map == MAP_FAILED){
+		diag("Couldn't map GPT header (%s?)\n",strerror(errno));
 		close(*fd);
 		return map;
 	}
@@ -421,13 +423,6 @@ const_unmap_gpt(const device *parent,void *map,size_t mapsize,int fd){
 
 		diag("Error munmapping %s (%s?)\n",parent->name,strerror(errno));
 		close(fd);
-		errno = e;
-		return -1;
-	}
-	if(close(fd)){
-		int e = errno;
-
-		diag("Error closing %s (%s?)\n",parent->name,strerror(errno));
 		errno = e;
 		return -1;
 	}
@@ -884,11 +879,13 @@ uintmax_t first_gpt(const device *d){
 	}
 	ghead = (gpt_header *)((char *)map + LBA_SIZE);
 	r = ghead->first_usable;
+	assert(r);
 	if(const_unmap_gpt(d,map,mapsize,fd)){
 		close(fd);
 		return 0;
 	}
 	if(close(fd)){
+		diag("Couldn't close GPT map %d on %s (%s?)\n",fd,d->name,strerror(errno));
 		return 0;
 	}
 	assert(r);
@@ -912,6 +909,7 @@ uintmax_t last_gpt(const device *d){
 		return 0;
 	}
 	if(close(fd)){
+		diag("Couldn't close GPT map %d on %s (%s?)\n",fd,d->name,strerror(errno));
 		return 0;
 	}
 	return r;
