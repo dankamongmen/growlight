@@ -21,7 +21,10 @@ extern "C" {
 #endif
 #endif
 
+struct form_option;
+
 void locked_diag(const char *,...);
+void raise_form(const char *,void (*)(const char *),struct form_option *,int,int);
 
 #ifdef __cplusplus
 }

@@ -1152,8 +1152,7 @@ form_options(struct form_state *fs){
 // -------------------------------------------------------------------------
 #define FORM_Y_OFFSET 5
 #define FORM_X_OFFSET 5
-static void
-raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops,int defidx){
+void raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops,int defidx){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;
