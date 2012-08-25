@@ -515,16 +515,13 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	// existing partitions overlap with this one.
 	partno = ghead->partcount;
 	for(z = 0 ; z < ghead->partcount ; ++z){
-		// if there's any non-zero bits in either the type or partiton
-		// guid, assume it's being used.
+		// if there're any non-zero bits in either the type or
+		// partition guid, assume it's being used.
 		if(memcmp(gpe[z].type_guid,zguid,sizeof(zguid)) || memcmp(gpe[z].part_guid,zguid,sizeof(zguid))){
 			if((gpe[z].first_lba >= fsec && gpe[z].first_lba <= lsec) ||
 					(gpe[z].last_lba <= lsec && gpe[z].last_lba >= fsec)){
 				diag("Partition overlap (%ju:%ju) ([%u]%ju:%ju)\n",fsec,lsec,
 						z,gpe[z].first_lba,gpe[z].last_lba);
-				munmap(map,mapsize);
-				close(fd);
-				return -1;
 			}
 			continue;
 		}
@@ -565,7 +562,7 @@ int add_gpt_prec(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,uns
 	}
 	snprintf(cname,sizeof(cname) - 1,"%ls",name);
 	r = blkpg_add_partition(fd,fsec * LBA_SIZE,
-			(lsec - fsec + 1) * LBA_SIZE,z,cname);
+			(lsec - fsec + 1) * LBA_SIZE,z + 1,cname);
 	if(close(fd)){
 		int e = errno;
 
