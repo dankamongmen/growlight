@@ -483,7 +483,7 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	char pre[PREFIXSTRLEN + 1];
-	const char *selstr = "";
+	const char *selstr = NULL;
 	const device *d = bo->d;
 	unsigned off = sx - 1;
 	const zobj *z;
@@ -537,14 +537,6 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 					"partition table metadata" :
 					"unpartitioned space";
 				assert(wattrset(w,A_BOLD|co) == OK);
-				assert(wattron(w,A_REVERSE) == OK);
-				if(x < ex / 2){
-					mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
-				}else{
-					mvwprintw(w,y - 1,x - (strlen(selstr) + 3),"%.*s⇦⇦⇦⇖",
-							ex - (x + strlen(selstr) + 10 + 4),selstr);
-				}
-				assert(wattroff(w,A_REVERSE) == OK);
 				wattron(w,A_UNDERLINE);
 			}else{
 				assert(wattrset(w,co) == OK);
@@ -560,12 +552,6 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 				}
 				assert(wattron(w,A_REVERSE) == OK);
-				if(x < ex / 2){
-					mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",ex - (x + strlen(z->p->name)),z->p->name);
-				}else{
-					mvwprintw(w,y - 1,x - (strlen(z->p->name) + 3),"%.*s⇦⇦⇦⇖",
-							ex - (x + strlen(z->p->name) + 10 + 4),z->p->name);
-				}
 				assert(wattroff(w,A_REVERSE) == OK);
 				wattron(w,A_UNDERLINE);
 			}else{ // device is not selected
@@ -588,6 +574,16 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				rep = '0' + rep;	// FIXME lame
 			}
 		}
+		if(selstr){
+			assert(wattron(w,A_REVERSE) == OK);
+			if(x < ex / 2){
+				mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
+			}else{
+				mvwprintw(w,y - 1,x - (strlen(selstr) + 3),"%.*s⇦⇦⇦⇖",
+						ex - (x + strlen(selstr) + 10 + 4),selstr);
+			}
+			assert(wattroff(w,A_REVERSE) == OK);
+		}
 		mvwaddch(w,y,x,rep);
 		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
 		och = ch;
@@ -603,6 +599,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			mvwaddch(w,y,off - ((och + strlen(str)) / 2) - 1,' ');
 			mvwaddch(w,y,off - ((och + strlen(str)) / 2) + strlen(str),' ');
 		}
+		selstr = NULL;
 	}while((z = z->next) != bo->zchain);
 }
 
