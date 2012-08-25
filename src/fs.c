@@ -329,11 +329,29 @@ static struct fs virtfss[] = {
 		.name = "devpts",
 		.desc = "Pseudoterminal devices",
 	},{
+		.name = "rootfs",
+		.desc = "Early trivial filesystem mounted at /",
+	},{
+		.name = "proc",
+		.desc = "Process information",
+	},{
 		.name = "sysfs",
 		.desc = "Linux device/driver relationships",
 	},{
 		.name = "tmpfs",
 		.desc = "RAM-backed filesystem",
+	},{
+		.name = "binfmt_misc",
+		.desc = "Executable filetype management",
+	},{
+		.name = "nfsd",
+		.desc = "Network filesystem daemon management",
+	},{
+		.name = "rpc_pipefs",
+		.desc = "Remote Procedure Call pipe filesytem",
+	},{
+		.name = "fusectl",
+		.desc = "Filesystem in UserSpacE management",
 	},{
 		.name = NULL,
 	}
