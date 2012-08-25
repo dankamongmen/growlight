@@ -62,7 +62,7 @@ int devfd = -1; // Hold a reference to DEVROOT
 static unsigned usepci;
 static const glightui *gui;
 static struct pci_access *pciacc;
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 static unsigned thrcount;
 static pthread_mutex_t barrier = PTHREAD_MUTEX_INITIALIZER;
