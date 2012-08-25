@@ -517,7 +517,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}
 		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
-		mvwprintw(w,y,sx,"%s %s",qprefix(d->size,1,pre,sizeof(pre),1),selstr);
+		mvwprintw(w,y,sx,"%s %s",qprefix(d->size,1,pre,sizeof(pre),1),"unpartitioned space");
 		return;
 	}
 	if((z = bo->zchain) == NULL){
