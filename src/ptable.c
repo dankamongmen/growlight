@@ -101,6 +101,19 @@ static const struct ptable {
 	uintmax_t (*last)(const device *);	// Get last usable sector
 } ptables[] = {
 	{
+		.name = "dos",
+		.desc = "IBMPC (DOS) / Master Boot Record",
+		.make = dos_make_table,
+		.zap = dos_zap_table,
+		.add = dos_add_part,
+		.del = NULL,
+		.pname = NULL,
+		.uuid = NULL,
+		.flag = dos_set_flag,
+		.code = dos_set_code,
+		.first = first_dos,
+		.last = last_dos,
+	}, {
 		.name = "gpt",
 		.desc = "GUID Partition Table",
 		.make = new_gpt,
@@ -114,20 +127,8 @@ static const struct ptable {
 		.first = first_gpt,
 		.last = last_gpt,
 	}, {
-		.name = "dos",
-		.desc = "IBMPC (DOS) / Master Boot Record",
-		.make = dos_make_table,
-		.zap = dos_zap_table,
-		.add = dos_add_part,
-		.del = NULL,
-		.pname = NULL,
-		.uuid = NULL,
-		.flag = dos_set_flag,
-		.code = dos_set_code,
-		.first = first_dos,
-		.last = last_dos,
-	},
-	{ .name = NULL, }
+		.name = NULL,
+	}
 };
 
 pttable_type *get_ptable_types(int *count){

@@ -1322,7 +1322,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	}
 	assert(top_panel(fs->p) != ERR);
 	// FIXME adapt for scrolling (default can be off-window at beginning)
-	if((fs->idx = defidx + 1) < 2){
+	if((fs->idx = defidx) < 1){
 		fs->idx = defidx = 1;
 	}
 	fs->opcount = ops;
@@ -1404,7 +1404,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	}
 	assert(top_panel(fs->p) != ERR);
 	// FIXME adapt for scrolling
-	if((fs->idx = defidx + 1) < 2){
+	if((fs->idx = defidx) < 1){
 		fs->idx = defidx = 1;
 	}
 	fs->opcount = ops;
@@ -1759,15 +1759,13 @@ partition_base_p(void){
 		locked_diag("Partition creation requires selection of a block device");
 		return NULL;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return NULL;
 	}
-	if(b->d->layout == LAYOUT_NONE){
-		if(b->d->blkdev.pttable == NULL){
-			locked_diag("Partition creation requires a partition table");
-			return NULL;
-		}
+	if(selected_unpartitionedp()){
+		locked_diag("Partition creation requires a partition table");
+		return NULL;
 	}
 	if(b->zone->rep == 'P'){
 		locked_diag("Remove partition table on %s to reclaim metadata",b->d->name);
@@ -3857,17 +3855,12 @@ make_ptable(void){
 		locked_diag("Partition table creation requires selection of a block device");
 		return;
 	}
-	if(b->d->layout != LAYOUT_NONE){
-		// FIXME
-		locked_diag("Partition table creation requires a physical device");
-		return;
-	}
-	if(b->d->blkdev.pttable){
-		locked_diag("Partition table already exists on %s",b->d->name);
-		return;
-	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(!selected_unpartitionedp()){
+		locked_diag("Partition table already exists on %s",b->d->name);
 		return;
 	}
 	if((ops_ptype = pttype_table(&opcount)) == NULL){
@@ -3911,18 +3904,19 @@ kill_filesystem_confirm(const char *op){
 			locked_diag("Filesystem wipe requires a selected block device");
 			return;
 		}
-		if(b->zone == NULL){
+		if(selected_unloadedp()){
 			locked_diag("Media is not loaded on %s",b->d->name);
 			return;
 		}
-		if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+		if(selected_emptyp()){
 			locked_diag("Filesystems cannot be wiped from empty space");
 			return;
 		}
-		if(b->zone->p){
-			d = b->zone->p;
-		}else{
+		if(selected_unpartitionedp()){
 			d = b->d;
+		}else{
+			assert(selected_partitionp());
+			d = b->zone->p;
 		}
 		wipe_filesystem(d);
 		redraw_adapter(current_adapter);
@@ -3940,11 +3934,11 @@ kill_filesystem(void){
 		locked_diag("Filesystem wipe requires a selected block device");
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+	if(selected_emptyp()){
 		locked_diag("Filesystems cannot be wiped from empty space");
 		return;
 	}
@@ -3976,19 +3970,20 @@ fsck_partition(void){
 		locked_diag("Partition check requires selection of a partition");
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p == NULL){
-		check_partition(b->d);
-		return;
-	}
-	if(b->zone->p->layout != LAYOUT_PARTITION){
+	if(selected_emptyp()){
 		locked_diag("Selected object is not a partition");
 		return;
 	}
-	check_partition(b->zone->p);
+	if(selected_unpartitionedp()){
+		check_partition(b->d);
+	}else{
+		assert(selected_unpartitionedp());
+		check_partition(b->zone->p);
+	}
 }
 
 static void
@@ -4000,11 +3995,11 @@ delete_partition_confirm(const char *op){
 			locked_diag("Partition deletion requires selection of a partition");
 			return;
 		}
-		if(b->zone == NULL){
+		if(selected_unloadedp()){
 			locked_diag("Media is not loaded on %s",b->d->name);
 			return;
 		}
-		if(b->zone->p == NULL){
+		if(selected_unpartitionedp()){
 			locked_diag("Space is already unpartitioned");
 			return;
 		}
@@ -4022,11 +4017,11 @@ delete_partition(void){
 		locked_diag("Partition deletion requires selection of a partition");
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p == NULL){
+	if(selected_unpartitionedp()){
 		locked_diag("Space is already unpartitioned");
 		return;
 	}
@@ -4111,7 +4106,7 @@ mountpoint_callback(const char *path){
 		locked_diag("Must select a filesystem to mount");
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
@@ -4119,11 +4114,12 @@ mountpoint_callback(const char *path){
 		locked_diag("User cancelled mount operation");
 		return;
 	}
-	if(b->zone->p){
+	if(selected_unpartitionedp()){
+		mmount(b->d,path,b->d->mnttype);
+	}else{
+		assert(selected_partitionp());
 		mmount(b->zone->p,path,b->zone->p->mnttype);
-		return;
 	}
-	mmount(b->d,path,b->d->mnttype);
 }
 
 static void
@@ -4134,12 +4130,12 @@ mount_filesystem(void){
 		locked_diag("Must select a filesystem to mount");
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p){
-		if(b->zone->p->layout != LAYOUT_PARTITION){
+	if(!selected_unpartitionedp()){
+		if(selected_emptyp()){
 			locked_diag("Cannot mount unused space");
 			return;
 		}
@@ -4148,10 +4144,6 @@ mount_filesystem(void){
 			return;
 		}
 	}else{
-		if(b->d == NULL){
-			locked_diag("Need a block device to mount");
-			return;
-		}
 		if(b->d->mnttype == NULL){
 			locked_diag("No filesystem detected on %s",b->d->name);
 			return;
@@ -4168,12 +4160,12 @@ umount_target(void){
 		locked_diag("Must select a filesystem to mount");
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p){
-		if(b->zone->p && b->zone->p->layout != LAYOUT_PARTITION){
+	if(!selected_unpartitionedp()){
+		if(selected_emptyp()){
 			locked_diag("Cannot unmount unused space");
 			return;
 		}
@@ -4208,8 +4200,12 @@ biosboot(void){
 		locked_diag("Must select a block device to boot");
 		return -1;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
+		return -1;
+	}
+	if(selected_unpartitionedp()){
+		locked_diag("BIOS cannot boot from unpartitioned %s",b->d->name);
 		return -1;
 	}
 	if(b->zone->p){
@@ -4249,8 +4245,12 @@ uefiboot(void){
 		locked_diag("Must select a block device to boot");
 		return -1;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
+		return -1;
+	}
+	if(selected_unpartitionedp()){
+		locked_diag("UEFI cannot boot from unpartitioned %s",b->d->name);
 		return -1;
 	}
 	if(b->zone->p){
@@ -4289,17 +4289,22 @@ mount_target(void){
 		locked_diag("Must select a filesystem to mount");
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p){
-		if(b->zone->p->layout != LAYOUT_PARTITION){
+	if(!selected_unpartitionedp()){
+		if(selected_emptyp()){
 			locked_diag("Cannot mount unused space");
 			return;
 		}
 		if(b->zone->p->target){
 			locked_diag("%s is already a target",b->zone->p->name);
+			return;
+		}
+	}else{
+		if(b->d->target){
+			locked_diag("%s is already a target",b->d->name);
 			return;
 		}
 	}
@@ -4314,19 +4319,18 @@ umount_filesystem(void){
 		locked_diag("Must select a filesystem to unmount");
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone->p){
-		if(b->zone->p->layout != LAYOUT_PARTITION){
+	if(!selected_unpartitionedp()){
+		if(selected_emptyp()){
 			locked_diag("Cannot unmount unused space");
 			return;
 		}
 		unmount(b->zone->p);
 	}else{
 		unmount(b->d);
-		return;
 	}
 }
 
