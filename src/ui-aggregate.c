@@ -42,11 +42,14 @@ struct form_state {
 };
 
 static char *pending_aggtype;
+static const char *pending_name = "SprezzAggregate"; // FIXME
 
 static void
 destroy_agg_forms(void){
 	free(pending_aggtype);
 	pending_aggtype = NULL;
+	// free(pending_name); // FIXME
+	// pending_name = NULL; // FIXME
 }
 
 static struct form_option *
@@ -189,6 +192,17 @@ err:
 static void agg_callback(const char *);
 
 static void
+do_agg(const aggregate_type *at,char * const *selarray,int selections){
+	if(at->makeagg == NULL){
+		locked_diag("FIXME %s creation is not yet implemented",pending_aggtype);
+		return;
+	}
+	// put up splash
+	at->makeagg(pending_name,selarray,selections);
+	// kill splash, print result
+}
+
+static void
 aggcomp_callback(const char *fn,char **selarray,int selections){
 	struct form_option *comps_agg;
 	const aggregate_type *at;
@@ -201,15 +215,19 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 			raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
 		}
 		return;
-	}else if(strcmp(fn,"") == 0){
-		// FIXME check for validity of config, and make it!
-		locked_diag("FIXME actual creation is not yet implemented");
-		destroy_agg_forms();
-		return;
 	}
 	if((at = get_aggregate(pending_aggtype)) == NULL){
 		destroy_agg_forms();
 		return;
+	}
+	if(strcmp(fn,"") == 0){
+		if(selections >= at->mindisks){
+			do_agg(at,selarray,selections);
+			destroy_agg_forms();
+			return;
+		}else{
+			locked_diag("%s needs at least %d devices",pending_aggtype,at->mindisks);
+		}
 	}
 	if((comps_agg = component_table(at,&opcount,fn,&defidx,&selarray,&selections)) == NULL){
 		destroy_agg_forms();

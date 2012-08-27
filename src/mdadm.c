@@ -142,7 +142,7 @@ int destroy_mdadm(device *d){
 
 static int
 generic_mdadm_create(const char *name,const char *metadata,const char *level,
-			const char * const *comps,int num){
+			char * const *comps,int num){
 	char buf[BUFSIZ];
 	size_t left,pos;
 	int z;
@@ -165,22 +165,22 @@ generic_mdadm_create(const char *name,const char *metadata,const char *level,
 			metadata,level,name,num,buf);
 }
 
-int make_mdraid0(const char *name,const char * const *comps,int num){
+int make_mdraid0(const char *name,char * const *comps,int num){
 	return generic_mdadm_create(name,"1.2","raid0",comps,num);
 }
 
-int make_mdraid1(const char *name,const char * const *comps,int num){
+int make_mdraid1(const char *name,char * const *comps,int num){
 	return generic_mdadm_create(name,"1.2","raid1",comps,num);
 }
 
-int make_mdraid4(const char *name,const char * const *comps,int num){
+int make_mdraid4(const char *name,char * const *comps,int num){
 	return generic_mdadm_create(name,"1.2","raid4",comps,num);
 }
 
-int make_mdraid5(const char *name,const char * const *comps,int num){
+int make_mdraid5(const char *name,char * const *comps,int num){
 	return generic_mdadm_create(name,"1.2","raid5",comps,num);
 }
 
-int make_mdraid6(const char *name,const char * const *comps,int num){
+int make_mdraid6(const char *name,char * const *comps,int num){
 	return generic_mdadm_create(name,"1.2","raid6",comps,num);
 }
