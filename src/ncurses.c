@@ -129,7 +129,7 @@ typedef struct adapterstate {
 
 #define EXPANSION_MAX EXPANSION_FULL
 
-static char statusmsg[79];
+static char statusmsg[BUFSIZ];
 static unsigned count_adapters;
 // dequeue + single selection
 static reelbox *current_adapter,*top_reelbox,*last_reelbox;
@@ -3890,8 +3890,8 @@ new_filesystem(void){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(!selected_unpartitionedp() && selected_emptyp()){
-		locked_diag("Filesystems cannot be created in empty space %p %p %p",b->zone,b->zone->p,b->d);
+	if(selected_emptyp()){
+		locked_diag("Selected region of %s is empty space",b->d->name);
 		return;
 	}
 	if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
@@ -5043,9 +5043,9 @@ update_blockobj(blockobj *b,device *d){
 		if(d->mnt){
 			++mounts;
 		}
-		sector = d->size / d->logsec - 1;
+		sector = d->size / d->logsec + 1;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
-		sector = d->size / d->logsec - 1;
+		sector = d->size / d->logsec + 1;
 	}else{
 		if( (sector = first_usable_sector(d)) ){
 			if((z = create_zobj(z,zones,0,sector - 1,NULL,L'P')) == NULL){
