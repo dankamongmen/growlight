@@ -6,9 +6,21 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "zfs.h"
 #include "mmap.h"
 #include "popen.h"
 #include "growlight.h"
+
+static int
+create_btrfs(const char *dev,const char *name){
+	if(name == NULL){
+		name = "SprezzaBTRFS";
+	}
+	if(vspopen_drain("mkfs.btrfs -h -L \"%s\" %s",name,dev)){
+		return -1;
+	}
+	return 0;
+}
 
 static int
 hfs_mkfs(const char *dev,const char *name){
@@ -244,6 +256,16 @@ static const struct fs {
 		.desc = "Compact Disc Filesystem (ISO 9660:1999)",
 	},
 	{
+		.name = "ozfs",
+		.desc = "Oracle's ZFS (Solaris 11 default)",
+	},
+	{
+		.name = "zol",
+		.desc = "LLNL's ZoL (ZFS on Linux)",
+		.mkfs = make_zfs,
+		.nameparam = ' ',
+	},
+	{
 		.name = "zfs_member",
 		.desc = "ZFS zpool member",
 	},
@@ -330,6 +352,7 @@ static const struct fs {
 		.name = "btrfs",
 		.desc = "Oracle's B-Tree Filesystem",
 		.nameparam = 'L',
+		.mkfs = create_btrfs,
 	},
 	{
 		.name = "ubifs",

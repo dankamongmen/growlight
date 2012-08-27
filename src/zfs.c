@@ -311,6 +311,10 @@ int make_raidz2(const char *name,char * const *vdevs,int num){
 int make_raidz3(const char *name,char * const *vdevs,int num){
 	return generic_make_zpool("raidz3",name,vdevs,num);
 }
+
+int make_zfs(const char *dev,const char *name){
+	return vspopen_drain("zpool create %s %s",name,dev);
+}
 #else
 int init_zfs_support(const glightui *gui __attribute__ ((unused))){
 	diag("No ZFS support in this build.\n");
@@ -331,6 +335,12 @@ int scan_zpools(const glightui *gui __attribute__ ((unused))){
 }
 
 int destroy_zpool(device *d __attribute__ ((unused))){
+	diag("No ZFS support in this build.\n");
+	return 0;
+}
+
+int make_zfs(const char *dev __attribute__ ((unused)),
+		const char *name __attribute__ ((unused))){
 	diag("No ZFS support in this build.\n");
 	return 0;
 }
