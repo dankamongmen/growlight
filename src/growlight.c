@@ -344,8 +344,11 @@ free_device(device *d){
 	if(d){
 		device *p;
 
-		if(d->c && d->c->uistate && d->uistate){
-			gui->block_free(d->c->uistate,d->uistate);
+		if(d->c){
+			d->c->demand -= transport_bw(d->blkdev.transport);
+			if(d->c->uistate && d->uistate){
+				gui->block_free(d->c->uistate,d->uistate);
+			}
 		}
 		free_mntentry(d->target);
 		switch(d->layout){
