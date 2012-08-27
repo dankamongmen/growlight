@@ -158,7 +158,8 @@ static inline int
 selected_unpartitionedp(void){
 	const blockobj *bo = get_selected_blockobj();
 
-	return bo && !bo->zone;
+	return bo && !bo->zone && bo->d->layout == LAYOUT_NONE && !bo->d->blkdev.pttable;
+	//return bo && !bo->zone;
 }
 
 static inline int
@@ -1403,8 +1404,8 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	}
 	assert(top_panel(fs->p) != ERR);
 	// FIXME adapt for scrolling
-	if((fs->idx = defidx) < 0){
-		fs->idx = defidx = 0;
+	if((fs->idx = defidx + 1) < 2){
+		fs->idx = defidx = 1;
 	}
 	fs->opcount = ops;
 	fs->ysize = rows - 2;
