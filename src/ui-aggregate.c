@@ -44,7 +44,7 @@ destroy_agg_forms(void){
 }
 
 static struct form_option *
-component_table(int *count,char *match,int *defidx){
+component_table(const aggregate_type *at,int *count,char *match,int *defidx){
 	struct form_option *fo = NULL,*tmp;
 	const controller *c;
 
@@ -83,6 +83,15 @@ component_table(int *count,char *match,int *defidx){
 			++*count;
 		}
 	}
+	if(at->maxfaulted){
+		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+			goto err;
+		}
+		fo = tmp;
+		fo[*count].option = strdup("missing");
+		fo[*count].desc = strdup("force construction of degraded array");
+		++*count;
+	}
 	return fo;
 
 err:
@@ -104,11 +113,11 @@ agg_callback(const char *fn){
 		locked_diag("aggregate creation was cancelled");
 		return;
 	}
-	if((comps_agg = component_table(&opcount,NULL,&defidx)) == NULL){
+	at = get_aggregate(fn);
+	if((comps_agg = component_table(at,&opcount,NULL,&defidx)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
-	at = get_aggregate(fn);
 	raise_multiform("select aggregate components",agg_callback,comps_agg,opcount,at->mindisks);
 	locked_diag("not yet implemented FIXME");
 }
