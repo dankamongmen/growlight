@@ -17,6 +17,7 @@ int make_mdraid1(const char *name,char * const *,int);
 int make_mdraid4(const char *name,char * const *,int);
 int make_mdraid5(const char *name,char * const *,int);
 int make_mdraid6(const char *name,char * const *,int);
+int make_mdraid10(const char *name,char * const *,int);
 
 #ifdef __cplusplus
 }

@@ -184,3 +184,7 @@ int make_mdraid5(const char *name,char * const *comps,int num){
 int make_mdraid6(const char *name,char * const *comps,int num){
 	return generic_mdadm_create(name,"1.2","raid6",comps,num);
 }
+
+int make_mdraid10(const char *name,char * const *comps,int num){
+	return generic_mdadm_create(name,"1.2","raid10",comps,num);
+}

@@ -1,3 +1,4 @@
+#include "zfs.h"
 #include "mdadm.h"
 #include "growlight.h"
 #include "aggregate.h"
@@ -58,26 +59,31 @@ static const aggregate_type aggregates[] = {
 		.desc = "Interleaved mirror combination",
 		.mindisks = 4,
 		.maxfaulted = 1, // FIXME technically 1 from each mirror
+		.makeagg = make_mdraid10,
 	},{
 		.name = "zmirror",
 		.desc = "Zpool with data replication (mirroring)",
 		.mindisks = 2,
 		.maxfaulted = 1,
+		.makeagg = make_zmirror,
 	},{
 		.name = "raidz1",
 		.desc = "ZFS RAID with distributed parity",
 		.mindisks = 3,
 		.maxfaulted = 1,
+		.makeagg = make_raidz1,
 	},{
 		.name = "raidz2",
 		.desc = "ZFS RAID with 2x distributed parity",
 		.mindisks = 4,
 		.maxfaulted = 2,
+		.makeagg = make_raidz2,
 	},{
 		.name = "raidz3",
 		.desc = "ZFS RAID with 3x distributed parity",
 		.mindisks = 5,
 		.maxfaulted = 3,
+		.makeagg = make_raidz3,
 	},{
 		.name = "zil",
 		.desc = "ZFS Write-Intent Log",

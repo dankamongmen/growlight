@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "zfs.h"
+#include "popen.h"
 #include "config.h"
 #include "growlight.h"
 
@@ -271,6 +272,44 @@ int destroy_zpool(device *d){
 	}
 	diag("Not yet implemented FIXME\n"); // FIXME
 	return -1;
+}
+
+static int
+generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num){
+	char buf[BUFSIZ];
+	size_t left,pos;
+	int z;
+
+	pos = 0;
+	left = sizeof(buf) - 1;
+	for(z = 0 ; z < num ; ++z){
+		if(strlen(vdevs[z]) >= left){
+			diag("Too many arguments for zpool creation\n");
+			return -1;
+		}
+		strcat(buf + pos,vdevs[z]);
+		pos += strlen(vdevs[z]) + 1;
+		buf[pos - 1] = ' ';
+		left -= strlen(vdevs[z]) + 1;
+	}
+	buf[pos - 1] = '\0';
+	return vspopen_drain("zpool create %s %s %s",type,name,buf);
+}
+
+int make_zmirror(const char *name,char * const *vdevs,int num){
+	return generic_make_zpool("mirror",name,vdevs,num);
+}
+
+int make_raidz1(const char *name,char * const *vdevs,int num){
+	return generic_make_zpool("raidz1",name,vdevs,num);
+}
+
+int make_raidz2(const char *name,char * const *vdevs,int num){
+	return generic_make_zpool("raidz2",name,vdevs,num);
+}
+
+int make_raidz3(const char *name,char * const *vdevs,int num){
+	return generic_make_zpool("raidz3",name,vdevs,num);
 }
 #else
 int init_zfs_support(const glightui *gui __attribute__ ((unused))){

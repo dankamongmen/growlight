@@ -16,6 +16,11 @@ int scan_zpools(const glightui *);
 int print_zfs_version(FILE *);
 int destroy_zpool(struct device *);
 
+int make_zmirror(const char *,char * const *,int);
+int make_raidz1(const char *,char * const *,int);
+int make_raidz2(const char *,char * const *,int);
+int make_raidz3(const char *,char * const *,int);
+
 #ifdef __cplusplus
 }
 #endif
