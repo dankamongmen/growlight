@@ -151,6 +151,7 @@ typedef struct device {
 			char *mdname;
 			transport_e transport;
 			unsigned long degraded;	// number of missing devices
+			char *pttable;		// Partition table type (can be NULL)
 		} mddev;
 		struct { // Device Manager
 			unsigned long disks;	// RAID disks in md

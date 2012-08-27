@@ -368,6 +368,7 @@ free_device(device *d){
 				free(d->mddev.level);
 				free(d->mddev.uuid);
 				free(d->mddev.mdname);
+				free(d->blkdev.pttable);
 				break;
 			}case LAYOUT_DM:{
 				mdslave *md;

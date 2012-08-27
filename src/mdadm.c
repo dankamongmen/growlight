@@ -32,6 +32,11 @@ int explore_md_sysfs(device *d,int dirfd){
 		verbf("Warning: no 'level' content in mdadm device %s\n",d->name);
 		d->mddev.level = 0;
 	}
+	// FIXME there's some archaic rules on mdadm devices making some of them
+	// non-partitionable, but they're all partitionable after 2.6.38 or something
+	if((d->mddev.pttable = strdup("mdp")) == NULL){
+		return -1;
+	}
 	if((d->model = strdup("Linux mdadm")) == NULL){
 		return -1;
 	}

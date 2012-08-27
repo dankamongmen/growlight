@@ -2406,8 +2406,9 @@ update_details(WINDOW *hw){
 					d->size / (d->logsec ? d->logsec : 1));
 	}
 	mvwprintw(hw,5,START_COL,"Partitioning: %s I/O scheduler: %s",
-			d->blkdev.pttable ? d->blkdev.pttable : "none",
-			d->sched ? d->sched : "custom");
+			d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
+			d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
+			"n/a",d->sched ? d->sched : "custom");
 	if(b->zone){
 		char align[BPREFIXSTRLEN + 1];
 		char buf[BPREFIXSTRLEN + 1];

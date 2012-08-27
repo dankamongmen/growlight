@@ -180,6 +180,8 @@ int parse_mounts(const glightui *gui,const char *fn){
 				free(d->mntops);
 				free(d->mnt);
 			}
+		}else{
+			verbf("New %s mount %s on %s\n",fs,mnt,d->name);
 		}
 		d->mnt = mnt;
 		d->mntops = ops;

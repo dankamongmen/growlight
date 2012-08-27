@@ -483,7 +483,7 @@ print_drive(const device *d,int descend){
 			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec, L'V', L'M', L'.',
 			d->roflag ? L'r' : L'.', L'.',
-			"n/a",
+			d->mddev.pttable ? d->mddev.pttable : "none",
 			d->wwn ? d->wwn : "n/a",
 			transport_str(d->mddev.transport)
 			);
