@@ -101,7 +101,7 @@ err:
 
 static struct form_option *
 component_table(const aggregate_type *at,int *count,const char *match,int *defidx,
-		const char *fn,char ***selarray,int *selections){
+		char ***selarray,int *selections){
 	struct form_option *fo = NULL,*tmp;
 	const controller *c;
 
@@ -116,35 +116,35 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 			if((key = strdup(d->name)) == NULL){
 				goto err;
 			}
-			if(fn && strcmp(fn,key) == 0){
-				int z;
-
-				for(z = 0 ; z < *selections ; ++z){
-					if(strcmp(key,(*selarray)[z]) == 0){
-						free((*selarray)[z]);
-						(*selarray)[z] = NULL;
-						if(z < *selections - 1){
-							memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * *selections - z);
-						}
-						--*selections;
-						z = -1;
-						break;
-					}
-				}
-				if(z >= *selections){
-					typeof(*selarray) tmp;
-
-					if((tmp = realloc(*selarray,sizeof(**selarray) * *selections)) == NULL){
-						goto err;
-					}
-					*selarray = tmp;
-					(*selarray)[*selections] = strdup(fn);
-					++*selections;
-				}
-			}
 			if(match){
 				if(strcmp(key,match) == 0){
 					*defidx = *count;
+				}
+				if(strcmp(key,match) == 0){
+					int z;
+
+					for(z = 0 ; z < *selections ; ++z){
+						if(strcmp(key,(*selarray)[z]) == 0){
+							free((*selarray)[z]);
+							(*selarray)[z] = NULL;
+							if(z < *selections - 1){
+								memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * *selections - z);
+							}
+							--*selections;
+							z = -1;
+							break;
+						}
+					}
+					if(z >= *selections){
+						typeof(*selarray) tmp;
+
+						if((tmp = realloc(*selarray,sizeof(**selarray) * (*selections + 1))) == NULL){
+							goto err;
+						}
+						*selarray = tmp;
+						(*selarray)[*selections] = strdup(match);
+						++*selections;
+					}
 				}
 			}else{
 				if(aggregate_default_p(key)){
@@ -206,7 +206,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 		destroy_agg_forms();
 		return;
 	}
-	if((comps_agg = component_table(at,&opcount,fn,&defidx,fn,&selarray,&selections)) == NULL){
+	if((comps_agg = component_table(at,&opcount,fn,&defidx,&selarray,&selections)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
@@ -232,7 +232,7 @@ agg_callback(const char *fn){
 	}
 	selarray = NULL;
 	pending_aggtype = strdup(fn);
-	if((comps_agg = component_table(at,&opcount,NULL,&defidx,NULL,&selarray,&selections)) == NULL){
+	if((comps_agg = component_table(at,&opcount,NULL,&defidx,&selarray,&selections)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
