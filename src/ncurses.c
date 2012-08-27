@@ -1234,7 +1234,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 			longdesc = strlen(opstrs[x].desc);
 		}
 	}
-	cols = longdesc + longop * 2 + 3;
+	cols = longdesc + longop * 2 + 9;
 	rows = (ops > selectno ? ops : selectno) + 4;
 	getmaxyx(stdscr,y,x);
 	if(x < cols + START_COL * 4){
@@ -1270,7 +1270,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
-	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,fs->boxstr);
 	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
@@ -1401,7 +1401,7 @@ raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
 	getmaxyx(stdscr,y,x);
 	assert(x >= cols + START_COL * 2);
 	assert(y >= 3);
-	if((fsw = newwin(3,cols + START_COL * 2,y - 5,5)) == NULL){
+	if((fsw = newwin(3,cols + START_COL * 2,y - 4,5)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;

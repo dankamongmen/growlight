@@ -110,7 +110,7 @@ agg_callback(const char *fn){
 	int opcount,defidx;
 
 	if(fn == NULL){
-		locked_diag("aggregate creation was cancelled");
+		raise_aggregate_form(stdscr);
 		return;
 	}
 	at = get_aggregate(fn);
@@ -119,7 +119,6 @@ agg_callback(const char *fn){
 		return;
 	}
 	raise_multiform("select aggregate components",agg_callback,comps_agg,opcount,at->mindisks);
-	locked_diag("not yet implemented FIXME");
 }
 
 static char *pending_aggtype;
@@ -184,5 +183,5 @@ int raise_aggregate_form(WINDOW *w){
 	}
 	raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
 	assert(w);
-	return -1;
+	return 0;
 }
