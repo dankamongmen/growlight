@@ -1438,7 +1438,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
 	getmaxyx(stdscr,y,x);
 	assert(x >= cols + START_COL * 2);
 	assert(y >= 3);
-	if((fsw = newwin(3,cols + START_COL * 2,y - 4,5)) == NULL){
+	if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
@@ -4861,7 +4861,7 @@ handle_ncurses_input(WINDOW *w){
 					return;
 				}
 				break;
-			case 'q': case 'Q':
+			case 'q':
 				diag("User-initiated shutdown");
 				return;
 			default:{
