@@ -137,6 +137,44 @@ static reelbox *current_adapter,*top_reelbox,*last_reelbox;
 #define START_COL 1		// Room to leave for borders
 #define PAD_COLS(cols) ((cols))
 
+static blockobj *
+get_selected_blockobj(void){
+	reelbox *rb;
+
+	if((rb = current_adapter) == NULL){
+		return NULL;
+	}
+	return rb->selected;
+}
+
+static inline int
+selected_unloadedp(void){
+	const blockobj *bo = get_selected_blockobj();
+
+	return bo && !bo->zone && bo->d->layout == LAYOUT_NONE && bo->d->blkdev.unloaded;
+}
+
+static inline int
+selected_unpartitionedp(void){
+	const blockobj *bo = get_selected_blockobj();
+
+	return bo && !bo->zone;
+}
+
+static inline int
+selected_emptyp(void){
+	const blockobj *bo = get_selected_blockobj();
+
+	return bo && !bo->zone->p;
+}
+
+static inline int
+selected_partitionp(void){
+	const blockobj *bo = get_selected_blockobj();
+
+	return bo && bo->zone->p;
+}
+
 static int
 selection_active(void){
 	if(current_adapter == NULL){
@@ -155,16 +193,6 @@ get_selected_adapter(void){
 		return NULL;
 	}
 	return current_adapter->as;
-}
-
-static blockobj *
-get_selected_blockobj(void){
-	reelbox *rb;
-
-	if((rb = current_adapter) == NULL){
-		return NULL;
-	}
-	return rb->selected;
 }
 
 static int
@@ -1577,22 +1605,26 @@ fs_do_internal(device *d,const char *fst,const char *name){
 
 static void
 fs_do(const char *name){
-	blockobj *b;
-	int r;
+	blockobj *b = get_selected_blockobj();
+	int r = -1;
 
+	if(b == NULL){
+		locked_diag("A block device must be selected");
+		return;
+	}
 	if(!current_adapter || !(b = current_adapter->selected)){
 		locked_diag("Lost selection while targeting");
 		destroy_fs_forms();
 		return;
 	}
-	if(b->zone == NULL){
+	if(selected_unloadedp()){
+		locked_diag("%s is unloaded, aborting.\n",b->d->name);
+	}else if(selected_unpartitionedp()){
 		r = fs_do_internal(b->d,pending_fstype,name);
-	}else if(b->zone->p->layout != LAYOUT_PARTITION){
-		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
-		destroy_fs_forms();
-		return;
-	}else{
+	}else if(selected_partitionp()){
 		r = fs_do_internal(b->zone->p,pending_fstype,name);
+	}else if(selected_emptyp()){
+		locked_diag("Cannot make filesystems in empty space");
 	}
 	if(r == 0){
 		locked_diag("Successfully created %s filesystem",pending_fstype);
@@ -3846,25 +3878,21 @@ make_ptable(void){
 
 static void
 new_filesystem(void){
+	blockobj *b = get_selected_blockobj();
 	struct form_option *ops_fs;
 	int opcount,defidx;
-	blockobj *b;
 
-	if((b = get_selected_blockobj()) == NULL){
-		locked_diag("Filesystem creation requires a selected block device");
+	if(b == NULL){
+		locked_diag("A block device must be selected");
 		return;
 	}
-	if(b->d == NULL){
+	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(b->zone){
-		if(!b->zone->p){
-		       	if(b->zone->p->layout != LAYOUT_PARTITION){
-				locked_diag("Filesystems cannot be created in empty space");
-				return;
-			}
-		}
+	if(selected_emptyp()){
+		locked_diag("Filesystems cannot be created in empty space");
+		return;
 	}
 	if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
 		return;
@@ -4983,8 +5011,13 @@ free_zchain(zobj **z){
 	*z = NULL;
 }
 
-// b->zone == NULL: device unloaded or inaccessible
-// b->
+// b->zone == NULL:
+// 	d->layout == LAYOUT_NONE:
+// 		d->blkdev.unloaded: device unloaded or inaccessible
+// 		d->blkdev.pttable == NULL: no partitioning table
+//	d->layout == * ??? FIXME
+// b->zone->p == NULL: empty space
+// b->zone->p: partition
 static void
 update_blockobj(blockobj *b,device *d){
 	unsigned fs,mounts,zones,zonesel;
