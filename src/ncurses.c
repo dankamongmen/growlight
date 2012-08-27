@@ -1174,7 +1174,6 @@ multiform_options(struct form_state *fs){
 				break;
 			}
 		}
-		assert(selidx || !selidx);
 		wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 4 - START_COL * 4,
 			cols - fs->longop * 2 - 4 - START_COL * 4,opstrs[op].desc);
 		wattroff(fsw,A_REVERSE);
