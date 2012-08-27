@@ -154,7 +154,7 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 					*defidx = *count;
 				}
 			}
-			if((desc = strdup(d->name)) == NULL){
+			if((desc = strdup(d->model ? d->model : d->wwn ? d->wwn : d->name)) == NULL){
 				free(key);
 				goto err;
 			}
@@ -190,6 +190,7 @@ err:
 }
 
 static void agg_callback(const char *);
+static void aggname_callback(const char *);
 
 static void
 do_agg(const aggregate_type *at,char * const *selarray,int selections){
@@ -209,11 +210,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 	int opcount,defidx;
 
 	if(fn == NULL){
-		struct form_option *ops_agg;
-
-		if( (ops_agg = agg_table(&opcount,pending_aggtype,&defidx)) ){
-			raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
-		}
+		raise_str_form("enter aggregate name",aggname_callback,pending_aggname);
 		return;
 	}
 	if((at = get_aggregate(pending_aggtype)) == NULL){
@@ -246,7 +243,11 @@ aggname_callback(const char *fn){
 	char **selarray;
 
 	if(fn == NULL){
-		locked_diag("aggregate creation was cancelled");
+		struct form_option *ops_agg;
+
+		if( (ops_agg = agg_table(&opcount,pending_aggtype,&defidx)) ){
+			raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
+		}
 		return;
 	}
 	if((pending_aggname = strdup(fn)) == NULL){
