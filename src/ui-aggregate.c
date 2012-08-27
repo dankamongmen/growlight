@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <assert.h>
 #include <stdlib.h>
+
+#include "ncurses.h"
 #include "growlight.h"
 #include "aggregate.h"
 #include "ui-aggregate.h"
@@ -99,7 +101,7 @@ err:
 
 static struct form_option *
 component_table(const aggregate_type *at,int *count,const char *match,int *defidx,
-		const char *fn,int **selarray){
+		const char *fn,char ***selarray,int *selections){
 	struct form_option *fo = NULL,*tmp;
 	const controller *c;
 
@@ -115,8 +117,27 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 				goto err;
 			}
 			if(fn && strcmp(fn,key) == 0){
-				if(*selarray){
-					(*selarray)[*count] = !(*selarray)[*count];
+				int z;
+
+				for(z = 0 ; z < *selections ; ++z){
+					if((*selarray)[z]){
+						// FIXME move others up
+						free((*selarray)[z]);
+						(*selarray)[z] = NULL;
+						--*selections;
+						z = -1;
+						break;
+					}
+				}
+				if(z >= *selections){
+					typeof(*selarray) tmp;
+
+					if((tmp = realloc(*selarray,sizeof(**selarray) * *selections)) == NULL){
+						goto err;
+					}
+					*selarray = tmp;
+					(*selarray)[*selections] = strdup(fn);
+					++*selections;
 				}
 			}
 			if(match){
@@ -143,12 +164,6 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 			++*count;
 		}
 	}
-	if(!*selarray && *count){
-		if((*selarray = malloc(sizeof(**selarray) * *count)) == NULL){
-			goto err;
-		}
-		memset(*selarray,0,sizeof(**selarray) * *count);
-	}
 	if(at->maxfaulted){
 		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
 			goto err;
@@ -172,7 +187,7 @@ err:
 static void agg_callback(const char *);
 
 static void
-aggcomp_callback(const char *fn,int *selarray){
+aggcomp_callback(const char *fn,char **selarray,int selections){
 	struct form_option *comps_agg;
 	const aggregate_type *at;
 	int opcount,defidx;
@@ -189,12 +204,12 @@ aggcomp_callback(const char *fn,int *selarray){
 		destroy_agg_forms();
 		return;
 	}
-	if((comps_agg = component_table(at,&opcount,fn,&defidx,fn,&selarray)) == NULL){
+	if((comps_agg = component_table(at,&opcount,fn,&defidx,fn,&selarray,&selections)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,defidx,at->mindisks,selarray);
+			opcount,defidx,at->mindisks,selarray,selections);
 }
 
 static void
@@ -202,7 +217,8 @@ agg_callback(const char *fn){
 	struct form_option *comps_agg;
 	const aggregate_type *at;
 	int opcount,defidx;
-	int *selarray;
+	int selections = 0;
+	char **selarray;
 
 	if(fn == NULL){
 		locked_diag("aggregate creation was cancelled");
@@ -214,15 +230,15 @@ agg_callback(const char *fn){
 	}
 	selarray = NULL;
 	pending_aggtype = strdup(fn);
-	if((comps_agg = component_table(at,&opcount,NULL,&defidx,NULL,&selarray)) == NULL){
+	if((comps_agg = component_table(at,&opcount,NULL,&defidx,NULL,&selarray,&selections)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,defidx,at->mindisks,selarray);
+			opcount,defidx,at->mindisks,selarray,selections);
 }
 
-int raise_aggregate_form(WINDOW *w){
+int raise_aggregate_form(void){
 	struct form_option *ops_agg;
 	int opcount,defidx;
 
@@ -231,6 +247,5 @@ int raise_aggregate_form(WINDOW *w){
 		return -1;
 	}
 	raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
-	assert(w);
 	return 0;
 }

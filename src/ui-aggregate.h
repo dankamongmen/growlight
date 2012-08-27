@@ -5,9 +5,7 @@
 extern "C" {
 #endif
 
-#include "ncurses.h"
-
-int raise_aggregate_form(WINDOW *);
+int raise_aggregate_form(void);
 
 #ifdef __cplusplus
 }

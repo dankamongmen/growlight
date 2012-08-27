@@ -15,6 +15,7 @@
 #include "health.h"
 #include "ptable.h"
 #include "ptypes.h"
+#include "ncurses.h"
 #include "growlight.h"
 #include "aggregate.h"
 #include "ui-aggregate.h"
@@ -1030,7 +1031,7 @@ struct form_state {
 	PANEL *p;
 	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
-	void (*mcb)(const char *,int *);// callback on multiform input
+	void (*mcb)(const char *,char **,int); // callback on multiform input
 	int idx;			// selection index, [0..ysize)
 	int longop;			// length of longest op
 	char *boxstr;			// string for box label
@@ -1040,8 +1041,9 @@ struct form_state {
 			struct form_option *ops;// form_option array for *this instance*
 			int scrolloff;		// scroll offset
 			int opcount;		// total number of ops
-			int selectno;		// number of selections
-			int *selarray;		// array of selections
+			int selectno;		// number of selections, total
+			int selections;		// number of active selections
+			char **selarray;	// array of selections by name
 		};
 		struct form_input inp;	// form_input state for this instance
 	};
@@ -1140,7 +1142,7 @@ multiform_options(struct form_state *fs){
 	};
 	const struct form_option *opstrs = fs->ops;
 	WINDOW *fsw = panel_window(fs->p);
-	int z,cols;
+	int z,cols,selidx;
 
 	if(fs->formtype != FORM_MULTISELECT){
 		return;
@@ -1165,10 +1167,12 @@ multiform_options(struct form_state *fs){
 		if((z - 1) == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
-		if(fs->selarray[op]){
-			wcolor_set(fsw,SELECTED_COLOR,NULL);
-		}else{
-			wcolor_set(fsw,INPUT_COLOR,NULL);
+		wcolor_set(fsw,INPUT_COLOR,NULL);
+		for(selidx = 0 ; selidx < fs->selections ; ++selidx){
+			if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
+				wcolor_set(fsw,SELECTED_COLOR,NULL);
+				break;
+			}
 		}
 		wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 4 - START_COL * 4,
 			cols - fs->longop * 2 - 4 - START_COL * 4,opstrs[op].desc);
@@ -1212,9 +1216,9 @@ form_options(struct form_state *fs){
 
 #define FORM_Y_OFFSET 5
 #define FORM_X_OFFSET 5
-void raise_multiform(const char *str,void (*fxn)(const char *,int *),
+void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 		struct form_option *opstrs,int ops,int defidx,
-		int selectno,int *selarray){
+		int selectno,char **selarray,int selections){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;
@@ -1279,6 +1283,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,int *),
 	fs->opcount = ops;
 	fs->ysize = rows - 2;
 	fs->selarray = selarray;
+	fs->selections = selections;
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
@@ -4365,7 +4370,7 @@ handle_subwindow_input(int ch){
 static int
 handle_actform_input(int ch){
 	struct form_state *fs = actform;
-	void (*mcb)(const char *,int *);
+	void (*mcb)(const char *,char **,int);
 	void (*cb)(const char *);
 
 	if(fs->formtype == FORM_STRING_INPUT){
@@ -4386,19 +4391,20 @@ handle_actform_input(int ch){
 			pthread_mutex_unlock(&bfl);
 			break;
 		case ' ': case '\r': case '\n': case KEY_ENTER:{
-			int *selarray;
+			int op,selections;
+			char **selarray;
 			char *optstr;
-			int op;
 
 			pthread_mutex_lock(&bfl);
 				op = (actform->idx + fs->scrolloff) % fs->opcount;
 				assert(optstr = strdup(actform->ops[op].option));
 				selarray = fs->selarray;
+				selections = fs->selections;
 				fs->selarray = NULL;
 				free_form(actform);
 				actform = NULL;
 				if(fs->formtype == FORM_MULTISELECT){
-					mcb(optstr,selarray);
+					mcb(optstr,selarray,selections);
 				}else{
 					cb(optstr);
 				}
@@ -4410,7 +4416,7 @@ handle_actform_input(int ch){
 			free_form(actform);
 			actform = NULL;
 			if(fs->formtype == FORM_MULTISELECT){
-				mcb(NULL,NULL);
+				mcb(NULL,NULL,0);
 			}else{
 				cb(NULL);
 			}
@@ -4784,7 +4790,7 @@ handle_ncurses_input(WINDOW *w){
 				if(actform){
 					locked_diag("An input dialog is already active");
 				}else{
-					raise_aggregate_form(stdscr);
+					raise_aggregate_form();
 				}
 				unlock_ncurses();
 				break;
