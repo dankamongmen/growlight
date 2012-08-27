@@ -1303,7 +1303,9 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,fs->boxstr);
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
+#define ESCSTR "'C' confirms setup, ⎋esc returns"
+	mvwprintw(fsw,fs->ysize + 1,cols - strlen(ESCSTR),ESCSTR);
+#undef ESCSTR
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
 	fs->ops = opstrs;
@@ -4426,7 +4428,7 @@ handle_actform_input(int ch){
 				free(optstr);
 			pthread_mutex_unlock(&bfl);
 			break;
-		}case KEY_ESC:
+		}case KEY_ESC:{
 			pthread_mutex_lock(&bfl);
 			free_form(actform);
 			actform = NULL;
@@ -4437,7 +4439,7 @@ handle_actform_input(int ch){
 			}
 			pthread_mutex_unlock(&bfl);
 			break;
-		case KEY_UP: case 'k':{
+		}case KEY_UP: case 'k':{
 			pthread_mutex_lock(&bfl);
 			if(fs->idx <= 1){
 				if(fs->scrolloff <= 0){
@@ -4456,8 +4458,7 @@ handle_actform_input(int ch){
 			screen_update();
 			pthread_mutex_unlock(&bfl);
 			break;
-		}
-		case KEY_DOWN: case 'j':{
+		}case KEY_DOWN: case 'j':{
 			pthread_mutex_lock(&bfl);
 			if(fs->idx >= fs->ysize - 2){
 				if(fs->scrolloff >= fs->opcount){
@@ -4476,10 +4477,23 @@ handle_actform_input(int ch){
 			screen_update();
 			pthread_mutex_unlock(&bfl);
 			break;
-		}
-		case 'q':
+		}case 'q':{
 			return 1;
-		default:{
+		}case 'C':{
+			char **selarray;
+			int selections;
+
+			if(fs->formtype == FORM_MULTISELECT){
+				selarray = fs->selarray;
+				selections = fs->selections;
+				fs->selarray = NULL;
+				free_form(actform);
+				actform = NULL;
+				mcb("",selarray,selections);
+				break;
+			}
+			// intentional fallthrough for non-multiform case
+		}default:{
 			diag("please %s (⎋esc returns)",actform->boxstr);
 			break;
 		}

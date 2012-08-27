@@ -201,6 +201,11 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 			raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
 		}
 		return;
+	}else if(strcmp(fn,"") == 0){
+		// FIXME check for validity of config, and make it!
+		locked_diag("FIXME actual creation is not yet implemented");
+		destroy_agg_forms();
+		return;
 	}
 	if((at = get_aggregate(pending_aggtype)) == NULL){
 		destroy_agg_forms();
