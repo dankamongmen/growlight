@@ -3641,8 +3641,6 @@ recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
 	if(newsel){
 		is->rb->selline = newsel;
 	}
-	assert(is->rb->selline >= 1);
-	assert(is->rb->selline < getmaxy(is->rb->win) - 1 || !is->expansion);
 }
 
 static int
