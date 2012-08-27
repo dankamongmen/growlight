@@ -1146,7 +1146,7 @@ multiform_options(struct form_state *fs){
 	mvwadd_wch(fsw,1,fs->longop + 4,&bchr[0]);
 	wattron(fsw,A_BOLD);
 	for(z = 1 ; z < fs->ysize - 1 ; ++z){
-		int op = (z + fs->scrolloff) % fs->opcount;
+		int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
 		assert(op >= 0);
 		assert(op < fs->opcount);
