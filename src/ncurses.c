@@ -1624,13 +1624,13 @@ fs_callback(const char *fs){
 		return;
 	}
 	free(pending_fstype);
-	if(fstype_named_p(fs) == 0){
-		pending_fstype = NULL;
-		fs_do(NULL);
-		return;
-	}
+	pending_fstype = NULL;
 	if((pending_fstype = strdup(fs)) == NULL){
 		destroy_fs_forms();
+		return;
+	}
+	if(fstype_named_p(fs) == 0){
+		fs_do(NULL);
 		return;
 	}
 	// FIXME come up with a good default
@@ -3860,9 +3860,11 @@ new_filesystem(void){
 		return;
 	}
 	if(b->zone){
-		if(!b->zone->p || b->zone->p->layout != LAYOUT_PARTITION){
-			locked_diag("Filesystems cannot be created in empty space");
-			return;
+		if(!b->zone->p){
+		       	if(b->zone->p->layout != LAYOUT_PARTITION){
+				locked_diag("Filesystems cannot be created in empty space");
+				return;
+			}
 		}
 	}
 	if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
@@ -4982,6 +4984,8 @@ free_zchain(zobj **z){
 	*z = NULL;
 }
 
+// b->zone == NULL: device unloaded or inaccessible
+// b->
 static void
 update_blockobj(blockobj *b,device *d){
 	unsigned fs,mounts,zones,zonesel;
