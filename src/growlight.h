@@ -247,6 +247,8 @@ typedef struct controller {
 		} pcie;
 	};
 	uintmax_t bandwidth;	// Bandwidth in bits per second. 0 -> unknown.
+	uintmax_t demand;	// Theoretical bandwidth in bits per second
+				//  used by attached devices
 	device *blockdevs;
 	struct controller *next;
 	dev_t devno;		// Don't expose this non-persistent datum
