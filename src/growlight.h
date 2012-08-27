@@ -163,6 +163,7 @@ typedef struct device {
 		struct { // Partitions are kept in on-disk order
 			// The *partition* UUID, not the filesystem's or disk's
 			char *uuid;
+			// FIXME store this as multibyte char *
 			wchar_t *pname;		// Partition name, if it has
 						//  one (GPT has a UTF-16 name)
 			unsigned pnumber;	// Partition number

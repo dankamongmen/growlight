@@ -4345,15 +4345,16 @@ handle_subwindow_input(int ch){
 }
 
 // We received input while a modal form was active. Divert it from the typical
-// UI, and handle it according to the form.
-static void
+// UI, and handle it according to the form. Returning non-zero quits the
+// program, and should pretty much only indicate that 'q' was pressed.
+static int
 handle_actform_input(int ch){
 	struct form_state *fs = actform;
 	void (*cb)(const char *);
 
 	if(fs->formtype == FORM_STRING_INPUT){
 		handle_actform_string_input(ch);
-		return;
+		return 0;
 	}
 	cb = actform->fxn;
 	switch(ch){
@@ -4423,11 +4424,14 @@ handle_actform_input(int ch){
 			pthread_mutex_unlock(&bfl);
 			break;
 		}
+		case 'q':
+			return 1;
 		default:{
 			diag("please %s (⎋esc returns)",actform->boxstr);
 			break;
 		}
 	}
+	return 0;
 }
 
 static void
@@ -4514,7 +4518,9 @@ handle_ncurses_input(WINDOW *w){
 
 	while((ch = getch()) != ERR){
 		if(actform){
-			handle_actform_input(ch);
+			if(handle_actform_input(ch)){
+				break;
+			}
 			continue;
 		}
 		if(active){
