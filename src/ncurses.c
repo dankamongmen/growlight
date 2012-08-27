@@ -540,6 +540,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				assert(wattron(w,A_REVERSE) == OK);
 				assert(wattroff(w,A_REVERSE) == OK);
 				wattron(w,A_UNDERLINE);
+				// FIXME need to store pname as multibyte char *
+				// selstr = z->p->partdev.pname;
+				// selstr = selstr ? selstr : z->p->name;
+				selstr = z->p->name;
 			}else{ // device is not selected
 				if(z->p->target){
 					assert(wattrset(w,COLOR_PAIR(TARGET_COLOR)) == OK);
