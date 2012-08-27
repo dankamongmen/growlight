@@ -98,7 +98,8 @@ err:
 }
 
 static struct form_option *
-component_table(const aggregate_type *at,int *count,char *match,int *defidx){
+component_table(const aggregate_type *at,int *count,char *match,int *defidx,
+		const char *fn,int **selarray){
 	struct form_option *fo = NULL,*tmp;
 	const controller *c;
 
@@ -112,6 +113,11 @@ component_table(const aggregate_type *at,int *count,char *match,int *defidx){
 
 			if((key = strdup(d->name)) == NULL){
 				goto err;
+			}
+			if(fn && strcmp(fn,key) == 0){
+				if(*selarray){
+					(*selarray)[*count] = !(*selarray)[*count];
+				}
 			}
 			if(match){
 				if(strcmp(key,match) == 0){
@@ -136,6 +142,12 @@ component_table(const aggregate_type *at,int *count,char *match,int *defidx){
 			fo[*count].desc = desc;
 			++*count;
 		}
+	}
+	if(!*selarray && *count){
+		if((*selarray = malloc(sizeof(**selarray) * *count)) == NULL){
+			goto err;
+		}
+		memset(*selarray,0,sizeof(**selarray) * *count);
 	}
 	if(at->maxfaulted){
 		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
@@ -177,11 +189,10 @@ aggcomp_callback(const char *fn,int *selarray){
 		destroy_agg_forms();
 		return;
 	}
-	if((comps_agg = component_table(at,&opcount,NULL,&defidx)) == NULL){
+	if((comps_agg = component_table(at,&opcount,NULL,&defidx,fn,&selarray)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
-	// FIXME set entry in selarray
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
 			opcount,at->mindisks,selarray);
 }
@@ -201,18 +212,12 @@ agg_callback(const char *fn){
 		destroy_agg_forms();
 		return;
 	}
+	selarray = NULL;
 	pending_aggtype = strdup(fn);
-	if((comps_agg = component_table(at,&opcount,NULL,&defidx)) == NULL){
+	if((comps_agg = component_table(at,&opcount,NULL,&defidx,NULL,&selarray)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
-	if((selarray = malloc(sizeof(*selarray) * opcount)) == NULL){
-		// free comps_agg
-		destroy_agg_forms();
-		return;
-	}
-	// FIXME need retain across instances
-	memset(selarray,0,sizeof(*selarray) * opcount);
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
 			opcount,at->mindisks,selarray);
 }
