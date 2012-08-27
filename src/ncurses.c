@@ -1165,7 +1165,7 @@ multiform_options(struct form_state *fs){
 		if((z - 1) == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
-		if(fs->selarray[z - 1]){
+		if(fs->selarray[op]){
 			wcolor_set(fsw,SELECTED_COLOR,NULL);
 		}else{
 			wcolor_set(fsw,INPUT_COLOR,NULL);
@@ -1213,7 +1213,8 @@ form_options(struct form_state *fs){
 #define FORM_Y_OFFSET 5
 #define FORM_X_OFFSET 5
 void raise_multiform(const char *str,void (*fxn)(const char *,int *),
-		struct form_option *opstrs,int ops,int selectno,int *selarray){
+		struct form_option *opstrs,int ops,int defidx,
+		int selectno,int *selarray){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;
@@ -1271,7 +1272,10 @@ void raise_multiform(const char *str,void (*fxn)(const char *,int *),
 		return;
 	}
 	assert(top_panel(fs->p) != ERR);
-	fs->idx = 0;
+	// FIXME adapt for scrolling
+	if((fs->idx = defidx) < 0){
+		fs->idx = defidx = 0;
+	}
 	fs->opcount = ops;
 	fs->ysize = rows - 2;
 	fs->selarray = selarray;
@@ -1293,7 +1297,8 @@ void raise_multiform(const char *str,void (*fxn)(const char *,int *),
 // -------------------------------------------------------------------------
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
-void raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,int ops,int defidx){
+void raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
+					int ops,int defidx){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;

@@ -98,7 +98,7 @@ err:
 }
 
 static struct form_option *
-component_table(const aggregate_type *at,int *count,char *match,int *defidx,
+component_table(const aggregate_type *at,int *count,const char *match,int *defidx,
 		const char *fn,int **selarray){
 	struct form_option *fo = NULL,*tmp;
 	const controller *c;
@@ -189,12 +189,12 @@ aggcomp_callback(const char *fn,int *selarray){
 		destroy_agg_forms();
 		return;
 	}
-	if((comps_agg = component_table(at,&opcount,NULL,&defidx,fn,&selarray)) == NULL){
+	if((comps_agg = component_table(at,&opcount,fn,&defidx,fn,&selarray)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,at->mindisks,selarray);
+			opcount,defidx,at->mindisks,selarray);
 }
 
 static void
@@ -219,7 +219,7 @@ agg_callback(const char *fn){
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,at->mindisks,selarray);
+			opcount,defidx,at->mindisks,selarray);
 }
 
 int raise_aggregate_form(WINDOW *w){

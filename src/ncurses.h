@@ -30,7 +30,7 @@ void raise_form(const char *,void (*)(const char *),struct form_option *,int,int
 
 // Multiselect form with side panel
 void raise_multiform(const char *,void (*)(const char *,int *),
-			struct form_option *,int,int,int *);
+		struct form_option *,int,int,int,int *);
 
 #ifdef __cplusplus
 }
