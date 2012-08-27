@@ -165,7 +165,7 @@ selected_unpartitionedp(void){
 static inline int
 selected_emptyp(void){
 	const blockobj *bo = get_selected_blockobj(); 
-	return bo && !selected_unpartitionedp() && !bo->zone->p;
+	return bo && bo->zone && !bo->zone->p;
 }
 
 static inline int
@@ -3890,8 +3890,8 @@ new_filesystem(void){
 		locked_diag("Media is not loaded on %s",b->d->name);
 		return;
 	}
-	if(selected_emptyp()){
-		locked_diag("Filesystems cannot be created in empty space");
+	if(!selected_unpartitionedp() && selected_emptyp()){
+		locked_diag("Filesystems cannot be created in empty space %p %p %p",b->zone,b->zone->p,b->d);
 		return;
 	}
 	if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
@@ -5037,18 +5037,16 @@ update_blockobj(blockobj *b,device *d){
 		zonesel = 0;
 	}
 	z = NULL;
+	zones = 0;
 	if(d->mnttype){
 		++fs;
 		if(d->mnt){
 			++mounts;
 		}
-		if((z = create_zobj(z,0,first_usable_sector(d),last_usable_sector(d),d,L'\0')) == NULL){
-			goto err;
-		}
-		sector = last_usable_sector(d) + 1;
-		zones = 1;
+		sector = d->size / d->logsec - 1;
+	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
+		sector = d->size / d->logsec - 1;
 	}else{
-		zones = 0;
 		if( (sector = first_usable_sector(d)) ){
 			if((z = create_zobj(z,zones,0,sector - 1,NULL,L'P')) == NULL){
 				goto err;
@@ -5088,19 +5086,21 @@ update_blockobj(blockobj *b,device *d){
 		sector = p->partdev.lsector + 1;
 	}
 	if(d->logsec && d->size){
-		if(sector != last_usable_sector(d) + 1){
-			if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL,L'E')) == NULL){
-				goto err;
-			}
-			++zones;
-			sector = last_usable_sector(d) + 1;
-		}
 		if(sector != d->size / d->logsec + 1){
-			if((z = create_zobj(z,zones,sector,d->size / d->logsec,NULL,L'P')) == NULL){
-				goto err;
+			if(sector != last_usable_sector(d) + 1){
+				if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL,L'E')) == NULL){
+					goto err;
+				}
+				++zones;
+				sector = last_usable_sector(d) + 1;
 			}
-			++zones;
-			sector = d->size / d->logsec + 1;
+			if(sector != d->size / d->logsec + 1){
+				if((z = create_zobj(z,zones,sector,d->size / d->logsec,NULL,L'P')) == NULL){
+					goto err;
+				}
+				++zones;
+				sector = d->size / d->logsec + 1;
+			}
 		}
 	}
 	free_zchain(&b->zchain);
