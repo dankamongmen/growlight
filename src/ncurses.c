@@ -163,9 +163,8 @@ selected_unpartitionedp(void){
 
 static inline int
 selected_emptyp(void){
-	const blockobj *bo = get_selected_blockobj();
-
-	return bo && !bo->zone->p;
+	const blockobj *bo = get_selected_blockobj(); 
+	return bo && !selected_unpartitionedp() && !bo->zone->p;
 }
 
 static inline int
