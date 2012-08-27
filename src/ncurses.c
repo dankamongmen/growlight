@@ -1164,7 +1164,7 @@ multiform_options(struct form_state *fs){
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
 			fs->longop,fs->longop,opstrs[op].option);
-		if((z - 1) == fs->idx){
+		if(z == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
 		wcolor_set(fsw,INPUT_COLOR,NULL);
@@ -1208,9 +1208,7 @@ form_options(struct form_state *fs){
 		wcolor_set(fsw,INPUT_COLOR,NULL);
 		wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 4,
 			cols - fs->longop - 1 - START_COL * 4,opstrs[op].desc);
-		if(z == fs->idx){
-			wattroff(fsw,A_REVERSE);
-		}
+		wattroff(fsw,A_REVERSE);
 	}
 }
 
@@ -1278,7 +1276,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	assert(top_panel(fs->p) != ERR);
 	// FIXME adapt for scrolling
 	if((fs->idx = defidx) < 0){
-		fs->idx = defidx = 0;
+		fs->idx = defidx = 1;
 	}
 	fs->opcount = ops;
 	fs->ysize = rows - 2;
