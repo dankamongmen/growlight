@@ -1030,6 +1030,7 @@ struct form_state {
 	PANEL *p;
 	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
+	void (*mcb)(const char *,int *);// callback on multiform input
 	int idx;			// selection index, [0..ysize)
 	int longop;			// length of longest op
 	char *boxstr;			// string for box label
@@ -1211,7 +1212,7 @@ form_options(struct form_state *fs){
 
 #define FORM_Y_OFFSET 5
 #define FORM_X_OFFSET 5
-void raise_multiform(const char *str,void (*fxn)(const char *),
+void raise_multiform(const char *str,void (*fxn)(const char *,int *),
 		struct form_option *opstrs,int ops,int selectno,int *selarray){
 	size_t longop,longdesc;
 	struct form_state *fs;
@@ -1254,9 +1255,10 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 			return;
 		}
 	}
-	if((fs = create_form(str,fxn,FORM_MULTISELECT)) == NULL){
+	if((fs = create_form(str,NULL,FORM_MULTISELECT)) == NULL){
 		return;
 	}
+	fs->mcb = fxn;
 	if((fsw = newwin(rows,cols,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
@@ -4358,13 +4360,19 @@ handle_subwindow_input(int ch){
 static int
 handle_actform_input(int ch){
 	struct form_state *fs = actform;
+	void (*mcb)(const char *,int *);
 	void (*cb)(const char *);
 
 	if(fs->formtype == FORM_STRING_INPUT){
 		handle_actform_string_input(ch);
 		return 0;
+	}else if(fs->formtype == FORM_MULTISELECT){
+		mcb = actform->mcb;
+		cb = NULL;
+	}else{
+		mcb = NULL;
+		cb = actform->fxn;
 	}
-	cb = actform->fxn;
 	switch(ch){
 		case 12: // CTRL+L FIXME
 			pthread_mutex_lock(&bfl);
@@ -4373,15 +4381,22 @@ handle_actform_input(int ch){
 			pthread_mutex_unlock(&bfl);
 			break;
 		case ' ': case '\r': case '\n': case KEY_ENTER:{
+			int *selarray;
 			char *optstr;
 			int op;
 
 			pthread_mutex_lock(&bfl);
 				op = (actform->idx + fs->scrolloff) % fs->opcount;
 				assert(optstr = strdup(actform->ops[op].option));
+				selarray = fs->selarray;
+				fs->selarray = NULL;
 				free_form(actform);
 				actform = NULL;
-				cb(optstr);
+				if(fs->formtype == FORM_MULTISELECT){
+					mcb(optstr,selarray);
+				}else{
+					cb(optstr);
+				}
 				free(optstr);
 			pthread_mutex_unlock(&bfl);
 			break;
@@ -4389,7 +4404,11 @@ handle_actform_input(int ch){
 			pthread_mutex_lock(&bfl);
 			free_form(actform);
 			actform = NULL;
-			cb(NULL);
+			if(fs->formtype == FORM_MULTISELECT){
+				mcb(NULL,NULL);
+			}else{
+				cb(NULL);
+			}
 			pthread_mutex_unlock(&bfl);
 			break;
 		case KEY_UP: case 'k':{

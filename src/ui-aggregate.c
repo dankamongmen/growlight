@@ -160,11 +160,10 @@ err:
 static void agg_callback(const char *);
 
 static void
-aggcomp_callback(const char *fn){
+aggcomp_callback(const char *fn,int *selarray){
 	struct form_option *comps_agg;
 	const aggregate_type *at;
 	int opcount,defidx;
-	int *selarray;
 
 	if(fn == NULL){
 		struct form_option *ops_agg;
@@ -182,13 +181,7 @@ aggcomp_callback(const char *fn){
 		destroy_agg_forms();
 		return;
 	}
-	if((selarray = malloc(sizeof(*selarray) * opcount)) == NULL){
-		// free comps_agg
-		destroy_agg_forms();
-		return;
-	}
-	// FIXME need retain across instances
-	memset(selarray,0,sizeof(*selarray) * opcount);
+	// FIXME set entry in selarray
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
 			opcount,at->mindisks,selarray);
 }
