@@ -139,3 +139,48 @@ int destroy_mdadm(device *d){
 	}
 	return 0;
 }
+
+static int
+generic_mdadm_create(const char *name,const char *metadata,const char *level,
+			const char * const *comps,int num){
+	char buf[BUFSIZ];
+	size_t left,pos;
+	int z;
+
+	pos = 0;
+	left = sizeof(buf) - 1;
+	for(z = 0 ; z < num ; ++z){
+		if(strlen(comps[z]) >= left){
+			diag("Too many arguments for MD creation\n");
+			return -1;
+		}
+		strcat(buf + pos,comps[z]);
+		pos += strlen(comps[z]) + 1;
+		buf[pos - 1] = ' ';
+		left -= strlen(comps[z]) + 1;
+	}
+	buf[pos - 1] = '\0';
+	// FIXME provide a way to let user control write intent bitmap
+	return vspopen_drain("mdadm -c -e %s -l %s -N \"%s\" -n %d -b internal %s",
+			metadata,level,name,num,buf);
+}
+
+int make_mdraid0(const char *name,const char * const *comps,int num){
+	return generic_mdadm_create(name,"1.2","raid0",comps,num);
+}
+
+int make_mdraid1(const char *name,const char * const *comps,int num){
+	return generic_mdadm_create(name,"1.2","raid1",comps,num);
+}
+
+int make_mdraid4(const char *name,const char * const *comps,int num){
+	return generic_mdadm_create(name,"1.2","raid4",comps,num);
+}
+
+int make_mdraid5(const char *name,const char * const *comps,int num){
+	return generic_mdadm_create(name,"1.2","raid5",comps,num);
+}
+
+int make_mdraid6(const char *name,const char * const *comps,int num){
+	return generic_mdadm_create(name,"1.2","raid6",comps,num);
+}

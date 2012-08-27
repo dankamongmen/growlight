@@ -297,6 +297,7 @@ typedef struct aggregate_type {
 	char *desc;
 	int mindisks;
 	int maxfaulted;
+	int (*makeagg)(const char *,const char * const *,int);
 } aggregate_type;
 
 const aggregate_type *get_aggregate_types(int *);

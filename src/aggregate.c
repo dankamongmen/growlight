@@ -1,3 +1,4 @@
+#include "mdadm.h"
 #include "growlight.h"
 #include "aggregate.h"
 
@@ -27,26 +28,31 @@ static const aggregate_type aggregates[] = {
 		.desc = "Interleaved disk combination (striping) (MD)",
 		.mindisks = 2,
 		.maxfaulted = 0,
+		.makeagg = make_mdraid0,
 	},{
 		.name = "mdraid1",
 		.desc = "Mirroring (MD)",
 		.mindisks = 2,
 		.maxfaulted = 1,
+		.makeagg = make_mdraid1,
 	},{
 		.name = "mdraid4",
 		.desc = "Block striping with dedicated parity",
 		.mindisks = 3,
 		.maxfaulted = 1,
+		.makeagg = make_mdraid4,
 	},{
 		.name = "mdraid5",
 		.desc = "Block striping with distributed parity",
 		.mindisks = 3,
 		.maxfaulted = 1,
+		.makeagg = make_mdraid5,
 	},{
 		.name = "mdraid6",
 		.desc = "Block striping with 2x distributed parity",
 		.mindisks = 4,
 		.maxfaulted = 2,
+		.makeagg = make_mdraid6,
 	},{
 		.name = "mdraid10",
 		.desc = "Interleaved mirror combination",
