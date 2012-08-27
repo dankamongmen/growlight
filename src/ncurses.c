@@ -1157,9 +1157,11 @@ multiform_options(struct form_state *fs){
 
 		assert(op >= 0);
 		assert(op < fs->opcount);
+		wcolor_set(fsw,INPUT_COLOR,NULL);
 		if(fs->selectno >= z){
-			wcolor_set(fsw,INPUT_COLOR,NULL);
 			mvwprintw(fsw,z + 1,START_COL * 2,"%d",z);
+		}else if(fs->selections >= z){
+			mvwprintw(fsw,z + 2,START_COL * 2,"%d",z);
 		}
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
@@ -1179,6 +1181,9 @@ multiform_options(struct form_state *fs){
 		wattroff(fsw,A_REVERSE);
 	}
 	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+	for(z = 0 ; z < fs->selections ; ++z){
+		mvwaddstr(fsw,z >= fs->selectno ? 3 + z : 2 + z,4,fs->selarray[z]);
+	}
 	mvwadd_wch(fsw,fs->selectno + 2,1,&bchr[3]);
 	mvwadd_wch(fsw,fs->selectno + 2,fs->longop + 4,&bchr[1]);
 }
@@ -1274,8 +1279,8 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 		return;
 	}
 	assert(top_panel(fs->p) != ERR);
-	// FIXME adapt for scrolling
-	if((fs->idx = defidx) < 0){
+	// FIXME adapt for scrolling (default can be off-window at beginning)
+	if((fs->idx = defidx + 1) < 2){
 		fs->idx = defidx = 1;
 	}
 	fs->opcount = ops;
@@ -4394,7 +4399,7 @@ handle_actform_input(int ch){
 			char *optstr;
 
 			pthread_mutex_lock(&bfl);
-				op = (actform->idx + fs->scrolloff) % fs->opcount;
+				op = ((actform->idx - 1) + fs->scrolloff) % fs->opcount;
 				assert(optstr = strdup(actform->ops[op].option));
 				selarray = fs->selarray;
 				selections = fs->selections;
