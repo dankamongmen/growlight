@@ -353,6 +353,17 @@ transport_str(transport_e t){
 	 	t == AGGREGATE_MIXED ? "Mix" : "Ukn";
 }
 
+static inline uintmax_t
+transport_bw(transport_e t){
+	return t == SERIAL_USB3 ? 5000000000 :
+		t == SERIAL_USB2 ? 480000000 :
+		t == SERIAL_USB ? 12000000 :
+		t == SERIAL_ATAIII ? 6000000000 :
+		(t == SERIAL_ATAII || t == SERIAL_ATA8) ? 3000000000 :
+		(t == SERIAL_ATAI || t == SERIAL_UNKNOWN) ? 1500000000 :
+		t == PARALLEL_ATA ? 133000000 : 0;
+}
+
 #define PREFIXSTRLEN 7  // Does not include a '\0' (xxx.xxU)
 #define BPREFIXSTRLEN 9  // Does not include a '\0' (xxx.xxUi), i == prefix
 #define PREFIXFMT "%7s"
