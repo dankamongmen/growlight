@@ -3329,8 +3329,9 @@ env_details(WINDOW *hw,int rows){
 			assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 		}
 	}case 1:{
-		assert(mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d",
-			        COLORS,COLOR_PAIRS,srows,scols) != ERR);
+		assert(mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
+			        COLORS,COLOR_PAIRS,srows,scols,
+				can_change_color() ? "dynamic" : "fixed") != ERR);
 		--z;
 	}case 0:{
 		const char *lang = getenv("LANG");
