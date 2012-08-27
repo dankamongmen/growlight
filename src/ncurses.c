@@ -44,6 +44,7 @@ enum {
 	FORMBORDER_COLOR,
 	FORMTEXT_COLOR,
 	INPUT_COLOR,			// Form input color
+	SELECTED_COLOR,			// Selected options in multiform
 	MOUNT_COLOR,			// Mounted, untargeted filesystems
 	TARGET_COLOR,			// Targeted filesystems
 	FUCKED_COLOR,			// Things that warrant attention
@@ -1039,6 +1040,7 @@ struct form_state {
 			int scrolloff;		// scroll offset
 			int opcount;		// total number of ops
 			int selectno;		// number of selections
+			int *selarray;		// array of selections
 		};
 		struct form_input inp;	// form_input state for this instance
 	};
@@ -1086,6 +1088,8 @@ destroy_form_locked(struct form_state *fs){
 					free(fs->ops[z].option);
 					free(fs->ops[z].desc);
 				}
+				free(fs->selarray);
+				fs->selarray = NULL;
 				free(fs->ops);
 				fs->ops = NULL;
 				break;
@@ -1157,15 +1161,17 @@ multiform_options(struct form_state *fs){
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
 			fs->longop,fs->longop,opstrs[op].option);
-		if(z == fs->idx){
+		if((z - 1) == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
-		wcolor_set(fsw,INPUT_COLOR,NULL);
+		if(fs->selarray[z - 1]){
+			wcolor_set(fsw,SELECTED_COLOR,NULL);
+		}else{
+			wcolor_set(fsw,INPUT_COLOR,NULL);
+		}
 		wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 4 - START_COL * 4,
 			cols - fs->longop * 2 - 4 - START_COL * 4,opstrs[op].desc);
-		if(z == fs->idx){
-			wattroff(fsw,A_REVERSE);
-		}
+		wattroff(fsw,A_REVERSE);
 	}
 	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
 	mvwadd_wch(fsw,fs->selectno + 2,1,&bchr[3]);
@@ -1206,7 +1212,7 @@ form_options(struct form_state *fs){
 #define FORM_Y_OFFSET 5
 #define FORM_X_OFFSET 5
 void raise_multiform(const char *str,void (*fxn)(const char *),
-		struct form_option *opstrs,int ops,int selectno){
+		struct form_option *opstrs,int ops,int selectno,int *selarray){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;
@@ -1266,6 +1272,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *),
 	fs->idx = 0;
 	fs->opcount = ops;
 	fs->ysize = rows - 2;
+	fs->selarray = selarray;
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
@@ -2025,6 +2032,7 @@ setup_colors(void){
 	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,-1) == OK);
 	assert(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == OK);
+	assert(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == OK);
 	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == OK);
@@ -4497,7 +4505,7 @@ setup_target(void){
 		return;
 	}
 	// FIXME pop up a string input form and get the target path
-	locked_diag("Not yet implemented FIXME"); // FIXME 
+	locked_diag("Not yet implemented FIXME"); // FIXME
 }
 
 static void
