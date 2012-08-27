@@ -1169,6 +1169,7 @@ multiform_options(struct form_state *fs){
 		}
 		wcolor_set(fsw,INPUT_COLOR,NULL);
 		for(selidx = 0 ; selidx < fs->selections ; ++selidx){
+			locked_diag("SELECTION %d NAME %s\n",selidx,fs->selarray[selidx]);
 			if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
 				wcolor_set(fsw,SELECTED_COLOR,NULL);
 				break;
@@ -4403,7 +4404,7 @@ handle_actform_input(int ch){
 				fs->selarray = NULL;
 				free_form(actform);
 				actform = NULL;
-				if(fs->formtype == FORM_MULTISELECT){
+				if(mcb){
 					mcb(optstr,selarray,selections);
 				}else{
 					cb(optstr);

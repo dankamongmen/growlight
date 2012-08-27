@@ -120,10 +120,12 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 				int z;
 
 				for(z = 0 ; z < *selections ; ++z){
-					if((*selarray)[z]){
-						// FIXME move others up
+					if(strcmp(key,(*selarray)[z]) == 0){
 						free((*selarray)[z]);
 						(*selarray)[z] = NULL;
+						if(z < *selections - 1){
+							memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * *selections - z);
+						}
 						--*selections;
 						z = -1;
 						break;
