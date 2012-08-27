@@ -1419,8 +1419,7 @@ form_string_options(struct form_state *fs){
 	wmove(fsw,1,START_COL + 2 + strlen(fs->inp.buffer) + fs->longop); // 2 for ": " on prompt
 }
 
-static void
-raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
+void raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
 	struct form_state *fs;
 	WINDOW *fsw;
 	int cols;
@@ -4416,7 +4415,7 @@ handle_actform_input(int ch){
 			char *optstr;
 
 			pthread_mutex_lock(&bfl);
-				op = ((actform->idx - 1) + fs->scrolloff) % fs->opcount;
+				op = (actform->idx + fs->scrolloff) % fs->opcount;
 				assert(optstr = strdup(actform->ops[op].option));
 				selarray = fs->selarray;
 				selections = fs->selections;

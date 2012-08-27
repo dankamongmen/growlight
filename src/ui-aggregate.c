@@ -41,15 +41,15 @@ struct form_state {
 	};
 };
 
+static char *pending_aggname;
 static char *pending_aggtype;
-static const char *pending_name = "SprezzAggregate"; // FIXME
 
 static void
 destroy_agg_forms(void){
 	free(pending_aggtype);
 	pending_aggtype = NULL;
-	// free(pending_name); // FIXME
-	// pending_name = NULL; // FIXME
+	free(pending_aggname);
+	pending_aggname = NULL;
 }
 
 static struct form_option *
@@ -198,7 +198,7 @@ do_agg(const aggregate_type *at,char * const *selarray,int selections){
 		return;
 	}
 	// put up splash
-	at->makeagg(pending_name,selarray,selections);
+	at->makeagg(pending_aggname,selarray,selections);
 	// kill splash, print result
 }
 
@@ -238,12 +238,37 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 }
 
 static void
-agg_callback(const char *fn){
+aggname_callback(const char *fn){
 	struct form_option *comps_agg;
 	const aggregate_type *at;
-	int opcount,defidx;
 	int selections = 0;
+	int opcount,defidx;
 	char **selarray;
+
+	if(fn == NULL){
+		locked_diag("aggregate creation was cancelled");
+		return;
+	}
+	if((pending_aggname = strdup(fn)) == NULL){
+		destroy_agg_forms();
+		return;
+	}
+	if((at = get_aggregate(pending_aggtype)) == NULL){
+		destroy_agg_forms();
+		return;
+	}
+	selarray = NULL;
+	if((comps_agg = component_table(at,&opcount,NULL,&defidx,&selarray,&selections)) == NULL){
+		destroy_agg_forms();
+		return;
+	}
+	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
+			opcount,defidx,at->mindisks,selarray,selections);
+}
+
+static void
+agg_callback(const char *fn){
+	const aggregate_type *at;
 
 	if(fn == NULL){
 		locked_diag("aggregate creation was cancelled");
@@ -253,14 +278,11 @@ agg_callback(const char *fn){
 		destroy_agg_forms();
 		return;
 	}
-	selarray = NULL;
-	pending_aggtype = strdup(fn);
-	if((comps_agg = component_table(at,&opcount,NULL,&defidx,&selarray,&selections)) == NULL){
+	if((pending_aggtype = strdup(fn)) == NULL){
 		destroy_agg_forms();
 		return;
 	}
-	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,defidx,at->mindisks,selarray,selections);
+	raise_str_form("enter aggregate name",aggname_callback,at->defname);
 }
 
 int raise_aggregate_form(void){
