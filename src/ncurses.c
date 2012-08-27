@@ -901,9 +901,20 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
 		}
 		assert(waddstr(w,as->c->ident) != ERR);
 		if(as->c->bandwidth){
-			char buf[PREFIXSTRLEN + 1];
+			char buf[PREFIXSTRLEN + 1],dbuf[PREFIXSTRLEN + 1];
 
-			wprintw(w," (%sbps)",qprefix(as->c->bandwidth,1,buf,sizeof(buf),1));
+			if(as->c->demand){
+				wprintw(w," (%sbps to SouthBr, %sbps demanded)",
+					qprefix(as->c->bandwidth,1,buf,sizeof(buf),1),
+					qprefix(as->c->demand,1,dbuf,sizeof(dbuf),1));
+			}else{
+				wprintw(w," (%sbps to SouthBr)",
+					qprefix(as->c->bandwidth,1,buf,sizeof(buf),1));
+			}
+		}else if(as->c->bus != BUS_VIRTUAL && as->c->demand){
+			char dbuf[PREFIXSTRLEN + 1];
+
+			wprintw(w," (%sbps demanded)",qprefix(as->c->demand,1,dbuf,sizeof(dbuf),1));
 		}
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
 		if(current){
