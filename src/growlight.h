@@ -293,11 +293,12 @@ pttable_type *get_fs_types(int *);
 
 // Supported aggregate types
 typedef struct aggregate_type {
-	char *name;
-	char *desc;
+	const char *name;
+	const char *desc;
 	int mindisks;
 	int maxfaulted;
 	int (*makeagg)(const char *,char * const *,int);
+	const char *defname;
 } aggregate_type;
 
 const aggregate_type *get_aggregate_types(int *);
