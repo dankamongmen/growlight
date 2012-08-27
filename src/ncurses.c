@@ -4364,17 +4364,17 @@ handle_actform_input(int ch){
 			screen_update();
 			pthread_mutex_unlock(&bfl);
 			break;
-		case '\r': case '\n': case KEY_ENTER:{
+		case ' ': case '\r': case '\n': case KEY_ENTER:{
 			char *optstr;
 			int op;
 
 			pthread_mutex_lock(&bfl);
-		       	op = (actform->idx + fs->scrolloff) % fs->opcount;
-			assert(optstr = strdup(actform->ops[op].option));
-			free_form(actform);
-			actform = NULL;
-			cb(optstr);
-			free(optstr);
+				op = (actform->idx + fs->scrolloff) % fs->opcount;
+				assert(optstr = strdup(actform->ops[op].option));
+				free_form(actform);
+				actform = NULL;
+				cb(optstr);
+				free(optstr);
 			pthread_mutex_unlock(&bfl);
 			break;
 		}case KEY_ESC:
