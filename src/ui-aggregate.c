@@ -128,7 +128,7 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 							free((*selarray)[z]);
 							(*selarray)[z] = NULL;
 							if(z < *selections - 1){
-								memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * *selections - z);
+								memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * (*selections - 1 - z));
 							}
 							--*selections;
 							z = -1;
