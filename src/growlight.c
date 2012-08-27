@@ -1020,6 +1020,9 @@ create_new_device_inner(const char *name,int recurse){
 	lock_growlight();
 		d->next = d->c->blockdevs;
 		d->c->blockdevs = d;
+		if(d->layout == LAYOUT_NONE){
+			d->c->demand += transport_bw(d->blkdev.transport);
+		}
 		d->uistate = gui->block_event(d,d->uistate);
 	unlock_growlight();
 	return d;
