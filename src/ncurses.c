@@ -2456,6 +2456,14 @@ update_details(WINDOW *hw){
 		mvwprintw(hw,6,START_COL,"Media is not loaded");
 		return 0;
 	}
+	if(blockobj_unpartitionedp(b)){
+		char buf[BPREFIXSTRLEN + 1];
+
+		mvwprintw(hw,6,START_COL,BPREFIXFMT "B unpartitioned media",
+				bprefix(d->size,1,buf,sizeof(buf),1));
+		detail_fs(hw,b->d,7);
+		return 0;
+	}
 	if(b->zone){
 		char align[BPREFIXSTRLEN + 1];
 		char buf[BPREFIXSTRLEN + 1];
