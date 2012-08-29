@@ -102,6 +102,9 @@ typedef struct blockobj {
 	// always selected. The first time a blockobj is selected, zone 0 is
 	// selected. The selected zone is preserved across de- and reselection
 	// of the block device. Zones are indexed by 0, obviously.
+	// zones: number of zones
+	// zchain: list of zone objects
+	// zone: currently selected zone, non-NULL iff zones != 0
 	unsigned zones;
 	zobj *zchain,*zone;
 } blockobj;
@@ -149,8 +152,8 @@ get_selected_blockobj(void){
 
 static inline int
 blockobj_unloadedp(const blockobj *bo){
-	return bo && !bo->zone && ((bo->d->layout == LAYOUT_NONE && bo->d->blkdev.unloaded)
-			|| bo->d->size == 0);
+	return bo && ((bo->d->layout == LAYOUT_NONE && bo->d->blkdev.unloaded)
+		|| bo->d->size == 0);
 }
 
 static inline int
@@ -160,7 +163,9 @@ selected_unloadedp(void){
 
 static inline int
 blockobj_unpartitionedp(const blockobj *bo){
-	return bo && !bo->zone && bo->d->layout == LAYOUT_NONE && !bo->d->blkdev.pttable;
+	return bo && !bo->zone &&
+		((bo->d->layout == LAYOUT_NONE && !bo->d->blkdev.pttable)
+		|| bo->d->layout != LAYOUT_NONE);
 	//return bo && !bo->zone;
 }
 
@@ -2502,7 +2507,8 @@ update_details(WINDOW *hw){
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u %s ",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
-					b->zone->rep == L'P' ? "partition table metadata" :
+					b->zone->rep == L'P' ?
+					"partition table metadata" :
 					"unpartitioned space");
 		}
 	}
@@ -5054,7 +5060,7 @@ update_blockobj(blockobj *b,device *d){
 	device *p;
 
 	fs = mounts = 0;
-	if(d->blkdev.unloaded){
+	if(blockobj_unloadedp(b)){
 		free_zchain(&b->zchain);
 		b->zone = NULL;
 		return;
