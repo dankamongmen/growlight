@@ -149,7 +149,8 @@ get_selected_blockobj(void){
 
 static inline int
 blockobj_unloadedp(const blockobj *bo){
-	return bo && !bo->zone && bo->d->layout == LAYOUT_NONE && bo->d->blkdev.unloaded;
+	return bo && !bo->zone && ((bo->d->layout == LAYOUT_NONE && bo->d->blkdev.unloaded)
+			|| bo->d->size == 0);
 }
 
 static inline int
