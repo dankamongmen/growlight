@@ -616,9 +616,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		if(selstr){
 			assert(wattron(w,A_REVERSE) == OK);
 			if(x < ex / 2){
-				mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
+				mvwprintw(w,y - 1,x + 1,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
 			}else{
-				mvwprintw(w,y - 1,x - (strlen(selstr) + 3),"%.*s⇦⇦⇦⇖",
+				mvwprintw(w,y - 1,x - (strlen(selstr) + 4),"%.*s⇦⇦⇦⇖",
 						ex - (x + strlen(selstr) + 10 + 4),selstr);
 			}
 			assert(wattroff(w,A_REVERSE) == OK);
@@ -2482,14 +2482,14 @@ update_details(WINDOW *hw){
 			case LAYOUT_ZPOOL:
 			case LAYOUT_DM:
 			// FIXME limit length!
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u %s",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B %u→%u %s",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector);
 			detail_fs(hw,b->zone->p,7);
 			break;
 			case LAYOUT_PARTITION:
 			// FIXME limit length!
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B P%02x LBA %u→%u %s (%ls) type %04x %sB align",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B P%02x %u→%u %s (%ls) %04x %sB align",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->p->partdev.pnumber,
 					b->zone->fsector,b->zone->lsector,
@@ -2504,7 +2504,7 @@ update_details(WINDOW *hw){
 			// FIXME print alignment for unpartitioned space as well,
 			// but not until we implement zones in core (bug 252)
 			// or we'll need recreate alignment() etc here
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B LBA %u→%u %s ",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B %u→%u %s ",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
 					b->zone->rep == L'P' ?
@@ -5054,17 +5054,18 @@ free_zchain(zobj **z){
 // b->zone->p: partition
 static void
 update_blockobj(blockobj *b,device *d){
-	unsigned fs,mounts,zones,zonesel;
+	unsigned zones,zonesel;
 	uintmax_t sector;
 	zobj *z,*lastz;
 	device *p;
 
-	fs = mounts = 0;
 	if(blockobj_unloadedp(b)){
 		free_zchain(&b->zchain);
 		b->zone = NULL;
 		return;
 	}
+	// Remember the zone we had selected. It might disappear, or change
+	// index due to zones added prior to it.
 	if(b->zone){
 		zonesel = b->zone->zoneno;
 	}else{
@@ -5073,10 +5074,6 @@ update_blockobj(blockobj *b,device *d){
 	z = NULL;
 	zones = 0;
 	if(d->mnttype){
-		++fs;
-		if(d->mnt){
-			++mounts;
-		}
 		sector = d->size / d->logsec + 1;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
 		sector = d->size / d->logsec + 1;
@@ -5087,12 +5084,6 @@ update_blockobj(blockobj *b,device *d){
 			}
 			++zones;
 		}
-	}
-	if(d->target){
-		++mounts;
-	}
-	if(d->swapprio != SWAP_INVALID){
-		++fs;
 	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
@@ -5105,18 +5096,6 @@ update_blockobj(blockobj *b,device *d){
 			goto err;
 		}
 		++zones;
-		if(p->mnttype){
-			++fs;
-			if(p->mnt){
-				++mounts;
-			}
-		}
-		if(p->target){
-			++mounts;
-		}
-		if(p->swapprio != SWAP_INVALID){
-			++fs;
-		}
 		sector = p->partdev.lsector + 1;
 	}
 	if(d->logsec && d->size){
