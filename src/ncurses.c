@@ -148,31 +148,44 @@ get_selected_blockobj(void){
 }
 
 static inline int
-selected_unloadedp(void){
-	const blockobj *bo = get_selected_blockobj();
-
+blockobj_unloadedp(const blockobj *bo){
 	return bo && !bo->zone && bo->d->layout == LAYOUT_NONE && bo->d->blkdev.unloaded;
 }
 
 static inline int
-selected_unpartitionedp(void){
-	const blockobj *bo = get_selected_blockobj();
+selected_unloadedp(void){
+	return blockobj_unloadedp(get_selected_blockobj());
+}
 
+static inline int
+blockobj_unpartitionedp(const blockobj *bo){
 	return bo && !bo->zone && bo->d->layout == LAYOUT_NONE && !bo->d->blkdev.pttable;
 	//return bo && !bo->zone;
 }
 
 static inline int
-selected_emptyp(void){
-	const blockobj *bo = get_selected_blockobj(); 
+selected_unpartitionedp(void){
+	return blockobj_unpartitionedp(get_selected_blockobj());
+}
+
+static inline int
+blockobj_emptyp(const blockobj *bo){
 	return bo && bo->zone && !bo->zone->p;
 }
 
 static inline int
-selected_partitionp(void){
-	const blockobj *bo = get_selected_blockobj();
+selected_emptyp(void){
+	return blockobj_emptyp(get_selected_blockobj());
+}
 
+static inline int
+blockobj_partitionp(const blockobj *bo){
 	return bo && bo->zone->p;
+}
+
+static inline int
+selected_partitionp(void){
+	return blockobj_partitionp(get_selected_blockobj());
 }
 
 static int
@@ -2439,6 +2452,10 @@ update_details(WINDOW *hw){
 			d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
 			d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
 			"n/a",d->sched ? d->sched : "custom");
+	if(blockobj_unloadedp(b)){
+		mvwprintw(hw,6,START_COL,"Media is not loaded");
+		return 0;
+	}
 	if(b->zone){
 		char align[BPREFIXSTRLEN + 1];
 		char buf[BPREFIXSTRLEN + 1];
@@ -2479,8 +2496,6 @@ update_details(WINDOW *hw){
 					b->zone->rep == L'P' ? "partition table metadata" :
 					"unpartitioned space");
 		}
-	}else{
-		mvwprintw(hw,6,START_COL,"Media is not loaded");
 	}
 	return 0;
 }
