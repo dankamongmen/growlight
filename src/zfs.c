@@ -132,7 +132,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 	d->layout = LAYOUT_ZPOOL;
 	d->swapprio = SWAP_INVALID;
 	d->size = dehumanize(size);
-	if((d->physsec = (1u << dehumanize(ashift))) == 0){
+	if((d->physsec = (1u << dehumanize(ashift))) < 512u){
 		d->physsec = 512u;
 	}
 	d->logsec = 512;
