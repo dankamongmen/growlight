@@ -2561,11 +2561,11 @@ static const wchar_t *helps[] = {
 	L"'v': view selection details   'D': view recent diagnostics",
 	L"'E': view active mountpoints / installpoints",
 	L"'-': collapse adapter         '+': expand adapter",
-	L"'R': rescan selection         'S': reset selection",
 	L"'A': create aggregate         'Z': destroy aggregate",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
-	L"'/': search",
+	L"'R': rescan selection         'S': reset selection",
+	L"'/': search                   '!': rescan all",
 	NULL
 };
 
@@ -4892,6 +4892,11 @@ handle_ncurses_input(WINDOW *w){
 				unlock_ncurses();
 				break;
 			}
+			case '!':
+				pthread_mutex_lock(&bfl);
+				rescan_devices();
+				pthread_mutex_unlock(&bfl);
+				break;
 			case '/':
 				pthread_mutex_lock(&bfl);
 				start_search();
