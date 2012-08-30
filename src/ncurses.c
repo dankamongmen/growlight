@@ -3641,7 +3641,7 @@ node_lines(int e,const blockobj *l){
 }
 
 // Recompute lns values for all nodes, and return the number of lines of
-// output available before and after the current selection. If there is no
+// output available above and below the current selection. If there is no
 // current selection, the return value ought not be ascribed meaning. O(N) on
 // the number of drives, not just those visible -- unacceptable! FIXME
 static void
@@ -3650,7 +3650,7 @@ recompute_lines(adapterstate *is,int *before,int *after){
 	int newsel;
 
 	*after = -1;
-	*before = -1;
+	*before = 0;
 	newsel = 0;
 	for(l = is->bobjs ; l ; l = l->next){
 		unsigned lns;
@@ -3689,7 +3689,6 @@ recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
 	// precede us, or before the true number that follow us.
 	recompute_lines(is,&bef,&aft);
 	if(bef < 0 || aft < 0){
-		assert(!is->rb->selected);
 		return;
 	}
 	if(bef + aft + 1 <= newrows - 3){ // should never be less than, surely

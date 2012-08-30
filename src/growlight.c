@@ -84,8 +84,8 @@ static controller virtual_bus = {
 
 static controller *controllers = &virtual_bus;
 
-static device *create_new_device(const char *,int);
-static device *create_new_device_inner(const char *,int);
+static device *create_new_device(const char *);
+static device *create_new_device_inner(const char *);
 
 // Diagnostics. We keep the last MAXIMUM_LOG_ENTRIES records around for clients
 // to examine at their leisure, ala dmesg(1).
@@ -531,7 +531,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 			return -1;
 		}
 		++dev;
-		if(create_new_device_inner(dev,0) == NULL){
+		if(create_new_device_inner(dev) == NULL){
 			diag("Couldn't get disk: "SYSROOT"%s->%s/%s\n",name,buf,dev);
 			return -1;
 		}
@@ -818,21 +818,11 @@ void add_new_virtual_blockdev(device *d){
 	unlock_growlight();
 }
 
-static device *
-create_new_device_inner(const char *name,int recurse){
+static inline device *
+rescan(const char *name,device *d){
 	char buf[PATH_MAX] = "";
-	device *d;
 	int fd,r;
 
-	if(strlen(name) >= sizeof(d->name)){
-		diag("Bad name: %s\n",name);
-		return NULL;
-	}
-	if((d = malloc(sizeof(*d))) == NULL){
-		diag("Couldn't allocate space for %s\n",name);
-		return NULL;
-	}
-	memset(d,0,sizeof(*d));
 	strcpy(d->name,name);
 	d->swapprio = SWAP_INVALID;
 	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
@@ -857,7 +847,7 @@ create_new_device_inner(const char *name,int recurse){
 		return NULL;
 	}
 	// close(2)s fd
-	if((r = explore_sysfs_node(fd,name,d,recurse)) < 0){
+	if((r = explore_sysfs_node(fd,name,d,1)) < 0){
 		clobber_device(d);
 		return NULL;
 	}else if(r){
@@ -993,6 +983,8 @@ create_new_device_inner(const char *name,int recurse){
 					d->parts = p->next;
 					clobber_device(p);
 				}
+				free(d->blkdev.pttable);
+				d->blkdev.pttable = NULL;
 			}
 			blkid_free_probe(pr);
 		}else if((d->layout != LAYOUT_NONE || !d->blkdev.removable) || errno != ENOMEDIUM){
@@ -1022,14 +1014,35 @@ create_new_device_inner(const char *name,int recurse){
 		d->blkdev.last_usable = lookup_last_usable_sector(d);
 	}
 	lock_growlight();
-		d->next = d->c->blockdevs;
-		d->c->blockdevs = d;
-		if(d->layout == LAYOUT_NONE){
-			d->c->demand += transport_bw(d->blkdev.transport);
+		if(d->uistate){ // FIXME no good -- action here oughtn't
+				// depend on UI logic!
+			gui->block_event(d,d->uistate);
+		}else{
+			d->next = d->c->blockdevs;
+			d->c->blockdevs = d;
+			if(d->layout == LAYOUT_NONE){
+				d->c->demand += transport_bw(d->blkdev.transport);
+			}
+			d->uistate = gui->block_event(d,d->uistate);
 		}
-		d->uistate = gui->block_event(d,d->uistate);
 	unlock_growlight();
 	return d;
+}
+
+static device *
+create_new_device_inner(const char *name){
+	device *d;
+
+	if(strlen(name) >= sizeof(d->name)){
+		diag("Bad name: %s\n",name);
+		return NULL;
+	}
+	if((d = malloc(sizeof(*d))) == NULL){
+		diag("Couldn't allocate space for %s\n",name);
+		return NULL;
+	}
+	memset(d,0,sizeof(*d));
+	return rescan(name,d);
 }
 
 struct dlist {
@@ -1067,12 +1080,12 @@ del_from_discovery_list(const char *name){
 }
 
 static device *
-create_new_device(const char *name,int recurse){
+create_new_device(const char *name){
 	device *d;
 
 	add_to_discovery_list(name);
 	unlock_growlight();
-	d = create_new_device_inner(name,recurse);
+	d = create_new_device_inner(name);
 	lock_growlight();
 	del_from_discovery_list(name);
 	return d;
@@ -1136,7 +1149,7 @@ device *lookup_device(const char *name){
 			}
 		}
 	}
-	if( (d = create_new_device(name,1)) ){
+	if( (d = create_new_device(name)) ){
 		pthread_cond_signal(&discovery_cond);
 	}
 	return d;
@@ -1726,11 +1739,6 @@ void unlock_growlight(void){
 	assert(pthread_mutex_unlock(&lock) == 0);
 }
 
-static inline device *
-rescan(const char *name){
-	return create_new_device(name,0);
-}
-
 int reset_adapters(void){
 	diag("Not yet implemented.\n");
 	return -1;
@@ -1758,6 +1766,8 @@ int rescan_device(const char *name){
 	}while(s);
 	for(c = controllers ; c ; c = c->next){
 		for(lnk = &c->blockdevs ; *lnk ; lnk = &(*lnk)->next){
+			device *d;
+
 			if(strcmp(name,(*lnk)->name)){
 				if((*lnk)->layout == LAYOUT_NONE){
 					const device *p;
@@ -1774,18 +1784,16 @@ int rescan_device(const char *name){
 					continue;
 				}
 			} // if we get here, we've matched up
-			device *d = *lnk;
-			*lnk = d->next;
-			clobber_device(d);
-			// FIXME update aggregates, also
-			if(rescan(name) == NULL){
+			d = (*lnk)->next;
+			if(rescan(name,*lnk) == NULL){
+				*lnk = d;
 				unlock_growlight();
 				return -1;
 			}
 			return 0;
 		}
 	}
-	if(create_new_device(name,0) == NULL){
+	if(create_new_device(name) == NULL){
 		unlock_growlight();
 		return -1;
 	}
