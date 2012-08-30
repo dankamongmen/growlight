@@ -298,22 +298,22 @@ bevel(WINDOW *w){
 
 static void
 draw_main_window(WINDOW *w){
+	char buf[BUFSIZ];
 	int rows,cols,scol;
 
+	scol = snprintf(buf,sizeof(buf),"%s %s | %d adapter%s",PACKAGE,VERSION,
+			count_adapters,count_adapters == 1 ? "" : "s");
+	assert(scol > 0 && (unsigned)scol < sizeof(buf));
 	getmaxyx(w,rows,cols);
-	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
-	mvwhline(w,0,START_COL,ACS_HLINE,cols - START_COL * 2);
-	scol = START_COL * 4;
-	assert(mvwprintw(w,0,scol,"[") != ERR);
-	assert(wattron(w,A_BOLD | COLOR_PAIR(HEADER_COLOR)) != ERR);
-	assert(wprintw(w,"%s %s | %d adapter%s",PACKAGE,VERSION,
-			count_adapters,count_adapters == 1 ? "" : "s") != ERR);
-	assert(wattrset(w,COLOR_PAIR(BORDER_COLOR)) != ERR);
-	assert(wprintw(w,"]") != ERR);
 	assert(wattron(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
-	assert(mvwprintw(w,rows - 1,START_COL,"%-*.*s",cols - START_COL * 2,
+	assert(mvwprintw(w,rows - 1,0,"%-*.*s",cols - START_COL * 2,
 			cols - START_COL * 2,statusmsg) != ERR);
 	assert(wattroff(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
+
+	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
+	assert(mvwprintw(w,rows - 1,cols - scol - 1,"[") != ERR);
+	assert(wattron(w,A_BOLD | COLOR_PAIR(HEADER_COLOR)) != ERR);
+	waddstr(w,buf);
 }
 
 static void
@@ -349,7 +349,7 @@ lines_for_adapter(const struct adapterstate *as){
 	int l = 2;
 
 	if(as->expansion != EXPANSION_NONE){
-		l += as->devdisps * 3;
+		l += as->devdisps * 2;
 		l += as->devs;
 	}
 	return l;
@@ -361,7 +361,7 @@ device_lines(int expa,const blockobj *bo){
 
 	if(expa != EXPANSION_NONE){
 		if(bo->d->size){
-			l += 3;
+			l += 2;
 		}
 		++l;
 	}
@@ -391,7 +391,7 @@ static inline int
 adapter_lines_bounded(const adapterstate *as,int rows){
 	int l = lines_for_adapter(as);
 
-	if(l > rows - 2){ // top and bottom border
+	if(l > rows - 2){ // top and bottom borders
 		l = rows - 2;
 	}
 	return l;
@@ -647,52 +647,46 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 			unsigned cols,unsigned topp,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
 	char rolestr[12]; // taken from %-11.11s below
-	int selected,co;
+	int selected,co,x,rx;
 
 	if(line >= rows - !endp){
 		return;
 	}
 	strcpy(rolestr,"");
 	selected = line == rb->selline;
+	x = 1;
+	rx = cols - 78;
 	switch(bo->d->layout){
 case LAYOUT_NONE:
 	if(bo->d->blkdev.realdev){
 		if(bo->d->blkdev.removable){
-			if(selected){
-				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-			}else{
-				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-			}
+			assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 			strncpy(rolestr,"removable",sizeof(rolestr));
 		}else if(bo->d->blkdev.rotation >= 0){
-			if(selected){
-				assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(ROTATE_COLOR)) == OK);
-			}else{
-				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
-			}
+			assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
 			if(bo->d->blkdev.rotation > 0){
 				snprintf(rolestr,sizeof(rolestr),"%d rpm",bo->d->blkdev.rotation);
 			}else{
 				strncpy(rolestr,"ferromag",sizeof(rolestr));
 			}
 		}else{
-			if(selected){
-				assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(SSD_COLOR)) == OK);
-			}else{
-				assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
-			}
+			assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
 			strncpy(rolestr,"solidstate",sizeof(rolestr));
 		}
 	}else{
-		if(selected){
-			assert(wattrset(rb->win,A_REVERSE|COLOR_PAIR(VIRTUAL_COLOR)) == OK);
-		}else{
-			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
-		}
+		assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
 		strncpy(rolestr,"virtual",sizeof(rolestr));
 	}
 	if(line + topp >= 1){
-	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+		if(!bo->d->size || line + 2 < rows - !endp){
+			if(bo->d->size){
+				line += 2;
+				++x;
+				--rx;
+			}else if(selected){
+				wattron(rb->win,A_REVERSE);
+			}
+	mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -701,7 +695,11 @@ case LAYOUT_NONE:
 				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
-				cols - 78,cols - 78,"");
+				rx,rx,"");
+			if(bo->d->size){
+				line -= 2;
+			}
+		}
 	}
 		break;
 case LAYOUT_MDADM:
@@ -713,13 +711,17 @@ case LAYOUT_MDADM:
 	}else{
 		co = A_BOLD|COLOR_PAIR(MDADM_COLOR);
 	}
-	if(selected){
-		assert(wattrset(rb->win,A_REVERSE|co) == OK);
-	}else{
-		assert(wattrset(rb->win,co) == OK);
-	}
+	assert(wattrset(rb->win,co) == OK);
 	if(line + topp >= 1){
-	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+		if(!bo->d->size || line + 2 < rows - !endp){
+			if(bo->d->size){
+				line += 2;
+				++x;
+				--rx;
+			}else if(selected){
+				wattron(rb->win,A_REVERSE);
+			}
+	mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -728,18 +730,26 @@ case LAYOUT_MDADM:
 				"n/a",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->mddev.transport),
-				cols - 78,cols - 78,"");
+				rx,rx,"");
+			if(bo->d->size){
+				line -= 2;
+			}
+		}
 	}
 		break;
 case LAYOUT_DM:
 	strncpy(rolestr,"dm",sizeof(rolestr));
-	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(MDADM_COLOR)) == OK);
-	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
-	}
+	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
 	if(line + topp >= 1){
-	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+		if(!bo->d->size || line + 2 < rows - !endp){
+			if(bo->d->size){
+				line += 2;
+				++x;
+				--rx;
+			}else if(selected){
+				wattron(rb->win,A_REVERSE);
+			}
+	mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				bo->d->revision ? bo->d->revision : "n/a",
@@ -748,20 +758,28 @@ case LAYOUT_DM:
 				"n/a",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->dmdev.transport),
-				cols - 78,cols - 78,"");
+				rx,rx,"");
+			if(bo->d->size){
+				line += 2;
+			}
+		}
 	}
 		break;
 case LAYOUT_PARTITION:
 		break;
 case LAYOUT_ZPOOL:
 	strncpy(rolestr,"zpool",sizeof(rolestr));
-	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(ZPOOL_COLOR)) == OK);
-	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
-	}
+	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	if(line + topp >= 1){
-	mvwprintw(rb->win,line,START_COL,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %-4.4s %-*.*s",
+		if(!bo->d->size || line + 2 < rows - !endp){
+			if(bo->d->size){
+				line += 2;
+				++x;
+				--rx;
+			}else if(selected){
+				wattron(rb->win,A_REVERSE);
+			}
+	mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 				bo->d->name,
 				bo->d->model ? bo->d->model : "n/a",
 				(uintmax_t)bo->d->zpool.zpoolver,
@@ -770,23 +788,26 @@ case LAYOUT_ZPOOL:
 				"spa",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->zpool.transport),
-				cols - 78,cols - 78,"");
+				rx,rx,"");
+			if(bo->d->size){
+				line += 2;
+			}
+		}
 		break;
 	}
-	}
-	if(++line >= rows - !endp){
-		return;
 	}
 	if(bo->d->size == 0){
 		return;
 	}
-
-	if(line + topp >= 1){
-		mvwprintw(rb->win,line,START_COL,"%11.11s",bo->d->name);
-		if(line - 1 >= 1){
-			mvwprintw(rb->win,line - 1,START_COL,"%11.11s","");
-		}
+	if(selected){
+		wattron(rb->win,A_REVERSE);
 	}
+
+	// Box-diagram (3-line) mode. Print the name on the first line.
+	if(line + topp >= 1){
+		mvwprintw(rb->win,line,1,"%11.11s",bo->d->name);
+	}
+	
 	// Print summary below device name, in the same color
 	if(line + 1 < rows - !endp && line + topp + 1 >= 1){
 		if(strlen(rolestr)){
@@ -806,7 +827,9 @@ case LAYOUT_ZPOOL:
 				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			}
 			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 120u){
-				mvwprintw(rb->win,line + 2,START_COL,"%2.ju°C ",bo->d->blkdev.celsius);
+				mvwprintw(rb->win,line + 2,1,"%2.ju°C ",bo->d->blkdev.celsius);
+			}else{
+				mvwprintw(rb->win,line + 2,1,"     ");
 			}
 			if(bo->d->blkdev.smartgood != SMART_NOSUPPORT){
 				if(bo->d->blkdev.smartgood == SMART_STATUS_GOOD){
@@ -814,8 +837,9 @@ case LAYOUT_ZPOOL:
 				}else{
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
 				}
-				mvwprintw(rb->win,line + 2,6,"smart%lc",
-					bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' : L'✘');
+				wprintw(rb->win,"smart%lc",bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' : L'✘');
+			}else{
+				wprintw(rb->win,"      ");
 			}
 		}else if(bo->d->layout == LAYOUT_MDADM){
 			if(bo->d->mddev.degraded){
@@ -867,8 +891,10 @@ case LAYOUT_ZPOOL:
 	}
 	if(line + topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_LLCORNER);
-		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
-		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_LRCORNER);
+		waddch(rb->win,A_NORMAL|'{');
+		//mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+		mvwaddch(rb->win,line,cols - 3,A_NORMAL|'}');
+		waddch(rb->win,ACS_LRCORNER);
 	}
 	++line;
 }
@@ -911,8 +937,7 @@ print_adapter_devs(const adapterstate *as,int rows,int cols,
 // Abovetop: lines hidden at the top of the screen
 // Belowend: lines hidden at the bottom of the screen
 static void
-adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,
-						unsigned belowend){
+adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend){
 	int current = as->rb == current_adapter;
 	int bcolor,hcolor,rows,cols;
 	int attrs;
@@ -2956,9 +2981,8 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 		if(is->rb == NULL){ // it's off-screen
 			int delta;
 
-			if((is->rb = create_reelbox(is,rows,(rows - 1) - adapter_lines_bounded(is,rows),cols)) == NULL){
-				return; // FIXME
-			}
+			is->rb = create_reelbox(is,rows,(rows - 1) - adapter_lines_bounded(is,rows),cols);
+			assert(is->rb);
 			current_adapter = is->rb;
 			delta = -adapter_lines_bounded(is,rows);
 			if(getbegy(last_reelbox->win) + getmaxy(last_reelbox->win) >= rows - 1){
@@ -3091,9 +3115,8 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 		if(as->rb){
 			current_adapter = as->rb;
 		}else{
-			if((as->rb = create_reelbox(as,rows,1,cols)) == NULL){
-				return; // FIXME
-			}
+			as->rb = create_reelbox(as,rows,1,cols);
+			assert(as);
 			current_adapter = as->rb;
 			push_adapters_below(NULL,rows,cols,adapter_lines_bounded(as,rows) + 1);
 			if((current_adapter->next = top_reelbox) == NULL){
