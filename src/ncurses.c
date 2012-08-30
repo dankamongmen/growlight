@@ -5194,7 +5194,7 @@ block_callback(device *d,void *v){
 	blockobj *b;
 
 	if(d->layout == LAYOUT_PARTITION){
-		return; // FIXME ought be an assert; this shouldn't happen
+		return NULL; // FIXME ought be an assert; this shouldn't happen
 	}
 	pthread_mutex_lock(&bfl);
 	as = d->c->uistate;
