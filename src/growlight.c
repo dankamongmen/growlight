@@ -924,7 +924,6 @@ rescan(const char *name,device *d){
 			}
 			close(dfd);
 		}
-		free(d->blkdev.pttable);
 		snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
 		// FIXME move all this to its own function
 		if(probe_blkid_superblock(devbuf,&pr,d) == 0){
