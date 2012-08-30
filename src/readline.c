@@ -608,20 +608,24 @@ print_dm(const device *d,int prefix,int descend){
 		return r;
 	}
 	for(md = d->dmdev.slaves ; md ; md = md->next){
-		r += rr = print_dev_mplex(md->component,1,descend);
-		if(rr < 0){
-			return -1;
-		}
-		if(strcmp(md->name,md->component->name)){
-			const device *p;
+		device *s = lookup_device(md->name);
 
-			for(p = md->component->parts ; p ; p = p->next){
-				if(strcmp(md->name,p->name)){
-					continue;
-				}
-				r += rr = print_partition(p,descend);
-				if(rr < 0){
-					return -1;
+		if(s){
+			r += rr = print_dev_mplex(s,1,descend);
+			if(rr < 0){
+				return -1;
+			}
+			if(strcmp(md->name,s->name)){
+				const device *p;
+
+				for(p = s->parts ; p ; p = p->next){
+					if(strcmp(md->name,p->name)){
+						continue;
+					}
+					r += rr = print_partition(p,descend);
+					if(rr < 0){
+						return -1;
+					}
 				}
 			}
 		}
@@ -654,20 +658,24 @@ print_mdadm(const device *d,int prefix,int descend){
 		return r;
 	}
 	for(md = d->mddev.slaves ; md ; md = md->next){
-		r += rr = print_dev_mplex(md->component,1,descend);
-		if(rr < 0){
-			return -1;
-		}
-		if(strcmp(md->name,md->component->name)){
-			const device *p;
+		device *s = lookup_device(md->name);
 
-			for(p = md->component->parts ; p ; p = p->next){
-				if(strcmp(md->name,p->name)){
-					continue;
-				}
-				r += rr = print_partition(p,descend);
-				if(rr < 0){
-					return -1;
+		if(s){
+			r += rr = print_dev_mplex(s,1,descend);
+			if(rr < 0){
+				return -1;
+			}
+			if(strcmp(md->name,s->name)){
+				const device *p;
+
+				for(p = s->parts ; p ; p = p->next){
+					if(strcmp(md->name,p->name)){
+						continue;
+					}
+					r += rr = print_partition(p,descend);
+					if(rr < 0){
+						return -1;
+					}
 				}
 			}
 		}
