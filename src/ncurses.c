@@ -4518,11 +4518,13 @@ handle_actform_input(int ch){
 			break;
 		}case KEY_ESC:{
 			pthread_mutex_lock(&bfl);
-			free_form(actform);
-			actform = NULL;
 			if(fs->formtype == FORM_MULTISELECT){
+				free_form(actform);
+				actform = NULL;
 				mcb(NULL,NULL,0);
 			}else{
+				free_form(actform);
+				actform = NULL;
 				cb(NULL);
 			}
 			pthread_mutex_unlock(&bfl);
