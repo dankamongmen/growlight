@@ -521,6 +521,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	const char *selstr = NULL;
 	const device *d = bo->d;
 	unsigned off = sx - 1;
+	char buf[ex - sx + 2];
 	const zobj *z;
 
 	if(d->mnttype){
@@ -529,13 +530,14 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
 		}
-		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
-		mvwprintw(w,y,sx,"%s%s%s%s filesystem%s%s",
+		assert(snprintf(buf,sizeof(buf),"%s%s%s%s filesystem%s%s",
 				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 				d->mntsize ? " " : "",
 				d->label ? "" : "unlabeled ", d->mnttype,
 				d->label ? " named " : "",
-				d->label ? d->label : "");
+				d->label ? d->label : "") < (int)sizeof(buf));
+		mvwhline(w,y,sx,ACS_HLINE,ex - sx + 1);
+		mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
 		if(selected){
@@ -551,8 +553,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}
-		mvwprintw(w,y,sx,"%*.*s",ex - sx,ex - sx,"");
-		mvwprintw(w,y,sx,"%s %s",qprefix(d->size,1,pre,sizeof(pre),1),"unpartitioned space");
+		assert(snprintf(buf,sizeof(buf),"%s %s",qprefix(d->size,1,pre,sizeof(pre),1),"unpartitioned space") < (int)sizeof(buf));
+		mvwhline(w,y,sx,ACS_HLINE,ex);
+		mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
 		return;
 	}
 	if((z = bo->zchain) == NULL){
@@ -2559,9 +2562,9 @@ static const wchar_t *helps[] = {
 	L"'q': quit                     ctrl+'L': redraw the screen",
 	L"'e': view environment details 'H': toggle this help display",
 	L"'v': view selection details   'D': view recent diagnostics",
-	L"'E': view active mountpoints / installpoints",
-	L"'-': collapse adapter         '+': expand adapter",
+	L"'E': view mounts / targets    'z': modify aggregate",
 	L"'A': create aggregate         'Z': destroy aggregate",
+	L"'-': collapse adapter         '+': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
 	L"'R': rescan selection         'S': reset selection",
@@ -2577,7 +2580,6 @@ static const wchar_t *helps_block[] = {
 	L"'s': set partition attributes 'M': make new filesystem",
 	L"'F': fsck filesystem          'w': wipe filesystem",
 	L"'U': set UUID                 'L': set label/name",
-	L"'b': bind to aggregate        'f': free from aggregate",
 	L"'o': mount filesystem         'O': unmount filesystem",
 	NULL
 };
@@ -4633,6 +4635,21 @@ destroy_aggregate(void){
 }
 
 static void
+modify_aggregate(void){
+	blockobj *b;
+
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Aggregate destruction requires selection of an aggregate");
+		return;
+	}
+	if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
+		locked_diag("%s is not an aggregate",b->d->name);
+		return;
+	}
+	locked_diag("Aggregate modification not yet implemented FIXME");
+}
+
+static void
 search_callback(const char *term){
 	if(term == NULL){
 		locked_diag("Search was cancelled");
@@ -4915,6 +4932,11 @@ handle_ncurses_input(WINDOW *w){
 				}else{
 					raise_aggregate_form();
 				}
+				unlock_ncurses();
+				break;
+			case 'z':
+				pthread_mutex_lock(&bfl);
+				modify_aggregate();
 				unlock_ncurses();
 				break;
 			case 'Z':
