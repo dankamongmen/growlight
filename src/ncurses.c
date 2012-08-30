@@ -517,6 +517,11 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
+	static const cchar_t bchr[] = {
+		{ .attr = 0, .chars = L"─", },
+		{ .attr = 0, .chars = L"<", },
+		{ .attr = 0, .chars = L">", },
+	};
 	char pre[PREFIXSTRLEN + 1];
 	const char *selstr = NULL;
 	const device *d = bo->d;
@@ -536,8 +541,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				d->label ? "" : "unlabeled ", d->mnttype,
 				d->label ? " named " : "",
 				d->label ? d->label : "") < (int)sizeof(buf));
-		mvwhline(w,y,sx,ACS_HLINE,ex - sx + 1);
+		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
+		mvwadd_wch(w,y,sx,&bchr[1]);
 		mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
+		mvwadd_wch(w,y,ex - 1,&bchr[2]);
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
 		if(selected){
