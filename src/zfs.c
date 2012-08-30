@@ -262,6 +262,8 @@ int print_zfs_version(FILE *fp){
 }
 
 int destroy_zpool(device *d){
+	zpool_handle_t *zhp;
+
 	if(d == NULL){
 		diag("Passed a NULL zpool\n");
 		return -1;
@@ -270,8 +272,21 @@ int destroy_zpool(device *d){
 		diag("%s is not a zpool\n",d->name);
 		return -1;
 	}
-	diag("Not yet implemented FIXME\n"); // FIXME
-	return -1;
+	if((zhp = zpool_open_canfail(zht,d->name)) == NULL){
+		diag("Couldn't open zpool %s\n",d->name);
+		return -1;
+	}
+	if(zpool_disable_datasets(zhp,0)){
+		diag("Couldn't disable datasets on %s\n",d->name);
+		zpool_close(zhp);
+		return -1;
+	}
+	if(zpool_destroy(zhp)){
+		diag("Couldn't destroy %s\n",d->name);
+		zpool_close(zhp);
+	}
+	zpool_close(zhp);
+	return 0;
 }
 #else
 int init_zfs_support(const glightui *gui __attribute__ ((unused))){
