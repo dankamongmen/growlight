@@ -13,11 +13,11 @@ depcomp
 .deps/
 doc/growlight.ent
 growlight-curses
-growlight-tty
+growlight-readline
 growlight-curses.8
 growlight-curses.xhtml
-growlight-tty.8
-growlight-tty.xhtml
+growlight-readline.8
+growlight-readline.xhtml
 growlight-*.tar.bz2
 growlight-*.tar.gz
 install-sh
