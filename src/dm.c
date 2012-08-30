@@ -58,10 +58,6 @@ int explore_dm_sysfs(device *d,int dirfd){
 		if((c = strdup(lbuf + 4)) == NULL){
 			return -1;
 		}
-		if((subd = lookup_device(c)) == NULL){
-			free(c);
-			return -1;
-		}
 		if((m = malloc(sizeof(*m))) == NULL){
 			free(c);
 			return -1;
@@ -70,7 +66,12 @@ int explore_dm_sysfs(device *d,int dirfd){
 		m->next = NULL;
 		*enqm = m;
 		enqm = &m->next;
-		m->component = subd;
+		/*m->component = subd;*/
+		lock_growlight();
+		if((subd = lookup_device(c)) == NULL){
+			unlock_growlight();
+			return -1;
+		}
 		switch(subd->layout){
 			case LAYOUT_NONE:
 				if(d->mddev.transport == AGGREGATE_UNKNOWN){
@@ -104,6 +105,7 @@ int explore_dm_sysfs(device *d,int dirfd){
 				diag("Unknown layout %d on %s\n",subd->layout,subd->name);
 				break;
 		}
+		unlock_growlight();
 	}
 	return 0;
 }

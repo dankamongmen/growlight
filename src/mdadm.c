@@ -44,7 +44,7 @@ int explore_md_sysfs(device *d,int dirfd){
 	d->mddev.transport = AGGREGATE_UNKNOWN;
 	for(rd = 0 ; rd < d->mddev.disks ; ++rd){
 		char buf[NAME_MAX],lbuf[NAME_MAX],*c;
-		//device *subd;
+		device *subd;
 		mdslave *m;
 		int r;
 
@@ -80,12 +80,12 @@ int explore_md_sysfs(device *d,int dirfd){
 		m->next = NULL;
 		*enqm = m;
 		enqm = &m->next;
-		/*
+		lock_growlight();
 		if((subd = lookup_device(c)) == NULL){
-			free(c);
+			unlock_growlight();
 			return -1;
 		}
-		m->component = subd;
+		// m->component = subd;
 		switch(subd->layout){
 			case LAYOUT_NONE:
 				if(d->mddev.transport == AGGREGATE_UNKNOWN){
@@ -119,7 +119,7 @@ int explore_md_sysfs(device *d,int dirfd){
 				diag("Unknown layout %d on %s\n",subd->layout,subd->name);
 				break;
 		}
-		*/
+		unlock_growlight();
 	}
 	if(d->mddev.degraded != degraded){
 		diag("%s had %lu degraded, %u missing\n",d->name,d->mddev.degraded,degraded);
