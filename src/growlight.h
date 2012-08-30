@@ -160,6 +160,7 @@ typedef struct device {
 			char *uuid;
 			char *dmname;
 			transport_e transport;
+			char *pttable;		// Partition table type (can be NULL)
 		} dmdev;
 		struct { // Partitions are kept in on-disk order
 			// The *partition* UUID, not the filesystem's or disk's

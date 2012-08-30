@@ -341,70 +341,77 @@ const controller *get_controllers(void){
 
 static void clobber_device(device *);
 
+// Prepare a device for being rescanned
+static void
+internal_device_reset(device *d){
+	device *p;
+
+	switch(d->layout){
+		case LAYOUT_NONE:{
+			free(d->blkdev.biossha1); d->blkdev.biossha1 = NULL;
+			free(d->blkdev.pttable); d->blkdev.pttable = NULL;
+			free(d->blkdev.serial); d->blkdev.serial = NULL;
+			break;
+		}case LAYOUT_MDADM:{
+			mdslave *md;
+
+			while( (md = d->mddev.slaves) ){
+				d->mddev.slaves = md->next;
+				free(md->name);
+				free(md);
+			}
+			free(d->mddev.level); d->mddev.level = NULL;
+			free(d->mddev.uuid); d->mddev.uuid = NULL;
+			free(d->mddev.mdname); d->mddev.mdname = NULL;
+			free(d->mddev.pttable); d->mddev.pttable = NULL;
+			break;
+		}case LAYOUT_DM:{
+			mdslave *md;
+
+			while( (md = d->dmdev.slaves) ){
+				d->dmdev.slaves = md->next;
+				free(md->name);
+				free(md);
+			}
+			free(d->dmdev.level); d->dmdev.level = NULL;
+			free(d->dmdev.uuid); d->dmdev.uuid = NULL;
+			free(d->dmdev.dmname); d->dmdev.dmname = NULL;
+			free(d->dmdev.pttable); d->dmdev.pttable = NULL;
+			break;
+		}case LAYOUT_PARTITION:{
+			free(d->partdev.pname); d->partdev.pname = NULL;
+			free(d->partdev.uuid); d->partdev.uuid = NULL;
+			break;
+		}case LAYOUT_ZPOOL:{
+			break;
+		}
+	}
+	while( (p = d->parts) ){
+		d->parts = p->next;
+		clobber_device(p);
+	}
+	free(d->sched); d->sched = NULL;
+	free(d->uuid); d->uuid = NULL;
+	free(d->wwn); d->wwn = NULL;
+	free(d->label); d->label = NULL;
+	free(d->model); d->model = NULL;
+	free(d->revision); d->revision = NULL;
+}
+
 static void
 free_device(device *d){
 	if(d){
-		device *p;
-
 		if(d->c){
 			d->c->demand -= transport_bw(d->blkdev.transport);
 			if(d->c->uistate && d->uistate){
 				gui->block_free(d->c->uistate,d->uistate);
 			}
 		}
+		internal_device_reset(d);
 		free_mntentry(d->target);
-		switch(d->layout){
-			case LAYOUT_NONE:{
-				free(d->blkdev.biossha1);
-				free(d->blkdev.pttable);
-				free(d->blkdev.serial);
-				break;
-			}case LAYOUT_MDADM:{
-				mdslave *md;
-
-				while( (md = d->mddev.slaves) ){
-					d->mddev.slaves = md->next;
-					free(md->name);
-					free(md);
-				}
-				free(d->mddev.level);
-				free(d->mddev.uuid);
-				free(d->mddev.mdname);
-				free(d->blkdev.pttable);
-				break;
-			}case LAYOUT_DM:{
-				mdslave *md;
-
-				while( (md = d->dmdev.slaves) ){
-					d->dmdev.slaves = md->next;
-					free(md->name);
-					free(md);
-				}
-				free(d->dmdev.level);
-				free(d->dmdev.uuid);
-				free(d->dmdev.dmname);
-				break;
-			}case LAYOUT_PARTITION:{
-				free(d->partdev.pname);
-				free(d->partdev.uuid);
-				break;
-			}case LAYOUT_ZPOOL:{
-				break;
-			}
-		}
-		while( (p = d->parts) ){
-			d->parts = p->next;
-			clobber_device(p);
-		}
-		free(d->sched);
-		free(d->mntops);
 		free(d->mnttype);
-		free(d->uuid);
+		free(d->mntops);
 		free(d->mnt);
-		free(d->wwn);
-		free(d->label);
-		free(d->model);
-		free(d->revision);
 	}
 }
 
@@ -830,6 +837,7 @@ rescan(const char *name,device *d){
 	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
 		diag("Couldn't read link at %s%s (%s?)\n",
 			SYSROOT,name,strerror(errno));
+		clobber_device(d);
 		return NULL;
 	}else{
 		verbf("%s -> %s\n",name,buf);
@@ -837,6 +845,7 @@ rescan(const char *name,device *d){
 	lock_growlight();
 	if((d->c = parse_bus_topology(buf)) == NULL){
 		unlock_growlight();
+		clobber_device(d);
 		return NULL;
 	}else{
 		unlock_growlight();
@@ -915,6 +924,7 @@ rescan(const char *name,device *d){
 			}
 			close(dfd);
 		}
+		free(d->blkdev.pttable);
 		snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
 		// FIXME move all this to its own function
 		if(probe_blkid_superblock(devbuf,&pr,d) == 0){
@@ -933,10 +943,11 @@ rescan(const char *name,device *d){
 				verbf("\t%d partition%s, table type %s\n",
 						pars,pars == 1 ? "" : "s",
 						pttable);
-				if((d->blkdev.pttable = strdup(pttable)) == NULL){
-					clobber_device(d);
-					blkid_free_probe(pr);
-					return NULL;
+				switch(d->layout){
+					case LAYOUT_NONE: assert((d->blkdev.pttable = strdup(pttable))); break;
+					case LAYOUT_MDADM: assert((d->mddev.pttable = strdup(pttable))); break;
+					case LAYOUT_DM: assert((d->dmdev.pttable = strdup(pttable))); break;
+					default: diag("Bad layout %d\n",d->layout); assert(0); break;
 				}
 				for(p = d->parts ; p ; p = p->next){
 					blkid_partition part;
@@ -985,8 +996,6 @@ rescan(const char *name,device *d){
 					d->parts = p->next;
 					clobber_device(p);
 				}
-				free(d->blkdev.pttable);
-				d->blkdev.pttable = NULL;
 			}
 			blkid_free_probe(pr);
 		}else if((d->layout != LAYOUT_NONE || !d->blkdev.removable) || errno != ENOMEDIUM){
@@ -1702,6 +1711,10 @@ int rescan_blockdev(const device *d){
 	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC)) < 0){
 		return -1;
 	}
+	diag("Syncing %s via %d...\n",d->name,fd);
+	if(fsync(fd)){
+		diag("Couldn't sync %d for %s (%s?)\n",fd,d->name,strerror(errno));
+	}
 	// The ioctl can fail for a number of reasons, usually because the
 	// work's still being done. Give it a try or two.
 	for(t = 0 ; t < 2 ; ++t){
@@ -1721,6 +1734,7 @@ int rescan_blockdev(const device *d){
 success:
 	close(fd);
 	diag("Updated kernel partition table for %s\n",d->name);
+	rescan_device(d->name);
 	return 0;
 }
 
@@ -1778,6 +1792,7 @@ int rescan_device(const char *name){
 				}
 			} // if we get here, we've matched up
 			d = (*lnk)->next;
+			internal_device_reset(*lnk);
 			if(rescan(name,*lnk) == NULL){
 				*lnk = d;
 				unlock_growlight();
