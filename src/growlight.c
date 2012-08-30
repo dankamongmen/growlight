@@ -339,6 +339,8 @@ const controller *get_controllers(void){
 	return controllers; // FIXME hugely unsafe
 }
 
+static void clobber_device(device *);
+
 static void
 free_device(device *d){
 	if(d){
@@ -347,6 +349,7 @@ free_device(device *d){
 		if(d->c){
 			d->c->demand -= transport_bw(d->blkdev.transport);
 			if(d->c->uistate && d->uistate){
+				assert(0);
 				gui->block_free(d->c->uistate,d->uistate);
 			}
 		}
@@ -392,7 +395,7 @@ free_device(device *d){
 		}
 		while( (p = d->parts) ){
 			d->parts = p->next;
-			free_device(p);
+			clobber_device(p);
 		}
 		free(d->sched);
 		free(d->mntops);
@@ -1654,8 +1657,6 @@ int rescan_controller(controller *c){
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
-	diag("Wrote '1' to %s\n",buf);
-	sync();
 	return 0;
 }
 
@@ -1669,8 +1670,6 @@ int reset_controller(controller *c){
 	if(write_sysfs(buf,"1\n")){
 		return -1;
 	}
-	diag("Wrote '1' to %s\n",buf);
-	sync();
 	return 0;
 }
 
@@ -1707,7 +1706,6 @@ int rescan_blockdev(const device *d){
 	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC)) < 0){
 		return -1;
 	}
-	sync();
 	// The ioctl can fail for a number of reasons, usually because the
 	// work's still being done. Give it a try or two.
 	for(t = 0 ; t < 2 ; ++t){
@@ -1727,7 +1725,6 @@ int rescan_blockdev(const device *d){
 success:
 	close(fd);
 	diag("Updated kernel partition table for %s\n",d->name);
-	sync();
 	return 0;
 }
 
