@@ -13,8 +13,8 @@
 <!ENTITY dhtitle "growlight reference">
   
 <!-- This is the application/package name.	-->
-<!ENTITY dhucpackage "growlight-tty">
-<!ENTITY dhpackage "growlight-tty">
+<!ENTITY dhucpackage "growlight-readline">
+<!ENTITY dhpackage "growlight-readline">
 
 <!-- If the application e.g. belongs to a package like X.org,	-->
 <!-- this should be set to the package/suite name instead of	-->
@@ -117,7 +117,7 @@ specification.</para>
 	</refsect1>
 	<refsect1 id="commands">
 		<title>USAGE</title>
-		<para><emphasis>growlight-tty</emphasis> implements an interactive command line
+		<para><emphasis>growlight-readline</emphasis> implements an interactive command line
 driven via GNU Readline. Commands are entered; a newline causes input to be interpreted, and
 output resulting from this interpretation is displayed to the user. Unlike
 programs such as <emphasis role="bold">fdisk(8)</emphasis> and <emphasis role="bold">gdisk(8)</emphasis>,

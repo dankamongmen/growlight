@@ -8,7 +8,7 @@ AM_CC=$(PTHREAD_CC)
 
 LIBS+=$(PTHREAD_LIBS) $(OPENSSL_LIBS)
 
-dist_man_MANS = growlight-tty.8 growlight-curses.8
+dist_man_MANS = growlight-readline.8 growlight-curses.8
 
 doc_DIR=doc
 doc_DATA=
@@ -19,7 +19,7 @@ dist_doc_DATA+=COPYING
 
 AM_CPPFLAGS=-D_GNU_SOURCE
 
-bin_PROGRAMS=growlight-tty
+bin_PROGRAMS=growlight-readline
 bin_PROGRAMS+=growlight-curses
 
 common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
@@ -33,9 +33,9 @@ common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 	src/gpt.c src/gpt.h src/crc32.c src/crc32.h src/ptypes.c src/ptypes.h \
 	src/dm.c src/dm.h src/aggregate.c src/aggregate.h
 
-growlight_tty_SOURCES=$(common_SOURCES)
-growlight_tty_SOURCES+=src/readline.c
-growlight_tty_LDADD:=$(CURSES_LIB)
+growlight_readline_SOURCES=$(common_SOURCES)
+growlight_readline_SOURCES+=src/readline.c
+growlight_readline_LDADD:=$(CURSES_LIB)
 
 growlight_curses_SOURCES=$(common_SOURCES)
 growlight_curses_SOURCES+=src/ncurses.c src/ncurses.h src/ui-aggregate.h src/ui-aggregate.c
