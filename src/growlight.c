@@ -349,7 +349,6 @@ free_device(device *d){
 		if(d->c){
 			d->c->demand -= transport_bw(d->blkdev.transport);
 			if(d->c->uistate && d->uistate){
-				assert(0);
 				gui->block_free(d->c->uistate,d->uistate);
 			}
 		}
@@ -1161,16 +1160,13 @@ device *lookup_device(const char *name){
 static void *
 scan_device(void *name){
 	device *d;
-	int sig;
 
 	lock_growlight();
 	d = name ? lookup_device(name) : NULL;
 	unlock_growlight();
 	assert(pthread_mutex_lock(&barrier) == 0);
-	sig = --thrcount == 0;
-	if(sig){
-		pthread_cond_signal(&barrier_cond);
-	}
+	pthread_cond_signal(&barrier_cond);
+	--thrcount;
 	assert(pthread_mutex_unlock(&barrier) == 0);
 	free(name);
 	return d;
@@ -1845,12 +1841,16 @@ match_device(const device *d){
 	return NULL;
 }
 
+// FIXME this is broken currently, since you're holding the lock upon entry,
+// and then spawn a bunch of threads which all must grab that same lock. need
+// to rethink its design entirely, yeargh :/
 int rescan_devices(void){
 	const controller *c;
 	device *d,*t,*p;
 	int ret = 0;
 	devtable dt;
 
+	diag("rescan functionality is broken FIXME\n"); return 0; // FIXME
 	push_devtable(&dt);
 	ret |= scan_zpools(gui);
 	ret |= watch_dir(-1,SYSROOT,scan_device);
