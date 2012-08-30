@@ -727,7 +727,7 @@ case LAYOUT_MDADM:
 				bo->d->revision ? bo->d->revision : "n/a",
 				qprefix(bo->d->size,1,buf,sizeof(buf),0),
 				bo->d->physsec,
-				"n/a",
+				bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->mddev.transport),
 				rx,rx,"");
@@ -755,7 +755,7 @@ case LAYOUT_DM:
 				bo->d->revision ? bo->d->revision : "n/a",
 				qprefix(bo->d->size,1,buf,sizeof(buf),0),
 				bo->d->physsec,
-				"n/a",
+				bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
 				bo->d->wwn ? bo->d->wwn : "n/a",
 				transport_str(bo->d->dmdev.transport),
 				rx,rx,"");
