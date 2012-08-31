@@ -84,9 +84,9 @@ setup_colors(void){
 	assert(init_pair(MDADM_COLOR,COLOR_LIGHTYELLOW,-1) == OK);
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
-	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
-	assert(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,COLOR_BLACK) == OK);
-	assert(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == OK);
+	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,-1) == OK);
+	assert(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == OK);
 	assert(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == OK);
 	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
@@ -1447,6 +1447,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	fs->selectno = selectno;
 	multiform_options(fs);
 	actform = fs;
+	form_colors();
 	screen_update();
 }
 
@@ -1624,6 +1625,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
 	form_string_options(fs);
 	actform = fs;
 	curs_set(1);
+	form_colors();
 	screen_update();
 }
 
