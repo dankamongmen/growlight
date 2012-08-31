@@ -55,6 +55,50 @@ enum {
 	GREEN_COLOR,
 };
 
+#define COLOR_LIGHTRED 9
+#define COLOR_LIGHTGREEN 10
+#define COLOR_LIGHTYELLOW 11
+#define COLOR_LIGHTBLUE 12
+#define COLOR_LIGHTMAGENTA 13 // (pink)
+#define COLOR_LIGHTCYAN 14
+#define COLOR_LIGHTWHITE 15
+#define COLOR_HIDDEN 16
+
+static int
+setup_colors(void){
+	assert(init_pair(BORDER_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
+	assert(init_pair(FOOTER_COLOR,COLOR_YELLOW,-1) == OK);
+	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
+	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
+	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
+	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
+	assert(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == OK);
+	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(SSD_COLOR,COLOR_LIGHTGREEN,-1) == OK);
+	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(MDADM_COLOR,COLOR_LIGHTYELLOW,-1) == OK);
+	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
+	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
+	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
+	assert(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,COLOR_BLACK) == OK);
+	assert(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == OK);
+	assert(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == OK);
+	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == OK);
+
+	assert(init_pair(RED_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
+	wrefresh(curscr);
+	return 0;
+}
+
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 struct panel_state {
@@ -1222,6 +1266,10 @@ free_form(struct form_state *fs){
 		free(fs->boxstr);
 		destroy_form_locked(fs);
 		free(fs);
+		setup_colors();
+		if(current_adapter){
+			touchwin(current_adapter->win);
+		}
 		screen_update();
 	}
 }
@@ -1402,6 +1450,34 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	screen_update();
 }
 
+static void
+form_colors(void){
+	init_pair(BORDER_COLOR,COLOR_BLACK,-1);
+	init_pair(HEADER_COLOR,COLOR_BLACK,-1);
+	init_pair(FOOTER_COLOR,COLOR_BLACK,-1);
+	init_pair(UHEADING_COLOR,COLOR_BLACK,-1);
+	init_pair(UBORDER_COLOR,COLOR_BLACK,-1);
+	init_pair(PBORDER_COLOR,COLOR_BLACK,-1);
+	init_pair(OPTICAL_COLOR,COLOR_BLACK,-1);
+	init_pair(ROTATE_COLOR,COLOR_BLACK,-1);
+	init_pair(VIRTUAL_COLOR,COLOR_BLACK,-1);
+	init_pair(SSD_COLOR,COLOR_BLACK,-1);
+	init_pair(FS_COLOR,COLOR_BLACK,-1);
+	init_pair(EMPTY_COLOR,COLOR_BLACK,-1);
+	init_pair(METADATA_COLOR,COLOR_BLACK,-1);
+	init_pair(MDADM_COLOR,COLOR_BLACK,-1);
+	init_pair(ZPOOL_COLOR,COLOR_BLACK,-1);
+	init_pair(PARTITION_COLOR,COLOR_BLACK,-1);
+	init_pair(MOUNT_COLOR,COLOR_BLACK,-1);
+	init_pair(TARGET_COLOR,COLOR_BLACK,-1);
+	init_pair(FUCKED_COLOR,COLOR_BLACK,-1);
+	init_pair(RED_COLOR,COLOR_BLACK,-1);
+	init_pair(ORANGE_COLOR,COLOR_BLACK,-1);
+	init_pair(GREEN_COLOR,COLOR_BLACK,-1);
+	wrefresh(curscr);
+	screen_update();
+}
+
 // -------------------------------------------------------------------------
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
@@ -1476,6 +1552,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	fs->ops = opstrs;
 	form_options(fs);
 	actform = fs;
+	form_colors();
 	screen_update();
 }
 
@@ -2114,49 +2191,6 @@ ncurses_cleanup(WINDOW **w){
 	default: fprintf(stderr,"Couldn't cleanup ncurses\n"); break;
 	}
 	return ret;
-}
-
-#define COLOR_LIGHTRED 9
-#define COLOR_LIGHTGREEN 10
-#define COLOR_LIGHTYELLOW 11
-#define COLOR_LIGHTBLUE 12
-#define COLOR_LIGHTMAGENTA 13 // (pink)
-#define COLOR_LIGHTCYAN 14
-#define COLOR_LIGHTWHITE 15
-#define COLOR_HIDDEN 16
-
-static int
-setup_colors(void){
-	assert(init_pair(BORDER_COLOR,COLOR_GREEN,-1) == OK);
-	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(FOOTER_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
-	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
-	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
-	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == OK);
-	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
-	assert(init_pair(SSD_COLOR,COLOR_LIGHTGREEN,-1) == OK);
-	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
-	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
-	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
-	assert(init_pair(MDADM_COLOR,COLOR_LIGHTYELLOW,-1) == OK);
-	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
-	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,-1) == OK);
-	assert(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,-1) == OK);
-	assert(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == OK);
-	assert(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == OK);
-	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
-	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
-	assert(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == OK);
-
-	assert(init_pair(RED_COLOR,COLOR_RED,-1) == OK);
-	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
-	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
-	return 0;
 }
 
 static WINDOW *
@@ -4518,6 +4552,7 @@ handle_actform_input(int ch){
 				fs->selarray = NULL;
 				free_form(actform);
 				actform = NULL;
+				setup_colors();
 				if(mcb){
 					mcb(optstr,selarray,selections);
 				}else{
@@ -4537,7 +4572,7 @@ handle_actform_input(int ch){
 				actform = NULL;
 				cb(NULL);
 			}
-			pthread_mutex_unlock(&bfl);
+			unlock_ncurses();
 			break;
 		}case KEY_UP: case 'k':{
 			pthread_mutex_lock(&bfl);
