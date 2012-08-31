@@ -1569,14 +1569,12 @@ form_string_options(struct form_state *fs){
 	cols = getmaxx(fsw);
 	wattrset(fsw,A_BOLD);
 	wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+	mvwhline(fsw,1,1,' ',cols - 2);
 	mvwprintw(fsw,1,START_COL,"%-*.*s: ",
 		fs->longop,fs->longop,fs->inp.prompt);
 	wcolor_set(fsw,INPUT_COLOR,NULL);
-	wprintw(fsw,"%-*.*s",cols - fs->longop - 2 - START_COL * 2,
-		cols - fs->longop - 2 - START_COL * 2,fs->inp.buffer);
+	wprintw(fsw,"%.*s",cols - fs->longop - 2 - 2,fs->inp.buffer);
 	wattroff(fsw,A_BOLD);
-	// Place the cursor at the end of input
-	wmove(fsw,1,START_COL + 2 + strlen(fs->inp.buffer) + fs->longop); // 2 for ": " on prompt
 }
 
 void raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
@@ -4448,6 +4446,21 @@ umount_filesystem(void){
 	}
 }
 
+static void
+remove_last_bufchar(char *buf){
+	char *killem = buf;
+	mbstate_t mb;
+	int m;
+
+	memset(&mb,0,sizeof(mb));
+	while( (m = mbrlen(buf,strlen(buf),&mb)) ){
+		assert(m > 0);
+		killem = buf;
+		buf += m;
+	}
+	*killem = '\0';
+}
+
 // We received input while a modal freeform string input form was active.
 // Divert it from the typical UI, and handle it according to the form.
 static void
@@ -4491,10 +4504,8 @@ handle_actform_string_input(int ch){
 		break;
 	}case KEY_BACKSPACE:{
 		pthread_mutex_lock(&bfl);
-		if(strlen(fs->inp.buffer)){
-			fs->inp.buffer[strlen(fs->inp.buffer) - 1] = '\0';
-			form_string_options(fs);
-		}
+		remove_last_bufchar(fs->inp.buffer);
+		form_string_options(fs);
 		unlock_ncurses();
 		break;
 	}default:{
