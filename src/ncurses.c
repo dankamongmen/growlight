@@ -561,8 +561,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}
 		assert(snprintf(buf,sizeof(buf),"%s %s",qprefix(d->size,1,pre,sizeof(pre),1),"unpartitioned space") < (int)sizeof(buf));
-		mvwhline(w,y,sx,ACS_HLINE,ex);
+		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
+		mvwadd_wch(w,y,sx,&bchr[1]);
 		mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
+		mvwadd_wch(w,y,ex - 1,&bchr[2]);
 		return;
 	}
 	if((z = bo->zchain) == NULL){
@@ -4699,13 +4701,13 @@ handle_ncurses_input(WINDOW *w){
 	while((ch = getch()) != ERR){
 		if(actform){
 			if(handle_actform_input(ch)){
-				break;
+				return;
 			}
 			continue;
 		}
 		if(active){
 			if((ch = handle_subwindow_input(ch)) == 0){
-				continue;
+				return;
 			}
 		}
 		switch(ch){
