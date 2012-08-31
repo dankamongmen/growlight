@@ -161,7 +161,7 @@ setup_colors(void){
 	assert(init_pair(MDADM_COLOR,COLOR_LIGHTYELLOW,-1) == OK);
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
-	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,-1) == OK);
+	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
 	assert(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,-1) == OK);
 	assert(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == OK);
 	assert(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == OK);
@@ -179,28 +179,28 @@ setup_colors(void){
 
 static void
 form_colors(void){
-	init_pair(BORDER_COLOR,COLOR_BLACK,-1);
-	init_pair(HEADER_COLOR,COLOR_BLACK,-1);
-	init_pair(FOOTER_COLOR,COLOR_BLACK,-1);
-	init_pair(UHEADING_COLOR,COLOR_BLACK,-1);
-	init_pair(UBORDER_COLOR,COLOR_BLACK,-1);
-	init_pair(PBORDER_COLOR,COLOR_BLACK,-1);
-	init_pair(OPTICAL_COLOR,COLOR_BLACK,-1);
-	init_pair(ROTATE_COLOR,COLOR_BLACK,-1);
-	init_pair(VIRTUAL_COLOR,COLOR_BLACK,-1);
-	init_pair(SSD_COLOR,COLOR_BLACK,-1);
-	init_pair(FS_COLOR,COLOR_BLACK,-1);
-	init_pair(EMPTY_COLOR,COLOR_BLACK,-1);
-	init_pair(METADATA_COLOR,COLOR_BLACK,-1);
-	init_pair(MDADM_COLOR,COLOR_BLACK,-1);
-	init_pair(ZPOOL_COLOR,COLOR_BLACK,-1);
-	init_pair(PARTITION_COLOR,COLOR_BLACK,-1);
-	init_pair(MOUNT_COLOR,COLOR_BLACK,-1);
-	init_pair(TARGET_COLOR,COLOR_BLACK,-1);
-	init_pair(FUCKED_COLOR,COLOR_BLACK,-1);
-	init_pair(RED_COLOR,COLOR_BLACK,-1);
-	init_pair(ORANGE_COLOR,COLOR_BLACK,-1);
-	init_pair(GREEN_COLOR,COLOR_BLACK,-1);
+	init_pair(BORDER_COLOR,-1,-1);
+	init_pair(HEADER_COLOR,-1,-1);
+	init_pair(FOOTER_COLOR,-1,-1);
+	init_pair(UHEADING_COLOR,-1,-1);
+	init_pair(UBORDER_COLOR,-1,-1);
+	init_pair(PBORDER_COLOR,-1,-1);
+	init_pair(OPTICAL_COLOR,-1,-1);
+	init_pair(ROTATE_COLOR,-1,-1);
+	init_pair(VIRTUAL_COLOR,-1,-1);
+	init_pair(SSD_COLOR,-1,-1);
+	init_pair(FS_COLOR,-1,-1);
+	init_pair(EMPTY_COLOR,-1,-1);
+	init_pair(METADATA_COLOR,-1,-1);
+	init_pair(MDADM_COLOR,-1,-1);
+	init_pair(ZPOOL_COLOR,-1,-1);
+	init_pair(PARTITION_COLOR,-1,-1);
+	init_pair(MOUNT_COLOR,-1,-1);
+	init_pair(TARGET_COLOR,-1,-1);
+	init_pair(FUCKED_COLOR,-1,-1);
+	init_pair(RED_COLOR,-1,-1);
+	init_pair(ORANGE_COLOR,-1,-1);
+	init_pair(GREEN_COLOR,-1,-1);
 	wrefresh(curscr);
 	screen_update();
 }
@@ -727,8 +727,6 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				}else{
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 				}
-				assert(wattron(w,A_REVERSE) == OK);
-				assert(wattroff(w,A_REVERSE) == OK);
 				wattron(w,A_UNDERLINE);
 				// FIXME need to store pname as multibyte char *
 				// selstr = z->p->partdev.pname;
@@ -755,14 +753,12 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 		}
 		if(selstr){
-			assert(wattron(w,A_REVERSE) == OK);
 			if(x < ex / 2){
 				mvwprintw(w,y - 1,x + 1,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
 			}else{
 				mvwprintw(w,y - 1,x - (strlen(selstr) + 4),"%.*s⇦⇦⇦⇖",
 						ex - (x + strlen(selstr) + 10 + 4),selstr);
 			}
-			assert(wattroff(w,A_REVERSE) == OK);
 		}
 		mvwaddch(w,y,x,rep);
 		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
