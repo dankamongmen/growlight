@@ -150,7 +150,7 @@ setup_colors(void){
 	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
-	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
+	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,COLOR_BLACK) == OK);
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == OK);
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
@@ -186,6 +186,7 @@ form_colors(void){
 	init_pair(UBORDER_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
 	init_pair(PHEADING_COLOR,-1,-1);
+	init_pair(SUBDISPLAY_COLOR,-1,-1);
 	init_pair(OPTICAL_COLOR,-1,-1);
 	init_pair(ROTATE_COLOR,-1,-1);
 	init_pair(VIRTUAL_COLOR,-1,-1);
@@ -2649,11 +2650,13 @@ max_helpstr_len(const wchar_t **h){
 static int
 helpstrs(WINDOW *hw,int row){
 	const wchar_t *hs;
-	int z,rows;
+	int z,rows,cols;
 
 	rows = getmaxy(hw);
+	cols = getmaxx(hw);
 	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
+		mvwhline(hw,row + z,START_COL,' ',cols - 2);
 		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
 	}
 	row += z;
@@ -2663,6 +2666,7 @@ helpstrs(WINDOW *hw,int row){
 		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 	}
 	for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
+		mvwhline(hw,row + z,START_COL,' ',cols - 2);
 		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
 	}
 	row += z;
@@ -2672,6 +2676,7 @@ helpstrs(WINDOW *hw,int row){
 		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 	}
 	for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
+		mvwhline(hw,row + z,START_COL,' ',cols - 2);
 		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
 	}
 	return OK;
@@ -3443,18 +3448,20 @@ static int
 env_details(WINDOW *hw,int rows){
 	const int col = START_COL;
 	const int row = 1;
-	int z,srows,scols;
+	int z,srows,scols,cols;
 
 	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 	getmaxyx(stdscr,srows,scols);
 	if((z = rows) >= ENVROWS){
 		z = ENVROWS - 1;
 	}
+	cols = getmaxx(hw);
 	switch(z){ // Intentional fallthroughs all the way to 0
 	case (ENVROWS - 1):{
 		while(z > 1){
 			int c0,c1;
 
+			mvwhline(hw,row + z,1,' ',cols - 2);
 			c0 = (z - 2) * COLORSPERROW;
 			c1 = c0 + (COLORSPERROW - 1);
 			assert(mvwprintw(hw,row + z,col,"0x%02x--0x%02x: ",c0,c1) == OK);
@@ -3472,6 +3479,7 @@ env_details(WINDOW *hw,int rows){
 			assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 		}
 	}case 1:{
+		mvwhline(hw,row + z,1,' ',cols - 2);
 		assert(mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
 			        COLORS,COLOR_PAIRS,srows,scols,
 				can_change_color() ? "dynamic" : "fixed") != ERR);
@@ -3480,6 +3488,7 @@ env_details(WINDOW *hw,int rows){
 		const char *lang = getenv("LANG");
 		const char *term = getenv("TERM");
 
+		mvwhline(hw,row + z,1,' ',cols - 2);
 		lang = lang ? lang : "Undefined";
 		assert(mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s  ESCDELAY: %d",lang,term,ESCDELAY) != ERR);
 		--z;
@@ -3496,6 +3505,7 @@ print_mount(WINDOW *w,int *row,int both,const device *d){
 	char buf[PREFIXSTRLEN + 1],b[256];
 	int cols = getmaxx(w),r;
 
+	mvwhline(w,*row,START_COL,' ',cols - 2);
 	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
@@ -3510,6 +3520,7 @@ print_mount(WINDOW *w,int *row,int both,const device *d){
 	if((r = snprintf(b,sizeof(b)," %s %s",d->mnt,d->mntops)) >= (int)sizeof(b)){
 		b[sizeof(b) - 1] = '\0';
 	}
+	mvwhline(w,*row,START_COL,' ',cols - 2);
 	mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
 	wattron(w,A_BOLD);
 	++*row;
@@ -3520,6 +3531,7 @@ print_target(WINDOW *w,const device *d,int *row,int both,const mntentry *m){
 	char buf[PREFIXSTRLEN + 1],b[256]; // FIXME uhhhh
 	int cols = getmaxx(w),r;
 
+	mvwhline(w,*row,START_COL,' ',cols - 2);
 	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
 			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
 			d->mnttype,
@@ -3534,6 +3546,7 @@ print_target(WINDOW *w,const device *d,int *row,int both,const mntentry *m){
 	if((r = snprintf(b,sizeof(b)," %s %s",m->path,m->ops)) >= (int)sizeof(b)){
 		b[sizeof(b) - 1] = '\0';
 	}
+	mvwhline(w,*row,START_COL,' ',cols - 2);
 	mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
 	wattron(w,A_BOLD);
 	++*row;
@@ -3542,8 +3555,9 @@ print_target(WINDOW *w,const device *d,int *row,int both,const mntentry *m){
 static int
 map_details(WINDOW *hw){
 	const controller *c;
-	int y,rows;
+	int y,rows,cols;
 
+	cols = getmaxx(hw);
 	rows = getmaxy(hw) - 1;
 	y = 1;
 	if(growlight_target){
@@ -3552,6 +3566,7 @@ map_details(WINDOW *hw){
 		++y;
 	}
 	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+	mvwhline(hw,y,1,' ',cols - 2);
 	mvwprintw(hw,y,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
 			FSLABELSIZ,FSLABELSIZ,"Label",
 			"Type","UUID","Bytes","Device");
@@ -3605,6 +3620,9 @@ map_details(WINDOW *hw){
 				}
 			}
 		}
+	}
+	while(y < rows){
+		mvwhline(hw,y++,1,' ',cols - 2);
 	}
 	return 0;
 }
