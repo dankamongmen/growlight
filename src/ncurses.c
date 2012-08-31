@@ -148,8 +148,8 @@ setup_colors(void){
 	assert(init_pair(FOOTER_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
-	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(PHEADING_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
+	assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == OK);
@@ -185,6 +185,7 @@ form_colors(void){
 	init_pair(UHEADING_COLOR,-1,-1);
 	init_pair(UBORDER_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
+	init_pair(PHEADING_COLOR,-1,-1);
 	init_pair(OPTICAL_COLOR,-1,-1);
 	init_pair(ROTATE_COLOR,-1,-1);
 	init_pair(VIRTUAL_COLOR,-1,-1);
