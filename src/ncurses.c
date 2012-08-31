@@ -4473,8 +4473,7 @@ handle_actform_string_input(int ch){
 	case 12: // CTRL+L, redraw screen FIXME
 		pthread_mutex_lock(&bfl);
 		wrefresh(curscr);
-		screen_update();
-		pthread_mutex_unlock(&bfl);
+		unlock_ncurses();
 		break;
 	case 21: // CTRL+u, clear input line FIXME
 		pthread_mutex_lock(&bfl);
@@ -4517,7 +4516,7 @@ handle_actform_string_input(int ch){
 		pthread_mutex_lock(&bfl);
 		if((tmp = realloc(fs->inp.buffer,strlen(fs->inp.buffer) + 2)) == NULL){
 			locked_diag("Couldn't allocate input buffer (%s?)",strerror(errno));
-			pthread_mutex_unlock(&bfl);
+			unlock_ncurses();
 			return;
 		}
 		fs->inp.buffer = tmp;
@@ -4564,8 +4563,7 @@ handle_actform_input(int ch){
 		case 12: // CTRL+L FIXME
 			pthread_mutex_lock(&bfl);
 			wrefresh(curscr);
-			screen_update();
-			pthread_mutex_unlock(&bfl);
+			unlock_ncurses();
 			break;
 		case ' ': case '\r': case '\n': case KEY_ENTER:{
 			int op,selections;
@@ -4587,7 +4585,7 @@ handle_actform_input(int ch){
 					cb(optstr);
 				}
 				free(optstr);
-			pthread_mutex_unlock(&bfl);
+			unlock_ncurses();
 			break;
 		}case KEY_ESC:{
 			pthread_mutex_lock(&bfl);
@@ -4618,8 +4616,7 @@ handle_actform_input(int ch){
 			}else{
 				form_options(fs);
 			}
-			screen_update();
-			pthread_mutex_unlock(&bfl);
+			unlock_ncurses();
 			break;
 		}case KEY_DOWN: case 'j':{
 			pthread_mutex_lock(&bfl);
@@ -4637,8 +4634,7 @@ handle_actform_input(int ch){
 			}else{
 				form_options(fs);
 			}
-			screen_update();
-			pthread_mutex_unlock(&bfl);
+			unlock_ncurses();
 			break;
 		}case 'q':{
 			return 1;
@@ -4646,6 +4642,7 @@ handle_actform_input(int ch){
 			char **selarray;
 			int selections;
 
+			pthread_mutex_lock(&bfl);
 			if(fs->formtype == FORM_MULTISELECT){
 				selarray = fs->selarray;
 				selections = fs->selections;
@@ -4653,8 +4650,10 @@ handle_actform_input(int ch){
 				free_form(actform);
 				actform = NULL;
 				mcb("",selarray,selections);
+				unlock_ncurses();
 				break;
 			}
+			unlock_ncurses();
 			// intentional fallthrough for non-multiform case
 		}default:{
 			diag("please %s (⎋esc returns)",actform->boxstr);
@@ -4984,7 +4983,7 @@ handle_ncurses_input(WINDOW *w){
 			case '!':
 				pthread_mutex_lock(&bfl);
 				rescan_devices();
-				pthread_mutex_unlock(&bfl);
+				unlock_ncurses();
 				break;
 			case '/':
 				pthread_mutex_lock(&bfl);
@@ -5106,7 +5105,7 @@ adapter_callback(controller *a, void *state){
 				newrb = rows - newrb;
 				if((rb = create_reelbox(as,rows,newrb,cols)) == NULL){
 					free_adapter_state(as);
-					pthread_mutex_unlock(&bfl);
+					unlock_ncurses();
 					return NULL;
 				}
 				if(last_reelbox){
@@ -5148,8 +5147,7 @@ adapter_callback(controller *a, void *state){
 		//resize_adapter(rb);
 		redraw_adapter(rb);
 	}
-	screen_update();
-	pthread_mutex_unlock(&bfl);
+	unlock_ncurses();
 	return as;
 }
 
@@ -5319,9 +5317,8 @@ block_callback(device *d,void *v){
 		resize_adapter(as->rb);
 		recompute_selection(as,old,oldrows,getmaxy(as->rb->win));
 		redraw_adapter(as->rb);
-		screen_update();
 	}
-	pthread_mutex_unlock(&bfl);
+	unlock_ncurses();
 	return b;
 }
 
@@ -5436,7 +5433,7 @@ static void
 vdiag(const char *fmt,va_list v){
 	pthread_mutex_lock(&bfl);
 	locked_vdiag(fmt,v);
-	pthread_mutex_unlock(&bfl);
+	unlock_ncurses();
 }
 
 int main(int argc,char * const *argv){
