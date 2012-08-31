@@ -1711,9 +1711,6 @@ int rescan_blockdev(const device *d){
 		return -1;
 	}
 	diag("Syncing %s via %d...\n",d->name,fd);
-	if(fsync(fd)){
-		diag("Couldn't sync %d for %s (%s?)\n",fd,d->name,strerror(errno));
-	}
 	// The ioctl can fail for a number of reasons, usually because the
 	// work's still being done. Give it a try or two.
 	for(t = 0 ; t < 2 ; ++t){
@@ -1731,8 +1728,11 @@ int rescan_blockdev(const device *d){
 	return -1;
 
 success:
-	close(fd);
 	diag("Updated kernel partition table for %s\n",d->name);
+	if(fsync(fd)){
+		diag("Couldn't sync %d for %s (%s?)\n",fd,d->name,strerror(errno));
+	}
+	close(fd);
 	rescan_device(d->name);
 	return 0;
 }
