@@ -400,6 +400,9 @@ static struct fs virtfss[] = {
 		.name = "sysfs",
 		.desc = "Linux device/driver relationships",
 	},{
+		.name = "debugfs",
+		.desc = "Linux free-form output filesystem",
+	},{
 		.name = "tmpfs",
 		.desc = "RAM-backed filesystem",
 	},{
