@@ -22,6 +22,71 @@
 
 #define KEY_ESC 27
 
+static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+
+struct panel_state {
+	PANEL *p;
+	int ysize;		      // number of lines of *text* (not win)
+};
+
+#define PANEL_STATE_INITIALIZER { .p = NULL, .ysize = -1, }
+#define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
+#define SUBDISPLAY_INVAL_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR))
+
+static struct panel_state *active;
+static struct panel_state maps = PANEL_STATE_INITIALIZER;
+static struct panel_state help = PANEL_STATE_INITIALIZER;
+static struct panel_state diags = PANEL_STATE_INITIALIZER;
+static struct panel_state details = PANEL_STATE_INITIALIZER;
+static struct panel_state environment = PANEL_STATE_INITIALIZER;
+
+struct form_option {
+	char *option;			// option key (the string passed to cb)
+	char *desc;			// longer description
+};
+
+struct form_input {
+	const char *prompt;		// short prompt. currently aliases boxstr
+	char *longprompt;		// longer prompt, not currently used
+	char *buffer;			// input buffer, initialized to ""
+};
+
+typedef enum {
+	FORM_SELECT,			// form_option[]
+	FORM_STRING_INPUT,		// form_input
+	FORM_MULTISELECT,		// form_options[]
+} form_enum;
+
+// Regarding scrolling selection windows: the movement model is the same as
+// the main scrollwindow: moving up at the topmost line keeps you at the top
+// of the widget, and rotates the selections. scrolloff equals the number of
+// lines options have been rotated down, and takes values between 0 and
+// opcount - 1. All option selection windows scroll, even if they fit all their
+// options, to maintain continuity of UI.
+struct form_state {
+	PANEL *p;
+	int ysize;			// number of lines of *text* (not win)
+	void (*fxn)(const char *);	// callback once form is done
+	void (*mcb)(const char *,char **,int); // callback on multiform input
+	int idx;			// selection index, [0..ysize)
+	int longop;			// length of longest op
+	char *boxstr;			// string for box label
+	form_enum formtype;		// type of form
+	union {
+		struct {
+			struct form_option *ops;// form_option array for *this instance*
+			int scrolloff;		// scroll offset
+			int opcount;		// total number of ops
+			int selectno;		// number of selections, total
+			int selections;		// number of active selections
+			char **selarray;	// array of selections by name
+		};
+		struct form_input inp;	// form_input state for this instance
+	};
+};
+
+static struct form_state *actform;
+
 // Our color pairs
 enum {
 	BORDER_COLOR = 1,		// Main window
@@ -64,6 +129,18 @@ enum {
 #define COLOR_LIGHTWHITE 15
 #define COLOR_HIDDEN 16
 
+static inline void
+screen_update(void){
+	if(active){
+		assert(top_panel(active->p) != ERR);
+	}
+	if(actform){
+		assert(top_panel(actform->p) != ERR);
+	}
+	update_panels();
+	assert(doupdate() == OK);
+}
+
 static int
 setup_colors(void){
 	assert(init_pair(BORDER_COLOR,COLOR_GREEN,-1) == OK);
@@ -96,30 +173,38 @@ setup_colors(void){
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
 	wrefresh(curscr);
+	screen_update();
 	return 0;
 }
 
-static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+static void
+form_colors(void){
+	init_pair(BORDER_COLOR,COLOR_BLACK,-1);
+	init_pair(HEADER_COLOR,COLOR_BLACK,-1);
+	init_pair(FOOTER_COLOR,COLOR_BLACK,-1);
+	init_pair(UHEADING_COLOR,COLOR_BLACK,-1);
+	init_pair(UBORDER_COLOR,COLOR_BLACK,-1);
+	init_pair(PBORDER_COLOR,COLOR_BLACK,-1);
+	init_pair(OPTICAL_COLOR,COLOR_BLACK,-1);
+	init_pair(ROTATE_COLOR,COLOR_BLACK,-1);
+	init_pair(VIRTUAL_COLOR,COLOR_BLACK,-1);
+	init_pair(SSD_COLOR,COLOR_BLACK,-1);
+	init_pair(FS_COLOR,COLOR_BLACK,-1);
+	init_pair(EMPTY_COLOR,COLOR_BLACK,-1);
+	init_pair(METADATA_COLOR,COLOR_BLACK,-1);
+	init_pair(MDADM_COLOR,COLOR_BLACK,-1);
+	init_pair(ZPOOL_COLOR,COLOR_BLACK,-1);
+	init_pair(PARTITION_COLOR,COLOR_BLACK,-1);
+	init_pair(MOUNT_COLOR,COLOR_BLACK,-1);
+	init_pair(TARGET_COLOR,COLOR_BLACK,-1);
+	init_pair(FUCKED_COLOR,COLOR_BLACK,-1);
+	init_pair(RED_COLOR,COLOR_BLACK,-1);
+	init_pair(ORANGE_COLOR,COLOR_BLACK,-1);
+	init_pair(GREEN_COLOR,COLOR_BLACK,-1);
+	wrefresh(curscr);
+	screen_update();
+}
 
-struct panel_state {
-	PANEL *p;
-	int ysize;		      // number of lines of *text* (not win)
-};
-
-#define PANEL_STATE_INITIALIZER { .p = NULL, .ysize = -1, }
-#define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
-#define SUBDISPLAY_INVAL_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR))
-
-static struct panel_state *active;
-static struct panel_state maps = PANEL_STATE_INITIALIZER;
-static struct panel_state help = PANEL_STATE_INITIALIZER;
-static struct panel_state diags = PANEL_STATE_INITIALIZER;
-static struct panel_state details = PANEL_STATE_INITIALIZER;
-static struct panel_state environment = PANEL_STATE_INITIALIZER;
-
-static struct form_state *actform;
-
-static void screen_update(void);
 static int update_diags(struct panel_state *);
 
 struct adapterstate;
@@ -1143,51 +1228,6 @@ show_splash(const wchar_t *msg){
 // else. Subwindows sit atop the hardware elements of the UI, but do not seize
 // any of the input UI. A form and subwindow can coexist.
 
-struct form_option {
-	char *option;			// option key (the string passed to cb)
-	char *desc;			// longer description
-};
-
-struct form_input {
-	const char *prompt;		// short prompt. currently aliases boxstr
-	char *longprompt;		// longer prompt, not currently used
-	char *buffer;			// input buffer, initialized to ""
-};
-
-typedef enum {
-	FORM_SELECT,			// form_option[]
-	FORM_STRING_INPUT,		// form_input
-	FORM_MULTISELECT,		// form_options[]
-} form_enum;
-
-// Regarding scrolling selection windows: the movement model is the same as
-// the main scrollwindow: moving up at the topmost line keeps you at the top
-// of the widget, and rotates the selections. scrolloff equals the number of
-// lines options have been rotated down, and takes values between 0 and
-// opcount - 1. All option selection windows scroll, even if they fit all their
-// options, to maintain continuity of UI.
-struct form_state {
-	PANEL *p;
-	int ysize;			// number of lines of *text* (not win)
-	void (*fxn)(const char *);	// callback once form is done
-	void (*mcb)(const char *,char **,int); // callback on multiform input
-	int idx;			// selection index, [0..ysize)
-	int longop;			// length of longest op
-	char *boxstr;			// string for box label
-	form_enum formtype;		// type of form
-	union {
-		struct {
-			struct form_option *ops;// form_option array for *this instance*
-			int scrolloff;		// scroll offset
-			int opcount;		// total number of ops
-			int selectno;		// number of selections, total
-			int selections;		// number of active selections
-			char **selarray;	// array of selections by name
-		};
-		struct form_input inp;	// form_input state for this instance
-	};
-};
-
 // -------------------------------------------------------------------------
 // -- form creation
 // -------------------------------------------------------------------------
@@ -1246,18 +1286,6 @@ destroy_form_locked(struct form_state *fs){
 		fs->ysize = -1;
 		actform = NULL;
 	}
-}
-
-static inline void
-screen_update(void){
-	if(active){
-		assert(top_panel(active->p) != ERR);
-	}
-	if(actform){
-		assert(top_panel(actform->p) != ERR);
-	}
-	update_panels();
-	assert(doupdate() == OK);
 }
 
 static void
@@ -1448,34 +1476,6 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	multiform_options(fs);
 	actform = fs;
 	form_colors();
-	screen_update();
-}
-
-static void
-form_colors(void){
-	init_pair(BORDER_COLOR,COLOR_BLACK,-1);
-	init_pair(HEADER_COLOR,COLOR_BLACK,-1);
-	init_pair(FOOTER_COLOR,COLOR_BLACK,-1);
-	init_pair(UHEADING_COLOR,COLOR_BLACK,-1);
-	init_pair(UBORDER_COLOR,COLOR_BLACK,-1);
-	init_pair(PBORDER_COLOR,COLOR_BLACK,-1);
-	init_pair(OPTICAL_COLOR,COLOR_BLACK,-1);
-	init_pair(ROTATE_COLOR,COLOR_BLACK,-1);
-	init_pair(VIRTUAL_COLOR,COLOR_BLACK,-1);
-	init_pair(SSD_COLOR,COLOR_BLACK,-1);
-	init_pair(FS_COLOR,COLOR_BLACK,-1);
-	init_pair(EMPTY_COLOR,COLOR_BLACK,-1);
-	init_pair(METADATA_COLOR,COLOR_BLACK,-1);
-	init_pair(MDADM_COLOR,COLOR_BLACK,-1);
-	init_pair(ZPOOL_COLOR,COLOR_BLACK,-1);
-	init_pair(PARTITION_COLOR,COLOR_BLACK,-1);
-	init_pair(MOUNT_COLOR,COLOR_BLACK,-1);
-	init_pair(TARGET_COLOR,COLOR_BLACK,-1);
-	init_pair(FUCKED_COLOR,COLOR_BLACK,-1);
-	init_pair(RED_COLOR,COLOR_BLACK,-1);
-	init_pair(ORANGE_COLOR,COLOR_BLACK,-1);
-	init_pair(GREEN_COLOR,COLOR_BLACK,-1);
-	wrefresh(curscr);
 	screen_update();
 }
 
