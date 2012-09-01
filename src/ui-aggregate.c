@@ -7,6 +7,9 @@
 #include "aggregate.h"
 #include "ui-aggregate.h"
 
+static const char AGGTYPE_TEXT[] =
+"What kind of aggregate do you hope to create?";
+
 typedef enum {
 	FORM_SELECT,			// form_option[]
 	FORM_STRING_INPUT,		// form_input
@@ -246,7 +249,8 @@ aggname_callback(const char *fn){
 		struct form_option *ops_agg;
 
 		if( (ops_agg = agg_table(&opcount,pending_aggtype,&defidx)) ){
-			raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
+			raise_form("select an aggregate type",agg_callback,ops_agg,
+					opcount,defidx,AGGTYPE_TEXT);
 		}
 		return;
 	}
@@ -294,6 +298,7 @@ int raise_aggregate_form(void){
 		destroy_agg_forms();
 		return -1;
 	}
-	raise_form("select an aggregate type",agg_callback,ops_agg,opcount,defidx);
+	raise_form("select an aggregate type",agg_callback,ops_agg,opcount,
+			defidx,AGGTYPE_TEXT);
 	return 0;
 }

@@ -22,6 +22,26 @@
 
 #define KEY_ESC 27
 
+static const char PTTYPE_TEXT[] =
+"Select a partition table type. GPT is recommended unless you must use tools "
+"and/or hardware which don't understand it.";
+
+static const char PARTTYPE_TEXT[] =
+"Select a type for the new partition. The ability to create a given filesystem "
+"is generally neither conferred nor denied due to partition type, but "
+"mismatched partition and filesystem types will confuse some tools and "
+"hardware. UEFI through version 1.1 is designed to boot from an ESP partition "
+"within a GPT table. UEFI+MBR and BIOS both generally require a primary (as "
+"opposed to logical) MBR partition.";
+
+static const char FSTYPE_TEXT[] =
+"Select a filesystem to create atop the block device. UEFI through version 1.1 "
+"requires FAT16 for the EFI System Partition. As of version 3.5, ext4 is the "
+"default Linux filesystem, but Windows and OS X do not natively support it. "
+"Sprezzatech recommends use of EXT4 or FAT16 for root filesystems, FAT32 or "
+"HFS+ for compatibility with Windows and OS X (respectively), and ZFS (in a "
+"redundant configuration) for other filesystems.";
+
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 struct panel_state {
@@ -1490,13 +1510,14 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
 void raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
-					int ops,int defidx){
+			int ops,int defidx,const char *text){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;
 	WINDOW *fsw;
 	int x,y;
 
+	assert(text); // FIXME
 	if(opstrs == NULL || !ops){
 		locked_diag("Passed empty %u-option string table",ops);
 		return;
@@ -1783,7 +1804,8 @@ fs_named_callback(const char *name){
 			destroy_fs_forms();
 			return;
 		}
-		raise_form("select a filesystem type",fs_callback,ops_fs,opcount,defidx);
+		raise_form("select a filesystem type",fs_callback,ops_fs,
+				opcount,defidx,FSTYPE_TEXT);
 		return;
 	}
 	fs_do(name);
@@ -2075,7 +2097,8 @@ psectors_callback(const char *psects){
 			cleanup_new_partition();
 			return;
 		}
-		raise_form("select a partition type",ptype_callback,ops_ptype,opcount,defidx);
+		raise_form("select a partition type",ptype_callback,ops_ptype,
+				opcount,defidx,PARTTYPE_TEXT);
 		return;
 	}
 	pending_spec = strdup(psects);
@@ -2137,7 +2160,8 @@ new_partition(void){
 	if((ops_ptype = ptype_table(b->d,&opcount,-1,&defidx)) == NULL){
 		return;
 	}
-	raise_form("select a partition type",ptype_callback,ops_ptype,opcount,defidx);
+	raise_form("select a partition type",ptype_callback,ops_ptype,opcount,
+			defidx,PARTTYPE_TEXT);
 }
 
 // -------------------------------------------------------------------------
@@ -2178,7 +2202,8 @@ confirm_operation(const char *op,void (*confirmcb)(const char *)){
 	ops_confirm[1].option = strdup("abort");
 	ops_confirm[1].desc = strdup("do not perform the operation");
 	// FIXME check values
-	raise_form("confirm operation",confirmcb,ops_confirm,2,1);
+	raise_form("confirm operation",confirmcb,ops_confirm,2,1,
+			"Please confirm the request.");
 	return 0;
 }
 // -------------------------------------------------------------------------
@@ -3439,7 +3464,7 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 	if(max_helpstr_len(helps_block) > helpcols){
 		helpcols = max_helpstr_len(helps_block);
 	}
-	helpcols += 4; // spacing + borders
+	helpcols += 2; // spacing + borders
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help",
 			L"http://nick-black.com/dankwiki/index.php/Growlight")){
@@ -4001,7 +4026,8 @@ make_ptable(void){
 	if((ops_ptype = pttype_table(&opcount)) == NULL){
 		return;
 	}
-	raise_form("select a table type",pttype_callback,ops_ptype,opcount,-1);
+	raise_form("select a table type",pttype_callback,ops_ptype,opcount,-1,
+			PTTYPE_TEXT);
 }
 
 static void
@@ -4025,7 +4051,8 @@ new_filesystem(void){
 	if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
 		return;
 	}
-	raise_form("select a filesystem type",fs_callback,ops_fs,opcount,defidx);
+	raise_form("select a filesystem type",fs_callback,ops_fs,opcount,
+			defidx,FSTYPE_TEXT);
 	return;
 }
 
