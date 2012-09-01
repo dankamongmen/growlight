@@ -89,8 +89,7 @@ static struct form_state *actform;
 
 // Our color pairs
 enum {
-	BORDER_COLOR = 1,		// Main window
-	HEADER_COLOR,
+	HEADER_COLOR = 1,
 	FOOTER_COLOR,
 	UHEADING_COLOR,
 	UBORDER_COLOR,
@@ -142,7 +141,6 @@ screen_update(void){
 
 static int
 setup_colors(void){
-	assert(init_pair(BORDER_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(FOOTER_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
@@ -188,7 +186,6 @@ setup_colors(void){
 
 static void
 form_colors(void){
-	init_pair(BORDER_COLOR,-1,-1);
 	init_pair(HEADER_COLOR,-1,-1);
 	init_pair(FOOTER_COLOR,-1,-1);
 	init_pair(UHEADING_COLOR,-1,-1);
@@ -437,22 +434,19 @@ bevel(WINDOW *w){
 
 static void
 draw_main_window(WINDOW *w){
+	int rows,cols,scol,x,y;
 	char buf[BUFSIZ];
-	int rows,cols,scol;
 
 	scol = snprintf(buf,sizeof(buf),"%s %s | %d adapter%s",PACKAGE,VERSION,
 			count_adapters,count_adapters == 1 ? "" : "s");
 	assert(scol > 0 && (unsigned)scol < sizeof(buf));
 	getmaxyx(w,rows,cols);
+	assert(wattrset(w,COLOR_PAIR(HEADER_COLOR)) != ERR);
+	mvwaddstr(w,rows - 1,0,buf);
+	getyx(w,y,x);
+	cols -= x + 2;
 	assert(wattron(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
-	assert(mvwprintw(w,rows - 1,0,"%-*.*s",cols - START_COL * 2,
-			cols - START_COL * 2,statusmsg) != ERR);
-	assert(wattroff(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
-
-	assert(wattrset(w,A_DIM | COLOR_PAIR(BORDER_COLOR)) != ERR);
-	assert(mvwprintw(w,rows - 1,cols - scol - 1,"[") != ERR);
-	assert(wattron(w,A_BOLD | COLOR_PAIR(HEADER_COLOR)) != ERR);
-	waddstr(w,buf);
+	assert(wprintw(w," %-*.*s",cols,cols,statusmsg) != ERR);
 }
 
 static void
@@ -762,19 +756,22 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				rep = '0' + rep;	// FIXME lame
 			}
 		}
+		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
+		och = ch;
 		wattron(w,A_REVERSE);
 		if(selstr){
+			int truech;
+
+			truech = (int)(off + ch) >= ex ? ex - off - 1 : ch;
 			if(x < ex / 2){
-				mvwprintw(w,y - 1,x + 1,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
+				mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
 			}else{
-				mvwprintw(w,y - 1,x - (strlen(selstr) + 4),"%.*s⇦⇦⇦⇖",
-						ex - (x + strlen(selstr) + 10 + 4),selstr);
+				mvwprintw(w,y - 1,x + truech - (strlen(selstr) + 4),"%.*s⇦⇦⇦⇖",
+						ex - (x + truech + strlen(selstr) + 4),selstr);
 			}
 		}
 		wattroff(w,A_REVERSE);
 		mvwaddch(w,y,x,rep);
-		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
-		och = ch;
 		while(ch--){
 			if(++off >= (unsigned)ex){
 				break;
