@@ -13,6 +13,10 @@ static const char AGGCOMP_TEXT[] =
 static const char AGGTYPE_TEXT[] =
 "What kind of aggregate do you hope to create?";
 
+static const char AGGNAME_TEXT[] =
+"The chosen name will be the primary means by which the system makes use of "
+"this new aggregate, so choose wisely, and plan for the future!";
+
 typedef enum {
 	FORM_SELECT,			// form_option[]
 	FORM_STRING_INPUT,		// form_input
@@ -216,7 +220,8 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 	int opcount,defidx;
 
 	if(fn == NULL){
-		raise_str_form("enter aggregate name",aggname_callback,pending_aggname);
+		raise_str_form("enter aggregate name",aggname_callback,
+				pending_aggname,AGGNAME_TEXT);
 		return;
 	}
 	if((at = get_aggregate(pending_aggtype)) == NULL){
@@ -290,7 +295,8 @@ agg_callback(const char *fn){
 		destroy_agg_forms();
 		return;
 	}
-	raise_str_form("enter aggregate name",aggname_callback,at->defname);
+	raise_str_form("enter aggregate name",aggname_callback,at->defname,
+			AGGNAME_TEXT);
 }
 
 int raise_aggregate_form(void){

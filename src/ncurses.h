@@ -30,7 +30,8 @@ void raise_form(const char *,void (*)(const char *),struct form_option *,
 			int,int,const char *);
 
 // Single-entry string entry form with command-line editing
-void raise_str_form(const char *,void (*)(const char *),const char *);
+void raise_str_form(const char *,void (*)(const char *),
+			const char *,const char *);
 
 // Multiselect form with side panel
 void raise_multiform(const char *,void (*)(const char *,char **,int),

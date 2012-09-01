@@ -24,9 +24,37 @@
 
 // For the ANSI standard terminal, we can fit only 4 lines of explicative text
 // onto the screen, so make each glyph count.
+static const char SEARCH_TEXT[] =
+"Your search term will be matched against device names, UUIDs, partition "
+"names, filesystem names (volume labels), manufacturers, model numbers, and "
+"serial numbers.";
+
+static const char TARG_TEXT[] =
+"Enter a mount point relative to the target's root. It must already exist, and "
+"no other filesystem should yet be mounted there. The filesystem will be made "
+"available for use now, and included in the target /etc/fstab for use later.";
+
+static const char MOUNT_TEXT[] =
+"Enter a mount point. It must already exist, and no other filesystem should "
+"yet be mounted there.";
+
 static const char PTTYPE_TEXT[] =
 "Select a partition table type. GPT is recommended unless you must use tools "
 "and/or hardware which don't understand it.";
+
+static const char PSPEC_TEXT[] =
+"Specify the new partition size as either a percentage of the containing "
+"space, a number of sectors, or a starting and ending sector (inclusive), "
+"separated by a colon (':').";
+
+static const char FSNAME_TEXT[] =
+"Named filesystems can be more easily used in bootloaders and other tools, and "
+"provide references independent of dynamic device topology. ";
+
+static const char PNAME_TEXT[] =
+"Named partitions can be more easily used in bootloaders and other tools, and "
+"provide references independent of dynamic device topology. A GPT partition's "
+"name consists of up to 32 UTF-16LE codepoints.";
 
 static const char PARTTYPE_TEXT[] =
 "Creating a given filesystem is generally neither enabled nor prohibited due "
@@ -1426,7 +1454,7 @@ form_options(struct form_state *fs){
 #define FORM_X_OFFSET 5
 static struct panel_state *
 raise_form_explication(const WINDOW *w,const char *text){
-	int linepre[FORM_Y_OFFSET];
+	int linepre[FORM_Y_OFFSET + 1];
 	struct panel_state *ps;
 	int cols,x,y,brk,tot;
 	WINDOW *win;
@@ -1434,10 +1462,14 @@ raise_form_explication(const WINDOW *w,const char *text){
 	cols = getmaxx(w);
 	tot = 0;
 	for(y = 0 ; y < FORM_Y_OFFSET ; ++y){
+		while(isspace(text[tot])){
+			++tot;
+		}
 		linepre[y] = tot;
 		brk = 0;
 		for(x = 1 ; x < cols - 1 ; ++x){
 			if(!text[tot]){
+				linepre[y + 1] = tot;
 				brk = x;
 				break;
 			}
@@ -1466,7 +1498,7 @@ raise_form_explication(const WINDOW *w,const char *text){
 	bevel(win);
 	wattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
 	do{
-		assert(mvwaddnstr(win,y + 1,1,text + linepre[y],cols - 2) != ERR);
+		assert(mvwaddnstr(win,y + 1,1,text + linepre[y],linepre[y + 1] - linepre[y]) != ERR);
 	}while(y--);
 	assert(top_panel(ps->p) != ERR);
 	screen_update();
@@ -1532,7 +1564,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 		free_form(fs);
 		return;
 	}
-	assert(top_panel(fs->p) != ERR);
+	wbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
 	// FIXME adapt for scrolling (default can be off-window at beginning)
 	if((fs->idx = defidx) < 1){
 		fs->idx = defidx = 1;
@@ -1557,6 +1589,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	fs->extext = raise_form_explication(stdscr,text);
 	actform = fs;
 	form_colors();
+	assert(top_panel(fs->p) != ERR);
 	screen_update();
 }
 
@@ -1662,7 +1695,8 @@ form_string_options(struct form_state *fs){
 	wattroff(fsw,A_BOLD);
 }
 
-void raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
+void raise_str_form(const char *str,void (*fxn)(const char *),
+			const char *def,const char *text){
 	struct form_state *fs;
 	WINDOW *fsw;
 	int cols;
@@ -1705,6 +1739,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),const char *def){
 	fs->inp.buffer = strdup(def);
 	form_string_options(fs);
 	actform = fs;
+	fs->extext = raise_form_explication(stdscr,text);
 	curs_set(1);
 	form_colors();
 	screen_update();
@@ -1883,7 +1918,7 @@ fs_callback(const char *fs){
 		return;
 	}
 	// FIXME come up with a good default
-	raise_str_form("enter filesystem name",fs_named_callback,NULL);
+	raise_str_form("enter filesystem name",fs_named_callback,NULL,FSNAME_TEXT);
 }
 
 // -------------------------------------------------------------------------
@@ -2005,7 +2040,8 @@ ptype_name_callback(const char *name){
 	size_t wcs;
 
 	if(name == NULL){ // go back to partition spec
-		raise_str_form("enter partition spec",psectors_callback,pending_spec);
+		raise_str_form("enter partition spec",psectors_callback,
+				pending_spec,PSPEC_TEXT);
 		return;
 	}
 	if((b = partition_base_p()) == NULL){
@@ -2159,14 +2195,16 @@ psectors_callback(const char *psects){
 	pending_spec = strdup(psects);
 	if(lex_part_spec(psects,b->zone,b->d->logsec,&fsect,&lsect)){
 		locked_diag("Not a valid partition spec: \"%s\"\n",psects);
-		raise_str_form("enter partition spec",psectors_callback,psects);
+		raise_str_form("enter partition spec",psectors_callback,
+				psects,PSPEC_TEXT);
 		return;
 	}
 	if(partitions_named_p(b->d)){
 		pending_spec = strdup(psects);
 		pending_fsect = fsect;
 		pending_lsect = lsect;
-		raise_str_form("enter partition name",ptype_name_callback,NULL);
+		raise_str_form("enter partition name",ptype_name_callback,
+				NULL,PNAME_TEXT);
 		return;
 	}
 	ps = show_splash(L"Creating partition...");
@@ -2199,7 +2237,7 @@ ptype_callback(const char *ptype){
 	}
 	pending_ptype = pt;
 	raise_str_form("enter partition spec",psectors_callback,
-			pending_spec ? pending_spec : "100%");
+			pending_spec ? pending_spec : "100%",PSPEC_TEXT);
 }
 
 static void
@@ -4366,7 +4404,7 @@ mount_filesystem(void){
 			return;
 		}
 	}
-	raise_str_form("enter mountpount",mountpoint_callback,"/");
+	raise_str_form("enter mountpount",mountpoint_callback,"/",MOUNT_TEXT);
 }
 
 static void
@@ -4525,7 +4563,8 @@ mount_target(void){
 			return;
 		}
 	}
-	raise_str_form("enter target mountpount",targpoint_callback,"/");
+	raise_str_form("enter target mountpount",targpoint_callback,"/",
+			TARG_TEXT);
 }
 
 static void
@@ -4836,7 +4875,8 @@ search_callback(const char *term){
 
 static void
 start_search(void){
-	raise_str_form("start typing an identifier",search_callback,NULL);
+	raise_str_form("start typing an identifier",search_callback,NULL,
+			SEARCH_TEXT);
 }
 
 static void
