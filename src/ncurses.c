@@ -115,7 +115,6 @@ enum {
 	TARGET_COLOR,			// Targeted filesystems
 	FUCKED_COLOR,			// Things that warrant attention
 
-	RED_COLOR,
 	ORANGE_COLOR,
 	GREEN_COLOR,
 };
@@ -154,11 +153,11 @@ setup_colors(void){
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == OK);
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
-	assert(init_pair(SSD_COLOR,COLOR_LIGHTGREEN,-1) == OK);
+	assert(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == OK);
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
-	assert(init_pair(MDADM_COLOR,COLOR_LIGHTYELLOW,-1) == OK);
+	assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
@@ -169,7 +168,6 @@ setup_colors(void){
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
 	assert(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == OK);
 
-	assert(init_pair(RED_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
 	wrefresh(curscr);
@@ -200,7 +198,6 @@ form_colors(void){
 	init_pair(MOUNT_COLOR,-1,-1);
 	init_pair(TARGET_COLOR,-1,-1);
 	init_pair(FUCKED_COLOR,-1,-1);
-	init_pair(RED_COLOR,-1,-1);
 	init_pair(ORANGE_COLOR,-1,-1);
 	init_pair(GREEN_COLOR,-1,-1);
 	wrefresh(curscr);
@@ -649,9 +646,9 @@ sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos)
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"─", },
-		{ .attr = 0, .chars = L"<", },
-		{ .attr = 0, .chars = L">", },
+		{ .attr = 0, .chars = L"∾", },
+		{ .attr = 0, .chars = L" ", },
+		{ .attr = 0, .chars = L" ", },
 	};
 	char pre[PREFIXSTRLEN + 1];
 	const char *selstr = NULL;
@@ -666,7 +663,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
 		}
-		assert(snprintf(buf,sizeof(buf),"%s%s%s%s filesystem%s%s",
+		assert(snprintf(buf,sizeof(buf)," %s%s%s%s filesystem%s%s ",
 				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 				d->mntsize ? " " : "",
 				d->label ? "" : "unlabeled ", d->mnttype,
@@ -691,7 +688,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}
-		assert(snprintf(buf,sizeof(buf),"%s %s",qprefix(d->size,1,pre,sizeof(pre),1),"unpartitioned space") < (int)sizeof(buf));
+		assert(snprintf(buf,sizeof(buf)," %s %s ",qprefix(d->size,1,pre,sizeof(pre),1),"unpartitioned space") < (int)sizeof(buf));
 		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
 		mvwadd_wch(w,y,sx,&bchr[1]);
 		mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
@@ -799,7 +796,7 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 case LAYOUT_NONE:
 	if(bo->d->blkdev.realdev){
 		if(bo->d->blkdev.removable){
-			assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+			assert(wattrset(rb->win,COLOR_PAIR(OPTICAL_COLOR)) == OK);
 			strncpy(rolestr,"removable",sizeof(rolestr));
 		}else if(bo->d->blkdev.rotation >= 0){
 			assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
@@ -809,7 +806,7 @@ case LAYOUT_NONE:
 				strncpy(rolestr,"ferromag",sizeof(rolestr));
 			}
 		}else{
-			assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(SSD_COLOR)) == OK);
+			assert(wattrset(rb->win,COLOR_PAIR(SSD_COLOR)) == OK);
 			strncpy(rolestr,"solidstate",sizeof(rolestr));
 		}
 	}else{
@@ -846,9 +843,9 @@ case LAYOUT_MDADM:
 		strncpy(rolestr,bo->d->mddev.level,sizeof(rolestr));
 	}
 	if(bo->d->mddev.degraded){
-		co = A_BOLD|COLOR_PAIR(FUCKED_COLOR);
+		co = COLOR_PAIR(FUCKED_COLOR);
 	}else{
-		co = A_BOLD|COLOR_PAIR(MDADM_COLOR);
+		co = COLOR_PAIR(MDADM_COLOR);
 	}
 	assert(wattrset(rb->win,co) == OK);
 	if(line + topp >= 1){
@@ -878,7 +875,7 @@ case LAYOUT_MDADM:
 		break;
 case LAYOUT_DM:
 	strncpy(rolestr,"dm",sizeof(rolestr));
-	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR)) == OK);
+	assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
 	if(line + topp >= 1){
 		if(!bo->d->size || line + 2 < rows - !endp){
 			if(bo->d->size){
@@ -908,7 +905,7 @@ case LAYOUT_PARTITION:
 		break;
 case LAYOUT_ZPOOL:
 	strncpy(rolestr,"zpool",sizeof(rolestr));
-	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(ZPOOL_COLOR)) == OK);
+	assert(wattrset(rb->win,COLOR_PAIR(ZPOOL_COLOR)) == OK);
 	if(line + topp >= 1){
 		if(!bo->d->size || line + 2 < rows - !endp){
 			if(bo->d->size){
@@ -941,6 +938,7 @@ case LAYOUT_ZPOOL:
 	if(selected){
 		wattron(rb->win,A_REVERSE);
 	}
+	wattron(rb->win,A_BOLD);
 
 	// Box-diagram (3-line) mode. Print the name on the first line.
 	if(line + topp >= 1){
@@ -959,7 +957,7 @@ case LAYOUT_ZPOOL:
 		if(bo->d->layout == LAYOUT_NONE){
 			wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			if(bo->d->blkdev.celsius >= 60u){
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
 			}else if(bo->d->blkdev.celsius >= 40u){
 				wattrset(rb->win,COLOR_PAIR(ORANGE_COLOR));
 			}else{
@@ -974,7 +972,7 @@ case LAYOUT_ZPOOL:
 				if(bo->d->blkdev.smartgood == SMART_STATUS_GOOD){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
 				}else{
-					wattrset(rb->win,A_BOLD|COLOR_PAIR(RED_COLOR));
+					wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
 				}
 				wprintw(rb->win,"smart%lc",bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' : L'✘');
 			}else{
@@ -985,7 +983,7 @@ case LAYOUT_ZPOOL:
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
 				mvwprintw(rb->win,line + 2,START_COL,"%2lu-degraded",bo->d->mddev.degraded);
 			}else{
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR));
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
 				mvwprintw(rb->win,line + 2,START_COL,"     active");
 			}
 		}else if(bo->d->layout == LAYOUT_ZPOOL){
@@ -993,7 +991,7 @@ case LAYOUT_ZPOOL:
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
 				mvwprintw(rb->win,line + 2,START_COL,"unavailable");
 			}else{
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(MDADM_COLOR));
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
 				mvwprintw(rb->win,line + 2,START_COL,"  available");
 			}
 		}
