@@ -90,6 +90,7 @@ struct form_state {
 	int longop;			// length of longest op
 	char *boxstr;			// string for box label
 	form_enum formtype;		// type of form
+	struct panel_state *extext;	// explication text, above the form
 	union {
 		struct {
 			struct form_option *ops;// form_option array for *this instance*
@@ -1322,6 +1323,7 @@ free_form(struct form_state *fs){
 		destroy_form_locked(fs);
 		free(fs);
 		setup_colors();
+		hide_panel_locked(fs->extext);
 		if(current_adapter){
 			touchwin(current_adapter->win);
 		}
@@ -1550,7 +1552,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	fs->ops = opstrs;
 	fs->selectno = selectno;
 	multiform_options(fs);
-	raise_form_explication(stdscr,text);
+	fs->extext = raise_form_explication(stdscr,text);
 	actform = fs;
 	form_colors();
 	screen_update();
@@ -1630,7 +1632,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	fs->ops = opstrs;
 	form_options(fs);
 	actform = fs;
-	raise_form_explication(stdscr,text);
+	fs->extext = raise_form_explication(stdscr,text);
 	form_colors();
 	assert(top_panel(fs->p) != ERR);
 	screen_update();
