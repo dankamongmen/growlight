@@ -151,9 +151,13 @@ setup_colors(void){
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,COLOR_BLACK) == OK);
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
-	assert(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == OK);
+	if(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
+		assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) != ERR);
+	}
 	assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
-	assert(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == OK);
+	if(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
+		assert(init_pair(SSD_COLOR,COLOR_WHITE,-1) != ERR);
+	}
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
@@ -161,13 +165,20 @@ setup_colors(void){
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
-	assert(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,-1) == OK);
-	assert(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == OK);
-	assert(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == OK);
+	if(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
+		assert(init_pair(FORMTEXT_COLOR,COLOR_WHITE,-1) != ERR);
+	}
+	if(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == ERR){
+		assert(init_pair(INPUT_COLOR,COLOR_GREEN,-1) != ERR);
+	}
+	if(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == ERR){
+		assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != ERR);
+	}
 	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
-	assert(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == OK);
-
+	if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == ERR){
+		assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) == ERR);
+	}
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
 	wrefresh(curscr);
