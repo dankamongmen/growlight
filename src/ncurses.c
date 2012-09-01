@@ -1291,6 +1291,9 @@ destroy_form_locked(struct form_state *fs){
 		assert(del_panel(fs->p) == OK);
 		fs->p = NULL;
 		assert(delwin(fsw) == OK);
+		hide_panel_locked(fs->extext);
+		free(fs->extext);
+		fs->extext = NULL;
 		switch(fs->formtype){
 			case FORM_SELECT:
 			case FORM_MULTISELECT:
@@ -1323,7 +1326,6 @@ free_form(struct form_state *fs){
 		destroy_form_locked(fs);
 		free(fs);
 		setup_colors();
-		hide_panel_locked(fs->extext);
 		if(current_adapter){
 			touchwin(current_adapter->win);
 		}
