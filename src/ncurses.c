@@ -1005,7 +1005,7 @@ case LAYOUT_ZPOOL:
 				}else{
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
 				}
-				wprintw(rb->win,"smart%lc",bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' : L'✘');
+				wprintw(rb->win,"smart%lc",bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✓' : L'✗');
 			}else{
 				wprintw(rb->win,"      ");
 			}
