@@ -134,6 +134,7 @@ enum {
 
 	ORANGE_COLOR,
 	GREEN_COLOR,
+	BLACK_COLOR,
 };
 
 #define COLOR_LIGHTRED 9
@@ -181,8 +182,8 @@ setup_colors(void){
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
-	if(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
-		assert(init_pair(FORMTEXT_COLOR,COLOR_WHITE,-1) != ERR);
+	if(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,COLOR_BLACK) == ERR){
+		assert(init_pair(FORMTEXT_COLOR,COLOR_WHITE,COLOR_BLACK) != ERR);
 	}
 	if(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == ERR){
 		assert(init_pair(INPUT_COLOR,COLOR_GREEN,-1) != ERR);
@@ -197,6 +198,7 @@ setup_colors(void){
 	}
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(BLACK_COLOR,COLOR_BLACK,COLOR_BLACK) == OK);
 	wrefresh(curscr);
 	screen_update();
 	return 0;
@@ -1418,9 +1420,57 @@ form_options(struct form_state *fs){
 
 #define FORM_Y_OFFSET 5
 #define FORM_X_OFFSET 5
+static struct panel_state *
+raise_form_explication(const WINDOW *w,const char *text){
+	int linepre[FORM_Y_OFFSET];
+	struct panel_state *ps;
+	int cols,x,y,brk,tot;
+	WINDOW *win;
+
+	cols = getmaxx(w);
+	tot = 0;
+	for(y = 0 ; y < FORM_Y_OFFSET ; ++y){
+		linepre[y] = tot;
+		brk = 0;
+		for(x = 1 ; x < cols - 1 ; ++x){
+			if(!text[tot]){
+				brk = x;
+				break;
+			}
+			if(isspace(text[tot])){
+				brk = x;
+			}
+			++tot;
+		}
+		// A brk value of 0 would indicate a single token longer than
+		// the screen, an unlikely event with which we don't yet deal.
+		assert(!text[tot] || brk);
+		// Go to the beginning of the current token, if we're in one.
+		tot -= (x - brk);
+		if(!text[tot]){
+			break;
+		}
+	}
+	// If we've not chewed through all the text, we're not going to fit it
+	// into the provided space. We don't yet deal with this situation FIXME
+	assert(!text[tot]);
+	assert( (ps = malloc(sizeof(*ps))) );
+	assert( (win = newwin(y + 3,cols - 2,FORM_Y_OFFSET - (y + 2),1)) );
+	assert( (ps->p = new_panel(win)) );
+	wbkgd(win,COLOR_PAIR(BLACK_COLOR));
+	wattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
+	bevel(win);
+	do{
+		assert(mvwaddnstr(win,y + 1,1,text + linepre[y],cols - 2) != ERR);
+	}while(y--);
+	assert(top_panel(ps->p) != ERR);
+	screen_update();
+	return ps;
+}
+
 void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 		struct form_option *opstrs,int ops,int defidx,
-		int selectno,char **selarray,int selections){
+		int selectno,char **selarray,int selections,const char *text){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;
@@ -1499,6 +1549,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	fs->ops = opstrs;
 	fs->selectno = selectno;
 	multiform_options(fs);
+	raise_form_explication(stdscr,text);
 	actform = fs;
 	form_colors();
 	screen_update();
@@ -1515,7 +1566,6 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	WINDOW *fsw;
 	int x,y;
 
-	assert(text); // FIXME
 	if(opstrs == NULL || !ops){
 		locked_diag("Passed empty %u-option string table",ops);
 		return;
@@ -1579,6 +1629,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	fs->ops = opstrs;
 	form_options(fs);
 	actform = fs;
+	raise_form_explication(stdscr,text);
 	form_colors();
 	screen_update();
 }

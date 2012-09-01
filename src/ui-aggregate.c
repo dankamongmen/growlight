@@ -7,6 +7,9 @@
 #include "aggregate.h"
 #include "ui-aggregate.h"
 
+static const char AGGCOMP_TEXT[] =
+"Bind devices to the new aggregate.";
+
 static const char AGGTYPE_TEXT[] =
 "What kind of aggregate do you hope to create?";
 
@@ -234,7 +237,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,defidx,at->mindisks,selarray,selections);
+			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT);
 }
 
 static void
@@ -268,7 +271,7 @@ aggname_callback(const char *fn){
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,defidx,at->mindisks,selarray,selections);
+			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT);
 }
 
 static void
