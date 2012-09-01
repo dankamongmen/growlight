@@ -853,8 +853,8 @@ static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 			unsigned cols,unsigned topp,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
+	int selected,co,x,rx,attr;
 	char rolestr[12]; // taken from %-11.11s below
-	int selected,co,x,rx;
 
 	if(line >= rows - !endp){
 		return;
@@ -1086,11 +1086,11 @@ case LAYOUT_ZPOOL:
 		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
 					cols - START_COL - 1,selected);
 	}
+	attr = A_BOLD | COLOR_PAIR(PARTITION_COLOR);
 	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
-	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+		attr |= A_REVERSE;
 	}
+	wattrset(rb->win,attr);
 	if(line + topp >= 1){
 		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
 	}
@@ -1098,11 +1098,16 @@ case LAYOUT_ZPOOL:
 		return;
 	}
 	if(line + topp >= 1){
-		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_LLCORNER);
-		waddch(rb->win,A_NORMAL|'{');
-		//mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
-		mvwaddch(rb->win,line,cols - 3,A_NORMAL|'}');
-		waddch(rb->win,ACS_LRCORNER);
+		int c = cols - 80;
+
+		mvwaddch(rb->win,line,START_COL + 10 + 1,attr | ACS_LLCORNER);
+		waddch(rb->win,attr | '{');
+		mvwaddch(rb->win,line,cols - 3 - c,attr | '}');
+		if(c > 0){
+			whline(rb->win,ACS_HLINE,c);
+			wmove(rb->win,line,cols - 2);
+		}
+		waddch(rb->win,attr | ACS_LRCORNER);
 	}
 	++line;
 }
