@@ -379,6 +379,17 @@ selected_partitionp(void){
 	return blockobj_partitionp(get_selected_blockobj());
 }
 
+static inline int
+blockobj_inusep(const blockobj *b){
+	return (b->d->mnt || b->d->target) ||
+		(b->zone->p && (b->zone->p->mnt || b->zone->p->target));
+}
+
+static inline int
+selected_inusep(void){
+	return blockobj_inusep(get_selected_blockobj());
+}
+
 static int
 selection_active(void){
 	if(current_adapter == NULL){
@@ -1454,7 +1465,8 @@ form_options(struct form_state *fs){
 #define FORM_X_OFFSET 5
 static struct panel_state *
 raise_form_explication(const WINDOW *w,const char *text){
-	int linepre[FORM_Y_OFFSET + 1];
+	int linepre[FORM_Y_OFFSET];
+	int linelen[FORM_Y_OFFSET];
 	struct panel_state *ps;
 	int cols,x,y,brk,tot;
 	WINDOW *win;
@@ -1466,11 +1478,12 @@ raise_form_explication(const WINDOW *w,const char *text){
 			++tot;
 		}
 		linepre[y] = tot;
+		linelen[y] = 0;
 		brk = 0;
 		for(x = 1 ; x < cols - 1 ; ++x){
 			if(!text[tot]){
-				linepre[y + 1] = tot;
 				brk = x;
+				linelen[y] = brk - 1;
 				break;
 			}
 			if(isspace(text[tot])){
@@ -1483,6 +1496,7 @@ raise_form_explication(const WINDOW *w,const char *text){
 		assert(!text[tot] || brk);
 		// Go to the beginning of the current token, if we're in one.
 		tot -= (x - brk);
+		linelen[y] = brk - 1;
 		if(!text[tot]){
 			break;
 		}
@@ -1498,7 +1512,7 @@ raise_form_explication(const WINDOW *w,const char *text){
 	bevel(win);
 	wattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
 	do{
-		assert(mvwaddnstr(win,y + 1,1,text + linepre[y],linepre[y + 1] - linepre[y]) != ERR);
+		assert(mvwaddnstr(win,y + 1,1,text + linepre[y],linelen[y]) != ERR);
 	}while(y--);
 	assert(top_panel(ps->p) != ERR);
 	screen_update();
@@ -2296,7 +2310,7 @@ confirm_operation(const char *op,void (*confirmcb)(const char *)){
 	ops_confirm[1].desc = strdup("do not perform the operation");
 	// FIXME check values
 	raise_form("confirm operation",confirmcb,ops_confirm,2,1,
-			"Please confirm the request.");
+			"Please confirm the request. You will not be able to undo this action.");
 	return 0;
 }
 // -------------------------------------------------------------------------
@@ -4258,6 +4272,10 @@ delete_partition_confirm(const char *op){
 			locked_diag("Space is already unpartitioned");
 			return;
 		}
+		if(selected_emptyp()){
+			locked_diag("Cannot remove empty space; partition it instead");
+			return;
+		}
 		wipe_partition(b->zone->p);
 		return;
 	}
@@ -4280,8 +4298,12 @@ delete_partition(void){
 		locked_diag("Space is already unpartitioned");
 		return;
 	}
-	if(b->zone->p->mnt || b->zone->p->target){
-		locked_diag("%s contains a mounted filesystem",b->zone->p->name);
+	if(selected_emptyp()){
+		locked_diag("Cannot remove empty space; partition it instead");
+		return;
+	}
+	if(selected_inusep()){
+		locked_diag("%s is in use",b->zone->p->name);
 		return;
 	}
 	confirm_operation("delete the partition",delete_partition_confirm);
