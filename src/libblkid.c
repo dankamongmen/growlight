@@ -51,6 +51,7 @@ int close_blkid(void){
 	return blkid_exit(0);
 }
 
+#include <unistd.h>
 // Takes a /dev/ path, and examines the superblock therein for a valid
 // filesystem or raid superblock.
 int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
@@ -72,11 +73,33 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 		}
 		dev = buf;
 	}
-	if((bp = blkid_new_probe_from_filename(dev)) == NULL){
-		if(errno != ENOMEDIUM){
-			diag("Couldn't get blkid probe for %s (%s?)\n",dev,strerror(errno));
+	// This will sometimes fail due to the device node not yet existing. To
+	// get here, however, we had to receive the name in a udev message, or
+	// via discovery -- we've verified a /sys block entry. Go ahead and
+	// loop a time or two, even though it's gross. I'd like a better way to
+	// deal with this, obviously. FIXME
+	{
+		int i;
+
+		for(i = 0 ; i < 3 ; ++i){
+			if((bp = blkid_new_probe_from_filename(dev)) == NULL){
+				if(errno == ENOMEDIUM){
+					return -1;
+				}
+				diag("Couldn't get blkid probe for %s (%s?), retrying...\n",dev,strerror(errno));
+				sleep(1);
+			}else{
+				break;
+			}
 		}
-		return -1;
+		if(bp == NULL){
+			if((bp = blkid_new_probe_from_filename(dev)) == NULL){
+				if(errno != ENOMEDIUM){
+					diag("Couldn't get blkid probe for %s (%s?), retrying...\n",dev,strerror(errno));
+					return -1;
+				}
+			}
+		}
 	}
 	if(blkid_probe_enable_topology(bp,1)){
 		diag("Couldn't enable blkid topology for %s (%s?)\n",dev,strerror(errno));
