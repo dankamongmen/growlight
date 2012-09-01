@@ -1909,6 +1909,7 @@ partition_base_p(void){
 
 static void
 ptype_name_callback(const char *name){
+	struct panel_state *sps;
 	const char *n;
 	wchar_t *wstr;
 	mbstate_t ps;
@@ -1941,7 +1942,12 @@ ptype_name_callback(const char *name){
 		cleanup_new_partition();
 		return;
 	}
+	sps = show_splash(L"Creating partition...");
 	add_partition(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
+	if(sps){
+		hide_panel_locked(sps);
+		free(sps);
+	}
 	free(wstr);
 	cleanup_new_partition();
 }
@@ -2043,6 +2049,7 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
 static void
 psectors_callback(const char *psects){
 	uintmax_t fsect,lsect;
+	struct panel_state *ps;
 	blockobj *b;
 
 	if((b = partition_base_p()) == NULL){
@@ -2072,7 +2079,12 @@ psectors_callback(const char *psects){
 		raise_str_form("enter partition name",ptype_name_callback,NULL);
 		return;
 	}
+	ps = show_splash(L"Creating partition...");
 	add_partition(b->d,NULL,fsect,lsect,pending_ptype);
+	if(ps){
+		hide_panel_locked(ps);
+		free(ps);
+	}
 	cleanup_new_partition();
 }
 
