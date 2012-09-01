@@ -1654,6 +1654,10 @@ int growlight_stop(void){
 int rescan_controller(controller *c){
 	char buf[PATH_MAX];
 
+	if(!c->sysfs){
+		diag("Can't rescan unknown/virtual controllers\n");
+		return -1;
+	}
 	if(snprintf(buf,sizeof(buf),"%s/device/rescan",c->sysfs) >= (int)sizeof(buf)){
 		diag("Name too long: %s\n",c->sysfs);
 		return -1;
@@ -1667,6 +1671,10 @@ int rescan_controller(controller *c){
 int reset_controller(controller *c){
 	char buf[PATH_MAX];
 
+	if(!c->sysfs){
+		diag("Can't reset unknown/virtual controllers\n");
+		return -1;
+	}
 	if(snprintf(buf,sizeof(buf),"%s/device/reset",c->sysfs) >= (int)sizeof(buf)){
 		diag("Name too long: %s\n",c->sysfs);
 		return -1;
