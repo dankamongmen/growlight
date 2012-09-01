@@ -444,6 +444,7 @@ draw_main_window(WINDOW *w){
 	assert(wattrset(w,COLOR_PAIR(HEADER_COLOR)) != ERR);
 	mvwaddstr(w,rows - 1,0,buf);
 	getyx(w,y,x);
+	assert(y >= 0);
 	cols -= x + 2;
 	assert(wattron(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
 	assert(wprintw(w," %-*.*s",cols,cols,statusmsg) != ERR);
