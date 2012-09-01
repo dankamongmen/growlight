@@ -751,6 +751,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				rep = '0' + rep;	// FIXME lame
 			}
 		}
+		wattron(w,A_REVERSE);
 		if(selstr){
 			if(x < ex / 2){
 				mvwprintw(w,y - 1,x + 1,"⇗⇨⇨⇨%.*s",ex - (x + strlen(selstr)),selstr);
@@ -759,6 +760,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 						ex - (x + strlen(selstr) + 10 + 4),selstr);
 			}
 		}
+		wattroff(w,A_REVERSE);
 		mvwaddch(w,y,x,rep);
 		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
 		och = ch;
@@ -1950,6 +1952,7 @@ ptype_name_callback(const char *name){
 	}
 	free(wstr);
 	cleanup_new_partition();
+	locked_diag("Created new partition %s on %s\n",name,b->d->name);
 }
 
 static int
@@ -2085,6 +2088,7 @@ psectors_callback(const char *psects){
 		hide_panel_locked(ps);
 		free(ps);
 	}
+	locked_diag("Created new partition %s\n",b->d->name);
 	cleanup_new_partition();
 }
 
