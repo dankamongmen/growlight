@@ -22,25 +22,23 @@
 
 #define KEY_ESC 27
 
+// For the ANSI standard terminal, we can fit only 4 lines of explicative text
+// onto the screen, so make each glyph count.
 static const char PTTYPE_TEXT[] =
 "Select a partition table type. GPT is recommended unless you must use tools "
 "and/or hardware which don't understand it.";
 
 static const char PARTTYPE_TEXT[] =
-"Select a type for the new partition. The ability to create a given filesystem "
-"is generally neither conferred nor denied due to partition type, but "
-"mismatched partition and filesystem types will confuse some tools and "
-"hardware. UEFI through version 1.1 is designed to boot from an ESP partition "
-"within a GPT table. UEFI+MBR and BIOS both generally require a primary (as "
-"opposed to logical) MBR partition.";
+"Creating a given filesystem is generally neither enabled nor prohibited due "
+"to partition type, but mismatched types will confuse some tools and hardware. "
+"UEFI through version 1.1 boots from an ESP partition within a GPT table. "
+"UEFI+MBR and BIOS boot from a primary (as opposed to logical) MBR partition.";
 
 static const char FSTYPE_TEXT[] =
-"Select a filesystem to create atop the block device. UEFI through version 1.1 "
-"requires FAT16 for the EFI System Partition. As of version 3.5, ext4 is the "
-"default Linux filesystem, but Windows and OS X do not natively support it. "
-"Sprezzatech recommends use of EXT4 or FAT16 for root filesystems, FAT32 or "
-"HFS+ for compatibility with Windows and OS X (respectively), and ZFS (in a "
-"redundant configuration) for other filesystems.";
+"UEFI through version 1.1 requires FAT16 for the EFI System Partition. As of "
+"version 3.5, ext4 is the default Linux filesystem, but Windows and OS X do "
+"not natively support it. Sprezzatech recommends use of EXT4 or FAT16 for root "
+"and ZFS (in a redundant configuration) for other filesystems.";
 
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
