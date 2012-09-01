@@ -74,12 +74,12 @@ int popen_drain(const char *cmd){
 		diag("%s",buf);
 	}
 	if(!feof(fd)){
-		diag("Error reading from '%s' (%s?)\n",cmd,strerror(errno));
+		diag("Error reading from '%s' (%s?)\n",safecmd,strerror(errno));
 		pclose(fd);
 		return -1;
 	}
 	if(pclose(fd)){
-		diag("Error running '%s'\n",cmd);
+		diag("Error running '%s'\n",safecmd);
 		return -1;
 	}
 	return 0;
