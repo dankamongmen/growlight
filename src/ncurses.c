@@ -185,8 +185,8 @@ setup_colors(void){
 	if(init_pair(FORMTEXT_COLOR,COLOR_LIGHTWHITE,COLOR_BLACK) == ERR){
 		assert(init_pair(FORMTEXT_COLOR,COLOR_WHITE,COLOR_BLACK) != ERR);
 	}
-	if(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,-1) == ERR){
-		assert(init_pair(INPUT_COLOR,COLOR_GREEN,-1) != ERR);
+	if(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == ERR){
+		assert(init_pair(INPUT_COLOR,COLOR_GREEN,COLOR_BLACK) != ERR);
 	}
 	if(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == ERR){
 		assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != ERR);
@@ -1458,8 +1458,9 @@ raise_form_explication(const WINDOW *w,const char *text){
 	assert( (win = newwin(y + 3,cols - 2,FORM_Y_OFFSET - (y + 2),1)) );
 	assert( (ps->p = new_panel(win)) );
 	wbkgd(win,COLOR_PAIR(BLACK_COLOR));
-	wattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
+	wattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
 	bevel(win);
+	wattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
 	do{
 		assert(mvwaddnstr(win,y + 1,1,text + linepre[y],cols - 2) != ERR);
 	}while(y--);
@@ -1611,7 +1612,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 		free_form(fs);
 		return;
 	}
-	assert(top_panel(fs->p) != ERR);
+	wbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
 	// FIXME adapt for scrolling
 	if((fs->idx = defidx) < 1){
 		fs->idx = defidx = 1;
@@ -1631,6 +1632,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	actform = fs;
 	raise_form_explication(stdscr,text);
 	form_colors();
+	assert(top_panel(fs->p) != ERR);
 	screen_update();
 }
 
