@@ -140,7 +140,7 @@ static struct form_state *actform;
 // Our color pairs
 enum {
 	HEADER_COLOR = 1,
-	FOOTER_COLOR,
+	STATUS_COLOR,
 	UHEADING_COLOR,
 	UBORDER_COLOR,
 	PBORDER_COLOR,
@@ -196,7 +196,7 @@ screen_update(void){
 static int
 setup_colors(void){
 	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(FOOTER_COLOR,COLOR_YELLOW,-1) == OK);
+	assert(init_pair(STATUS_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
@@ -241,8 +241,9 @@ setup_colors(void){
 
 static void
 form_colors(void){
+	// Don't reset the status color or (obviously) the form colors
+	locked_diag(""); // Don't leave a highlit status up from long ago
 	init_pair(HEADER_COLOR,-1,-1);
-	init_pair(FOOTER_COLOR,-1,-1);
 	init_pair(UHEADING_COLOR,-1,-1);
 	init_pair(UBORDER_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
@@ -512,7 +513,7 @@ draw_main_window(WINDOW *w){
 	getyx(w,y,x);
 	assert(y >= 0);
 	cols -= x + 2;
-	assert(wattron(w,A_BOLD | COLOR_PAIR(FOOTER_COLOR)) != ERR);
+	assert(wattron(w,A_BOLD | COLOR_PAIR(STATUS_COLOR)) != ERR);
 	assert(wprintw(w," %-*.*s",cols,cols,statusmsg) != ERR);
 }
 
@@ -1304,6 +1305,7 @@ show_splash(const wchar_t *msg){
 	mvwhline(panel_window(ps->p),2,1,' ',getmaxx(panel_window(ps->p)) - 2);
 	mvwaddwstr(panel_window(ps->p),2,2,msg);
 	mvwhline(panel_window(ps->p),3,1,' ',getmaxx(panel_window(ps->p)) - 2);
+	form_colors();
 	move_panel(ps->p,3,3);
 	return splash = ps;
 }
@@ -1886,6 +1888,7 @@ kill_splash(struct panel_state *ps){
 	assert(ps == splash);
 	hide_panel_locked(ps);
 	free(ps);
+	setup_colors();
 	splash = NULL;
 }
 
