@@ -5658,9 +5658,11 @@ adapter_free(void *cv){
 
 static void
 vdiag(const char *fmt,va_list v){
-	lock_ncurses();
+	assert(pthread_mutex_lock(&bfl) == 0);
 	locked_vdiag(fmt,v);
-	unlock_ncurses();
+	pthread_mutex_unlock(&bfl);
+	screen_update();
+	assert(pthread_mutex_unlock(&bfl) == 0);
 }
 
 int main(int argc,char * const *argv){
