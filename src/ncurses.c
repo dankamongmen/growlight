@@ -163,6 +163,8 @@ enum {
 	MOUNT_COLOR,			// Mounted, untargeted filesystems
 	TARGET_COLOR,			// Targeted filesystems
 	FUCKED_COLOR,			// Things that warrant attention
+	SPLASHBORDER_COLOR,
+	SPLASHTEXT_COLOR,
 
 	ORANGE_COLOR,
 	GREEN_COLOR,
@@ -230,6 +232,12 @@ setup_colors(void){
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
 	if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == ERR){
 		assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) == ERR);
+	}
+	if(init_pair(SPLASHBORDER_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == ERR){
+		assert(init_pair(SPLASHBORDER_COLOR,COLOR_GREEN,COLOR_BLACK) != ERR);
+	}
+	if(init_pair(SPLASHTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == ERR){
+		assert(init_pair(SPLASHTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != ERR);
 	}
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
@@ -642,7 +650,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
 	int x,y;
 
 	// Desired space above and below, which will be impugned upon as needed
-	ybelow = 9;
+	ybelow = 3;
 	yabove = 5;
 	getmaxyx(w,y,x);
 	if(cols == 0){
@@ -659,9 +667,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
 	}else{
 		yabove += y - (rows + ybelow + yabove);
 	}
-	// Six up from the bottom, so it looks good with our logo in the
-	// installer, heh
-	if((psw = newwin(rows + 2,cols,yabove,x - cols)) == NULL){
+	if((psw = newwin(rows + 2,cols,yabove,0)) == NULL){
 		locked_diag("Can't display subwindow, uh-oh");
 		return ERR;
 	}
