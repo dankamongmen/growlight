@@ -2875,19 +2875,19 @@ update_help_cond(WINDOW *w){
 	return 0;
 }
 
-static void
+static inline void
 lock_ncurses(void){
-	assert(pthread_mutex_lock(&bfl) == 0);
 	lock_growlight();
+	assert(pthread_mutex_lock(&bfl) == 0);
 }
 
-static void
+static inline void
 unlock_ncurses(void){
 	update_details_cond(panel_window(details.p));
 	update_help_cond(panel_window(help.p));
 	screen_update();
-	unlock_growlight();
 	assert(pthread_mutex_unlock(&bfl) == 0);
+	unlock_growlight();
 }	
 
 static void pull_adapters_down(reelbox *,int,int,int);
@@ -5317,12 +5317,27 @@ free_adapter_state(adapterstate *as){
 	}
 }
 
+// Used in growlight callbacks, since the growlight lock will already be held
+// in any such case.
+static inline void
+lock_ncurses_growlight(void){
+	assert(pthread_mutex_lock(&bfl) == 0);
+}
+
+static inline void
+unlock_ncurses_growlight(void){
+	update_details_cond(panel_window(details.p));
+	update_help_cond(panel_window(help.p));
+	screen_update();
+	assert(pthread_mutex_unlock(&bfl) == 0);
+}
+
 static void *
 adapter_callback(controller *a, void *state){
 	adapterstate *as;
 	reelbox *rb;
 
-	lock_ncurses();
+	lock_ncurses_growlight();
 	if((as = state) == NULL){
 		if( (state = as = create_adapter_state(a)) ){
 			int newrb,rows,cols;
@@ -5332,7 +5347,7 @@ adapter_callback(controller *a, void *state){
 				newrb = rows - newrb;
 				if((rb = create_reelbox(as,rows,newrb,cols)) == NULL){
 					free_adapter_state(as);
-					unlock_ncurses();
+					unlock_ncurses_growlight();
 					return NULL;
 				}
 				if(last_reelbox){
@@ -5374,7 +5389,7 @@ adapter_callback(controller *a, void *state){
 		//resize_adapter(rb);
 		redraw_adapter(rb);
 	}
-	unlock_ncurses();
+	unlock_ncurses_growlight();
 	return as;
 }
 
@@ -5515,7 +5530,7 @@ block_callback(device *d,void *v){
 	if(d->layout == LAYOUT_PARTITION){
 		return NULL; // FIXME ought be an assert; this shouldn't happen
 	}
-	lock_ncurses();
+	lock_ncurses_growlight();
 	as = d->c->uistate;
 	if((b = v) == NULL){
 		if( (b = create_blockobj(d)) ){
@@ -5545,7 +5560,7 @@ block_callback(device *d,void *v){
 		recompute_selection(as,old,oldrows,getmaxy(as->rb->win));
 		redraw_adapter(as->rb);
 	}
-	unlock_ncurses();
+	unlock_ncurses_growlight();
 	return b;
 }
 
@@ -5555,7 +5570,7 @@ block_free(void *cv,void *bv){
 	blockobj *bo = bv;
 	reelbox *rb;
 
-	lock_ncurses();
+	lock_ncurses_growlight();
 	if( (rb = as->rb) ){
 		if(bo == rb->selected){
 			if(bo->prev){
@@ -5590,7 +5605,7 @@ block_free(void *cv,void *bv){
 		recompute_selection(as,old,oldrows,getmaxy(rb->win));
 		redraw_adapter(as->rb);
 	}
-	unlock_ncurses();
+	unlock_ncurses_growlight();
 }
 
 static void
@@ -5598,7 +5613,7 @@ adapter_free(void *cv){
 	adapterstate *as = cv;
 	reelbox *rb = rb;
 
-	lock_ncurses();
+	lock_ncurses_growlight();
 	as->prev->next = as->next;
 	as->next->prev = as->prev;
 	if( (rb = as->rb) ){
@@ -5653,15 +5668,14 @@ adapter_free(void *cv){
 	free_adapter_state(as); // clears subentries
 	--count_adapters;
 	draw_main_window(stdscr); // Update the device count
-	unlock_ncurses();
+	unlock_ncurses_growlight();
 }
 
 static void
 vdiag(const char *fmt,va_list v){
-	assert(pthread_mutex_lock(&bfl) == 0);
+	lock_ncurses_growlight();
 	locked_vdiag(fmt,v);
-	screen_update();
-	assert(pthread_mutex_unlock(&bfl) == 0);
+	unlock_ncurses_growlight();
 }
 
 int main(int argc,char * const *argv){
