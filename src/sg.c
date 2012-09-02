@@ -298,10 +298,17 @@ int sg_interrogate(device *d,int fd){
 		}
 		snprintf(d->wwn,17,"%04x%04x%04x%04x",buf[108],buf[109],buf[110],buf[111]);
 	}
-	if(ntohs(buf[CMDS_SUPP_3]) & FEATURE_READWRITEVERIFY){
-		d->blkdev.rwverify = !!(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY);
-		verbf("\tRead-write-verify: %s\n",d->blkdev.rwverify ? "Enabled" : "Disabled/not present");
+	if(buf[CMDS_SUPP_3] & FEATURE_READWRITEVERIFY){
+		if(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY){
+			d->blkdev.rwverify = RWVERIFY_SUPPORTED_ON;
+		}else{
+			d->blkdev.rwverify = RWVERIFY_SUPPORTED_OFF;
+		}
+	}else{
+		d->blkdev.rwverify = RWVERIFY_UNSUPPORTED;
 	}
+	verbf("\tRead-write-verify: %s\n",d->blkdev.rwverify == RWVERIFY_UNSUPPORTED ? "Not present" :
+			d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? "Disabled" : "Enabled");
 	for(n = START_SERIAL ; n < START_SERIAL + LENGTH_SERIAL ; ++n){
 		unsigned char c1 = (buf[n] & 0xff00) >> 8u;
 		unsigned char c2 = (buf[n] & 0xff);
