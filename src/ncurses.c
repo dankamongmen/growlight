@@ -2867,10 +2867,17 @@ update_help_cond(WINDOW *w){
 }
 
 static void
+lock_ncurses(void){
+	assert(pthread_mutex_lock(&bfl) == 0);
+	lock_growlight();
+}
+
+static void
 unlock_ncurses(void){
 	update_details_cond(panel_window(details.p));
 	update_help_cond(panel_window(help.p));
 	screen_update();
+	unlock_growlight();
 	assert(pthread_mutex_unlock(&bfl) == 0);
 }	
 
@@ -4302,7 +4309,10 @@ delete_partition_confirm(const char *op){
 			locked_diag("Cannot remove empty space; partition it instead");
 			return;
 		}
-		wipe_partition(b->zone->p);
+		if(wipe_partition(b->zone->p)){
+			return;
+		}
+		redraw_adapter(current_adapter);
 		return;
 	}
 	locked_diag("partition deletion was cancelled");
@@ -4678,12 +4688,12 @@ handle_actform_string_input(int ch){
 	cb = actform->fxn;
 	switch(ch){
 	case 12: // CTRL+L, redraw screen FIXME
-		pthread_mutex_lock(&bfl);
+		lock_ncurses();
 		wrefresh(curscr);
 		unlock_ncurses();
 		break;
 	case 21: // CTRL+u, clear input line FIXME
-		pthread_mutex_lock(&bfl);
+		lock_ncurses();
 		fs->inp.buffer[0] = '\0';
 		form_string_options(fs);
 		unlock_ncurses();
@@ -4691,7 +4701,7 @@ handle_actform_string_input(int ch){
 	case '\r': case '\n': case KEY_ENTER:{
 		char *str;
 
-		pthread_mutex_lock(&bfl);
+		lock_ncurses();
 		assert(str = strdup(actform->inp.buffer));
 		free_form(actform);
 		actform = NULL;
@@ -4701,7 +4711,7 @@ handle_actform_string_input(int ch){
 		unlock_ncurses();
 		break;
 	}case KEY_ESC:{
-		pthread_mutex_lock(&bfl);
+		lock_ncurses();
 		free_form(actform);
 		actform = NULL;
 		curs_set(0);
@@ -4709,7 +4719,7 @@ handle_actform_string_input(int ch){
 		unlock_ncurses();
 		break;
 	}case KEY_BACKSPACE:{
-		pthread_mutex_lock(&bfl);
+		lock_ncurses();
 		remove_last_bufchar(fs->inp.buffer);
 		form_string_options(fs);
 		unlock_ncurses();
@@ -4720,7 +4730,7 @@ handle_actform_string_input(int ch){
 		if(ch >= 256 || !isgraph(ch)){
 			diag("please %s (⎋esc returns)",actform->boxstr);
 		}
-		pthread_mutex_lock(&bfl);
+		lock_ncurses();
 		if((tmp = realloc(fs->inp.buffer,strlen(fs->inp.buffer) + 2)) == NULL){
 			locked_diag("Couldn't allocate input buffer (%s?)",strerror(errno));
 			unlock_ncurses();
@@ -4768,7 +4778,7 @@ handle_actform_input(int ch){
 	}
 	switch(ch){
 		case 12: // CTRL+L FIXME
-			pthread_mutex_lock(&bfl);
+			lock_ncurses();
 			wrefresh(curscr);
 			unlock_ncurses();
 			break;
@@ -4777,7 +4787,7 @@ handle_actform_input(int ch){
 			char **selarray;
 			char *optstr;
 
-			pthread_mutex_lock(&bfl);
+			lock_ncurses();
 				op = (actform->idx + fs->scrolloff) % fs->opcount;
 				assert(optstr = strdup(actform->ops[op].option));
 				selarray = fs->selarray;
@@ -4795,7 +4805,7 @@ handle_actform_input(int ch){
 			unlock_ncurses();
 			break;
 		}case KEY_ESC:{
-			pthread_mutex_lock(&bfl);
+			lock_ncurses();
 			if(fs->formtype == FORM_MULTISELECT){
 				free_form(actform);
 				actform = NULL;
@@ -4808,7 +4818,7 @@ handle_actform_input(int ch){
 			unlock_ncurses();
 			break;
 		}case KEY_UP: case 'k':{
-			pthread_mutex_lock(&bfl);
+			lock_ncurses();
 			if(fs->idx <= 1){
 				if(fs->scrolloff <= 0){
 					fs->scrolloff = fs->opcount - 1;
@@ -4826,7 +4836,7 @@ handle_actform_input(int ch){
 			unlock_ncurses();
 			break;
 		}case KEY_DOWN: case 'j':{
-			pthread_mutex_lock(&bfl);
+			lock_ncurses();
 			if(fs->idx >= fs->ysize - 2){
 				if(fs->scrolloff >= fs->opcount){
 					fs->scrolloff = 1;
@@ -4849,7 +4859,7 @@ handle_actform_input(int ch){
 			char **selarray;
 			int selections;
 
-			pthread_mutex_lock(&bfl);
+			lock_ncurses();
 			if(fs->formtype == FORM_MULTISELECT){
 				selarray = fs->selarray;
 				selections = fs->selections;
@@ -4982,62 +4992,62 @@ handle_ncurses_input(WINDOW *w){
 		}
 		switch(ch){
 			case 'H':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				toggle_panel(w,&help,display_help);
 				unlock_ncurses();
 				break;
 			}
 			case 'D':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				toggle_panel(w,&diags,display_diags);
 				unlock_ncurses();
 				break;
 			}
 			case 'v':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				toggle_panel(w,&details,display_details);
 				unlock_ncurses();
 				break;
 			}
 			case 'e':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				toggle_panel(w,&environment,display_enviroment);
 				unlock_ncurses();
 				break;
 			}
 			case 'E':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				toggle_panel(w,&maps,display_maps);
 				unlock_ncurses();
 				break;
 			}
 			case KEY_BACKSPACE: case KEY_ESC:
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				deselect_adapter_locked();
 				unlock_ncurses();
 				break;
 			case '\r': case '\n': case KEY_ENTER:
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				select_adapter();
 				unlock_ncurses();
 				break;
 			case 12: // CTRL+L FIXME
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				unlock_ncurses();
 				break;
 			case '+':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				expand_adapter_locked();
 				unlock_ncurses();
 				break;
 			case '-':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				collapse_adapter_locked();
 				unlock_ncurses();
 				break;
 			}
 			case KEY_RIGHT: case 'l':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				if(selection_active()){
 					use_next_zone(current_adapter->selected);
 				}
@@ -5046,7 +5056,7 @@ handle_ncurses_input(WINDOW *w){
 				break;
 			}
 			case KEY_LEFT: case 'h':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				if(selection_active()){
 					use_prev_zone(current_adapter->selected);
 				}
@@ -5055,7 +5065,7 @@ handle_ncurses_input(WINDOW *w){
 				break;
 			}
 			case KEY_UP: case 'k':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				if(!selection_active()){
 					use_prev_controller(w,&details);
 				}else{
@@ -5065,7 +5075,7 @@ handle_ncurses_input(WINDOW *w){
 				break;
 			}
 			case KEY_DOWN: case 'j':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				if(!selection_active()){
 					use_next_controller(w,&details);
 				}else{
@@ -5075,137 +5085,137 @@ handle_ncurses_input(WINDOW *w){
 				break;
 			}
 			case 'm':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				make_ptable();
 				unlock_ncurses();
 				break;
 			}
 			case 'r':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				remove_ptable();
 				unlock_ncurses();
 				break;
 			}
 			case 'W':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				wipe_mbr();
 				unlock_ncurses();
 				break;
 			}
 			case 'B':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				badblock_check();
 				unlock_ncurses();
 				break;
 			}
 			case 'R':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				rescan_selection();
 				unlock_ncurses();
 				break;
 			}
 			case 'S':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				reset_selection();
 				unlock_ncurses();
 				break;
 			}
 			case 'n':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				new_partition();
 				unlock_ncurses();
 				break;
 			}
 			case 'd':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				delete_partition();
 				unlock_ncurses();
 				break;
 			}
 			case 'F':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				fsck_partition();
 				unlock_ncurses();
 				break;
 			}
 			case 's':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				set_partition_attrs();
 				unlock_ncurses();
 				break;
 			}
 			case 'M':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				new_filesystem();
 				unlock_ncurses();
 				break;
 			}
 			case 'w':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				kill_filesystem();
 				unlock_ncurses();
 				break;
 			}
 			case 'o':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				mount_filesystem();
 				unlock_ncurses();
 				break;
 			}
 			case 'O':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				umount_filesystem();
 				unlock_ncurses();
 				break;
 			}
 			case 't':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				mount_target();
 				unlock_ncurses();
 				break;
 			}
 			case 'T':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				umount_target();
 				unlock_ncurses();
 				break;
 			}
 			case 'b':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				enslave_disk();
 				unlock_ncurses();
 				break;
 			}
 			case 'f':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				liberate_disk();
 				unlock_ncurses();
 				break;
 			}
 			case 'i':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				setup_target();
 				unlock_ncurses();
 				break;
 			}
 			case '!':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				rescan_devices();
 				unlock_ncurses();
 				break;
 			case '/':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				start_search();
 				unlock_ncurses();
 				break;
 			case 'I':{
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				unset_target();
 				unlock_ncurses();
 				break;
 			}
 			case 'A':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				if(actform){
 					locked_diag("An input dialog is already active");
 				}else{
@@ -5214,18 +5224,18 @@ handle_ncurses_input(WINDOW *w){
 				unlock_ncurses();
 				break;
 			case 'z':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				modify_aggregate();
 				unlock_ncurses();
 				break;
 			case 'Z':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				destroy_aggregate();
 				unlock_ncurses();
 				break;
 // Finalization commands
 			case '*':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				if((r = uefiboot()) == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
@@ -5235,7 +5245,7 @@ handle_ncurses_input(WINDOW *w){
 				}
 				break;
 			case '#':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				if((r = biosboot()) == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
@@ -5245,7 +5255,7 @@ handle_ncurses_input(WINDOW *w){
 				}
 				break;
 			case '@':
-				pthread_mutex_lock(&bfl);
+				lock_ncurses();
 				if((r = finalize_target()) == 0){
 					locked_diag("Successfully finalized target /etc/fstab");
 				}
@@ -5303,7 +5313,7 @@ adapter_callback(controller *a, void *state){
 	adapterstate *as;
 	reelbox *rb;
 
-	pthread_mutex_lock(&bfl);
+	lock_ncurses();
 	if((as = state) == NULL){
 		if( (state = as = create_adapter_state(a)) ){
 			int newrb,rows,cols;
@@ -5496,7 +5506,7 @@ block_callback(device *d,void *v){
 	if(d->layout == LAYOUT_PARTITION){
 		return NULL; // FIXME ought be an assert; this shouldn't happen
 	}
-	pthread_mutex_lock(&bfl);
+	lock_ncurses();
 	as = d->c->uistate;
 	if((b = v) == NULL){
 		if( (b = create_blockobj(d)) ){
@@ -5536,7 +5546,7 @@ block_free(void *cv,void *bv){
 	blockobj *bo = bv;
 	reelbox *rb;
 
-	pthread_mutex_lock(&bfl);
+	lock_ncurses();
 	if( (rb = as->rb) ){
 		if(bo == rb->selected){
 			if(bo->prev){
@@ -5579,7 +5589,7 @@ adapter_free(void *cv){
 	adapterstate *as = cv;
 	reelbox *rb = rb;
 
-	pthread_mutex_lock(&bfl);
+	lock_ncurses();
 	as->prev->next = as->next;
 	as->next->prev = as->prev;
 	if( (rb = as->rb) ){
@@ -5639,7 +5649,7 @@ adapter_free(void *cv){
 
 static void
 vdiag(const char *fmt,va_list v){
-	pthread_mutex_lock(&bfl);
+	lock_ncurses();
 	locked_vdiag(fmt,v);
 	unlock_ncurses();
 }
