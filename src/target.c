@@ -76,6 +76,10 @@ int prepare_umount(device *d,const char *path){
 		diag("%s is mapped to %s, not %s\n",d->name,d->target->path,path);
 		return -1;
 	}
+	if(strcmp(growlight_target,d->target->path) == 0){
+		close(targfd);
+		targfd = -1;
+	}
 	m = d->target;
 	d->target = NULL;
 	if(umount2(path,UMOUNT_NOFOLLOW)){
