@@ -4402,6 +4402,25 @@ reset_selection(void){
 }
 
 static void
+wipe_mbr_confirm(const char *op){
+	blockobj *b;
+
+	if(!op || !approvedp(op)){
+		locked_diag("master boot record wipe was cancelled");
+		return;
+	}
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("MBR wipe requires selection of a block device");
+		return;
+	}
+	if(blockobj_unloadedp(b)){
+		locked_diag("Media is unloaded on %s\n",b->d->name);
+		return;
+	}
+	wipe_dosmbr(b->d);
+}
+
+static void
 wipe_mbr(void){
 	blockobj *b;
 
@@ -4409,7 +4428,11 @@ wipe_mbr(void){
 		locked_diag("MBR wipe requires selection of a block device");
 		return;
 	}
-	wipe_dosmbr(b->d);
+	if(blockobj_unloadedp(b)){
+		locked_diag("Media is unloaded on %s\n",b->d->name);
+		return;
+	}
+	confirm_operation("wipe the mbr",wipe_mbr_confirm);
 }
 
 static void
