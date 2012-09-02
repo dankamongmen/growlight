@@ -1775,16 +1775,19 @@ targpoint_callback(const char *path){
 		locked_diag("User cancelled target operation");
 		return;
 	}
-	if(!current_adapter || !(b = current_adapter->selected)){
-		locked_diag("Lost selection while targeting");
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a filesystem to mount");
 		return;
 	}
-	b = current_adapter->selected;
-	if(b->zone->p == NULL){
+	if(selected_unloadedp()){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(blockobj_unpartitionedp(b)){
 		prepare_mount(b->d,path,b->d->mnttype,b->d->uuid,b->d->label,"defaults");
 		redraw_adapter(current_adapter);
 		return;
-	}else if(b->zone->p->layout != LAYOUT_PARTITION){
+	}else if(blockobj_emptyp(b)){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
@@ -4584,9 +4587,17 @@ mount_target(void){
 			locked_diag("%s is already a target",b->zone->p->name);
 			return;
 		}
+		if(b->zone->p->mnttype == NULL){
+			locked_diag("No filesystem detected on %s",b->zone->p->name);
+			return;
+		}
 	}else{
 		if(b->d->target){
 			locked_diag("%s is already a target",b->d->name);
+			return;
+		}
+		if(b->d->mnttype == NULL){
+			locked_diag("No filesystem detected on %s",b->d->name);
 			return;
 		}
 	}
