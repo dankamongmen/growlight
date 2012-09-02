@@ -117,15 +117,27 @@ struct form_state {
 	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
 	void (*mcb)(const char *,char **,int); // callback on multiform input
-	int idx;			// selection index, [0..ysize)
 	int longop;			// length of longest op
 	char *boxstr;			// string for box label
 	form_enum formtype;		// type of form
 	struct panel_state *extext;	// explication text, above the form
 	union {
 		struct {
-			struct form_option *ops;// form_option array for *this instance*
+			// There's padding on the interface, and a border -- 4
+			// lines total. idx maps to true array indices, and has
+			// nothing to do with what's currently displayed (save
+			// that it's guaranteed to be onscreen). scrollidx also
+			// maps to true array indices, and identifies the first
+			// option listed. Thus:
+			//
+			//   idx - scrollidx % opcount == current display line
+			//   current display line + scrollidx % opcount == idx
+			//   idx == scrollidx -> display at top
+			//   idx == scrollidx + ysize - 4 -> display at bottom
+			//
+			int idx;		// selection index
 			int scrolloff;		// scroll offset
+			struct form_option *ops;// form_option array for *this instance*
 			int opcount;		// total number of ops
 			int selectno;		// number of selections, total
 			int selections;		// number of active selections
@@ -1441,7 +1453,7 @@ multiform_options(struct form_state *fs){
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
 			fs->longop,fs->longop,opstrs[op].option);
-		if(z == fs->idx){
+		if(op == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
 		wcolor_set(fsw,INPUT_COLOR,NULL);
@@ -1476,14 +1488,14 @@ form_options(struct form_state *fs){
 	cols = getmaxx(fsw);
 	wattron(fsw,A_BOLD);
 	for(z = 1 ; z < fs->ysize - 1 ; ++z){
-		int op = (z + fs->scrolloff) % fs->opcount;
+		int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
 		assert(op >= 0);
 		assert(op < fs->opcount);
 		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
 		mvwprintw(fsw,z + 1,START_COL * 2,"%-*.*s ",
 			fs->longop,fs->longop,opstrs[op].option);
-		if(z == fs->idx){
+		if(op == fs->idx){
 			wattron(fsw,A_REVERSE);
 		}
 		wcolor_set(fsw,INPUT_COLOR,NULL);
@@ -1612,9 +1624,9 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 		return;
 	}
 	wbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
-	// FIXME adapt for scrolling (default can be off-window at beginning)
-	if((fs->idx = defidx) < 1){
-		fs->idx = defidx = 1;
+	// FIXME adapt for scrolling (default might be off-window at beginning)
+	if((fs->idx = defidx) < 0){
+		fs->idx = defidx = 0;
 	}
 	fs->opcount = ops;
 	fs->ysize = rows - 2;
@@ -1697,9 +1709,9 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 		return;
 	}
 	wbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
-	// FIXME adapt for scrolling
-	if((fs->idx = defidx) < 1){
-		fs->idx = defidx = 1;
+	// FIXME adapt for scrolling (default might be off-window at beginning)
+	if((fs->idx = defidx) < 0){
+		fs->idx = defidx = 0;
 	}
 	fs->opcount = ops;
 	fs->ysize = rows - 2;
@@ -2346,12 +2358,12 @@ confirm_operation(const char *op,void (*confirmcb)(const char *)){
 	if((ops_confirm = malloc(sizeof(*ops_confirm) * 2)) == NULL){
 		return -1;
 	}
-	ops_confirm[0].option = strdup("do it");
-	ops_confirm[0].desc = strdup(op);
-	ops_confirm[1].option = strdup("abort");
-	ops_confirm[1].desc = strdup("do not perform the operation");
+	ops_confirm[0].option = strdup("abort");
+	ops_confirm[0].desc = strdup("do not perform the operation");
+	ops_confirm[1].option = strdup("do it");
+	ops_confirm[1].desc = strdup(op);
 	// FIXME check values
-	raise_form("confirm operation",confirmcb,ops_confirm,2,1,
+	raise_form("confirm operation",confirmcb,ops_confirm,2,0,
 			"Please confirm the request. You will not be able to undo this action.");
 	return 0;
 }
@@ -4835,8 +4847,8 @@ handle_actform_input(int ch){
 			char *optstr;
 
 			lock_ncurses();
-				op = (actform->idx + fs->scrolloff) % fs->opcount;
-				assert(optstr = strdup(actform->ops[op].option));
+				op = fs->idx;
+				assert(optstr = strdup(fs->ops[op].option));
 				selarray = fs->selarray;
 				selections = fs->selections;
 				fs->selarray = NULL;
@@ -4866,14 +4878,13 @@ handle_actform_input(int ch){
 			break;
 		}case KEY_UP: case 'k':{
 			lock_ncurses();
-			if(fs->idx <= 1){
-				if(fs->scrolloff <= 0){
+			if(fs->idx == fs->scrolloff){
+				if(--fs->scrolloff < 0){
 					fs->scrolloff = fs->opcount - 1;
-				}else{
-					--fs->scrolloff;
 				}
-			}else{
-				--fs->idx;
+			}
+			if(--fs->idx < 0){
+				fs->idx = fs->opcount - 1;
 			}
 			if(fs->formtype == FORM_MULTISELECT){
 				multiform_options(fs);
@@ -4884,14 +4895,13 @@ handle_actform_input(int ch){
 			break;
 		}case KEY_DOWN: case 'j':{
 			lock_ncurses();
-			if(fs->idx >= fs->ysize - 2){
-				if(fs->scrolloff >= fs->opcount){
-					fs->scrolloff = 1;
-				}else{
-					++fs->scrolloff;
+			if(fs->idx == (fs->scrolloff + fs->ysize - 3) % fs->opcount){
+				if(++fs->scrolloff >= fs->opcount){
+					fs->scrolloff = 0;
 				}
-			}else{
-				++fs->idx;
+			}
+			if(++fs->idx >= fs->opcount){
+				fs->idx = 0;
 			}
 			if(fs->formtype == FORM_MULTISELECT){
 				multiform_options(fs);
