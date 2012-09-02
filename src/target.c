@@ -127,6 +127,10 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *uuid,
 		diag("No target is defined\n");
 		return -1;
 	}
+	if(cfs == NULL){
+		diag("No filesystem type provided for %s\n",d->name);
+		return -1;
+	}
 	if(d->mnt){
 		diag("%s is already actively mounted at %s\n",d->name,d->mnt);
 		return -1;
