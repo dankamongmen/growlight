@@ -1610,7 +1610,6 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	if(parse_swaps(gui,SWAPS)){
-		unlock_growlight();
 		goto err;
 	}
 	unlock_growlight();
@@ -1809,6 +1808,7 @@ int rescan_device(const char *name){
 				unlock_growlight();
 				return -1;
 			}
+			unlock_growlight();
 			return 0;
 		}
 	}
