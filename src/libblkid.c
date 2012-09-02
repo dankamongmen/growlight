@@ -144,8 +144,6 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 			}else{
 				diag("Warning: unknown type %s for %s\n",val,dev);
 			}
-		}else if(strcmp(name,"SIZE") == 0){
-			printf("SIZE: %s\n",val);
 		}else if(strcmp(name,"UUID") == 0){
 			if((uuid = strdup(val)) == NULL){
 				goto err;
@@ -153,6 +151,17 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 		}else if(strcmp(name,"LABEL") == 0){
 			if((label = strdup(val)) == NULL){
 				goto err;
+			}
+		}else if(strcmp(name,"PART_ENTRY_SIZE") == 0){
+			if(d->layout == LAYOUT_PARTITION){
+				unsigned long long s;
+
+				s = strtoull(val,NULL,0);
+				if(d->size && d->size != s){
+					diag("%s size changed from %ju to %llu\n",d->name,d->size,s);
+				}
+			}else{
+				diag("PART_ENTRY_SIZE on non-partition %s\n",d->name);
 			}
 		}else if(strcmp(name,"PART_ENTRY_UUID") == 0){
 			if(d->layout == LAYOUT_PARTITION){
