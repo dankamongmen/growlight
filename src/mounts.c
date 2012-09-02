@@ -242,7 +242,7 @@ int unmount(device *d){
 				d->name,d->mnt,strerror(errno));
 		return -1;
 	}
-	printf("Unmounted %s from %s\n",d->name,d->mnt);
+	diag("Unmounted %s from %s\n",d->name,d->mnt);
 	free(d->mnt);
 	d->mnt = NULL;
 	return 0;
