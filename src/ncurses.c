@@ -163,6 +163,8 @@ enum {
 	MOUNT_COLOR,			// Mounted, untargeted filesystems
 	TARGET_COLOR,			// Targeted filesystems
 	FUCKED_COLOR,			// Things that warrant attention
+	SPLASHBORDER_COLOR,
+	SPLASHTEXT_COLOR,
 
 	ORANGE_COLOR,
 	GREEN_COLOR,
@@ -230,6 +232,12 @@ setup_colors(void){
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
 	if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == ERR){
 		assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) == ERR);
+	}
+	if(init_pair(SPLASHBORDER_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == ERR){
+		assert(init_pair(SPLASHBORDER_COLOR,COLOR_GREEN,COLOR_BLACK) != ERR);
+	}
+	if(init_pair(SPLASHTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == ERR){
+		assert(init_pair(SPLASHTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != ERR);
 	}
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
@@ -636,14 +644,14 @@ bottom_space_p(int rows){
 // is managed here; only the rows needed for display ought be provided.
 static int
 new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
-			const wchar_t *hstr,const wchar_t *bstr){
+			const wchar_t *hstr,const wchar_t *bstr,int borderpair){
 	const int crightlen = bstr ? wcslen(bstr) : 0;
 	int ybelow,yabove;
 	WINDOW *psw;
 	int x,y;
 
 	// Desired space above and below, which will be impugned upon as needed
-	ybelow = 9;
+	ybelow = 3;
 	yabove = 5;
 	getmaxyx(w,y,x);
 	if(cols == 0){
@@ -660,9 +668,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
 	}else{
 		yabove += y - (rows + ybelow + yabove);
 	}
-	// Six up from the bottom, so it looks good with our logo in the
-	// installer, heh
-	if((psw = newwin(rows + 2,cols,yabove,x - cols)) == NULL){
+	if((psw = newwin(rows + 2,cols,yabove,0)) == NULL){
 		locked_diag("Can't display subwindow, uh-oh");
 		return ERR;
 	}
@@ -675,7 +681,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
 	ps->ysize = rows;
 	// memory leaks follow if we're compiled with NDEBUG! FIXME
 	assert(wattron(psw,A_BOLD) != ERR);
-	assert(wcolor_set(psw,PBORDER_COLOR,NULL) == OK);
+	assert(wcolor_set(psw,borderpair,NULL) == OK);
 	assert(bevel(psw) == OK);
 	assert(wattroff(psw,A_BOLD) != ERR);
 	assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
@@ -1297,7 +1303,7 @@ show_splash(const wchar_t *msg){
 	}
 	memset(ps,0,sizeof(*ps));
 	// FIXME gross, clean all of this up
-	if(new_display_panel(stdscr,ps,3,wcslen(msg) + 4,NULL,NULL)){
+	if(new_display_panel(stdscr,ps,3,wcslen(msg) + 4,NULL,NULL,SPLASHBORDER_COLOR)){
 		free(ps);
 		return NULL;
 	}
@@ -3552,7 +3558,8 @@ update_diags(struct panel_state *ps){
 static int
 display_diags(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics",NULL)){
+	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics"
+				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
 	if(update_diags(ps)){
@@ -3577,7 +3584,8 @@ static const int DETAILROWS = 7; // FIXME make it dynamic based on selections
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details",NULL)){
+	if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details"
+				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
 	if(current_adapter){
@@ -3616,7 +3624,8 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 	helpcols += 2; // spacing + borders
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help",
-			L"http://nick-black.com/dankwiki/index.php/Growlight")){
+			L"http://nick-black.com/dankwiki/index.php/Growlight",
+			PBORDER_COLOR)){
 		goto err;
 	}
 	if(helpstrs(panel_window(ps->p),1)){
@@ -3825,7 +3834,8 @@ map_details(WINDOW *hw){
 static int
 display_enviroment(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display",NULL)){
+	if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display"
+				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
 	if(env_details(panel_window(ps->p),ps->ysize)){
@@ -3851,7 +3861,8 @@ display_maps(WINDOW *mainw,struct panel_state *ps){
 	unsigned rows = getmaxy(mainw) - 15;
 
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display",NULL)){
+	if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display"
+				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
 	if(map_details(panel_window(ps->p))){
