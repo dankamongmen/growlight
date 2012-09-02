@@ -996,7 +996,7 @@ blockdev_dump(int descend){
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual, (M)dadm, (Z)pool,\n"
 		"\t\t(D)M, r(O)tational, (r)ead-only, (W)ritecache enabled,\n"
-		"\t\t(B)IOS bootable, ✓/✗: SMART status\n");
+		"\t\t(B)IOS bootable, Read-Write-(v)erify, ✓/⚡/✗: SMART status\n");
 	return 0;
 }
 
@@ -1866,8 +1866,6 @@ version(wchar_t * const *args,const char *arghelp){
 "++'''''#++++++++++++++++++++++++++++++++'''''++++++++++##########++++''++++++'''"
 "++#++++++++++++++++++++++++++++++++++++++++#++++++++++++#########++++'+''''''+++\n");
 	use_terminfo_color(COLOR_WHITE,1);
-	ret |= popen_drain("smartctl --version");
-	printf("\n");
 	ret |= popen_drain("parted --version");
 	printf("\n");
 	ret |= popen_drain("mkswap --version");
