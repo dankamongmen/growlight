@@ -873,6 +873,7 @@ rescan(const char *name,device *d){
 	}
 	if(d->c == &virtual_bus && d->layout == LAYOUT_NONE){
 		d->blkdev.realdev = 0;
+		d->blkdev.smartgood = -1;
 	}
 	// Allow d->model to run the checks on validly-filebacked loop devices
 	if((d->layout == LAYOUT_NONE && (d->blkdev.realdev || d->model))
