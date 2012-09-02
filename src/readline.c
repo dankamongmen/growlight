@@ -462,15 +462,18 @@ print_drive(const device *d,int descend){
 			d->revision ? d->revision : "n/a",
 			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec,
-			d->blkdev.removable ? L'R' :
-				d->blkdev.smartgood == SK_SMART_OVERALL_GOOD ? L'✓' :
-				(d->blkdev.smartgood == SK_SMART_OVERALL_BAD_STATUS ||
-				 d->blkdev.smartgood == SK_SMART_OVERALL_BAD_SECTOR_MANY) ? L'✗' :
-				d->blkdev.smartgood > 0 ? L'⚡' :
-				d->blkdev.realdev ? L'.' : L'V',
-			d->blkdev.unloaded ? L'U' : L'.',
+			d->blkdev.unloaded ? L'U' :
+			 d->blkdev.removable ? L'R' :
+			 d->blkdev.smartgood == SK_SMART_OVERALL_GOOD ? L'✓' :
+			 (d->blkdev.smartgood == SK_SMART_OVERALL_BAD_STATUS ||
+			   d->blkdev.smartgood == SK_SMART_OVERALL_BAD_SECTOR_MANY) ? L'✗' :
+			 d->blkdev.smartgood > 0 ? L'⚡' :
+			 d->blkdev.realdev ? L'.' : L'V',
 			d->blkdev.rotation >= 0 ? L'O' : L'.',
-			d->blkdev.wcache ? L'W' : d->roflag ? L'r' : L'.',
+			d->roflag ? L'r' :
+			 d->blkdev.wcache ? L'W' : L'.',
+			d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'v' :
+			 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'⚠' : L'.',
 			d->blkdev.biosboot ? L'B' : L'.',
 			d->blkdev.pttable ? d->blkdev.pttable : "none",
 			d->wwn ? d->wwn : "n/a",
@@ -998,7 +1001,7 @@ blockdev_dump(int descend){
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual, (M)dadm, (Z)pool,\n"
 		"\t\t(D)M, r(O)tational, (r)ead-only, (W)ritecache enabled,\n"
-		"\t\t(B)IOS bootable, Read-Write-(v)erify, ✓/⚡/✗: SMART status\n");
+		"\t\t(B)IOS bootable, v/⚠: Read-Write-Verify, ✓/⚡/✗: SMART status\n");
 	return 0;
 }
 
