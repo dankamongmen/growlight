@@ -249,9 +249,9 @@ setup_colors(void){
 
 static void
 form_colors(void){
-	// Don't reset the status color or (obviously) the form colors
+	// Don't reset the status color or header color, nor (obviously) the
+	// form nor splash colors
 	locked_diag(""); // Don't leave a highlit status up from long ago
-	init_pair(HEADER_COLOR,-1,-1);
 	init_pair(UHEADING_COLOR,-1,-1);
 	init_pair(UBORDER_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
@@ -1307,6 +1307,7 @@ show_splash(const wchar_t *msg){
 		free(ps);
 		return NULL;
 	}
+	wattrset(panel_window(ps->p),A_BOLD|COLOR_PAIR(SPLASHTEXT_COLOR));
 	mvwhline(panel_window(ps->p),1,1,' ',getmaxx(panel_window(ps->p)) - 2);
 	mvwhline(panel_window(ps->p),2,1,' ',getmaxx(panel_window(ps->p)) - 2);
 	mvwaddwstr(panel_window(ps->p),2,2,msg);
@@ -1894,8 +1895,8 @@ kill_splash(struct panel_state *ps){
 	assert(ps == splash);
 	hide_panel_locked(ps);
 	free(ps);
-	setup_colors();
 	splash = NULL;
+	setup_colors();
 }
 
 static int
