@@ -58,8 +58,6 @@ void free_mntentry(mntentry *t){
 }
 
 int prepare_umount(device *d,const char *path){
-	mntentry *m;
-
 	if(path == NULL){
 		diag("Passed a NULL argument\n");
 		return -1;
@@ -87,7 +85,7 @@ int prepare_umount(device *d,const char *path){
 	}
 	free_mntentry(d->target);
 	d->target = NULL;
-	return r;
+	return 0;
 }
 
 static int
