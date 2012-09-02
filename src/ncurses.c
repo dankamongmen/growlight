@@ -23,7 +23,8 @@
 #define KEY_ESC 27
 
 // For the ANSI standard terminal, we can fit only 4 lines of explicative text
-// onto the screen, so make each glyph count.
+// onto the screen, so make each glyph count. By default, 76 characters can be
+// placed on each row.
 static const char SEARCH_TEXT[] =
 "Your search term will be matched against device names, UUIDs, partition "
 "names, filesystem names (volume labels), manufacturers, model numbers, and "
@@ -56,17 +57,17 @@ static const char PNAME_TEXT[] =
 "provide references independent of dynamic device topology. A GPT partition's "
 "name consists of up to 32 UTF-16LE codepoints.";
 
-static const char PARTTYPE_TEXT[] =
+static const char PARTTYPE_TEXT[] =     // characters here will be bumped ---v
 "Creating a given filesystem is generally neither enabled nor prohibited due "
-"to partition type, but mismatched types will confuse some tools and hardware. "
-"UEFI through version 1.1 boots from an ESP partition within a GPT table. "
-"UEFI+MBR and BIOS boot from a primary (as opposed to logical) MBR partition.";
+"to partition type, but mismatched types might confuse tools, hardware, and "
+"users. UEFI through version 1.1 boots from a GPT's ESP partition. UEFI+MBR "
+"and BIOS boot from a primary (as opposed to logical) MBR partition.";
 
 static const char FSTYPE_TEXT[] =
 "UEFI through version 1.1 requires FAT16 for the EFI System Partition. As of "
 "version 3.5, ext4 is the default Linux filesystem, but Windows and OS X do "
-"not natively support it. Sprezzatech recommends use of EXT4 or FAT16 for root "
-"and ZFS (in a redundant configuration) for other filesystems.";
+"not natively support it. Sprezzatech recommends use of EXT4 or FAT16 for "
+"root and ZFS (in a redundant configuration) for other filesystems.";
 
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
@@ -1478,15 +1479,16 @@ form_options(struct form_state *fs){
 #define FORM_X_OFFSET 5
 static struct panel_state *
 raise_form_explication(const WINDOW *w,const char *text){
-	int linepre[FORM_Y_OFFSET];
-	int linelen[FORM_Y_OFFSET];
+	int linepre[FORM_Y_OFFSET - 1];
+	int linelen[FORM_Y_OFFSET - 1];
 	struct panel_state *ps;
 	int cols,x,y,brk,tot;
 	WINDOW *win;
 
-	cols = getmaxx(w);
+	// There's two columns of padding surrounding the subwindow
+	cols = getmaxx(w) - 2;
 	tot = 0;
-	for(y = 0 ; y < FORM_Y_OFFSET ; ++y){
+	for(y = 0 ; (unsigned)y < sizeof(linepre) / sizeof(*linepre) ; ++y){
 		while(isspace(text[tot])){
 			++tot;
 		}
@@ -1518,7 +1520,7 @@ raise_form_explication(const WINDOW *w,const char *text){
 	// into the provided space. We don't yet deal with this situation FIXME
 	assert(!text[tot]);
 	assert( (ps = malloc(sizeof(*ps))) );
-	assert( (win = newwin(y + 3,cols - 2,FORM_Y_OFFSET - (y + 2),1)) );
+	assert( (win = newwin(y + 3,cols,FORM_Y_OFFSET - (y + 2),1)) );
 	assert( (ps->p = new_panel(win)) );
 	wbkgd(win,COLOR_PAIR(BLACK_COLOR));
 	wattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
@@ -4208,7 +4210,10 @@ kill_filesystem_confirm(const char *op){
 			assert(selected_partitionp());
 			d = b->zone->p;
 		}
-		wipe_filesystem(d);
+		// FIXME splash screen
+		if(wipe_filesystem(d)){
+			return;
+		}
 		redraw_adapter(current_adapter);
 		locked_diag("Wiped filesystem on %s",d->name);
 		return;
@@ -4470,7 +4475,9 @@ umount_target(void){
 			locked_diag("No target configured on selected partition");
 			return;
 		}
-		prepare_umount(b->zone->p,b->zone->p->target->path);
+		if(prepare_umount(b->zone->p,b->zone->p->target->path)){
+			return;
+		}
 		redraw_adapter(current_adapter);
 		return;
 	}else{
@@ -4478,7 +4485,9 @@ umount_target(void){
 			locked_diag("No target configured on selected device");
 			return;
 		}
-		prepare_umount(b->d,b->d->target->path);
+		if(prepare_umount(b->d,b->d->target->path)){
+			return;
+		}
 		redraw_adapter(current_adapter);
 		return;
 	}
@@ -4620,6 +4629,7 @@ mount_target(void){
 static void
 umount_filesystem(void){
 	blockobj *b;
+	int r;
 
 	if((b = get_selected_blockobj()) == NULL){
 		locked_diag("Must select a filesystem to unmount");
@@ -4634,9 +4644,12 @@ umount_filesystem(void){
 			locked_diag("Cannot unmount unused space");
 			return;
 		}
-		unmount(b->zone->p);
+		r = unmount(b->zone->p);
 	}else{
-		unmount(b->d);
+		r = unmount(b->d);
+	}
+	if(!r){
+		redraw_adapter(current_adapter);
 	}
 }
 
