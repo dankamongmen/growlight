@@ -832,7 +832,11 @@ rescan(const char *name,device *d){
 	char buf[PATH_MAX] = "";
 	int fd,r;
 
-	strcpy(d->name,name);
+	// Not an optimization, but rather insurance that we don't perform an
+	// overlapping copy when d->name is passed in as name.
+	if(strcmp(d->name,name)){
+		strcpy(d->name,name);
+	}
 	d->swapprio = SWAP_INVALID;
 	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
 		diag("Couldn't read link at %s%s (%s?)\n",
