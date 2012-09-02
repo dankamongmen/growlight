@@ -1803,7 +1803,7 @@ int rescan_device(const char *name){
 			} // if we get here, we've matched up
 			d = (*lnk)->next;
 			internal_device_reset(*lnk);
-			if(rescan(name,*lnk) == NULL){
+			if(rescan((*lnk)->name,*lnk) == NULL){
 				*lnk = d;
 				unlock_growlight();
 				return -1;
@@ -1876,10 +1876,11 @@ int rescan_devices(void){
 	int ret = 0;
 	devtable dt;
 
-	diag("rescan functionality is broken FIXME\n"); return 0; // FIXME
 	push_devtable(&dt);
+	unlock_growlight();
 	ret |= scan_zpools(gui);
 	ret |= watch_dir(-1,SYSROOT,scan_device);
+	lock_growlight();
 	ret |= parse_mounts(gui,MOUNTS);
 	ret |= parse_swaps(gui,SWAPS);
 	// Preserve any defined mappings, if possible. For a mapping to be
