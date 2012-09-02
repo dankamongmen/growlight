@@ -6,6 +6,7 @@
 #include <string.h>
 #include <locale.h>
 #include <pthread.h>
+#include <atasmart.h>
 
 #include "fs.h"
 #include "mbr.h"
@@ -1044,13 +1045,21 @@ case LAYOUT_ZPOOL:
 			}else{
 				mvwprintw(rb->win,line + 2,1,"     ");
 			}
-			if(bo->d->blkdev.smartgood != SMART_NOSUPPORT){
-				if(bo->d->blkdev.smartgood == SMART_STATUS_GOOD){
+			if(bo->d->blkdev.smartgood >= 0){
+				wchar_t rep;
+
+				if(bo->d->blkdev.smartgood == SK_SMART_OVERALL_GOOD){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
+					rep = L'✓';
+				}else if(bo->d->blkdev.smartgood != SK_SMART_OVERALL_BAD_STATUS
+						&& bo->d->blkdev.smartgood != SK_SMART_OVERALL_BAD_SECTOR_MANY){
+					wattrset(rb->win,A_BOLD|COLOR_PAIR(ORANGE_COLOR));
+					rep = L'⚡';
 				}else{
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+					rep = L'✗';
 				}
-				wprintw(rb->win,"smart%lc",bo->d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✓' : L'✗');
+				wprintw(rb->win,"smart%lc",rep);
 			}else{
 				wprintw(rb->win,"      ");
 			}

@@ -136,11 +136,8 @@ typedef struct device {
 			uint64_t first_usable;	// First usable logical sector
 			uint64_t last_usable;	// Last usable logical sector
 
-			enum {
-				SMART_NOSUPPORT,
-				SMART_STATUS_BAD,
-				SMART_STATUS_GOOD,
-			} smartgood;
+			int smartgood;		// -1 for no support, otherwise
+						//  SkSmartOverall enum values
 			uint64_t celsius;	// Last-polled temperature
 		} blkdev;
 		struct { // mdadm (MDRAID)

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <locale.h>
+#include <atasmart.h>
 #include <readline/history.h>
 #include <readline/readline.h>
 
@@ -462,8 +463,8 @@ print_drive(const device *d,int descend){
 			qprefix(d->size,1,buf,sizeof(buf),0),
 			d->physsec,
 			d->blkdev.removable ? L'R' :
-				d->blkdev.smartgood == SMART_STATUS_GOOD ? L'✔' :
-				d->blkdev.smartgood == SMART_STATUS_BAD ? L'✘' :
+				d->blkdev.smartgood == SK_SMART_OVERALL_GOOD ? L'✓' :
+				d->blkdev.smartgood > 0 ? L'✗' :
 				d->blkdev.realdev ? L'.' : L'V',
 			d->blkdev.unloaded ? L'U' : L'.',
 			d->blkdev.rotation >= 0 ? L'O' : L'.',
