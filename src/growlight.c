@@ -1349,18 +1349,18 @@ event_posix_thread(void *unsafe){
 				udev_event();
 			}else if(events[r].data.fd == em->mfd){
 				lock_growlight();
-				diag("Reparsing %s...\n",MOUNTS);
+				verbf("Reparsing %s...\n",MOUNTS);
 				clear_mounts(controllers);
 				parse_mounts(gui,MOUNTS);
 				unlock_growlight();
 			}else if(events[r].data.fd == em->sfd){
 				lock_growlight();
-				diag("Reparsing %s...\n",SWAPS);
+				verbf("Reparsing %s...\n",SWAPS);
 				parse_swaps(gui,SWAPS);
 				unlock_growlight();
 			}else if(events[r].data.fd == em->ffd){
 				lock_growlight();
-				diag("Reparsing %s...\n",FILESYSTEMS);
+				verbf("Reparsing %s...\n",FILESYSTEMS);
 				parse_filesystems(gui,FILESYSTEMS);
 				unlock_growlight();
 			}else{
