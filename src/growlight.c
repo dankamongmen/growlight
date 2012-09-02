@@ -1348,19 +1348,19 @@ event_posix_thread(void *unsafe){
 			}else if(events[r].data.fd == em->ufd){
 				udev_event();
 			}else if(events[r].data.fd == em->mfd){
-				lock_growlight();
 				verbf("Reparsing %s...\n",MOUNTS);
+				lock_growlight();
 				clear_mounts(controllers);
 				parse_mounts(gui,MOUNTS);
 				unlock_growlight();
 			}else if(events[r].data.fd == em->sfd){
-				lock_growlight();
 				verbf("Reparsing %s...\n",SWAPS);
+				lock_growlight();
 				parse_swaps(gui,SWAPS);
 				unlock_growlight();
 			}else if(events[r].data.fd == em->ffd){
-				lock_growlight();
 				verbf("Reparsing %s...\n",FILESYSTEMS);
+				lock_growlight();
 				parse_filesystems(gui,FILESYSTEMS);
 				unlock_growlight();
 			}else{
@@ -1729,8 +1729,8 @@ int rescan_blockdev(const device *d){
 		if(ioctl(fd,BLKRRPART,NULL) == 0){
 			goto success;
 		}
-		diag("Error calling BLKRRPART on "DEVROOT"/%s (%s?), retrying in 5s...\n",d->name,strerror(errno));
-		sleep(5);
+		diag("Error calling BLKRRPART on "DEVROOT"/%s (%s?), retrying in 2s...\n",d->name,strerror(errno));
+		sleep(2);
 	}
 	if(ioctl(fd,BLKRRPART,NULL) == 0){
 		goto success;
