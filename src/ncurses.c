@@ -79,6 +79,7 @@ struct panel_state {
 #define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
 #define SUBDISPLAY_INVAL_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR))
 
+static struct panel_state *splash;
 static struct panel_state *active;
 static struct panel_state maps = PANEL_STATE_INITIALIZER;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
@@ -182,6 +183,9 @@ screen_update(void){
 	}
 	if(actform){
 		assert(top_panel(actform->p) != ERR);
+	}
+	if(splash){
+		assert(top_panel(splash->p) != ERR);
 	}
 	update_panels();
 	assert(doupdate() == OK);
@@ -1276,6 +1280,7 @@ static struct panel_state *
 show_splash(const wchar_t *msg){
 	struct panel_state *ps;
 
+	assert(!splash);
 	if((ps = malloc(sizeof(*ps))) == NULL){
 		return NULL;
 	}
@@ -1285,9 +1290,12 @@ show_splash(const wchar_t *msg){
 		free(ps);
 		return NULL;
 	}
+	mvwhline(panel_window(ps->p),1,1,' ',getmaxx(panel_window(ps->p)) - 2);
+	mvwhline(panel_window(ps->p),2,1,' ',getmaxx(panel_window(ps->p)) - 2);
 	mvwaddwstr(panel_window(ps->p),2,2,msg);
+	mvwhline(panel_window(ps->p),3,1,' ',getmaxx(panel_window(ps->p)) - 2);
 	move_panel(ps->p,3,3);
-	return ps;
+	return splash = ps;
 }
 // -------------------------------------------------------------------------
 // -- end splash API
@@ -1862,6 +1870,14 @@ destroy_fs_forms(void){
 	pending_fstype = NULL;
 }
 
+static void
+kill_splash(struct panel_state *ps){
+	assert(ps == splash);
+	hide_panel_locked(ps);
+	free(ps);
+	splash = NULL;
+}
+
 static int
 fs_do_internal(device *d,const char *fst,const char *name){
 	struct panel_state *ps;
@@ -1870,8 +1886,7 @@ fs_do_internal(device *d,const char *fst,const char *name){
 	ps = show_splash(L"Creating filesystem...");
 	r = make_filesystem(d,fst,name);
 	if(ps){
-		hide_panel_locked(ps);
-		free(ps);
+		kill_splash(ps);
 	}
 	return r;
 }
@@ -2091,8 +2106,7 @@ ptype_name_callback(const char *name){
 	sps = show_splash(L"Creating partition...");
 	add_partition(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
 	if(sps){
-		hide_panel_locked(sps);
-		free(sps);
+		kill_splash(sps);
 	}
 	free(wstr);
 	cleanup_new_partition();
@@ -2232,8 +2246,7 @@ psectors_callback(const char *psects){
 	ps = show_splash(L"Creating partition...");
 	add_partition(b->d,NULL,fsect,lsect,pending_ptype);
 	if(ps){
-		hide_panel_locked(ps);
-		free(ps);
+		kill_splash(ps);
 	}
 	locked_diag("Created new partition %s\n",b->d->name);
 	cleanup_new_partition();
@@ -4373,8 +4386,7 @@ badblock_do_internal(void){
 	ps = show_splash(L"Performing block check...");
 	badblock_scan(b->d,0); // FIXME allow destructive badblock check
 	if(ps){
-		hide_panel_locked(ps);
-		free(ps);
+		kill_splash(ps);
 	}
 }
 
