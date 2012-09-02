@@ -643,7 +643,7 @@ bottom_space_p(int rows){
 // is managed here; only the rows needed for display ought be provided.
 static int
 new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
-			const wchar_t *hstr,const wchar_t *bstr){
+			const wchar_t *hstr,const wchar_t *bstr,int borderpair){
 	const int crightlen = bstr ? wcslen(bstr) : 0;
 	int ybelow,yabove;
 	WINDOW *psw;
@@ -680,7 +680,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
 	ps->ysize = rows;
 	// memory leaks follow if we're compiled with NDEBUG! FIXME
 	assert(wattron(psw,A_BOLD) != ERR);
-	assert(wcolor_set(psw,PBORDER_COLOR,NULL) == OK);
+	assert(wcolor_set(psw,borderpair,NULL) == OK);
 	assert(bevel(psw) == OK);
 	assert(wattroff(psw,A_BOLD) != ERR);
 	assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
@@ -1302,7 +1302,7 @@ show_splash(const wchar_t *msg){
 	}
 	memset(ps,0,sizeof(*ps));
 	// FIXME gross, clean all of this up
-	if(new_display_panel(stdscr,ps,3,wcslen(msg) + 4,NULL,NULL)){
+	if(new_display_panel(stdscr,ps,3,wcslen(msg) + 4,NULL,NULL,SPLASHBORDER_COLOR)){
 		free(ps);
 		return NULL;
 	}
@@ -3555,7 +3555,8 @@ update_diags(struct panel_state *ps){
 static int
 display_diags(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics",NULL)){
+	if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics"
+				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
 	if(update_diags(ps)){
@@ -3580,7 +3581,8 @@ static const int DETAILROWS = 7; // FIXME make it dynamic based on selections
 static int
 display_details(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details",NULL)){
+	if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details"
+				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
 	if(current_adapter){
@@ -3619,7 +3621,8 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 	helpcols += 2; // spacing + borders
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help",
-			L"http://nick-black.com/dankwiki/index.php/Growlight")){
+			L"http://nick-black.com/dankwiki/index.php/Growlight",
+			PBORDER_COLOR)){
 		goto err;
 	}
 	if(helpstrs(panel_window(ps->p),1)){
@@ -3828,7 +3831,8 @@ map_details(WINDOW *hw){
 static int
 display_enviroment(WINDOW *mainw,struct panel_state *ps){
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display",NULL)){
+	if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display"
+				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
 	if(env_details(panel_window(ps->p),ps->ysize)){
@@ -3854,7 +3858,8 @@ display_maps(WINDOW *mainw,struct panel_state *ps){
 	unsigned rows = getmaxy(mainw) - 15;
 
 	memset(ps,0,sizeof(*ps));
-	if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display",NULL)){
+	if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display"
+				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
 	if(map_details(panel_window(ps->p))){
