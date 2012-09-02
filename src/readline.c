@@ -996,7 +996,7 @@ blockdev_dump(int descend){
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual, (M)dadm, (Z)pool,\n"
 		"\t\t(D)M, r(O)tational, (r)ead-only, (W)ritecache enabled,\n"
-		"\t\t(B)IOS bootable, ✔/✘: SMART status\n");
+		"\t\t(B)IOS bootable, ✓/✗: SMART status\n");
 	return 0;
 }
 
