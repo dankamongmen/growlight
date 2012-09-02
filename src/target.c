@@ -80,15 +80,14 @@ int prepare_umount(device *d,const char *path){
 		close(targfd);
 		targfd = -1;
 	}
-	m = d->target;
-	d->target = NULL;
 	if(umount2(path,UMOUNT_NOFOLLOW)){
 		diag("Couldn't unmount %s at %s (%s?)\n",
-				d->name,d->mnt,strerror(errno));
-		// continue anyway...
+				path,d->mnt,strerror(errno));
+		return -1;
 	}
-	free_mntentry(m);
-	return 0;
+	free_mntentry(d->target);
+	d->target = NULL;
+	return r;
 }
 
 static int
@@ -289,8 +288,10 @@ int set_target(const char *path){
 			if(d->target){
 				if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
 					diag("Path too long: %s/%s\n",growlight_target,d->target->path);
+					return -1;
 				}else if(umount2(buf,UMOUNT_NOFOLLOW)){
 					diag("Couldn't unmount %s (%s?)\n",buf,strerror(errno));
+					return -1;
 				}
 				free_mntentry(d->target);
 				d->target = NULL;
@@ -299,8 +300,10 @@ int set_target(const char *path){
 				if(p->target){
 					if(snprintf(buf,sizeof(buf),"%s/%s",growlight_target,d->target->path) >= (int)sizeof(buf)){
 						diag("Path too long: %s/%s\n",growlight_target,d->target->path);
+						return -1;
 					}else if(umount2(buf,UMOUNT_NOFOLLOW)){
 						diag("Couldn't unmount %s (%s?)\n",buf,strerror(errno));
+						return -1;
 					}
 					free_mntentry(d->target);
 					d->target = NULL;
