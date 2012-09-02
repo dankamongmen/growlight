@@ -570,10 +570,14 @@ int wipe_filesystem(device *d){
 		diag("No filesystem on %s\n",d->name);
 		return -1;
 	}
-	if(vspopen_drain("wipefs -t %s %s",d->mnttype,d->name)){
+	if(d->mnt || d->target){
+		diag("%s is in use and cannot be wiped\n",d->name);
 		return -1;
 	}
-	// FIXME update fs/mnttype?
+	if(vspopen_drain("wipefs -t %s -a %s",d->mnttype,d->name)){
+		return -1;
+	}
+	rescan_blockdev(d);
 	return 0;
 }
 
