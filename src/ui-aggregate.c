@@ -17,6 +17,30 @@ static const char AGGNAME_TEXT[] =
 "The chosen name will be the primary means by which the system makes use of "
 "this new aggregate, so choose wisely, and plan for the future!";
 
+static inline int
+device_aggregablep(const device *d){
+	if(d->mnt){
+		return 0;
+	}
+	if(d->size == 0){
+		return 0;
+	}
+	switch(d->layout){
+		case LAYOUT_NONE:
+			if(d->blkdev.unloaded){
+				return 0;
+			}
+			break;
+		case LAYOUT_PARTITION:
+			break;
+		case LAYOUT_MDADM:
+		case LAYOUT_DM:
+		case LAYOUT_ZPOOL:
+			break;
+	}
+	return 1;
+}
+
 typedef enum {
 	FORM_SELECT,			// form_option[]
 	FORM_STRING_INPUT,		// form_input
@@ -183,15 +207,19 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;
 
-			if((tmp = grow_component_table(d,count,match,defidx,selarray,selections,fo)) == NULL){
-				goto err;
-			}
-			fo = tmp;
-			for(p = d->parts ; p ; p = p->next){
-				if((tmp = grow_component_table(p,count,match,defidx,selarray,selections,fo)) == NULL){
+			if(device_aggregablep(d)){
+				if((tmp = grow_component_table(d,count,match,defidx,selarray,selections,fo)) == NULL){
 					goto err;
 				}
 				fo = tmp;
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(device_aggregablep(p)){
+					if((tmp = grow_component_table(p,count,match,defidx,selarray,selections,fo)) == NULL){
+						goto err;
+					}
+					fo = tmp;
+				}
 			}
 		}
 	}
