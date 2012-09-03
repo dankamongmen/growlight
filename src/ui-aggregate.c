@@ -159,10 +159,6 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 						++*selections;
 					}
 				}
-			}else{
-				if(aggregate_default_p(key)){
-					*defidx = *count;
-				}
 			}
 			if((desc = strdup(d->model ? d->model : d->wwn ? d->wwn : d->name)) == NULL){
 				free(key);
@@ -179,6 +175,7 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 			++*count;
 		}
 	}
+	*defidx = (*defidx + 1) % *count;
 	if(at->maxfaulted){
 		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
 			goto err;
