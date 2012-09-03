@@ -913,18 +913,14 @@ rescan(const char *name,device *d){
 			}else if(d->c->transport == TRANSPORT_USB3){
 				d->blkdev.transport = SERIAL_USB3;
 			}
-			if(!d->blkdev.removable){
-				if((d->blkdev.biossha1 = malloc(20)) == NULL){
-					diag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
-					clobber_device(d);
-					return NULL;
-				}
-				if(mbrsha1(dfd,d->blkdev.biossha1)){
-					diag("Warning: Couldn't read MBR for %s\n",name);
-					free(d->blkdev.biossha1);
-					d->blkdev.biossha1 = NULL;
-				}
-			}else{
+			if((d->blkdev.biossha1 = malloc(20)) == NULL){
+				diag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
+				clobber_device(d);
+				return NULL;
+			}
+			if(mbrsha1(dfd,d->blkdev.biossha1)){
+				verbf("Couldn't read MBR for %s\n",name);
+				free(d->blkdev.biossha1);
 				d->blkdev.biossha1 = NULL;
 			}
 			close(dfd);
@@ -971,7 +967,9 @@ rescan(const char *name,device *d){
 								p->partdev.ptstate.extended = 1;
 							}
 							if(blkid_partition_is_primary(part)){
-								d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
+								if(d->blkdev.biossha1){
+									d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
+								}
 							}
 						}
 						p->partdev.flags = flags;
