@@ -351,6 +351,9 @@ internal_device_reset(device *d){
 			free(d->blkdev.biossha1); d->blkdev.biossha1 = NULL;
 			free(d->blkdev.pttable); d->blkdev.pttable = NULL;
 			free(d->blkdev.serial); d->blkdev.serial = NULL;
+			if(d->c){
+				d->c->demand -= transport_bw(d->blkdev.transport);
+			}
 			break;
 		}case LAYOUT_MDADM:{
 			mdslave *md;
@@ -402,7 +405,8 @@ static void
 free_device(device *d){
 	if(d){
 		if(d->c){
-			d->c->demand -= transport_bw(d->blkdev.transport);
+			// FIXME we haven't yet updated the adapter's demanded
+			// bandwidth, so this will reflect out of date info
 			if(d->c->uistate && d->uistate){
 				gui->block_free(d->c->uistate,d->uistate);
 			}
@@ -1369,7 +1373,7 @@ event_posix_thread(void *unsafe){
 						if(in->len){
 							verbf("Event on %s\n",in->name);
 						}
-						verbf("FIXME unhandled inotify event"); // FIXME do something with it
+						diag("FIXME unhandled inotify event"); // FIXME do something with it
 					}
 				}
 				if(s && errno != EAGAIN && errno != EWOULDBLOCK){
