@@ -1305,8 +1305,7 @@ redraw_adapter(const reelbox *rb){
 // -- splash API. splashes are displayed during long operations, especially
 //    those requiring an external program.
 // -------------------------------------------------------------------------
-static struct panel_state *
-show_splash(const wchar_t *msg){
+struct panel_state *show_splash(const wchar_t *msg){
 	struct panel_state *ps;
 
 	assert(!splash);
@@ -1902,8 +1901,7 @@ destroy_fs_forms(void){
 	pending_fstype = NULL;
 }
 
-static void
-kill_splash(struct panel_state *ps){
+void kill_splash(struct panel_state *ps){
 	assert(ps == splash);
 	hide_panel_locked(ps);
 	free(ps);

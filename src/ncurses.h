@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 struct form_option;
+struct panel_state;
 
 void locked_diag(const char *,...);
 
@@ -36,6 +37,9 @@ void raise_str_form(const char *,void (*)(const char *),
 // Multiselect form with side panel
 void raise_multiform(const char *,void (*)(const char *,char **,int),
 		struct form_option *,int,int,int,char **,int,const char *);
+
+struct panel_state *show_splash(const wchar_t *);
+void kill_splash(struct panel_state *);
 
 #ifdef __cplusplus
 }

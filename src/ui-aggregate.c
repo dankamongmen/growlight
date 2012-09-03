@@ -256,13 +256,22 @@ static void aggname_callback(const char *);
 
 static void
 do_agg(const aggregate_type *at,char * const *selarray,int selections){
+	struct panel_state *ps;
+	int r;
+
 	if(at->makeagg == NULL){
 		locked_diag("FIXME %s creation is not yet implemented",pending_aggtype);
 		return;
 	}
-	// put up splash
-	at->makeagg(pending_aggname,selarray,selections);
-	// kill splash, print result
+
+	ps = show_splash(L"Creating aggregate...");
+	r = at->makeagg(pending_aggname,selarray,selections);
+	if(ps){
+		kill_splash(ps);
+	}
+	if(r == 0){
+		locked_diag("Successfully created %s",pending_aggtype);
+	}
 }
 
 static void
