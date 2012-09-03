@@ -113,6 +113,63 @@ err:
 }
 
 static struct form_option *
+grow_component_table(const device *d,int *count,const char *match,int *defidx,
+			char ***selarray,int *selections,struct form_option *fo){
+	struct form_option *tmp;
+	char *key,*desc;
+
+	if((key = strdup(d->name)) == NULL){
+		return NULL;
+	}
+	if(match){
+		if(strcmp(key,match) == 0){
+			*defidx = *count;
+		}
+		if(strcmp(key,match) == 0){
+			int z;
+
+			for(z = 0 ; z < *selections ; ++z){
+				if(strcmp(key,(*selarray)[z]) == 0){
+					free((*selarray)[z]);
+					(*selarray)[z] = NULL;
+					if(z < *selections - 1){
+						memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * (*selections - 1 - z));
+					}
+					--*selections;
+					z = -1;
+					break;
+				}
+			}
+			if(z >= *selections){
+				typeof(*selarray) tmp;
+
+				if((tmp = realloc(*selarray,sizeof(**selarray) * (*selections + 1))) == NULL){
+					free(key);
+					return NULL;
+				}
+				*selarray = tmp;
+				(*selarray)[*selections] = strdup(match);
+				++*selections;
+			}
+		}
+	}
+	if((desc = strdup(d->model ? d->model : d->wwn ? d->wwn : d->name)) == NULL){
+		free(key);
+		return NULL;
+	}
+	if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+		free(key);
+		free(desc);
+		return NULL;
+	}
+	fo = tmp;
+	fo[*count].option = key;
+	fo[*count].desc = desc;
+	++*count;
+	return fo;
+}
+
+static struct form_option *
 component_table(const aggregate_type *at,int *count,const char *match,int *defidx,
 		char ***selarray,int *selections){
 	struct form_option *fo = NULL,*tmp;
@@ -124,55 +181,10 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 		const device *d;
 
 		for(d = c->blockdevs ; d ; d = d->next){
-			char *key,*desc;
-
-			if((key = strdup(d->name)) == NULL){
-				goto err;
-			}
-			if(match){
-				if(strcmp(key,match) == 0){
-					*defidx = *count;
-				}
-				if(strcmp(key,match) == 0){
-					int z;
-
-					for(z = 0 ; z < *selections ; ++z){
-						if(strcmp(key,(*selarray)[z]) == 0){
-							free((*selarray)[z]);
-							(*selarray)[z] = NULL;
-							if(z < *selections - 1){
-								memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * (*selections - 1 - z));
-							}
-							--*selections;
-							z = -1;
-							break;
-						}
-					}
-					if(z >= *selections){
-						typeof(*selarray) tmp;
-
-						if((tmp = realloc(*selarray,sizeof(**selarray) * (*selections + 1))) == NULL){
-							goto err;
-						}
-						*selarray = tmp;
-						(*selarray)[*selections] = strdup(match);
-						++*selections;
-					}
-				}
-			}
-			if((desc = strdup(d->model ? d->model : d->wwn ? d->wwn : d->name)) == NULL){
-				free(key);
-				goto err;
-			}
-			if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
-				free(key);
-				free(desc);
+			if((tmp = grow_component_table(d,count,match,defidx,selarray,selections,fo)) == NULL){
 				goto err;
 			}
 			fo = tmp;
-			fo[*count].option = key;
-			fo[*count].desc = desc;
-			++*count;
 		}
 	}
 	*defidx = (*defidx + 1) % *count;
@@ -188,6 +200,7 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 	return fo;
 
 err:
+	// FIXME free up selarray?
 	while(*count--){
 		free(fo[*count].option);
 		free(fo[*count].desc);
