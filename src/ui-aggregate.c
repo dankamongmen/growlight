@@ -25,6 +25,9 @@ device_aggregablep(const device *d){
 	if(d->size == 0){
 		return 0;
 	}
+	if(d->roflag){
+		return 0;
+	}
 	switch(d->layout){
 		case LAYOUT_NONE:
 			if(d->blkdev.unloaded){
