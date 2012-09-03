@@ -20,7 +20,7 @@ int probe_smart(device *d){
 		diag("SMART is only available on block devices\n");
 		return -1;
 	}
-	d->blkdev.smartgood = -1;
+	d->blkdev.smart = -1;
 	if(snprintf(path,sizeof(path),"/dev/%s",d->name) >= (int)sizeof(path)){
 		diag("Bad name: %s\n",d->name);
 		return -1;
@@ -46,16 +46,16 @@ int probe_smart(device *d){
 	if(sk_disk_smart_status(sk,&good) == 0){
 		SkSmartOverall overall;
 
-		verbf("Disk (%s) SMART status: %s\n",d->name,good ? "Good" : "Bad");
 		if(sk_disk_smart_get_overall(sk,&overall)){
 			if(good){
-				d->blkdev.smartgood = SK_SMART_OVERALL_GOOD;
+				d->blkdev.smart = SK_SMART_OVERALL_GOOD;
 			}else{
-				d->blkdev.smartgood = SK_SMART_OVERALL_BAD_STATUS;
+				d->blkdev.smart = SK_SMART_OVERALL_BAD_STATUS;
 			}
 		}else{
-			d->blkdev.smartgood = overall;
+			d->blkdev.smart = overall;
 		}
+		verbf("Disk (%s) SMART status: %d\n",d->name,d->blkdev.smart);
 	}
 	if(sk_disk_smart_get_temperature(sk,&kelvin) == 0){
 		d->blkdev.celsius = (kelvin - 273150) / 1000;

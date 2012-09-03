@@ -464,10 +464,10 @@ print_drive(const device *d,int descend){
 			d->physsec,
 			d->blkdev.unloaded ? L'U' :
 			 d->blkdev.removable ? L'R' :
-			 d->blkdev.smartgood == SK_SMART_OVERALL_GOOD ? L'✓' :
-			 (d->blkdev.smartgood == SK_SMART_OVERALL_BAD_STATUS ||
-			   d->blkdev.smartgood == SK_SMART_OVERALL_BAD_SECTOR_MANY) ? L'✗' :
-			 d->blkdev.smartgood > 0 ? L'⚡' :
+			 d->blkdev.smart == SK_SMART_OVERALL_GOOD ? L'✓' :
+			 (d->blkdev.smart == SK_SMART_OVERALL_BAD_STATUS ||
+			   d->blkdev.smart == SK_SMART_OVERALL_BAD_SECTOR_MANY) ? L'✗' :
+			 d->blkdev.smart > 0 ? L'⚡' :
 			 d->blkdev.realdev ? L'.' : L'V',
 			d->blkdev.rotation >= 0 ? L'O' : L'.',
 			d->roflag ? L'r' :

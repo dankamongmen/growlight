@@ -1064,14 +1064,14 @@ case LAYOUT_ZPOOL:
 			}else{
 				mvwprintw(rb->win,line + 2,1,"     ");
 			}
-			if(bo->d->blkdev.smartgood >= 0){
+			if(bo->d->blkdev.smart >= 0){
 				wchar_t rep;
 
-				if(bo->d->blkdev.smartgood == SK_SMART_OVERALL_GOOD){
+				if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
 					rep = L'✓';
-				}else if(bo->d->blkdev.smartgood != SK_SMART_OVERALL_BAD_STATUS
-						&& bo->d->blkdev.smartgood != SK_SMART_OVERALL_BAD_SECTOR_MANY){
+				}else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
+						&& bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(ORANGE_COLOR));
 					rep = L'⚡';
 				}else{
