@@ -51,7 +51,7 @@
 #define MOUNTS	"/proc/mounts"
 #define FILESYSTEMS	"/proc/filesystems"
 #define DEVROOT "/dev"
-#define DEVBYID DEVROOT "/disk/by-id/"
+#define DEVBYPATH DEVROOT "/disk/by-path/"
 
 unsigned verbose = 0;
 unsigned finalized = 0;
@@ -1164,6 +1164,17 @@ device *lookup_device(const char *name){
 }
 
 static void *
+scan_devbypath(void *vname){
+	const char *name = vname;
+
+	assert(pthread_mutex_lock(&barrier) == 0);
+	pthread_cond_signal(&barrier_cond);
+	--thrcount;
+	assert(pthread_mutex_unlock(&barrier) == 0);
+	return NULL;
+}
+
+static void *
 scan_device(void *name){
 	device *d;
 
@@ -1594,6 +1605,9 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	if(watch_dir(fd,SYSROOT,scan_device)){
+		goto err;
+	}
+	if(watch_dir(fd,DEVBYPATH,scan_devbypath)){
 		goto err;
 	}
 	lock_growlight();
