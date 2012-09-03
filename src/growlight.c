@@ -1185,7 +1185,6 @@ scan_devbypath(void *vname){
 		return NULL;
 	}
 	buf[r] = '\0';
-	fprintf(stderr,"%s -> %s\n",path,buf);
 	lock_growlight();
 	if( (d = lookup_device(buf)) ){
 		free(d->bypath);
