@@ -30,6 +30,9 @@ device_aggregablep(const device *d){
 			if(d->blkdev.unloaded){
 				return 0;
 			}
+			if(d->blkdev.pttable){
+				return 0;
+			}
 			break;
 		case LAYOUT_PARTITION:
 			break;
