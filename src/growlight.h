@@ -94,7 +94,7 @@ typedef struct device {
 	char name[NAME_MAX];		// Entry in /dev or /sys/block
 	char *model,*revision,*sn;	// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
-
+	char *bypath;			// Alias in /dev/disks/by-path/
 	// Filesystem information. Block devices can have a (single) filesystem
 	// if they don't have a partition table. The filesystem need not match
 	// the container size, though it is generally unsafe to actually mount

@@ -412,6 +412,7 @@ free_device(device *d){
 		free(d->mnttype);
 		free(d->mntops);
 		free(d->mnt);
+		free(d->bypath);
 	}
 }
 
@@ -1165,12 +1166,38 @@ device *lookup_device(const char *name){
 
 static void *
 scan_devbypath(void *vname){
-	const char *name = vname;
+	char buf[PATH_MAX + 1],path[PATH_MAX + 1];
+	char *name = vname;
+	device *d;
+	int r;
 
+	if(!name){
+		return NULL;
+	}
+	if((unsigned)snprintf(path,sizeof(path),"%s/%s",DEVBYPATH,name) >= sizeof(path)){
+		diag("Bad link: %s\n",name);
+		free(vname);
+		return NULL;
+	}
+	if((r = readlink(path,buf,sizeof(buf))) < 0){;
+		diag("Couldn't read link at %s\n",path);
+		free(vname);
+		return NULL;
+	}
+	buf[r] = '\0';
+	fprintf(stderr,"%s -> %s\n",path,buf);
+	lock_growlight();
+	if( (d = lookup_device(buf)) ){
+		free(d->bypath);
+		d->bypath = name;
+		name = NULL;
+	}
+	unlock_growlight();
 	assert(pthread_mutex_lock(&barrier) == 0);
 	pthread_cond_signal(&barrier_cond);
 	--thrcount;
 	assert(pthread_mutex_unlock(&barrier) == 0);
+	free(name); // name was set to NULL on success
 	return NULL;
 }
 
