@@ -1369,7 +1369,7 @@ event_posix_thread(void *unsafe){
 						if(in->len){
 							verbf("Event on %s\n",in->name);
 						}
-						diag("FIXME unhandled inotify event"); // FIXME do something with it
+						verbf("FIXME unhandled inotify event"); // FIXME do something with it
 					}
 				}
 				if(s && errno != EAGAIN && errno != EWOULDBLOCK){
