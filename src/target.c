@@ -78,9 +78,9 @@ int prepare_umount(device *d,const char *path){
 		close(targfd);
 		targfd = -1;
 	}
-	if(umount2(path,UMOUNT_NOFOLLOW)){
-		diag("Couldn't unmount %s at %s (%s?)\n",
-				path,d->mnt,strerror(errno));
+	if(umount2(d->target->path,UMOUNT_NOFOLLOW)){
+		diag("Couldn't unmount %s at %s (%s?)\n",d->mnttype,
+				d->target->path,strerror(errno));
 		return -1;
 	}
 	free_mntentry(d->target);
