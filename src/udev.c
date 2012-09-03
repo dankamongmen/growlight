@@ -21,9 +21,7 @@ int udev_event(void){
 			udev_device_get_devtype(dev),udev_device_get_syspath(dev),
 			udev_device_get_sysname(dev),udev_device_get_sysnum(dev),
 			udev_device_get_devnode(dev));
-		lock_growlight();
 		rescan_device(udev_device_get_sysname(dev));
-		unlock_growlight();
 	}
 	return 0;
 }
