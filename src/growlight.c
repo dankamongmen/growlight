@@ -1027,17 +1027,12 @@ rescan(const char *name,device *d){
 		d->blkdev.last_usable = lookup_last_usable_sector(d);
 	}
 	lock_growlight();
-		if(d->uistate){ // FIXME no good -- action here oughtn't
-				// depend on UI logic!
-			gui->block_event(d,d->uistate);
-		}else{
-			d->next = d->c->blockdevs;
-			d->c->blockdevs = d;
-			if(d->layout == LAYOUT_NONE){
-				d->c->demand += transport_bw(d->blkdev.transport);
-			}
-			d->uistate = gui->block_event(d,d->uistate);
+		d->next = d->c->blockdevs;
+		d->c->blockdevs = d;
+		if(d->layout == LAYOUT_NONE){
+			d->c->demand += transport_bw(d->blkdev.transport);
 		}
+		d->uistate = gui->block_event(d,d->uistate);
 	unlock_growlight();
 	return d;
 }
@@ -1800,10 +1795,10 @@ int rescan_device(const char *name){
 					continue;
 				}
 			} // if we get here, we've matched up
-			d = (*lnk)->next;
-			internal_device_reset(*lnk);
-			if(rescan((*lnk)->name,*lnk) == NULL){
-				*lnk = d;
+			d = *lnk;
+			*lnk = (*lnk)->next;
+			internal_device_reset(d);
+			if(rescan(d->name,d) == NULL){
 				unlock_growlight();
 				return -1;
 			}
