@@ -391,6 +391,12 @@ static struct fs virtfss[] = {
 		.name = "devtmpfs",
 		.desc = "Early static /dev filesystem",
 	},{
+		.name = "nfs",
+		.desc = "Network File System",
+	},{
+		.name = "nfs4",
+		.desc = "Network File System v4",
+	},{
 		.name = "rootfs",
 		.desc = "Early trivial filesystem mounted at /",
 	},{
