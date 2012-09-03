@@ -157,8 +157,15 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 				unsigned long long s;
 
 				s = strtoull(val,NULL,0);
+				// The sizes can and do differ:
+				//
+				//  - Extended partitions (MBR 0x5) will be
+				//    reported using their full size by libblkid,
+				//    but sysfs reports only that which doesn't
+				//    overlap with other partitions (we prefer
+				//    the latter).
 				if(d->size && d->size != s){
-					diag("%s size changed from %ju to %llu\n",d->name,d->size,s);
+					verbf("%s size changed from %ju to %llu\n",d->name,d->size,s);
 				}
 			}else{
 				diag("PART_ENTRY_SIZE on non-partition %s\n",d->name);
