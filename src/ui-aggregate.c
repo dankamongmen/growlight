@@ -181,10 +181,18 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 		const device *d;
 
 		for(d = c->blockdevs ; d ; d = d->next){
+			const device *p;
+
 			if((tmp = grow_component_table(d,count,match,defidx,selarray,selections,fo)) == NULL){
 				goto err;
 			}
 			fo = tmp;
+			for(p = d->parts ; p ; p = p->next){
+				if((tmp = grow_component_table(p,count,match,defidx,selarray,selections,fo)) == NULL){
+					goto err;
+				}
+				fo = tmp;
+			}
 		}
 	}
 	*defidx = (*defidx + 1) % *count;
