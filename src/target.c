@@ -58,6 +58,8 @@ void free_mntentry(mntentry *t){
 }
 
 int prepare_umount(device *d,const char *path){
+	char targpath[PATH_MAX + 1];
+
 	if(path == NULL){
 		diag("Passed a NULL argument\n");
 		return -1;
@@ -74,13 +76,17 @@ int prepare_umount(device *d,const char *path){
 		diag("%s is mapped to %s, not %s\n",d->name,d->target->path,path);
 		return -1;
 	}
+	if((unsigned)snprintf(targpath,sizeof(targpath),"%s/%s",get_target(),path) >= sizeof(targpath)){
+		diag("Bad path: %s\n",path);
+		return -1;
+	}
 	if(strcmp(growlight_target,d->target->path) == 0){
 		close(targfd);
 		targfd = -1;
 	}
-	if(umount2(d->target->path,UMOUNT_NOFOLLOW)){
+	if(umount2(targpath,UMOUNT_NOFOLLOW)){
 		diag("Couldn't unmount %s at %s (%s?)\n",d->mnttype,
-				d->target->path,strerror(errno));
+				targpath,strerror(errno));
 		return -1;
 	}
 	free_mntentry(d->target);
