@@ -2108,7 +2108,7 @@ ptype_name_callback(const char *name){
 	size_t wcs;
 	int r;
 
-	if(name == NULL){ // go back to partition spec
+	if(name == NULL || strcmp(name,"")){ // go back to partition spec
 		raise_str_form("enter partition spec",psectors_callback,
 				pending_spec,PSPEC_TEXT);
 		return;
