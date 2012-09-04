@@ -2106,6 +2106,7 @@ ptype_name_callback(const char *name){
 	mbstate_t ps;
 	blockobj *b;
 	size_t wcs;
+	int r;
 
 	if(name == NULL){ // go back to partition spec
 		raise_str_form("enter partition spec",psectors_callback,
@@ -2135,13 +2136,15 @@ ptype_name_callback(const char *name){
 		return;
 	}
 	sps = show_splash(L"Creating partition...");
-	add_partition(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
+	r = add_partition(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
 	if(sps){
 		kill_splash(sps);
 	}
 	free(wstr);
 	cleanup_new_partition();
-	locked_diag("Created new partition %s on %s\n",name,b->d->name);
+	if(!r){
+		locked_diag("Created new partition %s on %s\n",name,b->d->name);
+	}
 }
 
 static int
