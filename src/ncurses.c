@@ -522,8 +522,7 @@ draw_main_window(WINDOW *w){
 	int rows,cols,scol,x,y;
 	char buf[BUFSIZ];
 
-	scol = snprintf(buf,sizeof(buf),"%s %s | %d adapter%s",PACKAGE,VERSION,
-			count_adapters,count_adapters == 1 ? "" : "s");
+	scol = snprintf(buf,sizeof(buf),"%s %s (%d)",PACKAGE,VERSION,count_adapters - 1);
 	assert(scol > 0 && (unsigned)scol < sizeof(buf));
 	getmaxyx(w,rows,cols);
 	assert(wattrset(w,COLOR_PAIR(HEADER_COLOR)) != ERR);
