@@ -276,7 +276,7 @@ do_agg(const aggregate_type *at,char * const *selarray,int selections){
 }
 
 static void
-aggcomp_callback(const char *fn,char **selarray,int selections){
+aggcomp_callback(const char *fn,char **selarray,int selections,int scroll){
 	struct form_option *comps_agg;
 	const aggregate_type *at;
 	int opcount,defidx;
@@ -302,7 +302,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT);
+			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT,scroll);
 	locked_diag("%s needs at least %d devices",pending_aggtype,at->mindisks);
 }
 
@@ -337,7 +337,7 @@ aggname_callback(const char *fn){
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
-			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT);
+			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT,0);
 }
 
 static void
