@@ -231,13 +231,15 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 		}
 	}
 	if(at->maxfaulted){
-		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+		device fauxd;
+
+		memset(&fauxd,0,sizeof(fauxd));
+		strncpy(fauxd.name,"missing",sizeof(fauxd.name));
+		fauxd.bypath = "force construction of degraded array";
+		if((tmp = grow_component_table(&fauxd,count,match,defidx,selarray,selections,fo)) == NULL){
 			goto err;
 		}
 		fo = tmp;
-		fo[*count].option = strdup("missing");
-		fo[*count].desc = strdup("force construction of degraded array");
-		++*count;
 	}
 	*defidx = (*defidx + 1) % *count;
 	return fo;
