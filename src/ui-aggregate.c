@@ -8,7 +8,9 @@
 #include "ui-aggregate.h"
 
 static const char AGGCOMP_TEXT[] =
-"Bind devices to the new aggregate.";
+"Bind devices to the new aggregate. To be eligible, a device must either be "
+"unpartitioned, or be a partition having the appropriate component type. The "
+"device furthermore must not have a valid filesystem signature.";
 
 static const char AGGTYPE_TEXT[] =
 "What kind of aggregate do you hope to create?";
