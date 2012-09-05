@@ -35,8 +35,8 @@ void raise_str_form(const char *,void (*)(const char *),
 			const char *,const char *);
 
 // Multiselect form with side panel
-void raise_multiform(const char *,void (*)(const char *,char **,int),
-		struct form_option *,int,int,int,char **,int,const char *);
+void raise_multiform(const char *,void (*)(const char *,char **,int,int),
+	struct form_option *,int,int,int,char **,int,const char *,int);
 
 struct panel_state *show_splash(const wchar_t *);
 void kill_splash(struct panel_state *);

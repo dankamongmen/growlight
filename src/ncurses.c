@@ -114,7 +114,7 @@ typedef enum {
 struct form_state {
 	PANEL *p;
 	void (*fxn)(const char *);	// callback once form is done
-	void (*mcb)(const char *,char **,int); // callback on multiform input
+	void (*mcb)(const char *,char **,int,int); // multiform callback
 	int longop;			// length of prompt or longest op
 	char *boxstr;			// string for box label
 	form_enum formtype;		// type of form
@@ -1339,7 +1339,7 @@ struct panel_state *show_splash(const wchar_t *msg){
 // -- form creation
 // -------------------------------------------------------------------------
 static struct form_state *
-create_form(const char *str,void (*fxn)(const char *),form_enum ftype){
+create_form(const char *str,void (*fxn)(const char *),form_enum ftype,int scrolloff){
 	struct form_state *fs;
 
 	if( (fs = malloc(sizeof(*fs))) ){
@@ -1349,6 +1349,7 @@ create_form(const char *str,void (*fxn)(const char *),form_enum ftype){
 			free(fs);
 			return NULL;
 		}
+		fs->scrolloff = scrolloff;
 		fs->selectno = 1;
 		fs->formtype = ftype;
 		fs->fxn = fxn;
@@ -1558,9 +1559,10 @@ raise_form_explication(const WINDOW *w,const char *text){
 	return ps;
 }
 
-void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
+void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 		struct form_option *opstrs,int ops,int defidx,
-		int selectno,char **selarray,int selections,const char *text){
+		int selectno,char **selarray,int selections,const char *text,
+		int scrollidx){
 	size_t longop,longdesc;
 	struct form_state *fs;
 	int cols,rows;
@@ -1602,7 +1604,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 			return;
 		}
 	}
-	if((fs = create_form(str,NULL,FORM_MULTISELECT)) == NULL){
+	if((fs = create_form(str,NULL,FORM_MULTISELECT,scrollidx)) == NULL){
 		return;
 	}
 	fs->mcb = fxn;
@@ -1687,7 +1689,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 			return;
 		}
 	}
-	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
+	if((fs = create_form(str,fxn,FORM_SELECT,0)) == NULL){
 		return;
 	}
 	if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,x - cols - 4)) == NULL){
@@ -1758,7 +1760,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 		locked_diag("An input dialog is already active");
 		return;
 	}
-	if((fs = create_form(str,fxn,FORM_STRING_INPUT)) == NULL){
+	if((fs = create_form(str,fxn,FORM_STRING_INPUT,0)) == NULL){
 		return;
 	}
 	fs->longop = strlen(str);
@@ -4829,7 +4831,7 @@ handle_subwindow_input(int ch){
 static int
 handle_actform_input(int ch){
 	struct form_state *fs = actform;
-	void (*mcb)(const char *,char **,int);
+	void (*mcb)(const char *,char **,int,int);
 	void (*cb)(const char *);
 
 	if(fs->formtype == FORM_STRING_INPUT){
@@ -4849,7 +4851,7 @@ handle_actform_input(int ch){
 			unlock_ncurses();
 			break;
 		case ' ': case '\r': case '\n': case KEY_ENTER:{
-			int op,selections;
+			int op,selections,scrolloff;
 			char **selarray;
 			char *optstr;
 
@@ -4858,12 +4860,13 @@ handle_actform_input(int ch){
 				assert(optstr = strdup(fs->ops[op].option));
 				selarray = fs->selarray;
 				selections = fs->selections;
+				scrolloff = fs->scrolloff;
 				fs->selarray = NULL;
 				free_form(actform);
 				actform = NULL;
 				setup_colors();
 				if(mcb){
-					mcb(optstr,selarray,selections);
+					mcb(optstr,selarray,selections,scrolloff);
 				}else{
 					cb(optstr);
 				}
@@ -4873,9 +4876,10 @@ handle_actform_input(int ch){
 		}case KEY_ESC:{
 			lock_ncurses();
 			if(fs->formtype == FORM_MULTISELECT){
+				int scrolloff = fs->scrolloff;
 				free_form(actform);
 				actform = NULL;
-				mcb(NULL,NULL,0);
+				mcb(NULL,NULL,0,scrolloff);
 			}else{
 				free_form(actform);
 				actform = NULL;
@@ -4920,17 +4924,18 @@ handle_actform_input(int ch){
 		}case 'q':{
 			return 1;
 		}case 'C':{
+			int selections,scrolloff;
 			char **selarray;
-			int selections;
 
 			lock_ncurses();
 			if(fs->formtype == FORM_MULTISELECT){
 				selarray = fs->selarray;
 				selections = fs->selections;
+				scrolloff = fs->scrolloff;
 				fs->selarray = NULL;
 				free_form(actform);
 				actform = NULL;
-				mcb("",selarray,selections);
+				mcb("",selarray,selections,scrolloff);
 				unlock_ncurses();
 				break;
 			}
