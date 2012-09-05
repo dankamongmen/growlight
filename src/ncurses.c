@@ -691,7 +691,6 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
 		return ERR;
 	}
 	assert(top_panel(ps->p) != ERR);
-	ps->ysize = rows;
 	// memory leaks follow if we're compiled with NDEBUG! FIXME
 	assert(wattron(psw,A_BOLD) != ERR);
 	assert(wcolor_set(psw,borderpair,NULL) == OK);
@@ -717,7 +716,6 @@ hide_panel_locked(struct panel_state *ps){
 		assert(del_panel(ps->p) == OK);
 		ps->p = NULL;
 		assert(delwin(psw) == OK);
-		ps->ysize = -1;
 	}
 }
 
@@ -1397,7 +1395,6 @@ destroy_form_locked(struct form_state *fs){
 				fs->inp.buffer = NULL;
 				break;
 		}
-		fs->ysize = -1;
 		actform = NULL;
 	}
 }
@@ -1437,7 +1434,7 @@ multiform_options(struct form_state *fs){
 	wattron(fsw,A_BOLD);
 	mvwadd_wch(fsw,1,1,&bchr[2]);
 	mvwadd_wch(fsw,1,fs->longop + 4,&bchr[0]);
-	for(z = 1 ; z < fs->ysize - 1 ; ++z){
+	for(z = 1 ; z < getmaxy(fsw) - 3 ; ++z){
 		int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
 		assert(op >= 0);
@@ -1487,7 +1484,7 @@ form_options(struct form_state *fs){
 	}
 	cols = getmaxx(fsw);
 	wattron(fsw,A_BOLD);
-	for(z = 1 ; z < fs->ysize - 1 ; ++z){
+	for(z = 1 ; z < getmaxy(fsw) - 3 ; ++z){
 		int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
 		assert(op >= 0);
@@ -1629,7 +1626,6 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 		fs->idx = defidx = 0;
 	}
 	fs->opcount = ops;
-	fs->ysize = rows - 2;
 	fs->selarray = selarray;
 	fs->selections = selections;
 	wattroff(fsw,A_BOLD);
@@ -1638,7 +1634,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,fs->boxstr);
 #define ESCSTR "'C' confirms setup, ⎋esc returns"
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen(ESCSTR),ESCSTR);
+	mvwprintw(fsw,getmaxy(fsw) - 1,cols - strlen(ESCSTR),ESCSTR);
 #undef ESCSTR
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
@@ -1714,13 +1710,12 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 		fs->idx = defidx = 0;
 	}
 	fs->opcount = ops;
-	fs->ysize = rows - 2;
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
+	mvwprintw(fsw,getmaxy(fsw) - 1,cols - strlen("⎋esc returns"),"⎋esc returns");
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
 	fs->ops = opstrs;
@@ -1786,13 +1781,12 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 		return;
 	}
 	assert(top_panel(fs->p) != ERR);
-	fs->ysize = 1;
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,fs->ysize + 1,cols - strlen("⎋esc returns"),"⎋esc returns");
+	mvwprintw(fsw,getmaxy(fsw) - 1,cols - strlen("⎋esc returns"),"⎋esc returns");
 	fs->inp.prompt = fs->boxstr;
 	def = def ? def : "";
 	fs->inp.buffer = strdup(def);
@@ -3535,7 +3529,7 @@ update_diags(struct panel_state *ps){
 	int y,x,r;
 
 	getmaxyx(w,y,x);
-	y = ps->ysize;
+	y = getmaxy(w) - 2;
 	assert(x > 26 + START_COL * 2); // see ctime_r(3)
 	if((y = get_logs(y,l)) < 0){
 		return -1;
@@ -3858,7 +3852,7 @@ display_enviroment(WINDOW *mainw,struct panel_state *ps){
 				,NULL,PBORDER_COLOR)){
 		goto err;
 	}
-	if(env_details(panel_window(ps->p),ps->ysize)){
+	if(env_details(panel_window(ps->p),getmaxy(panel_window(ps->p)) - 1)){
 		goto err;
 	}
 	return OK;
@@ -4902,7 +4896,7 @@ handle_actform_input(int ch){
 			break;
 		}case KEY_DOWN: case 'j':{
 			lock_ncurses();
-			if(fs->idx == (fs->scrolloff + fs->ysize - 3) % fs->opcount){
+			if(fs->idx == (fs->scrolloff + getmaxy(panel_window(fs->p)) - 5) % fs->opcount){
 				if(++fs->scrolloff >= fs->opcount){
 					fs->scrolloff = 0;
 				}
