@@ -1231,11 +1231,13 @@ inotify_fd(void){
 
 typedef void *(*eventfxn)(void *);
 
+// If fd >= 0, we use it as an inotify fd, and will set *wd to the
+// acquired watch descriptor.
 static inline int
-watch_dir(int fd,const char *dfp,eventfxn fxn){
+watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	pthread_attr_t attr;
 	struct dirent *d;
-	int wfd,r,dfd;
+	int r,dfd;
 	DIR *dir;
 
 	if( (r = pthread_attr_init(&attr)) ||
@@ -1246,24 +1248,24 @@ watch_dir(int fd,const char *dfp,eventfxn fxn){
 	assert(thrcount == 0);
 	pthread_mutex_unlock(&barrier);
 	if(fd >= 0){
-		wfd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
-		if(wfd < 0){
+		*wd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
+		if(*wd < 0){
 			diag("Coudln't inotify on %s (%s?)\n",dfp,strerror(errno));
 			return -1;
 		}else{
-			verbf("Watching %s on fd %d\n",dfp,wfd);
+			verbf("Watching %s on fd %d\n",dfp,*wd);
 		}
 	}
 	r = 0;
 	if((dir = opendir(dfp)) == NULL){
 		diag("Coudln't open %s (%s?)\n",dfp,strerror(errno));
-		if(fd >= 0){ inotify_rm_watch(fd,wfd); }
+		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
 		pthread_attr_destroy(&attr);
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
 		diag("Coudln't get fd on %s (%s?)\n",dfp,strerror(errno));
-		if(fd >= 0){ inotify_rm_watch(fd,wfd); }
+		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
 		closedir(dir);
 		pthread_attr_destroy(&attr);
 		return -1;
@@ -1347,6 +1349,8 @@ struct event_marshal {
 	int mfd;		// /proc/mounts fd
 	int sfd;		// /proc/swaps fd
 	int ffd;		// /proc/filesystems fd
+	int syswd;		// /sys/block watch descriptor
+	int bypathwd;		// /dev/disk/by-path watch descriptor
 };
 
 static void *
@@ -1370,10 +1374,25 @@ event_posix_thread(void *unsafe){
 					if(s - idx >= (ptrdiff_t)sizeof(*in)){
 						in = (struct inotify_event *)(buf + idx);
 						idx += sizeof(*in);
-						if(in->len){
-							verbf("Event on %s\n",in->name);
+						if(in->len == 0){
+							diag("Nil-file event on unknown watch desc %d\n",in->wd);
+						}else if(in->wd == em->syswd){
+							char *name = strdup(in->name);
+							assert(name);
+							assert(pthread_mutex_lock(&barrier) == 0);
+							++thrcount;
+							assert(pthread_mutex_unlock(&barrier) == 0);
+							scan_device(name);
+						}else if(in->wd == em->bypathwd){
+							char *name = strdup(in->name);
+							assert(name);
+							assert(pthread_mutex_lock(&barrier) == 0);
+							++thrcount;
+							assert(pthread_mutex_unlock(&barrier) == 0);
+							scan_devbypath(name);
+						}else{
+							diag("Event on unknown watch desc %d (%s)\n",in->wd,in->name);
 						}
-						diag("FIXME unhandled inotify event"); // FIXME do something with it
 					}
 				}
 				if(s && errno != EAGAIN && errno != EWOULDBLOCK){
@@ -1408,7 +1427,7 @@ event_posix_thread(void *unsafe){
 }
 
 static int
-event_thread(int ifd,int ufd){
+event_thread(int ifd,int ufd,int syswd,int bypathwd){
 	struct event_marshal *em;
 	struct epoll_event ev;
 	int r;
@@ -1440,6 +1459,8 @@ event_thread(int ifd,int ufd){
 	}
 	em->ifd = ifd;
 	em->ufd = ufd;
+	em->syswd = syswd;
+	em->bypathwd = bypathwd;
 	if((em->mfd = open(MOUNTS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
 		close(em->efd);
 		free(em);
@@ -1556,7 +1577,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			.val = 0,
 		},
 	};
-	int fd,opt,longidx,udevfd;
+	int fd,opt,longidx,udevfd,syswd,bypathwd;
 	char buf[BUFSIZ];
 
 	gui = ui;
@@ -1634,10 +1655,10 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if(init_zfs_support(gui)){
 		goto err;
 	}
-	if(watch_dir(fd,SYSROOT,scan_device)){
+	if(watch_dir(fd,SYSROOT,scan_device,&syswd)){
 		goto err;
 	}
-	if(watch_dir(fd,DEVBYPATH,scan_devbypath)){
+	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd)){
 		goto err;
 	}
 	lock_growlight();
@@ -1654,7 +1675,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
-	if(event_thread(fd,udevfd)){
+	if(event_thread(fd,udevfd,syswd,bypathwd)){
 		goto err;
 	}
 	return 0;
@@ -1917,7 +1938,7 @@ int rescan_devices(void){
 	push_devtable(&dt);
 	unlock_growlight();
 	ret |= scan_zpools(gui);
-	ret |= watch_dir(-1,SYSROOT,scan_device);
+	ret |= watch_dir(-1,SYSROOT,scan_device,NULL);
 	lock_growlight();
 	ret |= parse_mounts(gui,MOUNTS);
 	ret |= parse_swaps(gui,SWAPS);
