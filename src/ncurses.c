@@ -1502,7 +1502,6 @@ form_options(struct form_state *fs){
 }
 
 #define FORM_Y_OFFSET 5
-#define FORM_X_OFFSET 5
 static struct panel_state *
 raise_form_explication(const WINDOW *w,const char *text){
 	int linepre[FORM_Y_OFFSET - 1];
@@ -1593,7 +1592,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 	cols = longdesc + longop * 2 + 9;
 	rows = (ops > selectno ? ops : selectno) + 4;
 	getmaxyx(stdscr,y,x);
-	if(x < cols + START_COL * 4){
+	if(x < cols){
 		locked_diag("Window too thin for form, uh-oh");
 		return;
 	}
@@ -1608,7 +1607,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int),
 		return;
 	}
 	fs->mcb = fxn;
-	if((fsw = newwin(rows,cols,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
+	if((fsw = newwin(rows,cols,FORM_Y_OFFSET,x - cols)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
@@ -1678,7 +1677,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	cols = longdesc + longop + 1;
 	rows = ops + 4;
 	getmaxyx(stdscr,y,x);
-	if(x < cols + START_COL * 4){
+	if(x < cols + 4){
 		locked_diag("Window too thin for form, uh-oh");
 		return;
 	}
@@ -1692,7 +1691,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	if((fs = create_form(str,fxn,FORM_SELECT)) == NULL){
 		return;
 	}
-	if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
+	if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,x - cols - 4)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
@@ -1766,9 +1765,9 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 	fs->longop = strlen(str);
 	cols = fs->longop + 40 + 1; // FIXME? 40 for input currently
 	getmaxyx(stdscr,y,x);
-	assert(x >= cols + START_COL * 2);
+	assert(x >= cols + 3);
 	assert(y >= 3);
-	if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET,FORM_X_OFFSET)) == NULL){
+	if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET,x - cols - 3)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
@@ -2694,22 +2693,18 @@ update_details(WINDOW *hw){
 		assert(mvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available") != ERR);
 	}else{
 		assert(mvwprintw(hw,2,START_COL,"Firmware: ") != ERR);
-		if(c->fwver){
-			waddstr(hw,c->fwver);
-		}else{
-			wattroff(hw,A_BOLD);
-			waddstr(hw,"Unknown");
-			wattron(hw,A_BOLD);
-		}
+		wattroff(hw,A_BOLD);
+		waddstr(hw,c->fwver ? c->fwver : "Unknown");
+		wattron(hw,A_BOLD);
 		waddstr(hw," BIOS: ");
-		if(c->biosver){
-			waddstr(hw,c->biosver);
-		}else{
-			wattroff(hw,A_BOLD);
-			waddstr(hw,"Unknown");
-			wattron(hw,A_BOLD);
-		}
-		wprintw(hw," Theoretical demand: %s",qprefix(c->demand,1,buf,sizeof(buf),1));
+		wattroff(hw,A_BOLD);
+		waddstr(hw,c->biosver ? c->biosver : "Unknown");
+		wattron(hw,A_BOLD);
+		waddstr(hw," Theoretical demand: ");
+		qprefix(c->demand,1,buf,sizeof(buf),1);
+		wattroff(hw,A_BOLD);
+		waddstr(hw,buf);
+		wattron(hw,A_BOLD);
 	}
 	if((b = current_adapter->selected) == NULL){
 		return 0;
