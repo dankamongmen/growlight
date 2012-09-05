@@ -2715,20 +2715,25 @@ update_details(WINDOW *hw){
 				++sn;
 			}
 		}
-		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) S/N: %-s",d->name,
+		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) S/N: %-s WC%lc RWV%lc RO%lc",d->name,
 					d->model ? d->model : "n/a",
 					d->revision ? d->revision : "n/a",
 					qprefix(d->size,1,buf,sizeof(buf),0),
-					sn ? sn : "n/a");
+					sn ? sn : "n/a",
+					d->blkdev.wcache ? L'+' : L'-',
+					d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
+					 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
+					d->roflag ? L'+' : L'-');
 		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju Transport: %s",
 					d->logsec,d->physsec,
 					d->size / (d->logsec ? d->logsec : 1),
 					transport_str(d->blkdev.transport));
 	}else{
-		mvwprintw(hw,3,START_COL,"%s: %s %s (%s)",d->name,
+		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
 					d->model ? d->model : "n/a",
 					d->revision ? d->revision : "n/a",
-					qprefix(d->size,1,buf,sizeof(buf),0));
+					qprefix(d->size,1,buf,sizeof(buf),0),
+					d->roflag ? L'+' : L'-');
 		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju",
 					d->logsec,d->physsec,
 					d->size / (d->logsec ? d->logsec : 1));
@@ -2774,8 +2779,8 @@ update_details(WINDOW *hw){
 					b->zone->fsector,b->zone->lsector,
 					b->zone->p->name,
 					b->zone->p->partdev.pname ?
-					 b->zone->p->partdev.pname :
-					 L"unnamed",b->zone->p->partdev.ptype,align);
+					 b->zone->p->partdev.pname : L"unnamed",
+					b->zone->p->partdev.ptype,align);
 			detail_fs(hw,b->zone->p,7);
 			break;
 			}
