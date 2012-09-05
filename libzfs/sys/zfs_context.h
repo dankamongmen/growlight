@@ -61,6 +61,7 @@
 #include <sys/fm/fs/zfs.h>
 #include <sys/sunddi.h>
 #include <sys/ctype.h>
+#include <sys/disp.h>
 #include <linux/dcache_compat.h>
 
 #else /* _KERNEL */
@@ -228,6 +229,9 @@ extern kthread_t *zk_thread_create(caddr_t stk, size_t  stksize,
 	proc_t *pp, int state, pri_t pri);
 extern void zk_thread_join(kt_did_t tid);
 
+#define	kpreempt_disable()	((void)0)
+#define	kpreempt_enable()	((void)0)
+
 #define	PS_NONE		-1
 
 #define	issig(why)	(FALSE)
@@ -384,10 +388,10 @@ typedef struct taskq_ent {
 #define	TASKQ_DYNAMIC		0x0004	/* Use dynamic thread scheduling */
 #define	TASKQ_THREADS_CPU_PCT	0x0008	/* Scale # threads by # cpus */
 #define	TASKQ_DC_BATCH		0x0010	/* Mark threads as batch */
-#define	TASKQ_NORECLAIM		0x0020	/* Disable direct memory reclaim */
 
 #define	TQ_SLEEP	KM_SLEEP	/* Can block for memory */
 #define	TQ_NOSLEEP	KM_NOSLEEP	/* cannot block for memory; may fail */
+#define	TQ_PUSHPAGE	KM_PUSHPAGE	/* Cannot perform I/O */
 #define	TQ_NOQUEUE	0x02		/* Do not enqueue if can't dispatch */
 #define	TQ_FRONT	0x08		/* Queue in front */
 

@@ -238,10 +238,8 @@ typedef struct dbuf_hash_table {
 
 uint64_t dbuf_whichblock(struct dnode *di, uint64_t offset);
 
-dmu_buf_impl_t *dbuf_create_tlib(struct dnode *dn, char *data);
 void dbuf_create_bonus(struct dnode *dn);
 int dbuf_spill_set_blksz(dmu_buf_t *db, uint64_t blksz, dmu_tx_t *tx);
-void dbuf_spill_hold(struct dnode *dn, dmu_buf_impl_t **dbp, void *tag);
 
 void dbuf_rm_spill(struct dnode *dn, dmu_tx_t *tx);
 
@@ -274,7 +272,6 @@ arc_buf_t *dbuf_loan_arcbuf(dmu_buf_impl_t *db);
 void dbuf_clear(dmu_buf_impl_t *db);
 void dbuf_evict(dmu_buf_impl_t *db);
 
-void dbuf_setdirty(dmu_buf_impl_t *db, dmu_tx_t *tx);
 void dbuf_unoverride(dbuf_dirty_record_t *dr);
 void dbuf_sync_list(list_t *list, dmu_tx_t *tx);
 void dbuf_release_bp(dmu_buf_impl_t *db);
@@ -348,13 +345,13 @@ boolean_t dbuf_is_metadata(dmu_buf_impl_t *db);
 	} \
 _NOTE(CONSTCOND) } while (0)
 
-#define	dprintf_dbuf_bp(db, bp, fmt, ...) do {			\
-	if (zfs_flags & ZFS_DEBUG_DPRINTF) {			\
-	char *__blkbuf = kmem_alloc(BP_SPRINTF_LEN, KM_SLEEP);	\
-	sprintf_blkptr(__blkbuf, bp);				\
-	dprintf_dbuf(db, fmt " %s\n", __VA_ARGS__, __blkbuf);	\
-	kmem_free(__blkbuf, BP_SPRINTF_LEN);			\
-	}							\
+#define	dprintf_dbuf_bp(db, bp, fmt, ...) do {				\
+	if (zfs_flags & ZFS_DEBUG_DPRINTF) {				\
+	char *__blkbuf = kmem_alloc(BP_SPRINTF_LEN, KM_PUSHPAGE);	\
+	sprintf_blkptr(__blkbuf, bp);					\
+	dprintf_dbuf(db, fmt " %s\n", __VA_ARGS__, __blkbuf);		\
+	kmem_free(__blkbuf, BP_SPRINTF_LEN);				\
+	}								\
 _NOTE(CONSTCOND) } while (0)
 
 #define	DBUF_VERIFY(db)	dbuf_verify(db)
