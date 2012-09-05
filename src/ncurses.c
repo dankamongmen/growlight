@@ -2693,9 +2693,23 @@ update_details(WINDOW *hw){
 	if(c->bus == BUS_VIRTUAL){
 		assert(mvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available") != ERR);
 	}else{
-		assert(mvwprintw(hw,2,START_COL,"Firmware: %s BIOS: %s",
-					c->fwver ? c->fwver : "Unknown",
-					c->biosver ? c->biosver : "Unknown") != ERR);
+		assert(mvwprintw(hw,2,START_COL,"Firmware: ") != ERR);
+		if(c->fwver){
+			waddstr(hw,c->fwver);
+		}else{
+			wattroff(hw,A_BOLD);
+			waddstr(hw,"Unknown");
+			wattron(hw,A_BOLD);
+		}
+		waddstr(hw," BIOS: ");
+		if(c->biosver){
+			waddstr(hw,c->biosver);
+		}else{
+			wattroff(hw,A_BOLD);
+			waddstr(hw,"Unknown");
+			wattron(hw,A_BOLD);
+		}
+		wprintw(hw," Theoretical demand: %s",qprefix(c->demand,1,buf,sizeof(buf),1));
 	}
 	if((b = current_adapter->selected) == NULL){
 		return 0;
