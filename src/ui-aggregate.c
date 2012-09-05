@@ -155,11 +155,9 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 	}
 	if(match){
 		if(strcmp(key,match) == 0){
-			*defidx = *count;
-		}
-		if(strcmp(key,match) == 0){
 			int z;
 
+			*defidx = *count;
 			for(z = 0 ; z < *selections ; ++z){
 				if(strcmp(key,(*selarray)[z]) == 0){
 					free((*selarray)[z]);
@@ -297,8 +295,6 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 			do_agg(at,selarray,selections);
 			destroy_agg_forms();
 			return;
-		}else{
-			locked_diag("%s needs at least %d devices",pending_aggtype,at->mindisks);
 		}
 	}
 	if((comps_agg = component_table(at,&opcount,fn,&defidx,&selarray,&selections)) == NULL){
@@ -307,6 +303,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections){
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
 			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT);
+	locked_diag("%s needs at least %d devices",pending_aggtype,at->mindisks);
 }
 
 static void

@@ -115,7 +115,7 @@ struct form_state {
 	PANEL *p;
 	void (*fxn)(const char *);	// callback once form is done
 	void (*mcb)(const char *,char **,int); // callback on multiform input
-	int longop;			// length of longest op
+	int longop;			// length of prompt or longest op
 	char *boxstr;			// string for box label
 	form_enum formtype;		// type of form
 	struct panel_state *extext;	// explication text, above the form
