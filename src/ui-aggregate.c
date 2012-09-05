@@ -230,7 +230,6 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 			}
 		}
 	}
-	*defidx = (*defidx + 1) % *count;
 	if(at->maxfaulted){
 		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
 			goto err;
@@ -240,6 +239,7 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 		fo[*count].desc = strdup("force construction of degraded array");
 		++*count;
 	}
+	*defidx = (*defidx + 1) % *count;
 	return fo;
 
 err:
