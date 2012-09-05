@@ -629,9 +629,9 @@ adapter_wholly_visible_p(int rows,const reelbox *rb){
 
 	if(rb->scrline + adapter_lines_bounded(as,rows) >= rows){
 		return 0;
-	}else if(rb->scrline < 1){
+	}else if(rb->scrline < 0){
 		return 0;
-	}else if(rb->scrline == 1 && adapter_lines_bounded(as,rows) != getmaxy(rb->win)){
+	}else if(rb->scrline == 0 && adapter_lines_bounded(as,rows) != getmaxy(rb->win)){
 		return 0;
 	}
 	return 1;
@@ -641,7 +641,7 @@ adapter_wholly_visible_p(int rows,const reelbox *rb){
 static inline int
 bottom_space_p(int rows){
 	if(!last_reelbox){
-		return rows - 1;
+		return rows;
 	}
 	if(getmaxy(last_reelbox->win) + getbegy(last_reelbox->win) >= rows - 2){
 		return 0;
@@ -1283,7 +1283,7 @@ redraw_adapter(const reelbox *rb){
 	assert(scrcols); // FIXME
 	if(adapter_wholly_visible_p(scrrows,rb) || active){ // completely vasible
 		topp = endp = 0;
-	}else if(getbegy(rb->win) == 1){ // no top
+	}else if(getbegy(rb->win) == 0){ // no top
 		topp = adapter_lines_unbounded(as) - getmaxy(rb->win);
 		endp = 0;
 	}else{
@@ -2466,9 +2466,7 @@ create_reelbox(adapterstate *as,int rows,int scrline,int cols){
 		l = rows - scrline - 1;
 	}
 	if( (ret = malloc(sizeof(*ret))) ){
-		if((ret->win = newwin(l,PAD_COLS(cols),scrline,0)) == NULL){
-			exit(0);
-		}
+		assert( (ret->win = newwin(l,PAD_COLS(cols),scrline,0)) );
 		assert( (ret->panel = new_panel(ret->win)) );
 		ret->scrline = scrline;
 		ret->selected = NULL;
@@ -2561,9 +2559,9 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 			assert(hide_panel(rb->panel) != ERR);
 			return;
 		}
-		if(targ < 1){
-			nlines = rr + (targ - 1);
-			targ = 1;
+		if(targ < 0){
+			nlines = rr + targ;
+			targ = 0;
 		}else{
 			nlines = adapter_lines_bounded(as,rows - targ + 1);
 		}
@@ -3245,7 +3243,7 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 	getmaxyx(w,rows,cols);
 	oldrb = current_adapter;
 	deselect_adapter_locked();
-	// Don't redraw the old inteface yet; it might have been moved/hidden
+	// Don't redraw the old interface yet; it might have been moved/hidden
 	if(current_adapter->next == NULL){
 		adapterstate *is = current_adapter->as->next;
 
@@ -3296,11 +3294,12 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 			}else{
 				top_reelbox = last_reelbox;
 			}
-			pull_adapters_up(rb,rows,cols,getmaxy(rb->win) + 1);
+			//pull_adapters_up(rb,rows,cols,getmaxy(rb->win) + 4);
+			push_adapters_above(rb,rows,cols,-getmaxy(rb->win));
 			if(last_reelbox){
-				rb->scrline = last_reelbox->scrline + getmaxy(last_reelbox->win) + 1;
+				rb->scrline = last_reelbox->scrline + getmaxy(last_reelbox->win);
 			}else{
-				rb->scrline = 1;
+				rb->scrline = 0;
 			}
 			rb->prev = last_reelbox;
 			last_reelbox->next = rb;
@@ -3386,7 +3385,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 		if(as->rb){
 			current_adapter = as->rb;
 		}else{
-			as->rb = create_reelbox(as,rows,1,cols);
+			as->rb = create_reelbox(as,rows,0,cols);
 			assert(as);
 			current_adapter = as->rb;
 			push_adapters_below(NULL,rows,cols,adapter_lines_bounded(as,rows) + 1);
@@ -3423,7 +3422,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 				last_reelbox = top_reelbox;
 			}
 			pull_adapters_down(rb,rows,cols,getmaxy(rb->win) + 1);
-			rb->scrline = 1;
+			rb->scrline = 0;
 			rb->next = top_reelbox;
 			top_reelbox->prev = rb;
 			rb->prev = NULL;
@@ -3434,7 +3433,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 		adapterstate *is = current_adapter->as;
 
 		if(rb->scrline < oldrb->scrline){ // ... at the top
-			rb->scrline = 1;
+			rb->scrline = 0;
 			push_adapters_below(rb,rows,cols,-(getmaxy(rb->win) - adapter_lines_bounded(is,rows)));
 			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
 			assert(replace_panel(rb->panel,rb->win) != ERR);
@@ -3447,7 +3446,7 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 				last_reelbox = top_reelbox;
 			}
 			push_adapters_below(NULL,rows,cols,adapter_lines_bounded(is,rows) + 1);
-			rb->scrline = 1;
+			rb->scrline = 0;
 			if( (rb->next = top_reelbox) ){
 				top_reelbox->prev = rb;
 			}else{
