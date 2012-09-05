@@ -332,7 +332,7 @@ typedef struct reelbox {
 
 typedef struct adapterstate {
 	controller *c;
-	unsigned devdisps,devs;
+	unsigned devs;
 	enum {
 		EXPANSION_NONE,
 		EXPANSION_FULL,
@@ -563,20 +563,7 @@ void locked_diag(const char *fmt,...){
 	va_end(v);
 }
 
-// This is the number of l we'd have in an optimal world; we might have
-// fewer available to us on this screen at this time.
-static int
-lines_for_adapter(const struct adapterstate *as){
-	int l = 2;
-
-	if(as->expansion != EXPANSION_NONE){
-		l += as->devdisps * 2;
-		l += as->devs;
-	}
-	return l;
-}
-
-static int
+static inline int
 device_lines(int expa,const blockobj *bo){
 	int l = 0;
 
@@ -585,6 +572,20 @@ device_lines(int expa,const blockobj *bo){
 			l += 2;
 		}
 		++l;
+	}
+	return l;
+}
+
+// This is the number of lines we'd have in an optimal world; we might have
+// fewer available to us on this screen at this time.
+static int
+lines_for_adapter(const struct adapterstate *as){
+	int l = 2;
+
+	const blockobj *bo;
+
+	for(bo = as->bobjs ; bo ; bo = bo->next){
+		l += device_lines(as->expansion,bo);
 	}
 	return l;
 }
@@ -5597,9 +5598,6 @@ block_callback(device *d,void *v){
 				as->bobjs->prev = b;
 				as->bobjs = b;
 			}
-			if(d->size){
-				++as->devdisps;
-			}
 			++as->devs;
 		}
 	}else{
@@ -5644,9 +5642,6 @@ block_free(void *cv,void *bv){
 	}
 	if(as->bobjs == bo){
 		as->bobjs = bo->next;
-	}
-	if(bo->d->size){
-		--as->devdisps;
 	}
 	--as->devs;
 	free(bo);
