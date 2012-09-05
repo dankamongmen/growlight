@@ -1219,9 +1219,10 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			char buf[PREFIXSTRLEN + 1],dbuf[PREFIXSTRLEN + 1];
 
 			if(as->c->demand){
-				wprintw(w," (%sbps to Southbridge, %sbps demanded)",
+				wprintw(w," (%sbps to Southbridge, %sbps (%u%%) demanded)",
 					qprefix(as->c->bandwidth,1,buf,sizeof(buf),1),
-					qprefix(as->c->demand,1,dbuf,sizeof(dbuf),1));
+					qprefix(as->c->demand,1,dbuf,sizeof(dbuf),1),
+					as->c->demand * 100 / as->c->bandwidth);
 			}else{
 				wprintw(w," (%sbps to Southbridge)",
 					qprefix(as->c->bandwidth,1,buf,sizeof(buf),1));
