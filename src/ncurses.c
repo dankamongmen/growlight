@@ -74,10 +74,9 @@ static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 struct panel_state {
 	PANEL *p;
-	int ysize;		      // number of lines of *text* (not win)
 };
 
-#define PANEL_STATE_INITIALIZER { .p = NULL, .ysize = -1, }
+#define PANEL_STATE_INITIALIZER { .p = NULL, }
 #define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
 #define SUBDISPLAY_INVAL_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR))
 
@@ -114,7 +113,6 @@ typedef enum {
 // options, to maintain continuity of UI.
 struct form_state {
 	PANEL *p;
-	int ysize;			// number of lines of *text* (not win)
 	void (*fxn)(const char *);	// callback once form is done
 	void (*mcb)(const char *,char **,int); // callback on multiform input
 	int longop;			// length of longest op
