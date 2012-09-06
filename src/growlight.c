@@ -1781,24 +1781,6 @@ int rescan_blockdev(const device *d){
 		return -1;
 	}
 	diag("Syncing %s via %d...\n",d->name,fd);
-	// The ioctl can fail for a number of reasons, usually because the
-	// work's still being done. Give it a try or two.
-	for(t = 0 ; t < 2 ; ++t){
-		if(ioctl(fd,BLKRRPART,NULL) == 0){
-			goto success;
-		}
-		diag("Error calling BLKRRPART on "DEVROOT"/%s (%s?), retrying in 2s...\n",d->name,strerror(errno));
-		sleep(2);
-	}
-	if(ioctl(fd,BLKRRPART,NULL) == 0){
-		goto success;
-	}
-	diag("Couldn't send BLKRRPART (%s?), aborting\n",strerror(errno));
-	close(fd);
-	return -1;
-
-success:
-	diag("Updated kernel partition table for %s\n",d->name);
 	if(fsync(fd)){
 		diag("Couldn't sync %d for %s (%s?)\n",fd,d->name,strerror(errno));
 	}
