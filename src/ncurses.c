@@ -179,6 +179,8 @@ enum {
 	ORANGE_COLOR,
 	GREEN_COLOR,
 	BLACK_COLOR,
+
+	FIRST_FREE_COLOR
 };
 
 #define COLOR_LIGHTRED 9
@@ -207,6 +209,8 @@ screen_update(void){
 
 static int
 setup_colors(void){
+	int z;
+
 	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(STATUS_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
@@ -252,6 +256,9 @@ setup_colors(void){
 	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
 	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(BLACK_COLOR,COLOR_BLACK,COLOR_BLACK) == OK);
+	for(z = FIRST_FREE_COLOR ; z < COLORS ; ++z){
+		init_pair(z,z,-1);
+	}
 	wrefresh(curscr);
 	screen_update();
 	return 0;
