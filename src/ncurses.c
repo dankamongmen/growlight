@@ -2356,7 +2356,9 @@ pttype_callback(const char *pttype){
 		return;
 	}
 	b = current_adapter->selected;
-	make_partition_table(b->d,pttype);
+	if(make_partition_table(b->d,pttype) == 0){
+		locked_diag("Made %s table on %s",pttype,b->d);
+	}
 }
 
 // -------------------------------------------------------------------------
