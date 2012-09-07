@@ -2745,9 +2745,9 @@ update_details(WINDOW *hw){
 				d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
 				 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
 				d->roflag ? L'+' : L'-');
-		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju Transport: %s",
-					d->logsec,d->physsec,
+		mvwprintw(hw,4,START_COL,"%ju sectors (%zuB logical/ %zuB physical) %s connect",
 					d->size / (d->logsec ? d->logsec : 1),
+					d->logsec,d->physsec,
 					transport_str(d->blkdev.transport));
 		wprintw(hw," (%sbps)",
 			qprefix(transport_bw(d->blkdev.transport),1,buf,sizeof(buf),1));
