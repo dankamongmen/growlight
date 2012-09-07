@@ -1070,7 +1070,7 @@ case LAYOUT_ZPOOL:
 
 				if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-					rep = L'✓';
+					rep = L'+'; //L'✓'; renders badly
 				}else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
 						&& bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(ORANGE_COLOR));
@@ -2714,6 +2714,7 @@ update_details(WINDOW *hw){
 		wattron(hw,A_BOLD);
 		waddstr(hw," Theoretical demand: ");
 		qprefix(c->demand,1,buf,sizeof(buf),1);
+		waddstr(hw,"bps");
 		wattroff(hw,A_BOLD);
 		waddstr(hw,buf);
 		wattron(hw,A_BOLD);
@@ -2753,10 +2754,16 @@ update_details(WINDOW *hw){
 					d->logsec,d->physsec,
 					d->size / (d->logsec ? d->logsec : 1));
 	}
-	mvwprintw(hw,5,START_COL,"Partitioning: %s I/O scheduler: %s",
-			d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
+	mvwprintw(hw,5,START_COL,"Partitioning: ");
+	wattroff(hw,A_BOLD);
+	wprintw(hw,"%s",d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
 			d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
-			"n/a",d->sched ? d->sched : "custom");
+			"n/a");
+	wattron(hw,A_BOLD);
+	waddstr(hw," I/O scheduler: ");
+	wattroff(hw,A_BOLD);
+	waddstr(hw,d->sched ? d->sched : "custom");
+	wattron(hw,A_BOLD);
 	if(blockobj_unloadedp(b)){
 		mvwprintw(hw,6,START_COL,"Media is not loaded");
 		return 0;
@@ -3309,7 +3316,6 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 			}else{
 				top_reelbox = last_reelbox;
 			}
-			//pull_adapters_up(rb,rows,cols,getmaxy(rb->win) + 4);
 			push_adapters_above(rb,rows,cols,-getmaxy(rb->win));
 			if(last_reelbox){
 				rb->scrline = last_reelbox->scrline + getmaxy(last_reelbox->win);
