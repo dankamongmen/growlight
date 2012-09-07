@@ -1844,10 +1844,12 @@ int rescan_device(const char *name){
 			d = *lnk;
 			*lnk = (*lnk)->next;
 			internal_device_reset(d);
+			// a successful rescan() reinserts the device
 			if(rescan(d->name,d) == NULL){
 				unlock_growlight();
 				return -1;
 			}
+			parse_mounts(gui,MOUNTS);
 			unlock_growlight();
 			return 0;
 		}
