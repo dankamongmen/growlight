@@ -378,7 +378,8 @@ int check_partition(device *d){
 		diag("No filesystem on %d\n",d->name);
 		return -1;
 	}
-	if(vspopen_drain("fsck.%s -C 0 /dev/%s",d->name,d->mnttype)){
+	// FIXME not every filesystem supports -y
+	if(vspopen_drain("fsck.%s -y -C 0 /dev/%s",d->mnttype,d->name)){
 		return -1;
 	}
 	return 0;

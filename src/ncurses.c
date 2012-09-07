@@ -4369,9 +4369,23 @@ set_partition_attrs(void){
 	// FIXME set that fucker
 }
 
+static inline int
+fsck_suitable_p(const device *d){
+	if(d->mnt){
+		locked_diag("Will not fsck mounted filesystem on %s",d->name);
+		return 0;
+	}
+	if(d->mnttype == NULL){
+		locked_diag("No filesystem found on %s",d->name);
+		return 0;
+	}
+	return 1;
+}
+
 static void
 fsck_partition(void){
 	blockobj *b;
+	device *d;
 
 	if((b = get_selected_blockobj()) == NULL){
 		locked_diag("Partition check requires selection of a partition");
@@ -4386,10 +4400,15 @@ fsck_partition(void){
 		return;
 	}
 	if(selected_unpartitionedp()){
-		check_partition(b->d);
+		d = b->d;
 	}else{
 		assert(selected_unpartitionedp());
-		check_partition(b->zone->p);
+		d = b->zone->d;
+	}
+	if(fsck_suitable_p(d)){
+		if(check_partition(d) == 0){
+			locked_diag("Validated filesystem on %s",d->name);
+		}
 	}
 }
 
