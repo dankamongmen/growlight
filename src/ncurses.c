@@ -2141,7 +2141,11 @@ ptype_name_callback(const char *name){
 	free(wstr);
 	cleanup_new_partition();
 	if(!r){
-		locked_diag("Created new partition %s on %s\n",name,b->d->name);
+		if(strcmp(name,"")){
+			locked_diag("Created new partition %s on %s\n",b->d->name);
+		}else{
+			locked_diag("Created new unnamed partition on %s\n",b->d->name);
+		}
 	}
 }
 
