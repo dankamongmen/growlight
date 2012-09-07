@@ -9,7 +9,7 @@
 #include "popen.h"
 #include "growlight.h"
 
-#define REDIRECTERR " 2>&1"
+#define REDIRECTERR " 2>&1 < /dev/null"
 static char *
 sanitize_cmd(const char *cmd){
 	char *tmp,*san = NULL;
