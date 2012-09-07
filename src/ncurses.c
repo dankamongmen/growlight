@@ -863,7 +863,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			if(z->p->mnttype){
 				if(!z->p->mnt || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->mnt) >= sizeof(buf)){
-					assert((unsigned)snprintf(buf,sizeof(buf),"%s",z->p->mnttype) < sizeof(buf));
+					assert((unsigned)snprintf(buf,sizeof(buf) - 2,"%s",z->p->mnttype) < sizeof(buf) - 2);
 				}
 			}
 			rep = z->p->partdev.pnumber % 16;
@@ -895,7 +895,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			mvwaddch(w,y,off,rep);
 		}
-		if(strlen(buf) && och >= strlen(buf) + 2){
+		if(strlen(buf) > och){
+			assert((unsigned) snprintf(buf,sizeof(buf),"%s",z->p->mnttype) <= sizeof(buf));
+		}
+		if(strlen(buf) && och >= strlen(buf)){
 			wattron(w,A_BOLD);
 			mvwaddstr(w,y,off - ((och + strlen(buf)) / 2),buf);
 			mvwaddch(w,y,off - ((och + strlen(buf)) / 2) - 1,' ');
@@ -908,6 +911,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 			unsigned cols,unsigned topp,unsigned endp){
+	static const cchar_t bchrs[] = {
+		{ .attr = 0, .chars = L"┤", },
+		{ .attr = 0, .chars = L"├", },
+	};
 	char buf[PREFIXSTRLEN + 1];
 	int selected,co,x,rx,attr;
 	char rolestr[12]; // taken from %-11.11s below
@@ -1169,8 +1176,8 @@ case LAYOUT_ZPOOL:
 		int c = cols - 80;
 
 		mvwaddch(rb->win,line,START_COL + 10 + 1,attr | ACS_LLCORNER);
-		waddch(rb->win,attr | '{');
-		mvwaddch(rb->win,line,cols - 3 - c,attr | '}');
+		wadd_wch(rb->win,&bchrs[0]);
+		mvwadd_wch(rb->win,line,cols - 3 - c,&bchrs[1]);
 		if(c > 0){
 			whline(rb->win,ACS_HLINE,c);
 			wmove(rb->win,line,cols - 2);
