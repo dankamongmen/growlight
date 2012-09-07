@@ -305,7 +305,11 @@ aggcomp_callback(const char *fn,char **selarray,int selections,int scroll){
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
 			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT,scroll);
-	locked_diag("%s needs at least %d devices",pending_aggtype,at->mindisks);
+	if(selections < at->mindisks){
+		locked_diag("%s needs at least %d devices",pending_aggtype,at->mindisks);
+	}else{
+		locked_diag("%s device requirement (%d) satisfied",pending_aggtype,at->mindisks);
+	}
 }
 
 static void
