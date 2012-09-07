@@ -192,6 +192,7 @@ enum {
 #define COLOR_LIGHTWHITE 15
 #define COLOR_HIDDEN 16
 #define COLOR_SKYBLUE 0x20 // 32 (xterm color cube)
+#define COLOR_LIGHTPURPLE 0x3f
 
 static inline void
 screen_update(void){
@@ -212,7 +213,9 @@ static int
 setup_colors(void){
 	int z;
 
-	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
+	if(init_pair(HEADER_COLOR,COLOR_LIGHTPURPLE,-1) == ERR){
+		assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
+	}
 	if(init_pair(STATUS_COLOR,COLOR_SKYBLUE,-1) == ERR){
 		assert(init_pair(STATUS_COLOR,COLOR_YELLOW,-1) != ERR);
 	}
@@ -2499,6 +2502,7 @@ ncurses_setup(void){
 		errstr = "Couldn't disable cursor\n";
 		goto err;
 	}
+	locked_diag("by nick black <nick.black@sprezzatech.com>");
 	draw_main_window(w);
 	refresh();
 	return w;
@@ -2784,7 +2788,7 @@ update_details(WINDOW *hw){
 				d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
 				 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
 				d->roflag ? L'+' : L'-');
-		mvwprintw(hw,4,START_COL,"%ju sectors (%zuB logical/ %zuB physical) %s connect",
+		mvwprintw(hw,4,START_COL,"%ju sectors (%zuB logical / %zuB physical) %s connect",
 					d->size / (d->logsec ? d->logsec : 1),
 					d->logsec,d->physsec,
 					transport_str(d->blkdev.transport));
@@ -2893,7 +2897,7 @@ static const wchar_t *helps[] = {
 	L"'-': collapse adapter         '+': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
-	L"'R': rescan selection         'S': reset selection",
+	L"'R': rescan selection         'S': reset controller",
 	L"'/': search                   '!': rescan all",
 	NULL
 };
@@ -3757,7 +3761,7 @@ env_details(WINDOW *hw,int rows){
 			mvwhline(hw,row + z,1,' ',cols - 2);
 			c0 = (z - 2) * COLORSPERROW;
 			c1 = c0 + (COLORSPERROW - 1);
-			assert(mvwprintw(hw,row + z,col,"0x%02x--0x%02x: ",c0,c1) == OK);
+			assert(mvwprintw(hw,row + z,col,"0x%02x%lc0x%02x: ",c0,L'–',c1) == OK);
 			while(c0 <= c1){
 			        if(c0 < COLORS){
 			                assert(wattrset(hw,COLOR_PAIR(c0)) == OK);
