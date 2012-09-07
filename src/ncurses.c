@@ -2284,7 +2284,7 @@ psectors_callback(const char *psects){
 	if(ps){
 		kill_splash(ps);
 	}
-	locked_diag("Created new partition %s\n",b->d->name);
+	locked_diag("Created new partition on %s\n",b->d->name);
 	cleanup_new_partition();
 }
 
