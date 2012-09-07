@@ -1233,7 +1233,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 	getmaxyx(w,rows,cols);
 	bcolor = UBORDER_COLOR;
 	hcolor = UHEADING_COLOR;
-	attrs = current ? A_REVERSE : A_BOLD;
+	attrs = current ? A_REVERSE : A_NORMAL;
 	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
 	if(abovetop == 0){
 		if(belowend == 0){
@@ -1251,14 +1251,11 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 	if(abovetop == 0){
 		if(current){
 			assert(wattron(w,A_BOLD) == OK);
-		}
-		assert(mvwprintw(w,0,5,"[") != ERR);
-		assert(wcolor_set(w,hcolor,NULL) == OK);
-		if(current){
-			assert(wattron(w,A_BOLD) == OK);
 		}else{
 			assert(wattroff(w,A_BOLD) == OK);
 		}
+		assert(mvwprintw(w,0,5,"[") != ERR);
+		assert(wcolor_set(w,hcolor,NULL) == OK);
 		assert(waddstr(w,as->c->ident) != ERR);
 		if(as->c->bandwidth){
 			char buf[PREFIXSTRLEN + 1],dbuf[PREFIXSTRLEN + 1];
@@ -1278,9 +1275,6 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			wprintw(w," (%sbps demanded)",qprefix(as->c->demand,1,dbuf,sizeof(dbuf),1));
 		}
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
-		if(current){
-			assert(wattron(w,A_BOLD) == OK);
-		}
 		assert(wprintw(w,"]") != ERR);
 		assert(wmove(w,0,cols - 4) != ERR);
 		assert(wattron(w,A_BOLD) == OK);
@@ -1290,6 +1284,11 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 	}
 	if(belowend == 0){
 		if(as->c->bus == BUS_PCIe){
+			if(current){
+				assert(wattron(w,A_BOLD) == OK);
+			}else{
+				assert(wattroff(w,A_BOLD) == OK);
+			}
 			assert(mvwprintw(w,rows - 1,2,"[") != ERR);
 			assert(wcolor_set(w,hcolor,NULL) != ERR);
 			if(current){
