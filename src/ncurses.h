@@ -41,6 +41,10 @@ void raise_multiform(const char *,void (*)(const char *,char **,int,int),
 struct panel_state *show_splash(const wchar_t *);
 void kill_splash(struct panel_state *);
 
+// get protection against bad arguments to mvwprintw()...
+extern int mvwprintw(WINDOW *,int,int,const char *,...)
+	__attribute__ ((format (printf,4,5)));
+
 #ifdef __cplusplus
 }
 #endif

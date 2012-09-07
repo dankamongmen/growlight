@@ -878,13 +878,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		wattron(w,A_REVERSE);
 		if(selstr){
 			if(x < ex / 2){
-				mvwprintw(w,y - 1,off,"⇗⇨⇨⇨%.*s",ex - (off + strlen(selstr) + 4),selstr);
+				mvwprintw(w,y - 1,off,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
 			}else{
 				int truech;
 
 				truech = (int)(off + ch) >= ex ? ex - off - 1 : ch;
 				mvwprintw(w,y - 1,off + truech - (strlen(selstr) + 4),"%.*s⇦⇦⇦⇖",
-						ex - (off + truech + strlen(selstr) + 4),selstr);
+						(int)(ex - (off + truech + strlen(selstr) + 4)),selstr);
 			}
 		}
 		wattroff(w,A_REVERSE);
@@ -2786,7 +2786,8 @@ update_details(WINDOW *hw){
 				d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
 				 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
 				d->roflag ? L'+' : L'-');
-		mvwprintw(hw,4,START_COL,"%ju sectors (%zuB logical / %zuB physical) %s connect",
+		assert(d->physsec <= 4096);
+		mvwprintw(hw,4,START_COL,"%ju sectors (%uB logical / %uB physical) %s connect",
 					d->size / (d->logsec ? d->logsec : 1),
 					d->logsec,
 					d->physsec,
@@ -2801,7 +2802,8 @@ update_details(WINDOW *hw){
 					d->revision ? d->revision : "n/a",
 					qprefix(d->size,1,buf,sizeof(buf),0),
 					d->roflag ? L'+' : L'-');
-		mvwprintw(hw,4,START_COL,"%ju sectors (%zuB logical / %zuB physical)",
+		assert(d->physsec <= 4096);
+		mvwprintw(hw,4,START_COL,"%ju sectors (%uB logical / %uB physical)",
 					d->size / (d->logsec ? d->logsec : 1),
 					d->logsec,
 					d->physsec);
@@ -2833,21 +2835,10 @@ update_details(WINDOW *hw){
 		char buf[BPREFIXSTRLEN + 1];
 
 		if(b->zone->p){
+			assert(b->zone->p->layout == LAYOUT_PARTITION);
 			bprefix(b->zone->p->partdev.alignment,1,align,sizeof(align),1);
-			switch(b->zone->p->layout){
-			case LAYOUT_NONE:
-			case LAYOUT_MDADM:
-			case LAYOUT_ZPOOL:
-			case LAYOUT_DM:
 			// FIXME limit length!
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B %u→%u %s",
-					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
-					b->zone->fsector,b->zone->lsector);
-			detail_fs(hw,b->zone->p,7);
-			break;
-			case LAYOUT_PARTITION:
-			// FIXME limit length!
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B P%02x %u→%u %s (%ls) %04x %sB align",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B P%02x %ju→%ju %s (%ls) %04x %sB align",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->p->partdev.pnumber,
 					b->zone->fsector,b->zone->lsector,
@@ -2856,13 +2847,11 @@ update_details(WINDOW *hw){
 					 b->zone->p->partdev.pname : L"unnamed",
 					b->zone->p->partdev.ptype,align);
 			detail_fs(hw,b->zone->p,7);
-			break;
-			}
 		}else{
 			// FIXME print alignment for unpartitioned space as well,
 			// but not until we implement zones in core (bug 252)
 			// or we'll need recreate alignment() etc here
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B %u→%u %s ",
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B %ju→%ju %s ",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
 					b->zone->fsector,b->zone->lsector,
 					b->zone->rep == L'P' ?
