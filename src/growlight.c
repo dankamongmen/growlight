@@ -1766,7 +1766,6 @@ int benchmark_blockdev(const device *d){
 // modifies the partitioning and doesn't notify the kernel itself.
 int rescan_blockdev(const device *d){
 	char buf[PATH_MAX];
-	unsigned t;
 	int fd;
 
 	if(snprintf(buf,sizeof(buf),SYSROOT"/%s/device/rescan",d->name) >= (int)sizeof(buf)){
