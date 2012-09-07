@@ -767,19 +767,19 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ",
-			d->mnt) >= (int)sizeof(buf)){
+			d->mnt) >= (int)sizeof(wbuf)){
 		if(swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s filesystem%ls%s%ls",
 			d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 			d->mntsize ? " " : "",
 			d->label ? "" : "nameless ", d->mnttype,
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
-			d->label ? L"” " : L" ") >= (int)sizeof(buf)){
+			d->label ? L"” " : L" ") >= (int)sizeof(wbuf)){
 			if((unsigned)swprintf(wbuf,sizeof(wbuf),L" %s%s%s filesystem ",
 				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 				d->mntsize ? " " : "",
-				d->mnttype) >= sizeof(buf)){
-				assert((unsigned)snprintf(buf,sizeof(buf),"%s",d->mnttype) < sizeof(buf));
+				d->mnttype) >= sizeof(wbuf)){
+				assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",d->mnttype) < sizeof(wbuf));
 			}
 		}
 		}
@@ -802,7 +802,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}
-		assert(snprintf(buf,sizeof(buf)," %s %s ",qprefix(d->size,1,pre,sizeof(pre),1),"unpartitioned space") < (int)sizeof(buf));
+		assert(snprintf(buf,sizeof(buf)," %s %s ",qprefix(d->size,1,pre,sizeof(pre),1),
+					"unpartitioned space") < (int)sizeof(buf));
 		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
 		mvwadd_wch(w,y,sx,&bchr[1]);
 		mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
@@ -813,10 +814,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		return;
 	}
 	do{
-		const char *str = NULL;
 		unsigned ch,och;
 		int rep,x;
 
+		buf[0] = '\0';
 		x = sectpos(d,z->fsector,sx,ex,&off);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
@@ -857,7 +858,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			if(z->p->partdev.alignment < d->physsec){ // misaligned!
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
-			str = z->p->mnttype;
+			if(z->p->mnttype){
+				if(!z->p->mnt || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->mnt) >= sizeof(buf)){
+					assert((unsigned)snprintf(buf,sizeof(buf),"%s",z->p->mnttype) < sizeof(buf));
+				}
+			}
 			rep = z->p->partdev.pnumber % 16;
 			if(rep >= 10){
 				rep = 'a' + (rep - 10); // FIXME lame
@@ -887,11 +892,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			mvwaddch(w,y,off,rep);
 		}
-		if(str && och >= strlen(str) + 2){
+		if(strlen(buf) && och >= strlen(buf) + 2){
 			wattron(w,A_BOLD);
-			mvwaddstr(w,y,off - ((och + strlen(str)) / 2),str);
-			mvwaddch(w,y,off - ((och + strlen(str)) / 2) - 1,' ');
-			mvwaddch(w,y,off - ((och + strlen(str)) / 2) + strlen(str),' ');
+			mvwaddstr(w,y,off - ((och + strlen(buf)) / 2),buf);
+			mvwaddch(w,y,off - ((och + strlen(buf)) / 2) - 1,' ');
+			mvwaddch(w,y,off - ((och + strlen(buf)) / 2) + strlen(buf),' ');
 		}
 		selstr = NULL;
 	}while((z = z->next) != bo->zchain);
