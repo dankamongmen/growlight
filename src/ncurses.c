@@ -191,6 +191,7 @@ enum {
 #define COLOR_LIGHTCYAN 14
 #define COLOR_LIGHTWHITE 15
 #define COLOR_HIDDEN 16
+#define COLOR_SKYBLUE 0x20 // 32 (xterm color cube)
 
 static inline void
 screen_update(void){
@@ -212,7 +213,9 @@ setup_colors(void){
 	int z;
 
 	assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(STATUS_COLOR,COLOR_YELLOW,-1) == OK);
+	if(init_pair(STATUS_COLOR,COLOR_SKYBLUE,-1) == ERR){
+		assert(init_pair(STATUS_COLOR,COLOR_YELLOW,-1) != ERR);
+	}
 	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
@@ -2749,8 +2752,10 @@ update_details(WINDOW *hw){
 					d->size / (d->logsec ? d->logsec : 1),
 					d->logsec,d->physsec,
 					transport_str(d->blkdev.transport));
-		wprintw(hw," (%sbps)",
+		if(transport_bw(d->blkdev.transport)){
+			wprintw(hw," (%sbps)",
 			qprefix(transport_bw(d->blkdev.transport),1,buf,sizeof(buf),1));
+		}
 	}else{
 		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
 					d->model ? d->model : "n/a",
