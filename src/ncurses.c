@@ -2126,6 +2126,7 @@ partition_base_p(void){
 static void
 ptype_name_callback(const char *name){
 	struct panel_state *sps;
+	char *container;
 	const char *n;
 	wchar_t *wstr;
 	mbstate_t ps;
@@ -2148,8 +2149,14 @@ ptype_name_callback(const char *name){
 		cleanup_new_partition();
 		return;
 	}
+	if((container = strdup(b->d->name)) == NULL){
+		locked_diag("Couldn't allocate name copy");
+		cleanup_new_partition();
+		return;
+	}
 	if((wstr = malloc(sizeof(*wstr) * (wcs + 1))) == NULL){
 		locked_diag("Couldn't allocate wide string");
+		free(container);
 		cleanup_new_partition();
 		return;
 	}
@@ -2157,10 +2164,12 @@ ptype_name_callback(const char *name){
 	memset(&ps,0,sizeof(ps));
 	if(mbsrtowcs(wstr,&n,wcs + 1,&ps) != wcs){
 		locked_diag("Error converting multibyte '%s'",name);
+		free(container);
 		cleanup_new_partition();
 		return;
 	}
 	sps = show_splash(L"Creating partition...");
+	// Cannot reference b further until we've had a callback
 	r = add_partition(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
 	if(sps){
 		kill_splash(sps);
@@ -2169,11 +2178,12 @@ ptype_name_callback(const char *name){
 	cleanup_new_partition();
 	if(!r){
 		if(strcmp(name,"")){
-			locked_diag("Created new partition %s on %s\n",b->d->name);
+			locked_diag("Created new partition %s on %s\n",container);
 		}else{
-			locked_diag("Created new unnamed partition on %s\n",b->d->name);
+			locked_diag("Created new unnamed partition on %s\n",container);
 		}
 	}
+	free(container);
 }
 
 static int
