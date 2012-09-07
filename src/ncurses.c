@@ -312,10 +312,8 @@ typedef struct blockobj {
 	// always selected. The first time a blockobj is selected, zone 0 is
 	// selected. The selected zone is preserved across de- and reselection
 	// of the block device. Zones are indexed by 0, obviously.
-	// zones: number of zones
 	// zchain: list of zone objects
-	// zone: currently selected zone, non-NULL iff zones != 0
-	unsigned zones;
+	// zone: currently selected zone, NULL iff |zchain| == 0
 	zobj *zchain,*zone;
 } blockobj;
 
@@ -5567,7 +5565,6 @@ update_blockobj(blockobj *b,device *d){
 		lastz->next = z;
 	}
 	b->zchain = z;
-	b->zones = zones;
 	return;
 
 err:
