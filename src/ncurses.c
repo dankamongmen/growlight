@@ -3323,9 +3323,9 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 			}else{
 				top_reelbox = last_reelbox;
 			}
-			push_adapters_above(rb,rows,cols,-getmaxy(rb->win));
+			push_adapters_above(rb,rows,cols,-getmaxy(rb->win) - 1);
 			if(last_reelbox){
-				rb->scrline = last_reelbox->scrline + getmaxy(last_reelbox->win);
+				rb->scrline = last_reelbox->scrline + getmaxy(last_reelbox->win) + 1;
 			}else{
 				rb->scrline = 0;
 			}
