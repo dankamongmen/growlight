@@ -2788,7 +2788,8 @@ update_details(WINDOW *hw){
 				d->roflag ? L'+' : L'-');
 		mvwprintw(hw,4,START_COL,"%ju sectors (%zuB logical / %zuB physical) %s connect",
 					d->size / (d->logsec ? d->logsec : 1),
-					d->logsec,d->physsec,
+					d->logsec,
+					d->physsec,
 					transport_str(d->blkdev.transport));
 		if(transport_bw(d->blkdev.transport)){
 			wprintw(hw," (%sbps)",
@@ -2800,9 +2801,10 @@ update_details(WINDOW *hw){
 					d->revision ? d->revision : "n/a",
 					qprefix(d->size,1,buf,sizeof(buf),0),
 					d->roflag ? L'+' : L'-');
-		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju",
-					d->logsec,d->physsec,
-					d->size / (d->logsec ? d->logsec : 1));
+		mvwprintw(hw,4,START_COL,"%ju sectors (%zuB logical / %zuB physical)",
+					d->size / (d->logsec ? d->logsec : 1),
+					d->logsec,
+					d->physsec);
 	}
 	mvwprintw(hw,5,START_COL,"Partitioning: ");
 	wattroff(hw,A_BOLD);
