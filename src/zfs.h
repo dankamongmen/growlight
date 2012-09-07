@@ -22,7 +22,7 @@ int make_raidz2(const char *,char * const *,int);
 int make_raidz3(const char *,char * const *,int);
 
 // Make a zpool from a single device (not recommended)
-int make_zfs(const char *,const char *);
+int make_zfs(const char *,const char *,int);
 
 #ifdef __cplusplus
 }

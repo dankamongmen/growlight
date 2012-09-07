@@ -12,7 +12,7 @@
 #include "growlight.h"
 
 static int
-create_btrfs(const char *dev,const char *name){
+create_btrfs(const char *dev,const char *name,int force __attribute__ ((unused))){
 	if(name == NULL){
 		name = "SprezzaBTRFS";
 	}
@@ -23,7 +23,7 @@ create_btrfs(const char *dev,const char *name){
 }
 
 static int
-hfs_mkfs(const char *dev,const char *name){
+hfs_mkfs(const char *dev,const char *name,int force __attribute__ ((unused))){
 	if(name == NULL){
 		name = "SprezzaHFS";
 	}
@@ -34,7 +34,7 @@ hfs_mkfs(const char *dev,const char *name){
 }
 
 static int
-hfsplus_mkfs(const char *dev,const char *name){
+hfsplus_mkfs(const char *dev,const char *name,int force __attribute__ ((unused))){
 	if(name == NULL){
 		name = "SprezzaHFS+";
 	}
@@ -45,7 +45,7 @@ hfsplus_mkfs(const char *dev,const char *name){
 }
 
 static int
-jfs_mkfs(const char *dev,const char *name){
+jfs_mkfs(const char *dev,const char *name,int force __attribute__ ((unused))){
 	// allow -c (badblock check) FIXME
 	if(name == NULL){
 		name = "SprezzaJFS";
@@ -58,54 +58,57 @@ jfs_mkfs(const char *dev,const char *name){
 }
 
 static int
-xfs_mkfs(const char *dev,const char *name){
+xfs_mkfs(const char *dev,const char *name,int force){
 	// allow -c (badblock check) FIXME
 	if(name == NULL){
 		name = "SprezzaXFS";
 	}
 	// FIXME set -s to the physical sector size
-	if(vspopen_drain("mkfs.xfs -L \"%s\" %s",name,dev)){
+	if(vspopen_drain("mkfs.xfs %s-L \"%s\" %s",
+			force ? "-f ": "",name,dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-create_ntfs(const char *dev,const char *name){
+create_ntfs(const char *dev,const char *name,int force){
 	if(name == NULL){
 		name = "SprezzaNTFS";
 	}
-	if(vspopen_drain("mkfs.ntfs -U -L \"%s\" %s",name,dev)){
+	if(vspopen_drain("mkfs.ntfs -v %s-U -L \"%s\" %s",
+			force ? "-F " : "",name,dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-cramfs_mkfs(const char *dev,const char *name){
+cramfs_mkfs(const char *dev,const char *name,int force __attribute__ ((unused))){
 	if(name == NULL){
 		name = "SprezzaCram";
 	}
-	if(vspopen_drain("mkcramfs -E -n \"%s\" %s",name,dev)){
+	if(vspopen_drain("mkcramfs -v -E -n \"%s\" %s",name,dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-vfat_mkfs(const char *dev,const char *name){
+vfat_mkfs(const char *dev,const char *name,int force){
 	// allow -c (badblock check) FIXME
 	if(name == NULL){
 		name = "SprezzaVFAT";
 	}
-	if(vspopen_drain("mkfs.vfat -F 32 -n \"%s\" %s",name,dev)){
+	if(vspopen_drain("mkfs.vfat %s-F 32 -n \"%s\" %s",
+				force ? "-I " : "",name,dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-ufs_mkfs(const char *dev,const char *name){
+ufs_mkfs(const char *dev,const char *name,int force __attribute__ ((unused))){
 	// allow -E (erase content for SSD)
 	// allow -J (journaling)
 	// allow -O1 (UFS1)
@@ -120,10 +123,9 @@ ufs_mkfs(const char *dev,const char *name){
 }
 
 static int
-ext4_mkfs(const char *dev,const char *name){
+ext4_mkfs(const char *dev,const char *name,int force){
 	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
 	// same for stripe_width FIXME
-	// need -F for non-partition or block special FIXME
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
 	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
@@ -131,17 +133,17 @@ ext4_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaEXT4";
 	}
-	if(vspopen_drain("mkfs.ext4 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",name,dev)){
+	if(vspopen_drain("mkfs.ext4 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+				force ? "-F " : "",name,dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-ext3_mkfs(const char *dev,const char *name){
+ext3_mkfs(const char *dev,const char *name,int force){
 	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
 	// same for stripe_width FIXME
-	// need -F for non-partition or block special FIXME
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
 	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
@@ -149,14 +151,15 @@ ext3_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaEXT3";
 	}
-	if(vspopen_drain("mkfs.ext3 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",name,dev)){
+	if(vspopen_drain("mkfs.ext3 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+				force ? "-F ": "",name,dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-ext2_mkfs(const char *dev,const char *name){
+ext2_mkfs(const char *dev,const char *name,int force){
 	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
 	// same for stripe_width FIXME
 	// need -F for non-partition or block special FIXME
@@ -167,7 +170,8 @@ ext2_mkfs(const char *dev,const char *name){
 	if(name == NULL){
 		name = "SprezzaEXT2";
 	}
-	if(vspopen_drain("mkfs.ext2 -b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",name,dev)){
+	if(vspopen_drain("mkfs.ext2 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+				force ? "-F " : "",name,dev)){
 		return -1;
 	}
 	return 0;
@@ -177,7 +181,7 @@ ext2_mkfs(const char *dev,const char *name){
 static const struct fs {
 	const char *name;
 	const char *desc;
-	int (*mkfs)(const char *,const char *);
+	int (*mkfs)(const char *,const char *,int);
 	char nameparam;			// parameter on cmdline to name
 	int namemax;			// max length of name, if known
 } fss[] = {
@@ -474,6 +478,7 @@ err:
 
 int make_filesystem(device *d,const char *ptype,const char *name){
 	const struct fs *pt;
+	int force = 0;
 
 	if(d == NULL || ptype == NULL){
 		diag("Passed NULL arguments, aborting\n");
@@ -493,6 +498,11 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 		diag("Won't create fs on active mount %s (%s)\n",
 				d->name,d->mnt);
 		return -1;
+	}
+	if(d->layout != LAYOUT_PARTITION){
+		if(d->parts == NULL){
+			force = 1;
+		}
 	}
 	if(name){
 		if(strchr(name,'"')){
@@ -516,7 +526,7 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 				return -1;
 			}
 			// FIXME needs accept/set UUID and label!
-			if(pt->mkfs(dbuf,name)){
+			if(pt->mkfs(dbuf,name,force)){
 				free(mnttype);
 				return -1;
 			}
