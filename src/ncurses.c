@@ -1469,7 +1469,7 @@ multiform_options(struct form_state *fs){
 	};
 	const struct form_option *opstrs = fs->ops;
 	WINDOW *fsw = panel_window(fs->p);
-	int z,cols,selidx;
+	int z,cols,selidx,maxz;
 
 	if(fs->formtype != FORM_MULTISELECT){
 		return;
@@ -1479,7 +1479,8 @@ multiform_options(struct form_state *fs){
 	wattron(fsw,A_BOLD);
 	mvwadd_wch(fsw,1,1,&bchr[2]);
 	mvwadd_wch(fsw,1,fs->longop + 4,&bchr[0]);
-	for(z = 1 ; z < getmaxy(fsw) - 3 ; ++z){
+	maxz = getmaxy(fsw) - 3 <= fs->opcount + 1 ? getmaxy(fsw) - 3 : fs->opcount + 1;
+	for(z = 1 ; z < maxz ; ++z){
 		int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
 		assert(op >= 0);
