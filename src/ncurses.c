@@ -2714,9 +2714,9 @@ update_details(WINDOW *hw){
 		wattron(hw,A_BOLD);
 		waddstr(hw," Theoretical demand: ");
 		qprefix(c->demand,1,buf,sizeof(buf),1);
-		waddstr(hw,"bps");
 		wattroff(hw,A_BOLD);
 		waddstr(hw,buf);
+		waddstr(hw,"bps");
 		wattron(hw,A_BOLD);
 	}
 	if((b = current_adapter->selected) == NULL){
@@ -2731,19 +2731,26 @@ update_details(WINDOW *hw){
 				++sn;
 			}
 		}
-		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) S/N: %-s WC%lc RWV%lc RO%lc",d->name,
-					d->model ? d->model : "n/a",
-					d->revision ? d->revision : "n/a",
-					qprefix(d->size,1,buf,sizeof(buf),0),
-					sn ? sn : "n/a",
-					d->blkdev.wcache ? L'+' : L'-',
-					d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
-					 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
-					d->roflag ? L'+' : L'-');
+		mvwprintw(hw,3,START_COL,"%s: ",d->name);
+		wattroff(hw,A_BOLD);
+		waddstr(hw,d->model ? d->model : "n/a");
+		waddstr(hw,d->revision ? d->revision : "n/a");
+		wattron(hw,A_BOLD);
+		wprintw(hw," (%s) S/N: ",qprefix(d->size,1,buf,sizeof(buf),0));
+		wattroff(hw,A_BOLD);
+		waddstr(hw,sn ? sn : "n/a");
+		wattron(hw,A_BOLD);
+		wprintw(hw," WC%lc RWV%lc RO%lc",
+				d->blkdev.wcache ? L'+' : L'-',
+				d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
+				 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
+				d->roflag ? L'+' : L'-');
 		mvwprintw(hw,4,START_COL,"Logical/physical/total sectors: %zuB/%zuB/%ju Transport: %s",
 					d->logsec,d->physsec,
 					d->size / (d->logsec ? d->logsec : 1),
 					transport_str(d->blkdev.transport));
+		wprintw(hw," (%sbps)",
+			qprefix(transport_bw(d->blkdev.transport),1,buf,sizeof(buf),1));
 	}else{
 		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
 					d->model ? d->model : "n/a",
