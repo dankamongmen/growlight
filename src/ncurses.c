@@ -251,7 +251,7 @@ setup_colors(void){
 	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
 	if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == ERR){
-		assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) == ERR);
+		assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) != ERR);
 	}
 	if(init_pair(SPLASHBORDER_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == ERR){
 		assert(init_pair(SPLASHBORDER_COLOR,COLOR_GREEN,COLOR_BLACK) != ERR);
