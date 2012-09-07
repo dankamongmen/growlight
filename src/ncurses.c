@@ -4977,7 +4977,7 @@ handle_actform_input(int ch){
 		}case KEY_DOWN: case 'j':{
 			lock_ncurses();
 			int maxz;
-			maxz = getmaxy(panel_window(fs->p)) - 5 >= fs->opcount - 1 ? fs->opcount - 1 : getmaxy(panel_window(fs->p));
+			maxz = getmaxy(panel_window(fs->p)) - 5 >= fs->opcount - 1 ? fs->opcount - 1 : getmaxy(panel_window(fs->p)) - 5;
 			if(fs->idx == (fs->scrolloff + maxz) % fs->opcount){
 				if(++fs->scrolloff >= fs->opcount){
 					fs->scrolloff = 0;
