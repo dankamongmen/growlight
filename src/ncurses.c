@@ -385,9 +385,9 @@ selected_unloadedp(void){
 static inline int
 blockobj_unpartitionedp(const blockobj *bo){
 	return bo && !bo->zone &&
-		((bo->d->layout == LAYOUT_NONE && !bo->d->blkdev.pttable)
-		|| bo->d->layout != LAYOUT_NONE);
-	//return bo && !bo->zone;
+		(bo->d->mnttype ||
+		 (bo->d->layout == LAYOUT_NONE && !bo->d->blkdev.pttable)
+		 || bo->d->layout != LAYOUT_NONE);
 }
 
 static inline int
