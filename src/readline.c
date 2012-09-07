@@ -1717,24 +1717,6 @@ biosboot(wchar_t * const *args,const char *arghelp){
 }
 
 static int
-rescan(wchar_t * const *args,const char *arghelp){
-	int r;
-
-	ZERO_ARG_CHECK(args,arghelp);
-	r = rescan_devices();
-	return r;
-}
-
-static int
-reset(wchar_t * const *args,const char *arghelp){
-	int r;
-
-	ZERO_ARG_CHECK(args,arghelp);
-	r = reset_adapters();
-	return r;
-}
-
-static int
 grubmap(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 
@@ -1996,8 +1978,6 @@ static const struct fxn {
 	const char *arghelp;
 } fxns[] = {
 #define FXN(x,args) { .cmd = L###x, .fxn = x, .arghelp = args, }
-	FXN(reset,""),
-	FXN(rescan,""),
 	FXN(adapter,"[ \"reset\" adapter ]\n"
 			"                 | [ \"rescan\" adapter ]\n"
 			"                 | [ \"detail\" adapter ]\n"

@@ -331,10 +331,9 @@ void add_new_virtual_blockdev(device *);
 int prepare_bios_boot(device *);
 int prepare_uefi_boot(device *);
 
-// Unlike virtually every other function, these two MUST NOT be called while
-// growlight is locked (ie, amidst lock_growlight()/unlock_growlight() pairs).
-int rescan_devices(void);
-int reset_adapters(void);
+// Must match in all four ways: UUID, label, device name, and bus path. Any
+// partial match is cause to fail the search, since it represents ambiguity.
+device *match_device(const device *);
 
 static inline const char *
 pcie_gen(unsigned gen){

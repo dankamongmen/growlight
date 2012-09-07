@@ -2897,7 +2897,7 @@ static const wchar_t *helps[] = {
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
 	L"'R': rescan selection         'S': reset controller",
-	L"'/': search                   '!': rescan all",
+	//L"'/': search",
 	NULL
 };
 
@@ -5339,11 +5339,6 @@ handle_ncurses_input(WINDOW *w){
 				unlock_ncurses();
 				break;
 			}
-			case '!':
-				lock_ncurses();
-				rescan_devices();
-				unlock_ncurses();
-				break;
 			case '/':
 				lock_ncurses();
 				start_search();

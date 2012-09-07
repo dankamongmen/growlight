@@ -478,35 +478,6 @@ Provided no parameter, all available diagnostic messages will be printed. Timest
 are printed along with each message.</para></listitem>
 		</varlistentry>
 		<varlistentry>
-			<term>rescan</term>
-			<listitem><para>
-Completely reinitializes growlight's idea of the storage system. Files like
-/proc/mounts and /proc/filesystems will be reparsed, superblocks will be reread,
-etc. Note that this only affects growlight; the devices themselves are not
-rescanned by the kernel as a result of <emphasis role="bold">rescan</emphasis>
-(see <emphasis role="bold">adapter rescan</emphasis> and
-<emphasis role="bold">blockdev rescan</emphasis> for this functionality).
-Furthermore, though <emphasis>&dhpackage;</emphasis> itself makes use of
-<emphasis role="bold">O_DIRECT</emphasis> to read boot sectors etc, other tools
-might not, and the kernel is not guaranteed in any case to honor it. If any
-detail of a block device underlying a mapping changes, that mapping will be
-dropped. If the target root mapping is dropped, all mappings will be dropped.</para>
-<para><emphasis>Growlight</emphasis> is designed to support on-the-fly external storage reconfiguration
-through use of <emphasis role="bold">libudev(3)</emphasis> and
-<emphasis role="bold">inotify(7)</emphasis>. This command should not be needed
-or used outside of debugging.</para></listitem>
-		</varlistentry>
-		<varlistentry>
-			<term>reset</term>
-			<listitem><para>
-Reset all adapters advertising this capability, presumably following addition
-or removal of a device. The exact effects of this command are unknown, and its
-use is <emphasis role="bold">strongly discouraged</emphasis>. <emphasis>Growlight</emphasis> is designed
-to support on-the-fly external storage reconfiguration through use of
-<emphasis role="bold">libudev(3)</emphasis> and <emphasis role="bold">inotify(7)</emphasis>.
-This command should not be needed or used outside of debugging.</para></listitem>
-		</varlistentry>
-		<varlistentry>
 			<term>help command</term>
 		</varlistentry>
 		<varlistentry>

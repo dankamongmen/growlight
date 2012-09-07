@@ -1796,11 +1796,6 @@ void unlock_growlight(void){
 	assert(pthread_mutex_unlock(&lock) == 0);
 }
 
-int reset_adapters(void){
-	diag("Not yet implemented.\n");
-	return -1;
-}
-
 int rescan_device(const char *name){
 	device **lnk;
 	controller *c;
@@ -1878,8 +1873,7 @@ devices_match_p(const device *d,const device *dd){
 
 // Must match in all four ways: UUID, label, device name, and bus path. Any
 // partial match is cause to fail the search, since it represents ambiguity.
-static device *
-match_device(const device *d){
+device *match_device(const device *d){
 	controller *c;
 
 	for(c = controllers ; c ; c = c->next){
@@ -1907,63 +1901,6 @@ match_device(const device *d){
 		}
 	}
 	return NULL;
-}
-
-// FIXME this is broken currently, since you're holding the lock upon entry,
-// and then spawn a bunch of threads which all must grab that same lock. need
-// to rethink its design entirely, yeargh :/
-int rescan_devices(void){
-	const controller *c;
-	device *d,*t,*p;
-	int ret = 0;
-	devtable dt;
-
-	push_devtable(&dt);
-	unlock_growlight();
-	ret |= scan_zpools(gui);
-	ret |= watch_dir(-1,SYSROOT,scan_device,NULL);
-	lock_growlight();
-	ret |= parse_mounts(gui,MOUNTS);
-	ret |= parse_swaps(gui,SWAPS);
-	// Preserve any defined mappings, if possible. For a mapping to be
-	// preserved, the device must still exist, with the same parameters,
-	// and all containing mappings must also be preserved.
-	for(c = dt.controllers ; c ; c = c->next){
-		for(d = c->blockdevs ; d ; d = d->next){
-			if(d->target){
-				if( (t = match_device(d)) ){
-					t->target = d->target;
-					d->target = NULL;
-				}
-			}
-			for(p = d->parts ; p ; p = p->next){
-				if(p->target){
-					if( (t = match_device(p)) ){
-						t->target = p->target;
-						p->target = NULL;
-					}
-				}
-			}
-		}
-	}
-	for(d = dt.virtual_blockdevs ; d ; d = d->next){
-		if(d->target){
-			if( (t = match_device(d)) ){
-				t->target = d->target;
-				d->target = NULL;
-			}
-		}
-		for(p = d->parts ; p ; p = p->next){
-			if(p->target){
-				if( (t = match_device(p)) ){
-					t->target = p->target;
-					p->target = NULL;
-				}
-			}
-		}
-	}
-	free_devtable(&dt);
-	return ret;
 }
 
 #define GROWLIGHT_SCRIPT "/usr/lib/post-base-installer.d/growlight"
