@@ -4403,7 +4403,7 @@ fsck_partition(void){
 		d = b->d;
 	}else{
 		assert(selected_unpartitionedp());
-		d = b->zone->d;
+		d = b->zone->p;
 	}
 	if(fsck_suitable_p(d)){
 		if(check_partition(d) == 0){

@@ -375,7 +375,7 @@ int check_partition(device *d){
 		return -1;
 	}
 	if(d->mnttype == NULL){
-		diag("No filesystem on %d\n",d->name);
+		diag("No filesystem on %s\n",d->name);
 		return -1;
 	}
 	// FIXME not every filesystem supports -y
