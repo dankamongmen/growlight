@@ -1086,6 +1086,10 @@ case LAYOUT_ZPOOL:
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
 				mvwprintw(rb->win,line + 2,START_COL,"     active");
 			}
+		}else if(bo->d->layout == LAYOUT_DM){
+			// FIXME add more detail...type of dm etc
+			wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
+			mvwprintw(rb->win,line + 2,START_COL,"     active");
 		}else if(bo->d->layout == LAYOUT_ZPOOL){
 			if(bo->d->zpool.state != POOL_STATE_ACTIVE){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
