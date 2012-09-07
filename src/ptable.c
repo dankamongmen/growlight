@@ -370,17 +370,15 @@ int uuid_partition(device *d,const void *uuid){
 }
 
 int check_partition(device *d){
-	char cmd[PATH_MAX];
-
 	if(d->mnt){
 		diag("Will not check mounted filesystem %s\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"fsck -C 0 /dev/%s",d->name) >= (int)sizeof(cmd)){
-		diag("Bad name: %s\n",d->name);
+	if(d->mnttype == NULL){
+		diag("No filesystem on %d\n",d->name);
 		return -1;
 	}
-	if(popen_drain(cmd)){
+	if(vspopen_drain("fsck.%s -C 0 /dev/%s",d->name,d->mnttype)){
 		return -1;
 	}
 	return 0;
