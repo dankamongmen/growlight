@@ -171,26 +171,43 @@ int parse_mounts(const glightui *gui,const char *fn){
 				continue;
 			}
 		}
-		if(d->mnt){
-			if(strcmp(d->mnt,mnt)){
-				diag("Already had mount for %s|%s: %s|%s\n",
-						dev,mnt,d->name,d->mnt);
-				// FIXME need to track both! see bug 175
+		if(growlight_target && strncmp(mnt,growlight_target,strlen(growlight_target)) == 0){
+			if(d->target){
+				if(strcmp(d->target->path,mnt)){
+					diag("Already had mount for %s|%s: %s|%s\n",
+							dev,mnt,d->name,d->target->path);
+					// FIXME need to track both! see bug 175
+				}
+				free_mntentry(d->target);
+				free(d->mnttype);
+			}else{
+				verbf("New %s target %s on %s\n",fs,mnt,d->name);
+			}
+			if((d->target = create_target(mnt,dev,d->uuid,d->label,ops)) == NULL){
+				goto err;
+			}
+		}else{
+			if(d->mnt){
+				if(strcmp(d->mnt,mnt)){
+					diag("Already had mount for %s|%s: %s|%s\n",
+							dev,mnt,d->name,d->mnt);
+					// FIXME need to track both! see bug 175
+				}
 				free(d->mnttype);
 				free(d->mntops);
 				free(d->mnt);
+			}else{
+				verbf("New %s mount %s on %s\n",fs,mnt,d->name);
 			}
-		}else{
-			verbf("New %s mount %s on %s\n",fs,mnt,d->name);
+			d->mnt = mnt;
+			d->mntops = ops;
+			d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
 		}
-		d->mnt = mnt;
-		d->mntops = ops;
-		d->mnttype = fs;
-		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
 		if(d->layout == LAYOUT_PARTITION){
 			d = d->partdev.parent;
 		}
 		d->uistate = gui->block_event(d,d->uistate);
+		d->mnttype = fs;
 		mnt = fs = ops = NULL;
 	}
 	free(dev); free(mnt); free(fs); free(ops);
