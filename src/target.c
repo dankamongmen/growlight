@@ -23,13 +23,27 @@ mntentry *create_target(const char *path,const char *dev,const char *uuid,
 	mntentry *t;
 
 	if( (t = malloc(sizeof(*t))) ){
-		t->path = strdup(path);
+		int tfd = -1;
+
+		if( (t->path = strdup(path)) ){
+			if(targfd < 0 && strcmp(t->path,growlight_target) == 0){
+				if((tfd = open(path,O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0){
+					diag("Couldn't open %s (%s?)\n",path,strerror(errno));
+					free(t->path);
+					free(t);
+					return NULL;
+				}
+			}
+		}
 		t->dev = strdup(dev);
 		t->ops = strdup(ops);
 		t->uuid = uuid ? strdup(uuid) : NULL;
 		t->label = label ? strdup(label) : NULL;
 		if(!t->path || !t->dev || !t->ops || (label && !t->label)
 						|| (uuid && !t->uuid)){
+			if(tfd >= 0){
+				close(tfd);
+			}
 			free(t->label);
 			free(t->uuid);
 			free(t->path);
@@ -37,6 +51,8 @@ mntentry *create_target(const char *path,const char *dev,const char *uuid,
 			free(t->ops);
 			free(t);
 			t = NULL;
+		}else if(tfd >= 0){
+			targfd = tfd;
 		}
 	}
 	if(!t){
@@ -57,8 +73,6 @@ void free_mntentry(mntentry *t){
 }
 
 int prepare_umount(device *d,const char *path){
-	char targpath[PATH_MAX + 1];
-
 	if(path == NULL){
 		diag("Passed a NULL argument\n");
 		return -1;
@@ -75,17 +89,13 @@ int prepare_umount(device *d,const char *path){
 		diag("%s is mapped to %s, not %s\n",d->name,d->target->path,path);
 		return -1;
 	}
-	if((unsigned)snprintf(targpath,sizeof(targpath),"%s/%s",get_target(),path) >= sizeof(targpath)){
-		diag("Bad path: %s\n",path);
-		return -1;
-	}
 	if(strcmp(growlight_target,d->target->path) == 0){
 		close(targfd);
 		targfd = -1;
 	}
-	if(umount2(targpath,UMOUNT_NOFOLLOW)){
+	if(umount2(d->target->path,UMOUNT_NOFOLLOW)){
 		diag("Couldn't unmount %s at %s (%s?)\n",d->mnttype,
-				targpath,strerror(errno));
+				d->target->path,strerror(errno));
 		return -1;
 	}
 	free_mntentry(d->target);
@@ -124,10 +134,8 @@ make_parent_directories(const char *path){
 // Used to map an on-disk filesystem (which may or may not already be mounted)
 // into the target fstab. If already mounted outside the target, the mount is
 // preserved in the target definition.
-int prepare_mount(device *d,const char *path,const char *cfs,const char *uuid,
-				const char *label,const char *ops){
+int prepare_mount(device *d,const char *path,const char *cfs){
 	char devname[PATH_MAX + 1],pathext[PATH_MAX + 1],*fs;
-	mntentry *m;
 
 	if(get_target() == NULL){
 		diag("No target is defined\n");
@@ -178,22 +186,7 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *uuid,
 			free(fs);
 			return -1;
 		}
-		strcat(pathext,"/etc");
-		if(mkdir(pathext,0755) && errno != EEXIST){
-			diag("Couldn't mkdir %s (%s?)\n",pathext,strerror(errno));
-			close(targfd);
-			targfd = -1;
-			umount2(devname,UMOUNT_NOFOLLOW);
-			free(fs);
-			return -1;
-		}
 		d->swapprio = SWAP_INVALID;
-		if((d->target = create_target(path,d->name,uuid,label,ops)) == NULL){
-			close(targfd);
-			targfd = -1;
-			free(fs);
-			return -1;
-		}
 		free(d->mnttype);
 		d->mnttype = fs;
 		return 0;
@@ -210,14 +203,6 @@ int prepare_mount(device *d,const char *path,const char *cfs,const char *uuid,
 		return -1;
 	}
 	d->swapprio = SWAP_INVALID;
-	if((m = create_target(path,d->name,uuid,label,ops)) == NULL){
-		umount2(devname,UMOUNT_NOFOLLOW);
-		free(fs);
-		return -1;
-	}
-	free(d->mnttype);
-	d->mnttype = fs;
-	d->target = m;
 	return 0;
 }
 
@@ -321,6 +306,7 @@ int set_target(const char *path){
 }
 
 int finalize_target(void){
+	char pathext[PATH_MAX + 1];
 	FILE *fp;
 	int fd;
 
@@ -330,6 +316,14 @@ int finalize_target(void){
 	}
 	if(targfd < 0){
 		diag("No target mappings are defined\n");
+		return -1;
+	}
+	if((unsigned)snprintf(pathext,sizeof(pathext),"%s/etc",growlight_target) >= sizeof(pathext)){
+		diag("Name too long (%s/etc)\n",growlight_target);
+		return -1;
+	}
+	if(mkdir(pathext,0755) && errno != EEXIST){
+		diag("Couldn't mkdir %s (%s?)\n",pathext,strerror(errno));
 		return -1;
 	}
 	if((fd = openat(targfd,"etc/fstab",O_WRONLY|O_CLOEXEC|O_CREAT,

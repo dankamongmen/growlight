@@ -1863,15 +1863,14 @@ targpoint_callback(const char *path){
 		return;
 	}
 	if(blockobj_unpartitionedp(b)){
-		prepare_mount(b->d,path,b->d->mnttype,b->d->uuid,b->d->label,"defaults");
+		prepare_mount(b->d,path,b->d->mnttype);
 		redraw_adapter(current_adapter);
 		return;
 	}else if(blockobj_emptyp(b)){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		prepare_mount(b->zone->p,path,b->zone->p->mnttype,
-			b->zone->p->uuid,b->zone->p->label,"defaults");
+		prepare_mount(b->zone->p,path,b->zone->p->mnttype);
 		redraw_adapter(current_adapter);
 		return;
 	}
