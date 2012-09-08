@@ -253,25 +253,28 @@ int sg_interrogate(device *d,int fd){
 	io.sbp = sb;
 	io.cmd_len = sizeof(cdb);
 	if(ioctl(fd,SG_IO,&io)){
-		diag("Couldn't perform SG_IO ioctl on %d (%s?)\n",fd,strerror(errno));
+		diag("Couldn't perform SG_IO ioctl on %s:%d (%s?)\n",d->name,fd,strerror(errno));
 		return -1;
 	}
+	if(io.driver_status && io.driver_status != SG_DRIVER_SENSE){
+		verbf("Bad driver status 0x%x on %s\n",io.driver_status,d->name);
+		cdb[14] = ATA_OP_PIDENTIFY;
+		if(ioctl(fd,SG_IO,&io)){
+			diag("Couldn't perform PIDENTIFY ioctl on %s:%d (%s?)\n",d->name,fd,strerror(errno));
+			return -1;
+		}
+		if(io.driver_status && io.driver_status != SG_DRIVER_SENSE){
+			verbf("Bad PIDENTIFY status 0x%x on %s\n",io.driver_status,d->name);
+			return -1;
+		}
+	}
 	if(io.status && io.status != SG_CHECK_CONDITION){
-		verbf("Bad check condition 0x%x\n",io.status);
+		verbf("Bad check condition 0x%x on %s\n",io.status,d->name);
 		return 0; // FIXME
 	}
 	if(io.host_status){
-		verbf("Bad host status 0x%x\n",io.host_status);
+		verbf("Bad host status 0x%x on %s\n",io.host_status,d->name);
 		return 0; // FIXME
-	}
-	if(io.driver_status && io.driver_status != SG_DRIVER_SENSE){
-		verbf("Bad driver status 0x%x\n",io.driver_status);
-		/*uint16_t args[4] = { ATA_OP_IDENTIFY, 0, 0, 1 };
-		if(ioctl(fd,HDIO_DRIVE_CMD,args)){
-			verbf("HDIO_DRIVE_CMD also failed (%s?)\n",strerror(errno));
-			return 0;
-		}*/
-		return 0;
 	}
 	/*conf = ntohs(buf[GEN_CONFIG]);
 	if(conf == 0x848a || conf == 0x844a
@@ -282,53 +285,6 @@ int sg_interrogate(device *d,int fd){
 	}else if(!(conf & CONFIG_ATAPI)){
 	}
 	*/
-	if((d->blkdev.rotation = buf[NMRR]) == 1){
-		d->blkdev.rotation = -1; // non-rotating store
-	}else if(d->blkdev.rotation <= 0x401){
-		d->blkdev.rotation = 0; // unknown rate
-	}
-	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
-		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
-		verbf("\tWrite-cache: %s\n",d->blkdev.wcache ? "Enabled" : "Disabled/not present");
-	}
-	if(ntohs(buf[CMDS_SUPP_2]) & WWN_SUP){
-		free(d->wwn);
-		if((d->wwn = malloc(17)) == NULL){
-			return -1;
-		}
-		snprintf(d->wwn,17,"%04x%04x%04x%04x",buf[108],buf[109],buf[110],buf[111]);
-	}
-	if(buf[CMDS_SUPP_3] & FEATURE_READWRITEVERIFY){
-		if(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY){
-			d->blkdev.rwverify = RWVERIFY_SUPPORTED_ON;
-		}else{
-			d->blkdev.rwverify = RWVERIFY_SUPPORTED_OFF;
-		}
-	}else{
-		d->blkdev.rwverify = RWVERIFY_UNSUPPORTED;
-	}
-	verbf("\tRead-write-verify: %s\n",d->blkdev.rwverify == RWVERIFY_UNSUPPORTED ? "Not present" :
-			d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? "Disabled" : "Enabled");
-	for(n = START_SERIAL ; n < START_SERIAL + LENGTH_SERIAL ; ++n){
-		unsigned char c1 = (buf[n] & 0xff00) >> 8u;
-		unsigned char c2 = (buf[n] & 0xff);
-
-		if(!isprint(c1) || !isprint(c2)){
-			break;
-		}
-		buf[n] = ntohs(buf[n]);
-	}
-	if(n == START_SERIAL + LENGTH_SERIAL){
-		d->blkdev.serial = malloc(LENGTH_SERIAL * sizeof(*buf) + 1);
-		if(d->blkdev.serial){
-			// FIXME this copies over whitespace
-			memcpy(d->blkdev.serial,buf + START_SERIAL,LENGTH_SERIAL * sizeof(*buf));
-			d->blkdev.serial[LENGTH_SERIAL * sizeof(*buf)] = '\0';
-		}
-	}else{
-		verbf("Got bad data on SG_IO for %s\n",d->name);
-		return 0;
-	}
 	maj = buf[TRANSPORT_MAJOR] >> 12u;
 	min = buf[TRANSPORT_MAJOR] & 0xfffu;
 	switch(maj){
@@ -351,6 +307,54 @@ int sg_interrogate(device *d,int fd){
 		default:
 			diag("Unknown transport type %hu on %s\n",maj,d->name);
 			break;
+	}
+	if((d->blkdev.rotation = buf[NMRR]) == 1){
+		d->blkdev.rotation = -1; // non-rotating store
+	}else if(d->blkdev.rotation <= 0x401){
+		d->blkdev.rotation = 0; // unknown rate
+	}
+	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
+		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
+		verbf("\t%s write-cache: %s\n",d->name,d->blkdev.wcache ? "Enabled" : "Disabled/not present");
+	}
+	if(ntohs(buf[CMDS_SUPP_2]) & WWN_SUP){
+		free(d->wwn);
+		if((d->wwn = malloc(17)) == NULL){
+			return -1;
+		}
+		snprintf(d->wwn,17,"%04x%04x%04x%04x",buf[108],buf[109],buf[110],buf[111]);
+	}
+	if(buf[CMDS_SUPP_3] & FEATURE_READWRITEVERIFY){
+		if(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY){
+			d->blkdev.rwverify = RWVERIFY_SUPPORTED_ON;
+		}else{
+			d->blkdev.rwverify = RWVERIFY_SUPPORTED_OFF;
+		}
+	}else{
+		d->blkdev.rwverify = RWVERIFY_UNSUPPORTED;
+	}
+	verbf("\t%s read-write-verify: %s\n",d->name,
+			d->blkdev.rwverify == RWVERIFY_UNSUPPORTED ? "Not present" :
+			d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? "Disabled" : "Enabled");
+	for(n = START_SERIAL ; n < START_SERIAL + LENGTH_SERIAL ; ++n){
+		unsigned char c1 = (buf[n] & 0xff00) >> 8u;
+		unsigned char c2 = (buf[n] & 0xff);
+
+		if(!isprint(c1) || !isprint(c2)){
+			break;
+		}
+		buf[n] = ntohs(buf[n]);
+	}
+	if(n == START_SERIAL + LENGTH_SERIAL){
+		d->blkdev.serial = malloc(LENGTH_SERIAL * sizeof(*buf) + 1);
+		if(d->blkdev.serial){
+			// FIXME this copies over whitespace
+			memcpy(d->blkdev.serial,buf + START_SERIAL,LENGTH_SERIAL * sizeof(*buf));
+			d->blkdev.serial[LENGTH_SERIAL * sizeof(*buf)] = '\0';
+		}
+	}else{
+		verbf("Got bad data on SG_IO for %s\n",d->name);
+		//return 0;
 	}
 	return 0;
 }
