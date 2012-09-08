@@ -3818,11 +3818,13 @@ print_target(WINDOW *w,const device *d,int *row,int both,const mntentry *m){
 	int cols = getmaxx(w),r;
 
 	mvwhline(w,*row,START_COL,' ',cols - 2);
-	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
+	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
 			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
 			d->mnttype,
 			m->uuid ? m->uuid : "n/a",
 			qprefix(d->mntsize,1,buf,sizeof(buf),0),
+			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 			m->dev);
 	++*row;
 	if(!both){
