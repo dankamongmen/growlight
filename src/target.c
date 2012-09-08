@@ -365,17 +365,30 @@ int dump_targets(FILE *fp){
 			const device *p;
 
 			if( (m = d->target) ){
-				fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",m->dev,
-						m->path,d->mnttype,m->ops,strcmp(m->path,"/") ? 2 : 1);
+				if(fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",m->dev,
+						m->path,d->mnttype,m->ops,strcmp(m->path,growlight_target) ? 2 : 1) < 0){
+					return -1;
+				}
+			}else if(d->layout == LAYOUT_NONE){
+				if(d->blkdev.removable){
+					if(fprintf(fp,"/dev/%s\t%s\t%s\t%s\t0\t0\n",d->name,
+							"/media/cdrom","auto","noauto,user") < 0){
+						return -1;
+					}
+				}
 			}
 			for(p = d->parts ; p ; p = p->next){
 				if( (m = p->target) ){
-					fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",m->dev,
-							m->path,p->mnttype,m->ops,strcmp(m->path,"/") ? 2 : 1);
+					if(fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",m->dev,
+							m->path,p->mnttype,m->ops,strcmp(m->path,growlight_target) ? 2 : 1) < 0){
+						return -1;
+					}
 				}
 			}
 		}
 	}
-	fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n");
+	if(fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n") < 0){
+		return -1;
+	}
 	return 0;
 }
