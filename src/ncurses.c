@@ -911,11 +911,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 
 static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
-			unsigned cols,unsigned topp,unsigned endp){
-	static const cchar_t bchrs[] = {
-		{ .attr = 0, .chars = L"┤", },
-		{ .attr = 0, .chars = L"├", },
-	};
+			unsigned cols,int topp,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
 	int selected,co,x,rx,attr;
 	char rolestr[12]; // taken from %-11.11s below
@@ -948,7 +944,7 @@ case LAYOUT_NONE:
 		assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
 		strncpy(rolestr,"virtual",sizeof(rolestr));
 	}
-	if(line + topp >= 1){
+	if(line + !!topp + 2 >= 1){
 		if(!bo->d->size || line + 2 < rows - !endp){
 			if(bo->d->size){
 				line += 2;
@@ -983,7 +979,7 @@ case LAYOUT_MDADM:
 		co = COLOR_PAIR(MDADM_COLOR);
 	}
 	assert(wattrset(rb->win,co) == OK);
-	if(line + topp >= 1){
+	if(line + !!topp + 2 >= 1){
 		if(!bo->d->size || line + 2 < rows - !endp){
 			if(bo->d->size){
 				line += 2;
@@ -1011,7 +1007,7 @@ case LAYOUT_MDADM:
 case LAYOUT_DM:
 	strncpy(rolestr,"dm",sizeof(rolestr));
 	assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
-	if(line + topp >= 1){
+	if(line + !!topp + 2 >= 1){
 		if(!bo->d->size || line + 2 < rows - !endp){
 			if(bo->d->size){
 				line += 2;
@@ -1041,7 +1037,7 @@ case LAYOUT_PARTITION:
 case LAYOUT_ZPOOL:
 	strncpy(rolestr,"zpool",sizeof(rolestr));
 	assert(wattrset(rb->win,COLOR_PAIR(ZPOOL_COLOR)) == OK);
-	if(line + topp >= 1){
+	if(line + !!topp + 2 >= 1){
 		if(!bo->d->size || line + 2 < rows - !endp){
 			if(bo->d->size){
 				line += 2;
@@ -1076,19 +1072,19 @@ case LAYOUT_ZPOOL:
 	wattron(rb->win,A_BOLD);
 
 	// Box-diagram (3-line) mode. Print the name on the first line.
-	if(line + topp >= 1){
+	if(line + !!topp >= 1){
 		mvwprintw(rb->win,line,1,"%11.11s",bo->d->name);
 	}
 	
 	// Print summary below device name, in the same color
-	if(line + 1 < rows - !endp && line + topp + 1 >= 1){
+	if(line + 1 < rows - !endp && line + !!topp + 1 >= 1){
 		if(strlen(rolestr)){
 			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
 		}
 	}
 
 	// ...and now the temperature...
-	if(line + 2 < rows - !endp && line + topp + 2 >= 1){
+	if((line + 2 < rows - !endp) && (line + !!topp + 2 >= 1)){
 		if(bo->d->layout == LAYOUT_NONE){
 			wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			if(bo->d->blkdev.celsius >= 60u){
@@ -1149,7 +1145,7 @@ case LAYOUT_ZPOOL:
 	}else{
 		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 	}
-	if(line + topp >= 1){
+	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
 		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
 		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
@@ -1157,7 +1153,7 @@ case LAYOUT_ZPOOL:
 	if(++line >= rows - !endp){
 		return;
 	}
-	if(line + topp >= 1){
+	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
 		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
 					cols - START_COL - 1,selected);
@@ -1167,14 +1163,18 @@ case LAYOUT_ZPOOL:
 		attr |= A_REVERSE;
 	}
 	wattrset(rb->win,attr);
-	if(line + topp >= 1){
+	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
 	}
 	if(++line >= rows - !endp){
 		return;
 	}
-	if(line + topp >= 1){
+	if(line + !!topp >= 1){
 		int c = cols - 80;
+		static const cchar_t bchrs[] = {
+			{ .attr = 0, .chars = L"┤", },
+			{ .attr = 0, .chars = L"├", },
+		};
 
 		mvwaddch(rb->win,line,START_COL + 10 + 1,attr | ACS_LLCORNER);
 		wadd_wch(rb->win,&bchrs[0]);
@@ -3144,12 +3144,13 @@ resize_adapter(reelbox *rb){
 			subrows += delta;
 		}
 		if(nlines > subrows){ // can we grow up?
-			int delta = rb->scrline - 1;
+			int delta;
 
-			if(delta + subrows > nlines){
-				delta = nlines - subrows;
+			if(rb->scrline - 1 + subrows > nlines){
+				delta = subrows - nlines;
+			}else{
+				delta = -1;
 			}
-			delta = -delta;
 			rb->scrline += delta;
 			push_adapters_above(rb,rows,cols,delta);
 			move_panel(rb->panel,rb->scrline,0);
