@@ -203,11 +203,11 @@ int parse_mounts(const glightui *gui,const char *fn){
 			d->mntops = ops;
 			d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
 		}
+		d->mnttype = fs;
 		if(d->layout == LAYOUT_PARTITION){
 			d = d->partdev.parent;
 		}
 		d->uistate = gui->block_event(d,d->uistate);
-		d->mnttype = fs;
 		mnt = fs = ops = NULL;
 	}
 	free(dev); free(mnt); free(fs); free(ops);
