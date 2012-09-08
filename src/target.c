@@ -18,8 +18,7 @@ char real_target[PATH_MAX + 1]; // Only used when we set or unset the target
 
 static int targfd = -1; // reference to target root, once defined
 
-static mntentry *
-create_target(const char *path,const char *dev,const char *uuid,
+mntentry *create_target(const char *path,const char *dev,const char *uuid,
 			const char *label,const char *ops){
 	mntentry *t;
 
