@@ -23,6 +23,8 @@
 
 #define KEY_ESC 27
 
+void locked_diag(const char *fmt,...) __attribute__ ((format (printf,1,2)));
+
 // For the ANSI standard terminal, we can fit only 4 lines of explicative text
 // onto the screen, so make each glyph count. By default, 76 characters can be
 // placed on each row.
@@ -274,7 +276,7 @@ static void
 form_colors(void){
 	// Don't reset the status color or header color, nor (obviously) the
 	// form nor splash colors
-	locked_diag(""); // Don't leave a highlit status up from long ago
+	locked_diag("%s",""); // Don't leave a highlit status up from long ago
 	init_pair(UHEADING_COLOR,-1,-1);
 	init_pair(UBORDER_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
@@ -2392,7 +2394,7 @@ pttype_callback(const char *pttype){
 	}
 	b = current_adapter->selected;
 	if(make_partition_table(b->d,pttype) == 0){
-		locked_diag("Made %s table on %s",pttype,b->d);
+		locked_diag("Made %s table on %s",pttype,b->d->name);
 	}
 }
 
