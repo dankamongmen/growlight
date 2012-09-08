@@ -1928,6 +1928,10 @@ write_postbase_hook(const char *fmt,...){
 		diag("Error closing %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
 		return -1;
 	}
+	if(chmod(GROWLIGHT_SCRIPT,S_IRUSR|S_IWUSR|S_IXUSR)){
+		diag("Error chmodding %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		return -1;
+	}
 	return 0;
 }
 
@@ -1953,7 +1957,7 @@ int prepare_bios_boot(device *d){
 		// FIXME restore this once we can set flags in UI!
 		// FIXME return -1;
 	}
-	if(write_postbase_hook("chroot %s apt-get install -y grub-pc\n"
+	if(write_postbase_hook("#!/bin/sh\nset -e\nchroot %s apt-get install -y grub-pc\n"
 		"chroot %s grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s\n",
 		growlight_target,growlight_target,d->mnt,d->name)){
 		return -1;
