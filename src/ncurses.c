@@ -862,7 +862,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
 			if(z->p->mnttype){
-				if(!z->p->mnt || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->mnt) >= sizeof(buf)){
+				if((!z->p->target || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->target->path) >= sizeof(buf))
+					&& (!z->p->mnt || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->mnt) >= sizeof(buf))){
 					assert((unsigned)snprintf(buf,sizeof(buf) - 2,"%s",z->p->mnttype) < sizeof(buf) - 2);
 				}
 			}
