@@ -3792,11 +3792,13 @@ print_mount(WINDOW *w,int *row,int both,const device *d){
 	int cols = getmaxx(w),r;
 
 	mvwhline(w,*row,START_COL,' ',cols - 2);
-	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-6.6s",
+	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
 			d->uuid ? d->uuid : "n/a",
 			qprefix(d->mntsize,1,buf,sizeof(buf),0),
+			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 			d->name);
 	++*row;
 	if(!both){
