@@ -3848,15 +3848,15 @@ map_details(WINDOW *hw){
 	y = 1;
 	if(growlight_target){
 		wattrset(hw,A_BOLD|COLOR_PAIR(UHEADING_COLOR));
-		mvwprintw(hw,1,START_COL,"Operating in target mode (%s)",growlight_target);
+		mvwprintw(hw,y,1,"Operating in target mode (%s)",growlight_target);
 		++y;
 	}
 	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
 	mvwhline(hw,y,1,' ',cols - 2);
-	mvwprintw(hw,y,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
+	mvwprintw(hw,y,1,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
 			FSLABELSIZ,FSLABELSIZ,"Label",
 			"Type","UUID","Bytes","Device");
-	if((y = START_COL + 1) >= rows){
+	if(++y >= rows){
 		return -1;
 	}
 	// First we list the targets
