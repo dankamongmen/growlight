@@ -1930,6 +1930,7 @@ write_postbase_hook(const char *fmt,...){
 	}
 	return 0;
 }
+
 int prepare_bios_boot(device *d){
 	if(d->layout != LAYOUT_PARTITION){
 		diag("Must boot from a partition\n");
@@ -1939,7 +1940,7 @@ int prepare_bios_boot(device *d){
 		diag("%s is not mapped as a target filesystem\n",d->name);
 		return -1;
 	}
-	if(strcmp(d->target->path,"/")){
+	if(strcmp(d->target->path,growlight_target)){
 		diag("%s is not mapped as the target root (%s)\n",d->name,d->target->path);
 		return -1;
 	}
