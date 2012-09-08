@@ -4294,6 +4294,10 @@ new_filesystem(void){
 		locked_diag("Selected region of %s is empty space",b->d->name);
 		return;
 	}
+	if(selected_inusep()){
+		locked_diag("Selected region of %s is in use",b->d->name);
+		return;
+	}
 	if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
 		return;
 	}
