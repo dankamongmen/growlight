@@ -183,7 +183,7 @@ int parse_mounts(const glightui *gui,const char *fn){
 			}else{
 				verbf("New %s target %s on %s\n",fs,mnt,d->name);
 			}
-			if((d->target = create_target(mnt,dev,d->uuid,d->label,ops)) == NULL){
+			if((d->target = create_target(mnt,d->name,d->uuid,d->label,ops)) == NULL){
 				goto err;
 			}
 		}else{
@@ -201,14 +201,15 @@ int parse_mounts(const glightui *gui,const char *fn){
 			}
 			d->mnt = mnt;
 			d->mntops = ops;
-			d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
+			mnt = ops = NULL;
 		}
+		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
 		d->mnttype = fs;
+		fs = NULL;
 		if(d->layout == LAYOUT_PARTITION){
 			d = d->partdev.parent;
 		}
 		d->uistate = gui->block_event(d,d->uistate);
-		mnt = fs = ops = NULL;
 	}
 	free(dev); free(mnt); free(fs); free(ops);
 	dev = mnt = fs = ops = NULL;
