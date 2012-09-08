@@ -3868,7 +3868,7 @@ map_details(WINDOW *hw){
 			const device *p;
 
 			if(d->target){
-				print_target(hw,p,&y,y + 1 < rows,p->target);
+				print_target(hw,d,&y,y + 1 < rows,d->target);
 				if(y >= rows){
 					return 0;
 				}
