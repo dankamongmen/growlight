@@ -572,10 +572,10 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
 		d->blkdev.realdev = 1;
 		if((d->model = get_sysfs_string(sdevfd,"model")) == NULL){
-			diag("Couldn't get a model for %s (%s?)\n",name,strerror(errno));
+			verbf("Couldn't get a model for %s (%s?)\n",name,strerror(errno));
 		}
 		if((d->revision = get_sysfs_string(sdevfd,"rev")) == NULL){
-			diag("Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
+			verbf("Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
 		}
 		verbf("\tModel: %s revision %s S/N %s\n",
 				d->model ? d->model : "n/a",
