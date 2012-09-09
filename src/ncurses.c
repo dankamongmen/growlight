@@ -5091,7 +5091,7 @@ modify_aggregate(void){
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
-		locked_diag("Aggregate destruction requires selection of an aggregate");
+		locked_diag("Aggregate modification requires selection of an aggregate");
 		return;
 	}
 	if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
