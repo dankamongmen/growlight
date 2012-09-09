@@ -5852,6 +5852,7 @@ int main(int argc,char * const *argv){
 		.block_free = block_free,
 	};
 	WINDOW *w;
+	struct panel_state *ps;
 
 	if(setlocale(LC_ALL,"") == NULL){
 		fprintf(stderr,"Couldn't find locale\n");
@@ -5860,11 +5861,14 @@ int main(int argc,char * const *argv){
 	if((w = ncurses_setup()) == NULL){
 		return EXIT_FAILURE;
 	}
+	ps = show_splash(L"Performing initialization...");
 	if(growlight_init(argc,argv,&ui)){
+		kill_splash(ps);
 		ncurses_cleanup(&w);
 		dump_diags();
 		return EXIT_FAILURE;
 	}
+	kill_splash(ps);
 	handle_ncurses_input(w);
 	if(growlight_stop()){
 		ncurses_cleanup(&w);
