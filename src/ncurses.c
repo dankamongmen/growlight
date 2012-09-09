@@ -905,10 +905,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			assert((unsigned) snprintf(buf,sizeof(buf),"%s",z->p->mnttype) <= sizeof(buf));
 		}
 		if(strlen(buf) && och >= strlen(buf)){
+			size_t start = ((och + strlen(buf)) / 2) +
+					!((och + strlen(buf)) % 2);
+
 			wattron(w,A_BOLD);
-			mvwaddstr(w,y,off - ((och + strlen(buf)) / 2),buf);
-			mvwaddch(w,y,off - ((och + strlen(buf)) / 2) - 1,' ');
-			mvwaddch(w,y,off - ((och + strlen(buf)) / 2) + strlen(buf),' ');
+			mvwaddstr(w,y,off - start,buf);
+			mvwaddch(w,y,off - start - 1,' ');
+			mvwaddch(w,y,off - start + strlen(buf),' ');
 		}
 		selstr = NULL;
 	}while((z = z->next) != bo->zchain);
