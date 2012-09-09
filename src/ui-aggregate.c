@@ -19,36 +19,6 @@ static const char AGGNAME_TEXT[] =
 "The chosen name will be the primary means by which the system makes use of "
 "this new aggregate, so choose wisely, and plan for the future!";
 
-static inline int
-device_aggregablep(const device *d){
-	if(d->mnt){
-		return 0;
-	}
-	if(d->size == 0){
-		return 0;
-	}
-	if(d->roflag){
-		return 0;
-	}
-	switch(d->layout){
-		case LAYOUT_NONE:
-			if(d->blkdev.unloaded){
-				return 0;
-			}
-			if(d->blkdev.pttable){
-				return 0;
-			}
-			break;
-		case LAYOUT_PARTITION:
-			break;
-		case LAYOUT_MDADM:
-		case LAYOUT_DM:
-		case LAYOUT_ZPOOL:
-			break;
-	}
-	return 1;
-}
-
 typedef enum {
 	FORM_SELECT,			// form_option[]
 	FORM_STRING_INPUT,		// form_input
