@@ -149,24 +149,24 @@ static int
 generic_mdadm_create(const char *name,const char *metadata,const char *level,
 			char * const *comps,int num){
 	char buf[BUFSIZ] = "";
-	size_t left,pos;
+	size_t pos;
 	int z;
 
 	pos = 0;
-	left = sizeof(buf) - 1;
+#define PREFIX "/dev/"
 	for(z = 0 ; z < num ; ++z){
-		if(strlen(comps[z]) >= left){
+		if((unsigned)snprintf(buf + pos,sizeof(buf) - pos," %s%s",
+				strcmp(*comps,"missing") ? "/dev/" : "",
+				*comps) >= sizeof(buf) - pos){
 			diag("Too many arguments for MD creation\n");
 			return -1;
 		}
-		strcat(buf + pos,comps[z]);
-		pos += strlen(comps[z]) + 1;
-		buf[pos - 1] = ' ';
-		left -= strlen(comps[z]) + 1;
+		++comps;
+		pos += strlen(buf + pos);
 	}
-	buf[pos - 1] = '\0';
+#undef PREFIX
 	// FIXME provide a way to let user control write intent bitmap
-	return vspopen_drain("mdadm -c -e %s -l %s -N \"%s\" -n %d -b internal %s",
+	return vspopen_drain("mdadm -C -e %s -l %s -N \"%s\" -n %d -b internal%s",
 			metadata,level,name,num,buf);
 }
 
