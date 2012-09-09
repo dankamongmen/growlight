@@ -2041,17 +2041,24 @@ fs_callback(const char *fs){
 static struct form_option *
 ptype_table(const device *d,int *count,int match,int *defidx){
 	struct form_option *fo = NULL,*tmp;
+	const char *pttable;
 	const ptype *pt;
 
 	assert(d);
-	assert(d->layout == LAYOUT_NONE);
-	assert(d->blkdev.pttable);
+	if(d->layout == LAYOUT_NONE){
+		pttable = d->blkdev.pttable;
+	}else if(d->layout == LAYOUT_MDADM){
+		pttable = d->mddev.pttable;
+	}else{
+		locked_diag("Can't partition this type of device");
+		return NULL;
+	}
 	*count = 0;
 	for(pt = ptypes ; pt->name ; ++pt){
 		const size_t KEYSIZE = 5; // 4 hex digit code
 		char *key,*desc;
 
-		if(!ptype_supported(d->blkdev.pttable,pt)){
+		if(!ptype_supported(pttable,pt)){
 			continue;
 		}
 		if((key = malloc(KEYSIZE)) == NULL){
