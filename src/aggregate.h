@@ -41,6 +41,9 @@ device_aggregablep(const device *d){
 			}
 			break;
 		case LAYOUT_PARTITION:
+			if(!parttype_aggregablep(d->partdev.ptype)){
+				return 0;
+			}
 			break;
 		case LAYOUT_MDADM:
 		case LAYOUT_DM:

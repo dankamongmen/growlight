@@ -345,6 +345,19 @@ pcie_gen(unsigned gen){
 	}
 }
 
+static inline int
+parttype_aggregablep(unsigned pt){
+	const ptype *pptr;
+
+	for(pptr = ptypes ; pptr->name ; ++pptr){
+		if(pt == pptr->code){
+			return pptr->aggregable;
+		}
+	}
+	diag("Partition type %u unknown\n",pt);
+	return 0;
+}
+
 // FIXME do away with this. use ptypes.[hc] exclusively
 static inline const char *
 partrole_str(unsigned ptype,uint64_t flags){

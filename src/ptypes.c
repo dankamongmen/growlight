@@ -147,14 +147,16 @@ const ptype ptypes[] = {
 		.mbr_code = 0xa5,
 	}, {
 		.code = 0xa504,
-		.name = "FreeBSD ZFS",
+		.name = "FreeBSD/Linux ZFS",
 		.gpt_guid = "\xBA\x7C\x6E\x51\xCF\x6E\xD6\x11\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
 		.mbr_code = 0xa5,
+		.aggregable = 1,
 	}, {
 		.code = 0xa505,
 		.name = "FreeBSD Vinum/RAID",
 		.gpt_guid = "\xB8\x7C\x6E\x51\xCF\x6E\xD6\x11\x8F\xF8\x00\x02\x2D\x09\x71\x2B",
 		.mbr_code = 0xa5,
+		.aggregable = 1,
 	}, {
 		.code = PARTROLE_ESP,
 		.name = "EFI System Partition (ESP)",
@@ -175,6 +177,7 @@ const ptype ptypes[] = {
 		.name = "Linux MDRAID",
 		.gpt_guid = "\x0F\x88\x9D\xA1\xFC\x05\x3B\x4D\xA0\x06\x74\x3F\x0F\x84\x91\x1E",
 		.mbr_code = 0xfd,
+		.aggregable = 1,
 	}, {
 		.code = 0xa580,
 		.name = "Midnight BSD data",
@@ -200,11 +203,13 @@ const ptype ptypes[] = {
 		.name = "Midnight BSD ZFS",
 		.gpt_guid = "\x5d\xe4\xd5\x85\x7c\x23\xe1\x11\xb4\xb3\xe8\x9a\x8f\x7f\xc3\xa7",
 		.mbr_code = 0,
+		.aggregable = 1,
 	}, {
 		.code = 0xa585,
 		.name = "Midnight BSD Vinum/RAID",
 		.gpt_guid = "\x5c\xe4\xd5\x85\x7c\x23\xe1\x11\xb4\xb3\xe8\x9a\x8f\x7f\xc3\xa7",
 		.mbr_code = 0,
+		.aggregable = 1,
 	}, {
 		.code = 0xa800,
 		.name = "Apple UFS",
@@ -240,6 +245,7 @@ const ptype ptypes[] = {
 		.name = "NetBSD RAID",
 		.gpt_guid = "\xAA\x8D\xF4\x49\x0E\xB1\xDC\x11\xB9\x9B\x00\x19\xD1\x87\x96\x48",
 		.mbr_code = 0xa9,
+		.aggregable = 1,
 	}, {
 		.code = 0xab00,
 		.name = "Apple boot",
@@ -255,11 +261,13 @@ const ptype ptypes[] = {
 		.name = "Apple RAID",
 		.gpt_guid = "\x44\x49\x41\x52\x00\x00\xAA\x11\xAA\x11\x00\x30\x65\x43\xEC\xAC",
 		.mbr_code = 0,
+		.aggregable = 1,
 	}, {
 		.code = 0xaf02,
 		.name = "Apple RAID offline",
 		.gpt_guid = "\x44\x49\x41\x52\x4F\x5F\xAA\x11\xAA\x11\x00\x30\x65\x43\xEC\xAC",
 		.mbr_code = 0,
+		.aggregable = 1,
 	}, {
 		.code = 0xaf03,
 		.name = "Apple label",
@@ -290,6 +298,7 @@ const ptype ptypes[] = {
 		.name = "Solaris /usr, Mac OS X ZFS",
 		.gpt_guid = "\xC3\x8C\x89\x6A\xD2\x1D\xB2\x11\x99\xA6\x08\x00\x20\x73\x66\x31",
 		.mbr_code = 0xbf,
+		.aggregable = 1,
 	}, {
 		.code = 0xbf02,
 		.name = "Solaris swap",

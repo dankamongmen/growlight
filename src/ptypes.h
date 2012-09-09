@@ -16,6 +16,7 @@ typedef struct ptype {
 	const char *name;		// Human-readable name
 	uint8_t gpt_guid[GUIDSIZE];	// GPT Type GUID (16 bytes) or 0s
 	uint8_t mbr_code;		// MBR code (1 byte) or 0
+	unsigned aggregable;		// Can it go into an aggregate?
 } ptype;
 
 extern const ptype ptypes[];

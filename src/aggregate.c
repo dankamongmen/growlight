@@ -77,19 +77,19 @@ static const aggregate_type aggregates[] = {
 		.name = "raidz1",
 		.desc = "ZFS RAID with distributed parity",
 		.mindisks = 3,
-		.maxfaulted = 1,
+		.maxfaulted = 0,
 		.defname = "SprezZRAID",
 	},{
 		.name = "raidz2",
 		.desc = "ZFS RAID with 2x distributed parity",
 		.mindisks = 4,
-		.maxfaulted = 2,
+		.maxfaulted = 0,
 		.defname = "SprezZRAID2",
 	},{
 		.name = "raidz3",
 		.desc = "ZFS RAID with 3x distributed parity",
 		.mindisks = 5,
-		.maxfaulted = 3,
+		.maxfaulted = 0,
 		.makeagg = make_raidz3,
 		.defname = "SprezZRAID3",
 	},{
