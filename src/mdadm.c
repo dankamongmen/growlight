@@ -139,7 +139,7 @@ int destroy_mdadm(device *d){
 		diag("%s is not an MD device\n",d->name);
 		return -1;
 	}
-	if(vspopen_drain("mdadm --misc %s --stop",d->name)){
+	if(vspopen_drain("mdadm --misc /dev/%s --stop",d->name)){
 		return -1;
 	}
 	return 0;
