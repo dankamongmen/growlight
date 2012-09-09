@@ -366,7 +366,8 @@ int dump_targets(FILE *fp){
 
 			if( (m = d->target) ){
 				if(fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",m->dev,
-						m->path,d->mnttype,m->ops,strcmp(m->path,growlight_target) ? 2 : 1) < 0){
+						m->path + strlen(growlight_target),
+						d->mnttype,m->ops,strcmp(m->path,growlight_target) ? 2 : 1) < 0){
 					return -1;
 				}
 			}else if(d->layout == LAYOUT_NONE){
@@ -380,7 +381,8 @@ int dump_targets(FILE *fp){
 			for(p = d->parts ; p ; p = p->next){
 				if( (m = p->target) ){
 					if(fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",m->dev,
-							m->path,p->mnttype,m->ops,strcmp(m->path,growlight_target) ? 2 : 1) < 0){
+							m->path + strlen(growlight_target),
+							p->mnttype,m->ops,strcmp(m->path,growlight_target) ? 2 : 1) < 0){
 						return -1;
 					}
 				}
