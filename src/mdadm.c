@@ -148,7 +148,7 @@ int destroy_mdadm(device *d){
 static int
 generic_mdadm_create(const char *name,const char *metadata,const char *level,
 			char * const *comps,int num){
-	char buf[BUFSIZ];
+	char buf[BUFSIZ] = "";
 	size_t left,pos;
 	int z;
 
