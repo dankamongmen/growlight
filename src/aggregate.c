@@ -29,24 +29,28 @@ static const aggregate_type aggregates[] = {
 		.desc = "Interleaved disk combination (striping) (MD)",
 		.mindisks = 2,
 		.maxfaulted = 0,
+		.makeagg = make_mdraid0,
 		.defname = "SprezzaRAID0",
 	},{
 		.name = "mdraid1",
 		.desc = "Mirroring (MD)",
 		.mindisks = 2,
 		.maxfaulted = 1,
+		.makeagg = make_mdraid1,
 		.defname = "SprezzaRAID1",
 	},{
 		.name = "mdraid4",
 		.desc = "Block striping with dedicated parity",
 		.mindisks = 3,
 		.maxfaulted = 1,
+		.makeagg = make_mdraid4,
 		.defname = "SprezzaRAID4",
 	},{
 		.name = "mdraid5",
 		.desc = "Block striping with distributed parity",
 		.mindisks = 3,
 		.maxfaulted = 1,
+		.makeagg = make_mdraid5,
 		.defname = "SprezzaRAID5",
 	},{
 		.name = "mdraid6",
