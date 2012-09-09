@@ -2704,11 +2704,14 @@ detail_fs(WINDOW *hw,const device *d,int row){
 		mvwprintw(hw,row,START_COL,BPREFIXFMT "%c %s%s%s%s%s%s%s",
 			d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
 			d->mntsize ? 'B' : ' ',
-			d->label ? "" : "unlabeled ",
-			d->mnt ? "" : "unmounted ",
+			(d->label || (d->target && d->target->label)) ? "" : "unlabeled ",
+			(d->mnt || d->target) ? "" : "unmounted ",
 			d->mnttype,
-			d->label ? " named " : "",d->label ? d->label : "",
-			d->mnt ? " active at " : "",d->mnt ? d->mnt : "");
+			(d->label || (d->target && d->target->label)) ? " named " : "",
+			d->label ? d->label :
+			 (d->target && d->target->label) ? d->target->label : "",
+			(d->mnt || d->target) ? " active at " : "",
+			d->mnt ? d->mnt : d->target ? d->target->path : "");
 	}else if(d->swapprio != SWAP_INVALID){
 		mvwprintw(hw,row,START_COL,BPREFIXFMT "B %sswap%s%s prio %d",
 			bprefix(d->mntsize,1,buf,sizeof(buf),0),
