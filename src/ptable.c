@@ -29,6 +29,21 @@ dos_zap_table(device *d){
 }
 
 static int
+mdp_add_part(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,
+				unsigned long long code __attribute__ ((unused))){
+	if(name){
+		diag("Names are not supported for MBR partitions!\n");
+		return -1;
+	}
+	if((lsec - fsec) * d->logsec > 2ull * 1000ull * 1000ull * 1000ull * 1000ull){
+		diag("MBR partitions may not exceed 2TB\n");
+		return -1;
+	}
+	diag("FIXME: I don't like mbp partitions! %s\n",d->name);
+	return -1;
+}
+
+static int
 dos_add_part(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,
 					unsigned long long code){
 	unsigned mbrcode;
@@ -86,6 +101,16 @@ last_dos(const device *d){
 	return d->logsec ? d->size / d->logsec : 0;
 }
 
+static uintmax_t
+first_mdp(const device *d __attribute__ ((unused))){
+	return 1;
+}
+
+static uintmax_t
+last_mdp(const device *d){
+	return (d->logsec && d->size) ? d->size / d->logsec - 1 : 0;
+}
+
 static const struct ptable {
 	const char *name;
 	const char *desc;
@@ -126,6 +151,19 @@ static const struct ptable {
 		.code = dos_set_code,
 		.first = first_dos,
 		.last = last_dos,
+	}, {
+		.name = "mdp",
+		.desc = "Linux MD partitioning",
+		.make = NULL,
+		.zap = NULL,
+		.add = mdp_add_part,
+		.del = NULL,
+		.pname = NULL,
+		.uuid = NULL,
+		.flag = NULL,
+		.code = NULL,
+		.first = first_mdp,
+		.last = last_mdp,
 	}, {
 		.name = NULL,
 	}
