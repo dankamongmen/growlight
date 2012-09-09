@@ -544,19 +544,22 @@ draw_main_window(WINDOW *w){
 	assert(y >= 0);
 	cols -= x + 2;
 	assert(wattron(w,A_BOLD | COLOR_PAIR(STATUS_COLOR)) != ERR);
-	wprintw(w," %-*.*s",cols,cols,statusmsg);
+	assert(wprintw(w," %-*.*s",cols,cols,statusmsg) != ERR);
 }
 
 static void
 locked_vdiag(const char *fmt,va_list v){
-	char *nl;
+	size_t off;
 
 	vsnprintf(statusmsg,sizeof(statusmsg) - 1,fmt,v);
-	if( (nl = strchr(statusmsg,'\n')) ){
-		*nl = '\0';
-	}
-	while( (nl = strchr(statusmsg,'\b')) || (nl = strchr(statusmsg,'\t')) ){
-		*nl = ' ';
+	statusmsg[sizeof(statusmsg) - 1] = '\0';
+	for(off = 0 ; off < sizeof(statusmsg) - 1 ; ++off){
+		if(!isgraph(statusmsg[off])){
+			if(!statusmsg[off]){
+				break;
+			}
+			statusmsg[off] = ' ';
+		}
 	}
 	draw_main_window(stdscr);
 	if(diags.p){
