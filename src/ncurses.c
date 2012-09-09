@@ -2792,14 +2792,26 @@ update_details(WINDOW *hw){
 				 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
 				d->roflag ? L'+' : L'-');
 		assert(d->physsec <= 4096);
-		mvwprintw(hw,4,START_COL,"%ju sectors (%uB logical / %uB physical) %s connect",
-					d->size / (d->logsec ? d->logsec : 1),
-					d->logsec,
-					d->physsec,
-					transport_str(d->blkdev.transport));
+		mvwprintw(hw,4,START_COL,"Sectors: ");
+		wattroff(hw,A_BOLD);
+		wprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
+		wattron(hw,A_BOLD);
+		wprintw(hw,"(");
+		wattroff(hw,A_BOLD);
+		wprintw(hw,"%uB ",d->logsec);
+		wattron(hw,A_BOLD);
+		wprintw(hw,"logical / ");
+		wattroff(hw,A_BOLD);
+		wprintw(hw,"%uB ",d->physsec);
+		wattron(hw,A_BOLD);
+		wprintw(hw,"physical) %s connect",
+				transport_str(d->blkdev.transport));
 		if(transport_bw(d->blkdev.transport)){
-			wprintw(hw," (%sbps)",
-			qprefix(transport_bw(d->blkdev.transport),1,buf,sizeof(buf),1));
+			wprintw(hw," (");
+			wattroff(hw,A_BOLD);
+			wprintw(hw,"%sbps",qprefix(transport_bw(d->blkdev.transport),1,buf,sizeof(buf),1));
+			wattron(hw,A_BOLD);
+			wprintw(hw,")");
 		}
 	}else{
 		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
