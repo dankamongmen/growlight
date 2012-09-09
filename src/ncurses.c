@@ -544,7 +544,7 @@ draw_main_window(WINDOW *w){
 	assert(y >= 0);
 	cols -= x + 2;
 	assert(wattron(w,A_BOLD | COLOR_PAIR(STATUS_COLOR)) != ERR);
-	assert(wprintw(w," %-*.*s",cols,cols,statusmsg) != ERR);
+	wprintw(w," %-*.*s",cols,cols,statusmsg);
 }
 
 static void
