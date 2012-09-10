@@ -389,7 +389,9 @@ blockobj_unpartitionedp(const blockobj *bo){
 	return bo && !bo->zone &&
 		(bo->d->mnttype ||
 		 (bo->d->layout == LAYOUT_NONE && !bo->d->blkdev.pttable)
-		 || bo->d->layout != LAYOUT_NONE);
+		 || (bo->d->layout == LAYOUT_MDADM && !bo->d->mddev.pttable)
+		 || (bo->d->layout == LAYOUT_DM && !bo->d->dmdev.pttable)
+		 || bo->d->layout == LAYOUT_ZPOOL);
 }
 
 static inline int
