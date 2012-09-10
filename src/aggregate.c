@@ -70,7 +70,7 @@ static const aggregate_type aggregates[] = {
 		.name = "zmirror",
 		.desc = "Zpool with data replication (mirroring)",
 		.mindisks = 2,
-		.maxfaulted = 1,
+		.maxfaulted = 0,
 		.makeagg = make_zmirror,
 		.defname = "SprezZMirror",
 	},{
