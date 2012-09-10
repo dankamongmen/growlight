@@ -173,7 +173,7 @@ int parse_mounts(const glightui *gui,const char *fn){
 		}
 		free(dev);
 		dev = NULL;
-		if(d->mnttype && strcmp(d->mnttype,fs) == 0){
+		if(d->mnttype && strcmp(d->mnttype,fs)){
 			diag("Already had mounttype for %s: %s (got %s)\n",
 					d->name,d->mnttype,fs);
 			free(d->mnttype);
