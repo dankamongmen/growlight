@@ -2053,6 +2053,8 @@ fs_callback(const char *fs){
 // -- end filesystem type form
 // -------------------------------------------------------------------------
 
+// A NULL return is only an error if *count is set to -1. If *count is set to
+// 0, it simply means this partition table type doesn't have type tags.
 static struct form_option *
 ptype_table(const device *d,int *count,int match,int *defidx){
 	struct form_option *fo = NULL,*tmp;
@@ -2113,6 +2115,7 @@ err:
 		free(fo[*count].option);
 		free(fo[*count].desc);
 	}
+	*count = -1;
 	free(fo);
 	return NULL;
 }
@@ -2327,12 +2330,12 @@ psectors_callback(const char *psects){
 		int opcount,defidx;
 
 		if((ops_ptype = ptype_table(b->d,&opcount,pending_ptype,&defidx)) == NULL){
+			if(opcount == 0){
+				raise_str_form("enter partition spec",psectors_callback,
+						pending_spec ? pending_spec : "100%",PSPEC_TEXT);
+				return;
+			}
 			cleanup_new_partition();
-			return;
-		}
-		if(opcount == 0){
-			raise_str_form("enter partition spec",psectors_callback,
-					pending_spec ? pending_spec : "100%",PSPEC_TEXT);
 			return;
 		}
 		raise_form("select a partition type",ptype_callback,ops_ptype,
@@ -2397,11 +2400,11 @@ new_partition(void){
 		return;
 	}
 	if((ops_ptype = ptype_table(b->d,&opcount,-1,&defidx)) == NULL){
-		return;
-	}
-	if(opcount == 0){
-		raise_str_form("enter partition spec",psectors_callback,
-				pending_spec ? pending_spec : "100%",PSPEC_TEXT);
+		if(opcount == 0){
+			raise_str_form("enter partition spec",psectors_callback,
+					pending_spec ? pending_spec : "100%",PSPEC_TEXT);
+			return;
+		}
 		return;
 	}
 	raise_form("select a partition type",ptype_callback,ops_ptype,opcount,
