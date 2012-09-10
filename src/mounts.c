@@ -241,6 +241,10 @@ make_parent_directories(const char *path){
 int mmount(device *d,const char *targ){
 	char name[PATH_MAX + 1];
 
+	if(targ[strlen(targ)] != '/'){
+		diag("Mountpoint must end in a '/' (%s)\n",targ);
+		return -1;
+	}
 	if(d == NULL || targ == NULL){
 		diag("Provided NULL arguments\n");
 		return -1;
