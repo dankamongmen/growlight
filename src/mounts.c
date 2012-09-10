@@ -171,48 +171,34 @@ int parse_mounts(const glightui *gui,const char *fn){
 				continue;
 			}
 		}
-		if(growlight_target && strncmp(mnt,growlight_target,strlen(growlight_target)) == 0){
-			if(d->target){
-				if(strcmp(d->target->path,mnt)){
-					diag("Already had mount for %s|%s: %s|%s\n",
-							dev,mnt,d->name,d->target->path);
-					// FIXME need to track both! see bug 175
-				}
-				free_mntentry(d->target);
-				free(d->mnttype);
-			}else{
-				verbf("New %s target %s on %s\n",fs,mnt,d->name);
-			}
-			if((d->target = create_target(mnt,d->name,d->uuid,d->label,ops)) == NULL){
-				goto err;
-			}
+		free(dev);
+		dev = NULL;
+		if(d->mnttype && strcmp(d->mnttype,fs) == 0){
+			diag("Already had mounttype for %s: %s (got %s)\n",
+					d->name,d->mnttype,fs);
+			free(d->mnttype);
+			d->mnttype = NULL;
+			free_stringlist(&d->mntops);
+			free_stringlist(&d->mnt);
+			d->mnttype = fs;
 		}else{
-			if(d->mnt){
-				if(strcmp(d->mnt,mnt)){
-					diag("Already had mount for %s|%s: %s|%s\n",
-							dev,mnt,d->name,d->mnt);
-					// FIXME need to track both! see bug 175
-				}
-				free(d->mnttype);
-				free(d->mntops);
-				free(d->mnt);
-			}else{
-				verbf("New %s mount %s on %s\n",fs,mnt,d->name);
-			}
-			d->mnt = mnt;
-			d->mntops = ops;
-			mnt = ops = NULL;
+			free(fs);
+		}
+		fs = NULL;
+		if(add_string_exclusive(&d->mnt,mnt)){
+			goto err;
+		}
+		if(add_string_exclusive(&d->mntops,ops)){
+			goto err;
 		}
 		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
-		d->mnttype = fs;
-		fs = NULL;
 		if(d->layout == LAYOUT_PARTITION){
 			d = d->partdev.parent;
 		}
 		d->uistate = gui->block_event(d,d->uistate);
 	}
-	free(dev); free(mnt); free(fs); free(ops);
-	dev = mnt = fs = ops = NULL;
+	free(mnt); free(fs); free(ops);
+	mnt = fs = ops = NULL;
 	munmap_virt(map,len);
 	close(fd);
 	return 0;
@@ -224,45 +210,92 @@ err:
 	return -1;
 }
 
-int mmount(device *d,const char *targ,const char *fs){
-	char name[PATH_MAX + 1];
+static int
+make_parent_directories(const char *path){
+	char dir[PATH_MAX + 1];
+	char *next;
 
-	if(d == NULL || targ == NULL || fs == NULL){
-		diag("Provided NULL arguments\n");
+	assert(strlen(path) < sizeof(dir));
+	strcpy(dir,path);
+	next = dir;
+	while(*next && (next = strchr(next,'/')) ){
+		if(next == dir){
+			++next;
+			continue;
+		}
+		*next = '\0';
+		if(mkdir(dir,0755) && errno != EEXIST){
+			diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
+			return -1;
+		}
+		*next = '/';
+		++next;
+	}
+	if(mkdir(dir,0755) && errno != EEXIST){
+		diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
 		return -1;
 	}
-	if(d->mnt){
-		diag("%s is already mounted\n",d->name);
-		return -1;
-	}
-	if((d->mnt = strdup(fs)) == NULL){
-		return -1;
-	}
-	snprintf(name,sizeof(name),"/dev/%s",d->name);
-	if(mount(name,targ,fs,MS_NOATIME,NULL)){
-		diag("Error mounting %s at %s (%s?)\n",
-				name,targ,strerror(errno));
-		free(d->mnt);
-		d->mnt = NULL;
-		return -1;
-	}
-	diag("Mounted %s at %s\n",d->name,d->mnt);
 	return 0;
 }
 
-int unmount(device *d){
-	if(d->mnt == NULL){
+int mmount(device *d,const char *targ){
+	char name[PATH_MAX + 1];
+
+	if(d == NULL || targ == NULL){
+		diag("Provided NULL arguments\n");
+		return -1;
+	}
+	if(!d->mnttype){
+		diag("%s does not have a filesystem signature\n",d->name);
+		return -1;
+	}
+	if(string_included_p(&d->mnt,targ)){
+		diag("%s is already mounted at %s\n",d->name,targ);
+		return -1;
+	}
+	if(growlight_target){
+		if(strncmp(targ,growlight_target,strlen(growlight_target)) == 0){
+			if(make_parent_directories(targ)){
+				diag("Couldn't make parents of %s\n",targ);
+			}
+		}
+	}
+	snprintf(name,sizeof(name),"/dev/%s",d->name);
+	if(mount(name,targ,d->mnttype,MS_NOATIME,NULL)){
+		diag("Error mounting %s at %s (%s?)\n",
+				name,targ,strerror(errno));
+		return -1;
+	}
+	if(growlight_target){
+		if(strcmp(targ,growlight_target) == 0){
+			mount_target();
+		}
+	}
+	diag("Mounted %s at %s\n",d->name,targ);
+	return 0;
+}
+
+int unmount(device *d,const char *path){
+	unsigned z;
+
+	if(d->mnt.count == 0){
 		diag("%s is not mounted\n",d->name);
 		return -1;
 	}
-	if(umount2(d->mnt,UMOUNT_NOFOLLOW)){
-		diag("Error unmounting %s at %s (%s?)\n",
-				d->name,d->mnt,strerror(errno));
-		return -1;
+	for(z = 0 ; z < d->mnt.count ; ++z){
+		if(path && strcmp(d->mnt.list[z],path) == 0){
+			continue;
+		}
+		diag("Unmounting %s from %s\n",d->name,d->mnt.list[z]);
+		if(strcmp(d->mnt.list[z],growlight_target) == 0){
+			unmount_target();
+		}
+		if(umount2(d->mnt.list[z],UMOUNT_NOFOLLOW)){
+			diag("Error unmounting %s at %s (%s?)\n",
+					d->name,d->mnt.list[z],strerror(errno));
+			return -1;
+		}
 	}
-	diag("Unmounted %s from %s\n",d->name,d->mnt);
-	free(d->mnt);
-	d->mnt = NULL;
 	return 0;
 }
 
@@ -274,13 +307,11 @@ void clear_mounts(controller *c){
 			device *p;
 
 			// Don't free mnttype. There's still a filesystem.
-			free(d->mnt);
-			free(d->mntops);
-			d->mnt = d->mntops = NULL;
+			free_stringlist(&d->mnt);
+			free_stringlist(&d->mntops);
 			for(p = d->parts ; p ; p = p->next){
-				free(p->mnt);
-				free(p->mntops);
-				p->mnt = p->mntops = NULL;
+				free_stringlist(&p->mnt);
+				free_stringlist(&p->mntops);
 			}
 		}
 		c = c->next;

@@ -484,19 +484,13 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 		diag("Passed NULL arguments, aborting\n");
 		return -1;
 	}
-	if(d->target){
-		diag("Won't create fs on target mount %s (%s)\n",
-				d->name,d->target->path);
-		return -1;
-	}
-	if(d->mnt){
-		diag("Won't create fs on active mount %s (%s)\n",
-				d->name,d->mnt);
+	if(d->mnttype){
+		diag("Won't create fs on %s filesystem at %s\n",
+				d->mnttype,d->name);
 		return -1;
 	}
 	if(d->swapprio >= SWAP_MAXPRIO){
-		diag("Won't create fs on active mount %s (%s)\n",
-				d->name,d->mnt);
+		diag("Won't create fs on active swap %s\n",d->name);
 		return -1;
 	}
 	if(d->layout != LAYOUT_PARTITION){
@@ -586,8 +580,8 @@ int wipe_filesystem(device *d){
 		diag("No filesystem on %s\n",d->name);
 		return -1;
 	}
-	if(d->mnt || d->target){
-		diag("%s is in use and cannot be wiped\n",d->name);
+	if(d->mnt.count){
+		diag("%s is in use (%ux) and cannot be wiped\n",d->name,d->mnt.count);
 		return -1;
 	}
 	if(vspopen_drain("wipefs -t %s -a /dev/%s",d->mnttype,d->name)){

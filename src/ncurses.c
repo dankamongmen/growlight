@@ -419,8 +419,7 @@ selected_partitionp(void){
 
 static inline int
 blockobj_inusep(const blockobj *b){
-	return (b->d->mnt || b->d->target) ||
-		(b->zone->p && (b->zone->p->mnt || b->zone->p->target));
+	return b->d->mnt.count || (b->zone->p && b->zone->p->mnt.count);
 }
 
 static inline int
@@ -768,18 +767,20 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
 		}
-		if(!d->mnt || swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s filesystem%ls%s%lsat %s ",
+		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s filesystem%ls%s%lsat %s ",
 			d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 			d->mntsize ? " " : "",
-			d->label ? "" : "nameless ", d->mnttype,
+			d->label ? "" : "nameless ",
+			d->mnttype,
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ",
-			d->mnt) >= (int)sizeof(wbuf)){
+			d->mnt.list[0]) >= (int)sizeof(wbuf)){
 		if(swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s filesystem%ls%s%ls",
 			d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 			d->mntsize ? " " : "",
-			d->label ? "" : "nameless ", d->mnttype,
+			d->label ? "" : "nameless ",
+			d->mnttype,
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ") >= (int)sizeof(wbuf)){
@@ -842,9 +843,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			rep = z->rep;
 		}else{ // dedicated partition
 			if(selected && z == bo->zone){ // partition and device are selected
-				if(z->p->target){
+				if(targeted_p(z->p)){
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(TARGET_COLOR)) == OK);
-				}else if(z->p->mnt){
+				}else if(z->p->mnt.count){
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(MOUNT_COLOR)) == OK);
 				}else{
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
@@ -855,9 +856,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				// selstr = selstr ? selstr : z->p->name;
 				selstr = z->p->name;
 			}else{ // device is not selected
-				if(z->p->target){
+				if(targeted_p(z->p)){
 					assert(wattrset(w,COLOR_PAIR(TARGET_COLOR)) == OK);
-				}else if(z->p->mnt){
+				}else if(z->p->mnt.count){
 					assert(wattrset(w,COLOR_PAIR(MOUNT_COLOR)) == OK);
 				}else{
 					assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
@@ -867,8 +868,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
 			if(z->p->mnttype){
-				if((!z->p->target || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->target->path) >= sizeof(buf))
-					&& (!z->p->mnt || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->mnt) >= sizeof(buf))){
+				if((!z->p->mnt.count || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->mnt.list[0]) >= sizeof(buf))){
 					assert((unsigned)snprintf(buf,sizeof(buf) - 2,"%s",z->p->mnttype) < sizeof(buf) - 2);
 				}
 			}
@@ -1270,7 +1270,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			char buf[PREFIXSTRLEN + 1],dbuf[PREFIXSTRLEN + 1];
 
 			if(as->c->demand){
-				wprintw(w," (%sbps to Southbridge, %sbps (%u%%) demanded)",
+				wprintw(w," (%sbps to Southbridge, %sbps (%ju%%) demanded)",
 					qprefix(as->c->bandwidth,1,buf,sizeof(buf),1),
 					qprefix(as->c->demand,1,dbuf,sizeof(dbuf),1),
 					as->c->demand * 100 / as->c->bandwidth);
@@ -1872,14 +1872,14 @@ targpoint_callback(const char *path){
 		return;
 	}
 	if(blockobj_unpartitionedp(b)){
-		prepare_mount(b->d,path,b->d->mnttype);
+		mmount(b->d,path);
 		redraw_adapter(current_adapter);
 		return;
 	}else if(blockobj_emptyp(b)){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		prepare_mount(b->zone->p,path,b->zone->p->mnttype);
+		mmount(b->zone->p,path);
 		redraw_adapter(current_adapter);
 		return;
 	}
@@ -2712,19 +2712,26 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 static void
 detail_fs(WINDOW *hw,const device *d,int row){
 	char buf[BPREFIXSTRLEN + 1];
+	unsigned z;
 
-	if(d->mnttype){
+	if(d->mnt.count){
+		for(z = 0 ; z < d->mnt.count ; ++z){
+			mvwprintw(hw,row,START_COL,BPREFIXFMT "%c %s%s%s%s%s%s%s",
+				d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
+				d->mntsize ? 'B' : ' ',
+				d->label ? "" : "unlabeled ",
+				"",
+				d->mnttype,
+				d->label ? " named " : "",
+				d->label ? d->label : "",
+				" active at ",
+				d->mnt.list[z]);
+		}
+	}else if(d->mnttype){
 		mvwprintw(hw,row,START_COL,BPREFIXFMT "%c %s%s%s%s%s%s%s",
 			d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
-			d->mntsize ? 'B' : ' ',
-			(d->label || (d->target && d->target->label)) ? "" : "unlabeled ",
-			(d->mnt || d->target) ? "" : "unmounted ",
-			d->mnttype,
-			(d->label || (d->target && d->target->label)) ? " named " : "",
-			d->label ? d->label :
-			 (d->target && d->target->label) ? d->target->label : "",
-			(d->mnt || d->target) ? " active at " : "",
-			d->mnt ? d->mnt : d->target ? d->target->path : "");
+			'B',"unlabeled ","unmounted ",
+			d->mnttype,"","","","");
 	}else if(d->swapprio != SWAP_INVALID){
 		mvwprintw(hw,row,START_COL,BPREFIXFMT "B %sswap%s%s prio %d",
 			bprefix(d->mntsize,1,buf,sizeof(buf),0),
@@ -3818,10 +3825,12 @@ env_details(WINDOW *hw,int rows){
 }
 
 static void
-print_mount(WINDOW *w,int *row,int both,const device *d){
+detail_mounts(WINDOW *w,int *row,int both,const device *d){
 	char buf[PREFIXSTRLEN + 1],b[256];
 	int cols = getmaxx(w),r;
+	unsigned z;
 
+	for(z = 0 ; z < d->mnt.count ; ++z){
 	mvwhline(w,*row,START_COL,' ',cols - 2);
 	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
@@ -3836,41 +3845,48 @@ print_mount(WINDOW *w,int *row,int both,const device *d){
 		return;
 	}
 	wattroff(w,A_BOLD);
-	if((r = snprintf(b,sizeof(b)," %s %s",d->mnt,d->mntops)) >= (int)sizeof(b)){
+	if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
 		b[sizeof(b) - 1] = '\0';
 	}
 	mvwhline(w,*row,START_COL,' ',cols - 2);
 	mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
 	wattron(w,A_BOLD);
 	++*row;
+	}
 }
 
 static void
-print_target(WINDOW *w,const device *d,int *row,int both,const mntentry *m){
+detail_targets(WINDOW *w,int *row,int both,const device *d){
 	char buf[PREFIXSTRLEN + 1],b[256]; // FIXME uhhhh
 	int cols = getmaxx(w),r;
+	unsigned z;
 
+	if(growlight_target == NULL){
+		return;
+	}
+	for(z = 0 ; z < d->mnt.count ; ++z){
 	mvwhline(w,*row,START_COL,' ',cols - 2);
 	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
-			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
+			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->mnttype,
-			m->uuid ? m->uuid : "n/a",
+			d->uuid ? d->uuid : "n/a",
 			qprefix(d->mntsize,1,buf,sizeof(buf),0),
 			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-			m->dev);
+			d->name);
 	++*row;
 	if(!both){
 		return;
 	}
 	wattroff(w,A_BOLD);
-	if((r = snprintf(b,sizeof(b)," %s %s",m->path,m->ops)) >= (int)sizeof(b)){
+	if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
 		b[sizeof(b) - 1] = '\0';
 	}
 	mvwhline(w,*row,START_COL,' ',cols - 2);
 	mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
 	wattron(w,A_BOLD);
 	++*row;
+	}
 }
 
 static int
@@ -3902,18 +3918,14 @@ map_details(WINDOW *hw){
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;
 
-			if(d->target){
-				print_target(hw,d,&y,y + 1 < rows,d->target);
-				if(y >= rows){
-					return 0;
-				}
+			detail_targets(hw,&y,y + 1 < rows,d);
+			if(y >= rows){
+				return 0;
 			}
 			for(p = d->parts ; p ; p = p->next){
-				if(p->target){
-					print_target(hw,p,&y,y + 1 < rows,p->target);
-					if(y >= rows){
-						return 0;
-					}
+				detail_targets(hw,&y,y + 1 < rows,p);
+				if(y >= rows){
+					return 0;
 				}
 			}
 		}
@@ -3926,18 +3938,14 @@ map_details(WINDOW *hw){
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;
 
-			if(d->mnt){
-				print_mount(hw,&y,y + 1 < rows,d);
-				if(y >= rows){
-					return 0;
-				}
+			detail_mounts(hw,&y,y + 1 < rows,d);
+			if(y >= rows){
+				return 0;
 			}
 			for(p = d->parts ; p ; p = p->next){
-				if(p->mnt){
-					print_mount(hw,&y,y + 1 < rows,p);
-					if(y >= rows){
-						return 0;
-					}
+				detail_mounts(hw,&y,y + 1 < rows,p);
+				if(y >= rows){
+					return 0;
 				}
 			}
 		}
@@ -4410,7 +4418,7 @@ set_partition_attrs(void){
 
 static inline int
 fsck_suitable_p(const device *d){
-	if(d->mnt){
+	if(d->mnt.count){
 		locked_diag("Will not fsck mounted filesystem on %s",d->name);
 		return 0;
 	}
@@ -4613,10 +4621,10 @@ mountpoint_callback(const char *path){
 		return;
 	}
 	if(selected_unpartitionedp()){
-		mmount(b->d,path,b->d->mnttype);
+		mmount(b->d,path);
 	}else{
 		assert(selected_partitionp());
-		mmount(b->zone->p,path,b->zone->p->mnttype);
+		mmount(b->zone->p,path);
 	}
 }
 
@@ -4651,7 +4659,7 @@ mount_filesystem(void){
 }
 
 static void
-umount_target(void){
+numount_target(void){
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
@@ -4667,21 +4675,21 @@ umount_target(void){
 			locked_diag("Cannot unmount unused space");
 			return;
 		}
-		if(b->zone->p->target == NULL){
-			locked_diag("No target configured on selected partition");
+		if(!targeted_p(b->zone->p)){
+			locked_diag("Block device %s is not a target",b->zone->p->name);
 			return;
 		}
-		if(prepare_umount(b->zone->p,b->zone->p->target->path)){
+		if(unmount(b->zone->p,NULL)){
 			return;
 		}
 		redraw_adapter(current_adapter);
 		return;
 	}else{
-		if(b->d->target == NULL){
-			locked_diag("No target configured on selected device");
+		if(!targeted_p(b->d)){
+			locked_diag("Block device %s is not a target",b->d->name);
 			return;
 		}
-		if(prepare_umount(b->d,b->d->target->path)){
+		if(unmount(b->d,NULL)){
 			return;
 		}
 		redraw_adapter(current_adapter);
@@ -4719,7 +4727,7 @@ biosboot(void){
 	}else{
 		d = b->d;
 	}
-	if(d->target == NULL){
+	if(!targeted_p(d)){
 		locked_diag("Block device %s is not a target",d->name);
 		return -1;
 	}
@@ -4764,7 +4772,7 @@ uefiboot(void){
 	}else{
 		d = b->d;
 	}
-	if(d->target == NULL){
+	if(!targeted_p(d)){
 		locked_diag("Block device %s is not a target",d->name);
 		return -1;
 	}
@@ -4780,7 +4788,7 @@ uefiboot(void){
 }
 
 static void
-mount_target(void){
+nmount_target(void){
 	blockobj *b;
 
 	if(!target_mode_p()){
@@ -4800,7 +4808,7 @@ mount_target(void){
 			locked_diag("Cannot mount unused space");
 			return;
 		}
-		if(b->zone->p->target){
+		if(targeted_p(b->zone->p)){
 			locked_diag("%s is already a target",b->zone->p->name);
 			return;
 		}
@@ -4809,7 +4817,7 @@ mount_target(void){
 			return;
 		}
 	}else{
-		if(b->d->target){
+		if(targeted_p(b->d)){
 			locked_diag("%s is already a target",b->d->name);
 			return;
 		}
@@ -4840,9 +4848,9 @@ umount_filesystem(void){
 			locked_diag("Cannot unmount unused space");
 			return;
 		}
-		r = unmount(b->zone->p);
+		r = unmount(b->zone->p,NULL);
 	}else{
-		r = unmount(b->d);
+		r = unmount(b->d,NULL);
 	}
 	if(!r){
 		redraw_adapter(current_adapter);
@@ -5359,13 +5367,13 @@ handle_ncurses_input(WINDOW *w){
 			}
 			case 't':{
 				lock_ncurses();
-				mount_target();
+				nmount_target();
 				unlock_ncurses();
 				break;
 			}
 			case 'T':{
 				lock_ncurses();
-				umount_target();
+				numount_target();
 				unlock_ncurses();
 				break;
 			}

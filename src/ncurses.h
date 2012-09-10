@@ -45,6 +45,10 @@ void kill_splash(struct panel_state *);
 extern int mvwprintw(WINDOW *,int,int,const char *,...)
 	__attribute__ ((format (printf,4,5)));
 
+// get protection against bad arguments to wprintw()...
+extern int wprintw(WINDOW *,const char *,...)
+	__attribute__ ((format (printf,2,3)));
+
 #ifdef __cplusplus
 }
 #endif

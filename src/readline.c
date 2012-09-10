@@ -104,7 +104,7 @@ wmmount(device *d,const wchar_t *targ){
 		fprintf(stderr,"Bad path: %ls\n",targ);
 		return -1;
 	}
-	return mmount(d,path,d->mnttype);
+	return mmount(d,path);
 }
 
 static int
@@ -242,26 +242,22 @@ prepare_wumount(device *d,const wchar_t *path){
 		fprintf(stderr,"Bad path: %ls\n",path);
 		return -1;
 	}
-	return prepare_umount(d,spath);
+	return unmount(d,spath);
 }
 
 static int
-prepare_wmount(device *d,const wchar_t *path,const wchar_t *fs,const wchar_t *ops){
-	char spath[PATH_MAX],sfs[NAME_MAX],sops[PATH_MAX];
+prepare_wmount(device *d,const wchar_t *path,const wchar_t *ops){
+	char spath[PATH_MAX],sops[PATH_MAX];
 
 	if(snprintf(spath,sizeof(spath),"%ls",path) >= (int)sizeof(spath)){
 		fprintf(stderr,"Bad path: %ls\n",path);
-		return -1;
-	}
-	if(snprintf(sfs,sizeof(sfs),"%ls",fs) >= (int)sizeof(sfs)){
-		fprintf(stderr,"Bad filesystem type: %ls\n",fs);
 		return -1;
 	}
 	if(snprintf(sops,sizeof(sops),"%ls",ops) >= (int)sizeof(sops)){
 		fprintf(stderr,"Bad filesystem options: %ls\n",ops);
 		return -1;
 	}
-	return prepare_mount(d,spath,sfs);
+	return mmount(d,spath);
 }
 
 #define ZERO_ARG_CHECK(args,arghelp) \
@@ -277,51 +273,21 @@ static int help(wchar_t * const *,const char *);
 static int print_dev_mplex(const device *,int,int);
 
 static int
-print_target(const device *d,const mntentry *m){
+print_mounts(const device *d){
 	char buf[PREFIXSTRLEN + 1];
 	int r = 0,rr;
+	unsigned z;
 
-	r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s " PREFIXFMT "\n %s %s\n",
-			FSLABELSIZ,FSLABELSIZ,m->label ? m->label : "n/a",
-			d->mnttype,
-			m->uuid ? m->uuid : "n/a", m->dev,
-			d->mntsize ? qprefix(d->mntsize,1,buf,sizeof(buf),0) : "",
-			m->path,m->ops);
-	if(rr < 0){
-		return -1;
-	}
-	return r;
-}
-
-static int
-print_mount(const device *d){
-	char buf[PREFIXSTRLEN + 1];
-	int r = 0,rr;
-
-	r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s " PREFIXFMT "\n %s %s\n",
-			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->mnttype,
-			d->uuid ? d->uuid : "n/a", d->name,
-			d->mntsize ? qprefix(d->mntsize,1,buf,sizeof(buf),0) : "",
-			d->mnt,d->mntops);
-	if(rr < 0){
-		return -1;
-	}
-	return r;
-}
-
-static int
-print_unmount(const device *d){
-	char buf[PREFIXSTRLEN + 1];
-	int r = 0,rr;
-
-	r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s " PREFIXFMT "\n",
-			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->mnttype,
-			d->uuid ? d->uuid : "n/a", d->name,
-			d->mntsize ? qprefix(d->mntsize,1,buf,sizeof(buf),0) : "");
-	if(rr < 0){
-		return -1;
+	for(z = 0 ; z < d->mnt.count ; ++z){
+		r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s " PREFIXFMT "\n %s %s\n",
+				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+				d->mnttype,
+				d->uuid ? d->uuid : "n/a", d->name,
+				d->mntsize ? qprefix(d->mntsize,1,buf,sizeof(buf),0) : "",
+				d->mnt.list[z],d->mntops.list[z]);
+		if(rr < 0){
+			return -1;
+		}
 	}
 	return r;
 }
@@ -369,17 +335,7 @@ print_fs(const device *p,int descend){
 			return -1;
 		}
 	}
-	if(p->target){
-		r += rr = print_target(p,p->target);
-		if(rr < 0){
-			return -1;
-		}
-	}
-	if(p->mnt){
-		r += rr = print_mount(p);
-	}else{
-		r += rr = print_unmount(p);
-	}
+	r += rr = print_mounts(p);
 	if(rr < 0){
 		return -1;
 	}
@@ -1410,24 +1366,12 @@ mounts(wchar_t * const *args,const char *arghelp){
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;
 
-			if(d->mnt){
-				if(print_mount(d) < 0){
-					return -1;
-				}
-			}else if(d->target){
-				if(print_target(p,p->target) < 0){
-					return -1;
-				}
+			if(print_mounts(d) < 0){
+				return -1;
 			}
 			for(p = d->parts ; p ; p = p->next){
-				if(p->mnt){
-					if(print_mount(p) < 0){
-						return -1;
-					}
-				}else if(p->target){
-					if(print_target(p,p->target) < 0){
-						return -1;
-					}
+				if(print_mounts(p) < 0){
+					return -1;
 				}
 			}
 		}
@@ -1463,7 +1407,7 @@ map(wchar_t * const *args,const char *arghelp){
 		}
 		return 0;
 	}
-	if(!args[2] || !args[3] || !args[4] || args[5]){
+	if(!args[2] || !args[3] || args[4]){
 		usage(args,arghelp);
 		return -1;
 	}
@@ -1474,7 +1418,7 @@ map(wchar_t * const *args,const char *arghelp){
 		fprintf(stderr,"Not an absolute path: %ls\n",args[2]);
 		return -1;
 	}
-	if(prepare_wmount(d,args[2],args[3],args[4])){
+	if(prepare_wmount(d,args[2],args[3])){
 		return -1;
 	}
 	return 0;
@@ -1566,7 +1510,7 @@ fs(wchar_t * const *args,const char *arghelp){
 			usage(args,arghelp);
 			return -1;
 		}
-		if(unmount(d)){
+		if(unmount(d,NULL)){
 			return -1;
 		}
 		return 0;
@@ -1667,20 +1611,20 @@ static device *
 get_target_root(void){
 	const controller *c;
 
+	if(growlight_target == NULL){
+		fprintf(stderr,"No target is defined\n");
+		return NULL;
+	}
 	for(c = get_controllers() ; c ; c = c->next){
 		device *d,*p;
 
 		for(d = c->blockdevs ; d ; d = d->next){
-			if(d->target){
-				if(strcmp(d->target->path,"/") == 0){
-					return d;
-				}
+			if(string_included_p(&d->mnt,growlight_target)){
+				return d;
 			}
 			for(p = d->parts ; p ; p = p->next){
-				if(p->target){
-					if(strcmp(p->target->path,"/") == 0){
-						return p;
-					}
+				if(string_included_p(&p->mnt,growlight_target)){
+					return d;
 				}
 			}
 		}
@@ -2026,7 +1970,7 @@ static const struct fxn {
 			"                 | [ \"unset\" ]\n"
 			"                 | [ \"finalize\" ]\n"
 			"                 | no arguments prints target"),
-	FXN(map,"[ mountdev mountpoint type options ]\n"
+	FXN(map,"[ mountdev mountpoint options ]\n"
 			"                 | no arguments prints target fstab"),
 	FXN(unmap,"mountpoint\n"),
 	FXN(mounts,""),

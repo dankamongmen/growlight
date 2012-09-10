@@ -412,10 +412,9 @@ free_device(device *d){
 			}
 		}
 		internal_device_reset(d);
-		free_mntentry(d->target);
+		free_stringlist(&d->mntops);
+		free_stringlist(&d->mnt);
 		free(d->mnttype);
-		free(d->mntops);
-		free(d->mnt);
 		free(d->bypath);
 	}
 }
@@ -1940,12 +1939,8 @@ int prepare_bios_boot(device *d){
 		diag("Must boot from a partition\n");
 		return -1;
 	}
-	if(d->target == NULL){
-		diag("%s is not mapped as a target filesystem\n",d->name);
-		return -1;
-	}
-	if(strcmp(d->target->path,growlight_target)){
-		diag("%s is not mapped as the target root (%s)\n",d->name,d->target->path);
+	if(!target_root_p(d)){
+		diag("%s is not mapped as the target root\n",d->name);
 		return -1;
 	}
 	if(d->partdev.ptype != PARTROLE_PRIMARY){
@@ -1958,8 +1953,8 @@ int prepare_bios_boot(device *d){
 		// FIXME return -1;
 	}
 	if(write_postbase_hook("#!/bin/sh\nset -e\napt-install grub-pc\n"
-		"in-target grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s\n",
-		d->mnt,d->name)){
+		"in-target grub-install --boot-directory=/boot/grub --no-floppy /dev/%s\n",
+		d->name)){
 		return -1;
 	}
 	return 0;
@@ -1974,14 +1969,14 @@ int prepare_uefi_boot(device *d){
 		diag("UEFI boots from GPT ESP partitions only\n");
 		return -1;
 	}
-	if(d->target == NULL){
+	if(!targeted_p(d)){
 		diag("%s is not mapped as a target filesystem\n",d->name);
 		return -1;
 	}
 	// FIXME ensure kernel is in ESP?
 	if(write_postbase_hook("#!/bin/sh\nset -e\napt-install grub-efi-amd64\n"
-	"in-target /usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s\n",
-		d->mnt,d->target->path,d->name)){
+	"in-target /usr/lib/grub/x86_64-efi/grub-install --boot-directory=/boot/grub --no-floppy /dev/%s\n",
+		d->name)){
 		return -1;
 	}
 	// FIXME point grub-efi at kernel

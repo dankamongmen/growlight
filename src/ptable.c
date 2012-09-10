@@ -408,7 +408,7 @@ int uuid_partition(device *d,const void *uuid){
 }
 
 int check_partition(device *d){
-	if(d->mnt){
+	if(d->mnt.count){
 		diag("Will not check mounted filesystem %s\n",d->name);
 		return -1;
 	}

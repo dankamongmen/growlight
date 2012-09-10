@@ -13,14 +13,9 @@
 int mkswap(device *d){
 	char cmd[PATH_MAX];
 
-	if(d->target){
-		diag("Won't create swap on target mount %s (%s)\n",
-				d->name,d->target->path);
-		return -1;
-	}
-	if(d->mnt){
-		diag("Won't create swap on active mount %s (%s)\n",
-				d->name,d->mnt);
+	if(d->mnttype){
+		diag("Won't create swap on %s filesystem at %s\n",
+				d->mnttype,d->name);
 		return -1;
 	}
 	if(d->swapprio >= SWAP_MAXPRIO){

@@ -8,13 +8,6 @@ extern "C" {
 #include <stdio.h>
 
 struct device;
-struct mntentry;
-
-int prepare_mount(struct device *,const char *,const char *);
-int prepare_umount(struct device *,const char *);
-
-struct mntentry *create_target(const char *,const char *,const char *,
-				const char *,const char *);
 
 int set_target(const char *);
 int finalize_target(void);
@@ -28,7 +21,9 @@ get_target(void){
 	return growlight_target;
 }
 
-void free_mntentry(struct mntentry *);
+// Indicate that we've just mounted/unmounted the target root
+int mount_target(void);
+int unmount_target(void);
 
 #ifdef __cplusplus
 }

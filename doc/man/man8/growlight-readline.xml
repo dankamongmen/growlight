@@ -412,15 +412,15 @@ the current target (if one exists).</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term>map [ mountdev mountpoint mnttype options ]</term>
+			<term>map [ mountdev mountpoint options ]</term>
 		</varlistentry>
 		<varlistentry>
 			<term>map</term>
 			<listitem>
 <para>Provided no arguments, <emphasis role="bold">map</emphasis> dumps the
 target's /etc/fstab as currently envisioned. Otherwise, attempt to mount
-mountdev at mountpoint (relative to the target root) as a filesystem of type
-mnttype, using the specified mount options (see <emphasis role="bold">mount(8)</emphasis>).
+mountdev at mountpoint (relative to the target root) as a filesystem of appropriate
+type, using the specified mount options (see <emphasis role="bold">mount(8)</emphasis>).
 If the mount is successful, the mapping will be added to the target /etc/fstab
 (though this will not be written out until <emphasis role="bold">target finalize</emphasis>
 is run). The <emphasis role="bold">map</emphasis> command is unavailable unless in

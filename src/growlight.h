@@ -13,6 +13,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/types.h>
 
 #include "gpt.h"
@@ -86,27 +87,39 @@ typedef enum {
 	RWVERIFY_SUPPORTED_ON,
 } rwverify_status;
 
+typedef struct {
+	unsigned count;
+	char **list;
+} stringlist;
+
 // An (non-link) entry in the device hierarchy, representing a block device.
 // A partition corresponds to one and only one block device (which of course
-// might represent multiple devices, or maybe just a file mounted loopback).
+// might represent multiple devices, or maybe just a file mounted loopback). A
+// partition or an unpartitioned block device can have a filesystem signature
+// "mnttype". This filesystem's size might be different from the partition size
+// (it is not safe to mount if the size is larger than the partition). The
+// filesystem may be mounted at zero or more places, with different options
+// each time.
 typedef struct device {
+	char name[NAME_MAX + 1];	// Entry in /dev or /sys/block
 	struct device *next;		// next block device on this controller
-	char name[NAME_MAX];		// Entry in /dev or /sys/block
+	// FIXME wwn and sn should only be in blockdev
+	// FIXME model/revision should not be in partition
 	char *model,*revision,*sn;	// Arbitrary UTF-8 strings
 	char *wwn;			// World Wide Name
+	// FIXME add by-id, by-label, and by-uuid links?
+	// FIXME handle multiple by-path links?
 	char *bypath;			// Alias in /dev/disks/by-path/
-	// Filesystem information. Block devices can have a (single) filesystem
-	// if they don't have a partition table. The filesystem need not match
-	// the container size, though it is generally unsafe to actually mount
-	// a filesystem which is larger than its container.
-	char *mnt;			// Active mount point
-	char *mntops;			// Mount options
-	uintmax_t mntsize;		// Filesystem size in bytes
-	// If the filesystem is not mounted, but is found, only mnttype will be
-	// set from among mnt, mntops and mnttype
-	char *mnttype;			// Type of mount
-	mntentry *target;		// Future mount point
 	uintmax_t size;			// Size in bytes of device
+	// If the filesystem is not mounted, but is found, only mnttype and
+	// mntsize will be set from among mnt, mntops, mntsize and mnttype.
+	// uuid and label can likewise only be set if mnttype is set.
+	char *uuid;			// *Filesystem* UUID
+	char *label;			// *Filesystem* label
+	char *mnttype;			// Type of mount
+	uintmax_t mntsize;		// Filesystem size in bytes
+	stringlist mnt;			// Active mount points
+	stringlist mntops;		// Corresponding mount options
 	unsigned logsec;		// Logical sector size in bytes
 	unsigned physsec;		// Physical sector size in bytes
 	// Ranges from 0 to 32565, 0 highest priority. For our purposes, we
@@ -117,8 +130,6 @@ typedef struct device {
 		SWAP_MAXPRIO = 0,
 		SWAP_MINPRIO = 65535,
 	} swapprio;		// Priority as a swap device
-	char *uuid;		// *Filesystem* UUID
-	char *label;		// *Filesystem* label
 	struct controller *c;
 	char *sched;		// I/O scheduler (can be NULL)
 	unsigned roflag;	// Read-only flag (hdparm -r, blockdev --getro)
@@ -492,6 +503,77 @@ int get_logs(unsigned,logent *);
 static inline int
 target_mode_p(void){
 	return !!growlight_target;
+}
+
+static inline int
+targeted_p(const device *d){
+	unsigned z;
+
+	if(!target_mode_p()){
+		return 0;
+	}
+	for(z = 0 ; z < d->mnt.count ; ++z){
+		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target)) == 0){
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static inline int
+target_root_p(const device *d){
+	unsigned z;
+
+	if(!target_mode_p()){
+		return 0;
+	}
+	for(z = 0 ; z < d->mnt.count ; ++z){
+		if(strcmp(d->mnt.list[z],growlight_target) == 0){
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static inline int
+string_included_p(const stringlist *sl,const char *s){
+	unsigned z;
+
+	for(z = 0 ; z < sl->count ; ++z){
+		if(strcmp(sl->list[z],s) == 0){
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static inline int
+add_string_exclusive(stringlist *sl,const char *s){
+	char **tmp;
+
+	if(string_included_p(sl,s)){
+		return 0;
+	}
+	if((tmp = realloc(sl->list,sizeof(*sl->list) * (sl->count + 1))) == NULL){
+		return -1;
+	}
+	sl->list = tmp;
+	if((sl->list[sl->count++] = strdup(s)) == NULL){
+		return -1;
+	}
+	return 0;
+}
+
+static inline void
+free_stringlist(stringlist *sl){
+	unsigned z;
+
+	for(z = 0 ; z < sl->count ; ++z){
+		free(sl->list[z]);
+	}
+	free(sl->list);
+	sl->list = NULL;
+	sl->count = 0;
 }
 
 #ifdef HAVE_LIBZFS

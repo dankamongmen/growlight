@@ -19,7 +19,7 @@ int badblock_scan(device *d,unsigned rw){
 	}
 	// FIXME supply -b blocksize argument!
 	if(snprintf(cmd,sizeof(cmd),"badblocks -v -s %s /dev/%s",
-		rw ? d->mnt ? "-n" : "-w" : "",d->name) >= (int)sizeof(cmd)){
+		rw ? d->mnt.count ? "-n" : "-w" : "",d->name) >= (int)sizeof(cmd)){
 		diag("Bad name: %s\n",d->name);
 		return -1;
 	}
