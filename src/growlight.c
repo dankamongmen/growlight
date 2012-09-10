@@ -1957,9 +1957,9 @@ int prepare_bios_boot(device *d){
 		// FIXME restore this once we can set flags in UI!
 		// FIXME return -1;
 	}
-	if(write_postbase_hook("#!/bin/sh\nset -e\nchroot %s apt-get install -y fbterm ncurses-term grub-pc\n"
-		"chroot %s grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s\n",
-		growlight_target,growlight_target,d->mnt,d->name)){
+	if(write_postbase_hook("#!/bin/sh\nset -e\napt-install grub-pc\n"
+		"in-target grub-install --boot-directory=%s/boot/grub --no-floppy /dev/%s\n",
+		d->mnt,d->name)){
 		return -1;
 	}
 	return 0;
@@ -1979,9 +1979,9 @@ int prepare_uefi_boot(device *d){
 		return -1;
 	}
 	// FIXME ensure kernel is in ESP?
-	if(write_postbase_hook("chroot %s apt-get install -y fbterm ncurses-term grub-efi-amd64\n"
-	"chroot %s /usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s\n",
-		growlight_target,growlight_target,d->mnt,d->target->path,d->name)){
+	if(write_postbase_hook("#!/bin/sh\nset -e\napt-install grub-efi-amd64\n"
+	"in-target /usr/lib/grub/x86_64-efi/grub-install --boot-directory=%s/%s --no-floppy /dev/%s\n",
+		d->mnt,d->target->path,d->name)){
 		return -1;
 	}
 	// FIXME point grub-efi at kernel
