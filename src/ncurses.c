@@ -3831,27 +3831,31 @@ detail_mounts(WINDOW *w,int *row,int both,const device *d){
 	unsigned z;
 
 	for(z = 0 ; z < d->mnt.count ; ++z){
-	mvwhline(w,*row,START_COL,' ',cols - 2);
-	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
-			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->mnttype,
-			d->uuid ? d->uuid : "n/a",
-			qprefix(d->mntsize,1,buf,sizeof(buf),0),
-			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-			d->name);
-	++*row;
-	if(!both){
-		return;
-	}
-	wattroff(w,A_BOLD);
-	if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
-		b[sizeof(b) - 1] = '\0';
-	}
-	mvwhline(w,*row,START_COL,' ',cols - 2);
-	mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
-	wattron(w,A_BOLD);
-	++*row;
+		if(growlight_target && !strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
+			continue;
+		}
+		mvwhline(w,*row,START_COL,' ',cols - 2);
+		mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+				d->mnttype,
+				d->uuid ? d->uuid : "n/a",
+				qprefix(d->mntsize,1,buf,sizeof(buf),0),
+				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+				d->name);
+		++*row;
+		if(!both){
+			return;
+		}
+		wattroff(w,A_BOLD);
+		if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
+			b[sizeof(b) - 1] = '\0';
+		}
+		mvwhline(w,*row,START_COL,' ',cols - 2);
+		mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
+		wattron(w,A_BOLD);
+		++*row;
+		break; // FIXME no space currently
 	}
 }
 
@@ -3865,27 +3869,31 @@ detail_targets(WINDOW *w,int *row,int both,const device *d){
 		return;
 	}
 	for(z = 0 ; z < d->mnt.count ; ++z){
-	mvwhline(w,*row,START_COL,' ',cols - 2);
-	mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
-			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-			d->mnttype,
-			d->uuid ? d->uuid : "n/a",
-			qprefix(d->mntsize,1,buf,sizeof(buf),0),
-			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-			cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-			d->name);
-	++*row;
-	if(!both){
-		return;
-	}
-	wattroff(w,A_BOLD);
-	if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
-		b[sizeof(b) - 1] = '\0';
-	}
-	mvwhline(w,*row,START_COL,' ',cols - 2);
-	mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
-	wattron(w,A_BOLD);
-	++*row;
+		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
+			continue;
+		}
+		mvwhline(w,*row,START_COL,' ',cols - 2);
+		mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+				d->mnttype,
+				d->uuid ? d->uuid : "n/a",
+				qprefix(d->mntsize,1,buf,sizeof(buf),0),
+				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+				d->name);
+		++*row;
+		if(!both){
+			return;
+		}
+		wattroff(w,A_BOLD);
+		if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
+			b[sizeof(b) - 1] = '\0';
+		}
+		mvwhline(w,*row,START_COL,' ',cols - 2);
+		mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
+		wattron(w,A_BOLD);
+		++*row;
+		break; // FIXME no space currently
 	}
 }
 
