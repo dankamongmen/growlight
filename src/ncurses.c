@@ -419,7 +419,8 @@ selected_partitionp(void){
 
 static inline int
 blockobj_inusep(const blockobj *b){
-	return b->d->mnt.count || (b->zone->p && b->zone->p->mnt.count);
+	return (b->d && b->d->mnt.count) ||
+		(b->zone && b->zone->p && b->zone->p->mnt.count);
 }
 
 static inline int
