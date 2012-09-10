@@ -315,22 +315,20 @@ int destroy_zpool(device *d __attribute__ ((unused))){
 static int
 generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num){
 	char buf[BUFSIZ];
-	size_t left,pos;
+	size_t pos;
 	int z;
 
 	pos = 0;
-	left = sizeof(buf) - 1;
+#define PREFIX "/dev/"
 	for(z = 0 ; z < num ; ++z){
-		if(strlen(vdevs[z]) >= left){
+		if((unsigned)snprintf(buf + pos,sizeof(buf) - pos," %s%s",PREFIX,*vdevs) >= sizeof(buf) - pos){
 			diag("Too many arguments for zpool creation\n");
 			return -1;
 		}
-		strcat(buf + pos,vdevs[z]);
-		pos += strlen(vdevs[z]) + 1;
-		buf[pos - 1] = ' ';
-		left -= strlen(vdevs[z]) + 1;
+		++vdevs;
+		pos += strlen(buf + pos);
 	}
-	buf[pos - 1] = '\0';
+#undef PREFIX
 	return vspopen_drain("zpool create %s %s %s",type,name,buf);
 }
 
