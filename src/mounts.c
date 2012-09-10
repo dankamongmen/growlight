@@ -250,6 +250,13 @@ int mmount(device *d,const char *targ){
 		diag("%s does not have a filesystem signature\n",d->name);
 		return -1;
 	}
+	if(growlight_target){
+		if(strncmp(targ,growlight_target,strlen(growlight_target)) == 0){
+			if(make_parent_directories(targ)){
+				diag("Couldn't make parents of %s\n",targ);
+			}
+		}
+	}
 	if((rname = realpath(targ,NULL)) == NULL){
 		diag("Couldn't canonicalize %s (%s)\n",targ,strerror(errno));
 		return -1;
@@ -261,8 +268,8 @@ int mmount(device *d,const char *targ){
 	}
 	if(growlight_target){
 		if(strncmp(rname,growlight_target,strlen(growlight_target)) == 0){
-			if(make_parent_directories(targ)){
-				diag("Couldn't make parents of %s\n",targ);
+			if(make_parent_directories(rname)){
+				diag("Couldn't make parents of %s\n",rname);
 			}
 		}
 	}
