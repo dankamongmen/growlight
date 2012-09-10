@@ -1859,58 +1859,40 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 static void
 targpoint_callback(const char *path){
 	char targ[PATH_MAX + 1];
-	char *nupath;
 	blockobj *b;
 
 	if(path == NULL){
 		locked_diag("User cancelled target operation");
 		return;
 	}
-	if(path[strlen(path)] != '/'){
-		assert( (nupath = malloc(strlen(path) + 2)) );
-		strcpy(nupath,path);
-		nupath[strlen(path)] = '/';
-		nupath[strlen(path) + 1] = '\0';
-		path = nupath;
-	}else{
-		nupath = NULL;
-	}
 	if(!growlight_target){
 		locked_diag("No target is set");
-		free(nupath);
 		return;
 	}
 	if((unsigned)snprintf(targ,sizeof(targ),"%s%s",growlight_target,path) >= sizeof(targ)){
 		locked_diag("Bad mountpoint: %s",path);
-		free(nupath);
 		return;
 	}
 	if((b = get_selected_blockobj()) == NULL){
 		locked_diag("Must select a filesystem to mount");
-		free(nupath);
 		return;
 	}
 	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
-		free(nupath);
 		return;
 	}
 	if(blockobj_unpartitionedp(b)){
 		mmount(b->d,targ);
 		redraw_adapter(current_adapter);
-		free(nupath);
 		return;
 	}else if(blockobj_emptyp(b)){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
-		free(nupath);
 		return;
 	}else{
 		mmount(b->zone->p,targ);
 		redraw_adapter(current_adapter);
-		free(nupath);
 		return;
 	}
-	free(nupath);
 	locked_diag("I'm confused. Aborting.\n");
 }
 

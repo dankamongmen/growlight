@@ -240,11 +240,8 @@ make_parent_directories(const char *path){
 
 int mmount(device *d,const char *targ){
 	char name[PATH_MAX + 1];
+	char *rname;
 
-	if(targ[strlen(targ) - 1] != '/'){
-		diag("Mountpoint must end in a '/' (%s)\n",targ);
-		return -1;
-	}
 	if(d == NULL || targ == NULL){
 		diag("Provided NULL arguments\n");
 		return -1;
@@ -253,29 +250,37 @@ int mmount(device *d,const char *targ){
 		diag("%s does not have a filesystem signature\n",d->name);
 		return -1;
 	}
-	if(string_included_p(&d->mnt,targ)){
+	if((rname = realpath(targ,NULL)) == NULL){
+		diag("Couldn't canonicalize %s (%s)\n",targ,strerror(errno));
+		return -1;
+	}
+	if(string_included_p(&d->mnt,rname)){
 		diag("%s is already mounted at %s\n",d->name,targ);
+		free(rname);
 		return -1;
 	}
 	if(growlight_target){
-		if(strncmp(targ,growlight_target,strlen(growlight_target)) == 0){
+		if(strncmp(rname,growlight_target,strlen(growlight_target)) == 0){
 			if(make_parent_directories(targ)){
 				diag("Couldn't make parents of %s\n",targ);
 			}
 		}
 	}
 	snprintf(name,sizeof(name),"/dev/%s",d->name);
+	// Use the original path for the actual mount
 	if(mount(name,targ,d->mnttype,MS_NOATIME,NULL)){
 		diag("Error mounting %s at %s (%s?)\n",
 				name,targ,strerror(errno));
+		free(rname);
 		return -1;
 	}
 	if(growlight_target){
-		if(strcmp(targ,growlight_target) == 0){
+		if(strcmp(rname,growlight_target) == 0){
 			mount_target();
 		}
 	}
 	diag("Mounted %s at %s\n",d->name,targ);
+	free(rname);
 	return 0;
 }
 
