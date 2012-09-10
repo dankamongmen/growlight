@@ -329,7 +329,7 @@ generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num
 		pos += strlen(buf + pos);
 	}
 #undef PREFIX
-	return vspopen_drain("zpool create %s %s %s",name,type,buf);
+	return vspopen_drain("zpool create -f %s %s %s",name,type,buf);
 }
 
 int make_zmirror(const char *name,char * const *vdevs,int num){
@@ -349,5 +349,5 @@ int make_raidz3(const char *name,char * const *vdevs,int num){
 }
 
 int make_zfs(const char *dev,const char *name,int force __attribute__ ((unused))){
-	return vspopen_drain("zpool create %s %s",name,dev);
+	return vspopen_drain("zfs create -o mountpoint=%s %s",name,dev);
 }
