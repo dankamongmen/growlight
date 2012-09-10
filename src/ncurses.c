@@ -3814,7 +3814,7 @@ env_details(WINDOW *hw,int rows){
 
 		mvwhline(hw,row + z,1,' ',cols - 2);
 		lang = lang ? lang : "Undefined";
-		assert(mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s  ESCDELAY: %d",lang,term,ESCDELAY) != ERR);
+		assert(mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s ESCDELAY: %d",lang,term,ESCDELAY) != ERR);
 		--z;
 		break;
 	}default:{
