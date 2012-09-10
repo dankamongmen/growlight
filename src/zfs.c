@@ -329,7 +329,7 @@ generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num
 		pos += strlen(buf + pos);
 	}
 #undef PREFIX
-	return vspopen_drain("zpool create %s %s %s",type,name,buf);
+	return vspopen_drain("zpool create %s %s %s",name,type,buf);
 }
 
 int make_zmirror(const char *name,char * const *vdevs,int num){
