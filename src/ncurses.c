@@ -2318,6 +2318,11 @@ psectors_callback(const char *psects){
 			cleanup_new_partition();
 			return;
 		}
+		if(opcount == 0){
+			raise_str_form("enter partition spec",psectors_callback,
+					pending_spec ? pending_spec : "100%",PSPEC_TEXT);
+			return;
+		}
 		raise_form("select a partition type",ptype_callback,ops_ptype,
 				opcount,defidx,PARTTYPE_TEXT);
 		return;
@@ -2380,6 +2385,11 @@ new_partition(void){
 		return;
 	}
 	if((ops_ptype = ptype_table(b->d,&opcount,-1,&defidx)) == NULL){
+		return;
+	}
+	if(opcount == 0){
+		raise_str_form("enter partition spec",psectors_callback,
+				pending_spec ? pending_spec : "100%",PSPEC_TEXT);
 		return;
 	}
 	raise_form("select a partition type",ptype_callback,ops_ptype,opcount,
