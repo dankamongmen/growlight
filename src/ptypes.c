@@ -412,6 +412,8 @@ int ptype_supported(const char *pttype,const ptype *pt){
 			return 0;
 		}
 		return 1;
+	}else if(strcmp(pttype,"mdp") == 0){
+		return 0;
 	}
 	diag("No support for pttype %s\n",pttype);
 	return 0;
