@@ -1857,10 +1857,19 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 // -------------------------------------------------------------------------
 static void
 targpoint_callback(const char *path){
+	char targ[PATH_MAX + 1];
 	blockobj *b;
 
 	if(path == NULL){
 		locked_diag("User cancelled target operation");
+		return;
+	}
+	if(!growlight_target){
+		locked_diag("No target is set");
+		return;
+	}
+	if((unsigned)snprintf(targ,sizeof(targ),"%s%s",growlight_target,path) >= sizeof(targ)){
+		locked_diag("Bad mountpoint: %s",path);
 		return;
 	}
 	if((b = get_selected_blockobj()) == NULL){
@@ -1872,14 +1881,14 @@ targpoint_callback(const char *path){
 		return;
 	}
 	if(blockobj_unpartitionedp(b)){
-		mmount(b->d,path);
+		mmount(b->d,targ);
 		redraw_adapter(current_adapter);
 		return;
 	}else if(blockobj_emptyp(b)){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		mmount(b->zone->p,path);
+		mmount(b->zone->p,targ);
 		redraw_adapter(current_adapter);
 		return;
 	}
