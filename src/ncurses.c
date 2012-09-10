@@ -936,143 +936,143 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 	rx = cols - 78;
 	switch(bo->d->layout){
 case LAYOUT_NONE:
-	if(bo->d->blkdev.realdev){
-		if(bo->d->blkdev.removable){
-			assert(wattrset(rb->win,COLOR_PAIR(OPTICAL_COLOR)) == OK);
-			strncpy(rolestr,"removable",sizeof(rolestr));
-		}else if(bo->d->blkdev.rotation >= 0){
-			assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
-			if(bo->d->blkdev.rotation > 0){
-				snprintf(rolestr,sizeof(rolestr),"%d rpm",bo->d->blkdev.rotation);
+		if(bo->d->blkdev.realdev){
+			if(bo->d->blkdev.removable){
+				assert(wattrset(rb->win,COLOR_PAIR(OPTICAL_COLOR)) == OK);
+				strncpy(rolestr,"removable",sizeof(rolestr));
+			}else if(bo->d->blkdev.rotation >= 0){
+				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
+				if(bo->d->blkdev.rotation > 0){
+					snprintf(rolestr,sizeof(rolestr),"%d rpm",bo->d->blkdev.rotation);
+				}else{
+					strncpy(rolestr,"ferromag",sizeof(rolestr));
+				}
 			}else{
-				strncpy(rolestr,"ferromag",sizeof(rolestr));
+				assert(wattrset(rb->win,COLOR_PAIR(SSD_COLOR)) == OK);
+				strncpy(rolestr,"solidstate",sizeof(rolestr));
 			}
 		}else{
-			assert(wattrset(rb->win,COLOR_PAIR(SSD_COLOR)) == OK);
-			strncpy(rolestr,"solidstate",sizeof(rolestr));
+			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
+			strncpy(rolestr,"virtual",sizeof(rolestr));
 		}
-	}else{
-		assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
-		strncpy(rolestr,"virtual",sizeof(rolestr));
-	}
-	if(line + !!topp + 2 >= 1){
-		if(!bo->d->size || line + 2 < rows - !endp){
-			if(bo->d->size){
-				line += 2;
-				++x;
-				--rx;
-			}else if(selected){
-				wattron(rb->win,A_REVERSE);
-			}
-	mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
-				bo->d->name,
-				bo->d->model ? bo->d->model : "n/a",
-				bo->d->revision ? bo->d->revision : "n/a",
-				qprefix(bo->d->size,1,buf,sizeof(buf),0),
-				bo->d->physsec,
-				bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
-				bo->d->wwn ? bo->d->wwn : "n/a",
-				bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
-				rx,rx,"");
-			if(bo->d->size){
-				line -= 2;
+		if(line + !!topp + 2 >= 1){
+			if(!bo->d->size || line + 2 < rows - !endp){
+				if(bo->d->size){
+					line += 2;
+					++x;
+					--rx;
+				}else if(selected){
+					wattron(rb->win,A_REVERSE);
+				}
+		mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+					bo->d->name,
+					bo->d->model ? bo->d->model : "n/a",
+					bo->d->revision ? bo->d->revision : "n/a",
+					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					bo->d->physsec,
+					bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
+					bo->d->wwn ? bo->d->wwn : "n/a",
+					bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
+					rx,rx,"");
+				if(bo->d->size){
+					line -= 2;
+				}
 			}
 		}
-	}
 		break;
 case LAYOUT_MDADM:
-	if(bo->d->mddev.level){
-		strncpy(rolestr,bo->d->mddev.level,sizeof(rolestr));
-	}
-	if(bo->d->mddev.degraded){
-		co = COLOR_PAIR(FUCKED_COLOR);
-	}else{
-		co = COLOR_PAIR(MDADM_COLOR);
-	}
-	assert(wattrset(rb->win,co) == OK);
-	if(line + !!topp + 2 >= 1){
-		if(!bo->d->size || line + 2 < rows - !endp){
-			if(bo->d->size){
-				line += 2;
-				++x;
-				--rx;
-			}else if(selected){
-				wattron(rb->win,A_REVERSE);
-			}
-	mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
-				bo->d->name,
-				bo->d->model ? bo->d->model : "n/a",
-				bo->d->revision ? bo->d->revision : "n/a",
-				qprefix(bo->d->size,1,buf,sizeof(buf),0),
-				bo->d->physsec,
-				bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
-				bo->d->wwn ? bo->d->wwn : "n/a",
-				transport_str(bo->d->mddev.transport),
-				rx,rx,"");
-			if(bo->d->size){
-				line -= 2;
+		if(bo->d->mddev.level){
+			strncpy(rolestr,bo->d->mddev.level,sizeof(rolestr));
+		}
+		if(bo->d->mddev.degraded){
+			co = COLOR_PAIR(FUCKED_COLOR);
+		}else{
+			co = COLOR_PAIR(MDADM_COLOR);
+		}
+		assert(wattrset(rb->win,co) == OK);
+		if(line + !!topp + 2 >= 1){
+			if(!bo->d->size || line + 2 < rows - !endp){
+				if(bo->d->size){
+					line += 2;
+					++x;
+					--rx;
+				}else if(selected){
+					wattron(rb->win,A_REVERSE);
+				}
+		mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+					bo->d->name,
+					bo->d->model ? bo->d->model : "n/a",
+					bo->d->revision ? bo->d->revision : "n/a",
+					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					bo->d->physsec,
+					bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
+					bo->d->wwn ? bo->d->wwn : "n/a",
+					transport_str(bo->d->mddev.transport),
+					rx,rx,"");
+				if(bo->d->size){
+					line -= 2;
+				}
 			}
 		}
-	}
 		break;
 case LAYOUT_DM:
-	strncpy(rolestr,"dm",sizeof(rolestr));
-	assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
-	if(line + !!topp + 2 >= 1){
-		if(!bo->d->size || line + 2 < rows - !endp){
-			if(bo->d->size){
-				line += 2;
-				++x;
-				--rx;
-			}else if(selected){
-				wattron(rb->win,A_REVERSE);
-			}
-	mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
-				bo->d->name,
-				bo->d->model ? bo->d->model : "n/a",
-				bo->d->revision ? bo->d->revision : "n/a",
-				qprefix(bo->d->size,1,buf,sizeof(buf),0),
-				bo->d->physsec,
-				bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
-				bo->d->wwn ? bo->d->wwn : "n/a",
-				transport_str(bo->d->dmdev.transport),
-				rx,rx,"");
-			if(bo->d->size){
-				line += 2;
+		strncpy(rolestr,"dm",sizeof(rolestr));
+		assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
+		if(line + !!topp + 2 >= 1){
+			if(!bo->d->size || line + 2 < rows - !endp){
+				if(bo->d->size){
+					line += 2;
+					++x;
+					--rx;
+				}else if(selected){
+					wattron(rb->win,A_REVERSE);
+				}
+		mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+					bo->d->name,
+					bo->d->model ? bo->d->model : "n/a",
+					bo->d->revision ? bo->d->revision : "n/a",
+					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					bo->d->physsec,
+					bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
+					bo->d->wwn ? bo->d->wwn : "n/a",
+					transport_str(bo->d->dmdev.transport),
+					rx,rx,"");
+				if(bo->d->size){
+					line += 2;
+				}
 			}
 		}
-	}
 		break;
 case LAYOUT_PARTITION:
 		break;
 case LAYOUT_ZPOOL:
-	strncpy(rolestr,"zpool",sizeof(rolestr));
-	assert(wattrset(rb->win,COLOR_PAIR(ZPOOL_COLOR)) == OK);
-	if(line + !!topp + 2 >= 1){
-		if(!bo->d->size || line + 2 < rows - !endp){
-			if(bo->d->size){
-				line += 2;
-				++x;
-				--rx;
-			}else if(selected){
-				wattron(rb->win,A_REVERSE);
-			}
-	mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
-				bo->d->name,
-				bo->d->model ? bo->d->model : "n/a",
-				(uintmax_t)bo->d->zpool.zpoolver,
-				qprefix(bo->d->size,1,buf,sizeof(buf),0),
-				bo->d->physsec,
-				"spa",
-				bo->d->wwn ? bo->d->wwn : "n/a",
-				transport_str(bo->d->zpool.transport),
-				rx,rx,"");
-			if(bo->d->size){
-				line += 2;
+		strncpy(rolestr,"zpool",sizeof(rolestr));
+		assert(wattrset(rb->win,COLOR_PAIR(ZPOOL_COLOR)) == OK);
+		if(line + !!topp + 2 >= 1){
+			if(!bo->d->size || line + 2 < rows - !endp){
+				if(bo->d->size){
+					line += 2;
+					++x;
+					--rx;
+				}else if(selected){
+					wattron(rb->win,A_REVERSE);
+				}
+		mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+					bo->d->name,
+					bo->d->model ? bo->d->model : "n/a",
+					(uintmax_t)bo->d->zpool.zpoolver,
+					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					bo->d->physsec,
+					"spa",
+					bo->d->wwn ? bo->d->wwn : "n/a",
+					transport_str(bo->d->zpool.transport),
+					rx,rx,"");
+				if(bo->d->size){
+					line += 2;
+				}
 			}
 		}
 		break;
-	}
 	}
 	if(bo->d->size == 0){
 		return;
