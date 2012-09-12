@@ -757,13 +757,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	};
 	char pre[PREFIXSTRLEN + 1];
 	const char *selstr = NULL;
+	wchar_t wbuf[ex - sx + 2];
 	const device *d = bo->d;
 	unsigned off = sx - 1;
 	char buf[ex - sx + 2];
 	const zobj *z;
 
 	if(d->mnttype){
-		wchar_t wbuf[ex - sx + 2];
 
 		if(selected){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
@@ -829,7 +829,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		unsigned ch,och;
 		int rep,x;
 
-		buf[0] = '\0';
+		wbuf[0] = L'\0';
 		x = sectpos(d,z->fsector,sx,ex,&off);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
@@ -871,8 +871,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
 			if(z->p->mnttype){
-				if((!z->p->mnt.count || (unsigned)snprintf(buf,sizeof(buf),"%s at %s",z->p->mnttype,z->p->mnt.list[0]) >= sizeof(buf))){
-					assert((unsigned)snprintf(buf,sizeof(buf) - 2,"%s",z->p->mnttype) < sizeof(buf) - 2);
+				if((!z->p->mnt.count || (unsigned)swprintf(wbuf,sizeof(wbuf),L"%s at %s",z->p->mnttype,z->p->mnt.list[0]) >= sizeof(wbuf))){
+					if(!z->p->label || swprintf(wbuf,sizeof(wbuf),L"%s “%s”",
+						z->p->mnttype,z->p->label) >= (int)sizeof(buf)){
+						assert((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->mnttype) < sizeof(wbuf) - 2);
+					}
 				}
 			}
 			rep = z->p->partdev.pnumber % 16;
@@ -904,17 +907,17 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			mvwaddch(w,y,off,rep);
 		}
-		if(strlen(buf) > och){
-			assert((unsigned) snprintf(buf,sizeof(buf),"%s",z->p->mnttype) <= sizeof(buf));
+		if(wcslen(wbuf) > och){
+			assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",z->p->mnttype) <= sizeof(wbuf));
 		}
-		if(strlen(buf) && och >= strlen(buf)){
-			size_t start = ((och + strlen(buf)) / 2) +
-					!((och + strlen(buf)) % 2);
+		if(wcslen(wbuf) && och >= wcslen(wbuf)){
+			size_t start = ((och + wcslen(wbuf)) / 2) +
+					!((och + wcslen(wbuf)) % 2);
 
 			wattron(w,A_BOLD);
-			mvwaddstr(w,y,off - start,buf);
+			mvwaddwstr(w,y,off - start,wbuf);
 			mvwaddch(w,y,off - start - 1,' ');
-			mvwaddch(w,y,off - start + strlen(buf),' ');
+			mvwaddch(w,y,off - start + wcslen(wbuf),' ');
 		}
 		selstr = NULL;
 	}while((z = z->next) != bo->zchain);
