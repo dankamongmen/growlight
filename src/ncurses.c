@@ -154,6 +154,7 @@ enum {
 	HEADER_COLOR = 1,
 	STATUS_COLOR,
 	UHEADING_COLOR,
+	UNHEADING_COLOR,
 	UBORDER_COLOR,
 	PBORDER_COLOR,
 	PHEADING_COLOR,
@@ -222,6 +223,9 @@ setup_colors(void){
 		assert(init_pair(STATUS_COLOR,COLOR_YELLOW,-1) != ERR);
 	}
 	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
+	if(init_pair(UNHEADING_COLOR,COLOR_SKYBLUE,-1) == ERR){
+		assert(init_pair(UNHEADING_COLOR,COLOR_BLUE,-1) != ERR);
+	}
 	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
@@ -278,6 +282,7 @@ form_colors(void){
 	// form nor splash colors
 	locked_diag("%s",""); // Don't leave a highlit status up from long ago
 	init_pair(UHEADING_COLOR,-1,-1);
+	init_pair(UNHEADING_COLOR,-1,-1);
 	init_pair(UBORDER_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
 	init_pair(PHEADING_COLOR,-1,-1);
@@ -1247,7 +1252,11 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 
 	getmaxyx(w,rows,cols);
 	bcolor = UBORDER_COLOR;
-	hcolor = UHEADING_COLOR;
+	if(current){
+		hcolor = UHEADING_COLOR; // plus A_BOLD
+	}else{
+		hcolor = UNHEADING_COLOR;;
+	}
 	attrs = current ? A_REVERSE : A_NORMAL;
 	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
 	if(abovetop == 0){
