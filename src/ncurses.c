@@ -770,30 +770,33 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
 		}
-		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s filesystem%ls%s%lsat %s ",
+		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s%s%ls%s%lsat %s ",
 			d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 			d->mntsize ? " " : "",
 			d->label ? "" : "nameless ",
 			d->mnttype,
+			aggregate_fs_p(d->mnttype) ? "" : " filesystem",
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ",
 			d->mnt.list[0]) >= (int)sizeof(wbuf)){
-		if(swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s filesystem%ls%s%ls",
-			d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
-			d->mntsize ? " " : "",
-			d->label ? "" : "nameless ",
-			d->mnttype,
-			d->label ? L" “" : L"",
-			d->label ? d->label : "",
-			d->label ? L"” " : L" ") >= (int)sizeof(wbuf)){
-			if((unsigned)swprintf(wbuf,sizeof(wbuf),L" %s%s%s filesystem ",
+			if(swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s%s%ls%s%ls",
 				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 				d->mntsize ? " " : "",
-				d->mnttype) >= sizeof(wbuf)){
-				assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",d->mnttype) < sizeof(wbuf));
+				d->label ? "" : "nameless ",
+				d->mnttype,
+				aggregate_fs_p(d->mnttype) ? "" : " filesystem",
+				d->label ? L" “" : L"",
+				d->label ? d->label : "",
+				d->label ? L"” " : L" ") >= (int)sizeof(wbuf)){
+				if((unsigned)swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s ",
+					d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
+					d->mntsize ? " " : "",
+					d->mnttype,
+					aggregate_fs_p(d->mnttype) ? "" : " filesystem") >= sizeof(wbuf)){
+					assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",d->mnttype) < sizeof(wbuf));
+				}
 			}
-		}
 		}
 		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
 		mvwadd_wch(w,y,sx,&bchr[1]);

@@ -18,6 +18,12 @@ fstype_default_p(const char *fstype){
 	return !strcmp(fstype,"ext4");
 }
 
+static inline int
+aggregate_fs_p(const char *fstype){
+	return !strcmp(fstype,"linux_raid_member") ||
+		!strcmp(fstype,"zfs_member");
+}
+
 // Does the filesystem support the concept of a name/label?
 int fstype_named_p(const char *);
 
