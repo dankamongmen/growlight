@@ -241,7 +241,9 @@ setup_colors(void){
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
-	assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) == OK);
+	if(init_pair(MDADM_COLOR,COLOR_LIGHTBLUE,-1) == ERR){
+		assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != ERR);
+	}
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
 	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
 	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
@@ -1022,6 +1024,7 @@ case LAYOUT_MDADM:
 				}
 			}
 		}
+		assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
 		break;
 case LAYOUT_DM:
 		strncpy(rolestr,"dm",sizeof(rolestr));
