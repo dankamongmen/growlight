@@ -174,7 +174,13 @@ enum {
 	INPUT_COLOR,			// Form input color
 	SELECTED_COLOR,			// Selected options in multiform
 	MOUNT_COLOR,			// Mounted, untargeted filesystems
+	MOUNT_COLOR1,
+	MOUNT_COLOR2,
+	MOUNT_COLOR3,
 	TARGET_COLOR,			// Targeted filesystems
+	TARGET_COLOR1,
+	TARGET_COLOR2,
+	TARGET_COLOR3,
 	FUCKED_COLOR,			// Things that warrant attention
 	SPLASHBORDER_COLOR,
 	SPLASHTEXT_COLOR,
@@ -196,6 +202,12 @@ enum {
 #define COLOR_HIDDEN 16
 #define COLOR_SKYBLUE 0x20 // 32 (xterm color cube)
 #define COLOR_LIGHTPURPLE 0x3f
+#define COLOR_MAGENTA1 0x34
+#define COLOR_MAGENTA2 0x35
+#define COLOR_MAGENTA3 0x36
+#define COLOR_WHITE1 0xf9
+#define COLOR_WHITE2 0xfa
+#define COLOR_WHITE3 0xfb
 
 static inline void
 screen_update(void){
@@ -257,7 +269,25 @@ setup_colors(void){
 		assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != ERR);
 	}
 	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
+	if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,-1) == ERR){
+		assert(init_pair(MOUNT_COLOR1,COLOR_WHITE,-1) == OK);
+	}
+	if(init_pair(MOUNT_COLOR2,COLOR_WHITE2,-1) == ERR){
+		assert(init_pair(MOUNT_COLOR2,COLOR_WHITE,-1) == OK);
+	}
+	if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,-1) == ERR){
+		assert(init_pair(MOUNT_COLOR3,COLOR_WHITE,-1) == OK);
+	}
 	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
+	if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,-1) == ERR){
+		assert(init_pair(TARGET_COLOR1,COLOR_MAGENTA,-1) == OK);
+	}
+	if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,-1) == ERR){
+		assert(init_pair(TARGET_COLOR2,COLOR_MAGENTA,-1) == OK);
+	}
+	if(init_pair(TARGET_COLOR3,COLOR_MAGENTA3,-1) == ERR){
+		assert(init_pair(TARGET_COLOR3,COLOR_MAGENTA,-1) == OK);
+	}
 	if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == ERR){
 		assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) != ERR);
 	}
@@ -300,7 +330,13 @@ form_colors(void){
 	init_pair(ZPOOL_COLOR,-1,-1);
 	init_pair(PARTITION_COLOR,-1,-1);
 	init_pair(MOUNT_COLOR,-1,-1);
+	init_pair(MOUNT_COLOR1,-1,-1);
+	init_pair(MOUNT_COLOR2,-1,-1);
+	init_pair(MOUNT_COLOR3,-1,-1);
 	init_pair(TARGET_COLOR,-1,-1);
+	init_pair(TARGET_COLOR1,-1,-1);
+	init_pair(TARGET_COLOR2,-1,-1);
+	init_pair(TARGET_COLOR3,-1,-1);
 	init_pair(FUCKED_COLOR,-1,-1);
 	init_pair(ORANGE_COLOR,-1,-1);
 	init_pair(GREEN_COLOR,-1,-1);
