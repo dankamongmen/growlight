@@ -173,11 +173,11 @@ enum {
 	FORMTEXT_COLOR,
 	INPUT_COLOR,			// Form input color
 	SELECTED_COLOR,			// Selected options in multiform
-	MOUNT_COLOR,			// Mounted, untargeted filesystems
+	MOUNT_COLOR0,			// Mounted, untargeted filesystems
 	MOUNT_COLOR1,
 	MOUNT_COLOR2,
 	MOUNT_COLOR3,
-	TARGET_COLOR,			// Targeted filesystems
+	TARGET_COLOR0,			// Targeted filesystems
 	TARGET_COLOR1,
 	TARGET_COLOR2,
 	TARGET_COLOR3,
@@ -192,6 +192,22 @@ enum {
 	FIRST_FREE_COLOR
 };
 
+static inline int
+next_targco(int targco){
+	if(++targco > TARGET_COLOR3){
+		targco = TARGET_COLOR0;
+	}
+	return targco;
+}
+
+static inline int
+next_mountco(int mountco){
+	if(++mountco > MOUNT_COLOR3){
+		mountco = MOUNT_COLOR0;
+	}
+	return mountco;
+}
+
 #define COLOR_LIGHTRED 9
 #define COLOR_LIGHTGREEN 10
 #define COLOR_LIGHTYELLOW 11
@@ -202,12 +218,14 @@ enum {
 #define COLOR_HIDDEN 16
 #define COLOR_SKYBLUE 0x20 // 32 (xterm color cube)
 #define COLOR_LIGHTPURPLE 0x3f
+#define COLOR_MAGENTA0 0x33
 #define COLOR_MAGENTA1 0x34
 #define COLOR_MAGENTA2 0x35
 #define COLOR_MAGENTA3 0x36
-#define COLOR_WHITE1 0xf9
-#define COLOR_WHITE2 0xfa
-#define COLOR_WHITE3 0xfb
+#define COLOR_WHITE0 0xfc
+#define COLOR_WHITE1 0xfa
+#define COLOR_WHITE2 0xf8
+#define COLOR_WHITE3 0xf6
 
 static inline void
 screen_update(void){
@@ -268,7 +286,9 @@ setup_colors(void){
 	if(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == ERR){
 		assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != ERR);
 	}
-	assert(init_pair(MOUNT_COLOR,COLOR_WHITE,-1) == OK);
+	if(init_pair(MOUNT_COLOR0,COLOR_WHITE0,-1) == ERR){
+		assert(init_pair(MOUNT_COLOR0,COLOR_WHITE,-1) == OK);
+	}
 	if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,-1) == ERR){
 		assert(init_pair(MOUNT_COLOR1,COLOR_WHITE,-1) == OK);
 	}
@@ -278,7 +298,9 @@ setup_colors(void){
 	if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,-1) == ERR){
 		assert(init_pair(MOUNT_COLOR3,COLOR_WHITE,-1) == OK);
 	}
-	assert(init_pair(TARGET_COLOR,COLOR_MAGENTA,-1) == OK);
+	if(init_pair(TARGET_COLOR0,COLOR_MAGENTA0,-1) == ERR){
+		assert(init_pair(TARGET_COLOR0,COLOR_MAGENTA,-1) == OK);
+	}
 	if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,-1) == ERR){
 		assert(init_pair(TARGET_COLOR1,COLOR_MAGENTA,-1) == OK);
 	}
@@ -329,11 +351,11 @@ form_colors(void){
 	init_pair(MDADM_COLOR,-1,-1);
 	init_pair(ZPOOL_COLOR,-1,-1);
 	init_pair(PARTITION_COLOR,-1,-1);
-	init_pair(MOUNT_COLOR,-1,-1);
+	init_pair(MOUNT_COLOR0,-1,-1);
 	init_pair(MOUNT_COLOR1,-1,-1);
 	init_pair(MOUNT_COLOR2,-1,-1);
 	init_pair(MOUNT_COLOR3,-1,-1);
-	init_pair(TARGET_COLOR,-1,-1);
+	init_pair(TARGET_COLOR0,-1,-1);
 	init_pair(TARGET_COLOR1,-1,-1);
 	init_pair(TARGET_COLOR2,-1,-1);
 	init_pair(TARGET_COLOR3,-1,-1);
@@ -804,6 +826,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	const device *d = bo->d;
 	unsigned off = sx - 1;
 	char buf[ex - sx + 2];
+	int targco,mountco;
 	const zobj *z;
 
 	if(d->mnttype){
@@ -868,6 +891,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	if((z = bo->zchain) == NULL){
 		return;
 	}
+	targco = TARGET_COLOR0;
+	mountco = MOUNT_COLOR0;
 	do{
 		unsigned ch,och;
 		int rep,x;
@@ -890,9 +915,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{ // dedicated partition
 			if(selected && z == bo->zone){ // partition and device are selected
 				if(targeted_p(z->p)){
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(TARGET_COLOR)) == OK);
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(targco)) == OK);
+					targco = next_targco(targco);
 				}else if(z->p->mnt.count){
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(MOUNT_COLOR)) == OK);
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(mountco)) == OK);
+					mountco = next_mountco(mountco);
 				}else{
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
 				}
@@ -903,9 +930,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				selstr = z->p->name;
 			}else{ // device is not selected
 				if(targeted_p(z->p)){
-					assert(wattrset(w,COLOR_PAIR(TARGET_COLOR)) == OK);
+					assert(wattrset(w,COLOR_PAIR(targco)) == OK);
+					targco = next_targco(targco);
 				}else if(z->p->mnt.count){
-					assert(wattrset(w,COLOR_PAIR(MOUNT_COLOR)) == OK);
+					assert(wattrset(w,COLOR_PAIR(mountco)) == OK);
+					mountco = next_mountco(mountco);
 				}else{
 					assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
 				}
