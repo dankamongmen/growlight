@@ -60,10 +60,11 @@
 	<refsynopsisdiv>
 		<cmdsynopsis>
 			<command>&dhpackage;</command>
-			<arg>-h|--help</arg>
-			<arg>-t|--target path</arg>
-			<arg>-v|--verbose</arg>
-			<arg>-V|--version</arg>
+			<arg>-h | --help</arg>
+			<arg>-v | --verbose</arg>
+			<arg>-V | --version</arg>
+			<arg>-n | --noimport</arg>
+			<arg>-t path | --target=path</arg>
 		</cmdsynopsis>
 	</refsynopsisdiv>
 	<refsect1 id="description">
@@ -82,25 +83,32 @@ variant.</para>
 	<refsect1 id="options">
 		<title>OPTIONS</title>
 		<varlistentry>
-			<term>-h|--help</term>
+			<term>-h | --help</term>
 			<listitem>
 			<para>Print a brief usage summary and exit.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term>-v|--verbose</term>
+			<term>-v | --verbose</term>
 			<listitem>
 			<para>Be more verbose.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term>-V|--version</term>
+			<term>-V | --version</term>
 			<listitem>
 			<para>Print version information and exit.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
-			<term>-t|--target=path</term>
+			<term>-n | --noimport</term>
+			<listitem>
+<para>Do not attempt to assemble aggregates (zpools, MD devices, etc) at
+startup.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term>-t path | --target=path</term>
 			<listitem>
 <para>Run in system installation mode, using <emphasis role="bold">path</emphasis> as the temporary mountpoint
 for the target's root filesystem. "map" commands will populate the hierarchy

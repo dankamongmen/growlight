@@ -1363,7 +1363,7 @@ version(const char *name){
 static void
 usage(const char *name){
 	diag("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
-				"\t\t[ -t|--target=path ]\n",basename(name));
+				"\t[ -t|--target=path ] [ -n|--noimport ]\n",basename(name));
 }
 
 static int
@@ -1607,6 +1607,11 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			.flag = NULL,
 			.val = 'h',
 		},{
+			.name = "noimport",
+			.has_arg = 0,
+			.flag = NULL,
+			.val = 'n',
+		},{
 			.name = "target",
 			.has_arg = 2,
 			.flag = NULL,
@@ -1629,6 +1634,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		},
 	};
 	int fd,opt,longidx,udevfd,syswd,mdwd,bypathwd;
+	int noimport;
 	char buf[BUFSIZ];
 
 	gui = ui;
@@ -1637,15 +1643,24 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	SSL_library_init();
+	noimport = 0;
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
-	while((opt = getopt_long(argc,argv,":ht:vV",ops,&longidx)) >= 0){
+	while((opt = getopt_long(argc,argv,":hnt:vV",ops,&longidx)) >= 0){
 		switch(opt){
 		case 'h':{
 			usage(argv[0]);
 			return -1;
+		}case 'n':{
+			if(noimport){
+				diag("Error: provided -n/--noimport twice\n");
+				usage(argv[0]);
+				return -1;
+			}
+			noimport = 1;
+			break;
 		}case 't':{
 			if(growlight_target){
-				diag("Error: defined --target twice (%s, %s)\n",
+				diag("Error: defined -t/--target twice (%s, %s)\n",
 						growlight_target,optarg);
 				usage(argv[0]);
 				return -1;
