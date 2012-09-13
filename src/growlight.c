@@ -1782,12 +1782,15 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	}
 	lock_growlight();
 	if(parse_filesystems(gui,FILESYSTEMS)){
+		unlock_growlight();
 		goto err;
 	}
 	if(parse_mounts(gui,MOUNTS)){
+		unlock_growlight();
 		goto err;
 	}
 	if(parse_swaps(gui,SWAPS)){
+		unlock_growlight();
 		goto err;
 	}
 	unlock_growlight();
@@ -1800,7 +1803,6 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	return 0;
 
 err:
-	unlock_growlight();
 	growlight_stop();
 	return -1;
 }
