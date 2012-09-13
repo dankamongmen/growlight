@@ -55,4 +55,6 @@ device_aggregablep(const device *d){
 
 const aggregate_type *get_aggregate(const char *);
 
+int assemble_aggregates(void);
+
 #endif

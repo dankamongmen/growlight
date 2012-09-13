@@ -1,5 +1,6 @@
 #include "zfs.h"
 #include "mdadm.h"
+#include "popen.h"
 #include "growlight.h"
 #include "aggregate.h"
 
@@ -139,4 +140,12 @@ const aggregate_type *get_aggregate(const char *name){
 const aggregate_type *get_aggregate_types(int *count){
 	*count = sizeof(aggregates) / sizeof(*aggregates);
 	return aggregates;
+}
+
+int assemble_aggregates(void){
+	diag("Scanning for zpools...\n");
+	vspopen_drain("zpool import -a");
+	diag("Scanning for MD devices...\n");
+	vspopen_drain("mdadm --assemble --scan");
+	return 0;
 }

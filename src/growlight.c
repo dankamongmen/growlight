@@ -45,6 +45,7 @@
 #include "target.h"
 #include "libblkid.h"
 #include "growlight.h"
+#include "aggregate.h"
 
 #define SYSROOT "/sys/class/block/"
 #define SWAPS "/proc/swaps"
@@ -1363,7 +1364,7 @@ version(const char *name){
 static void
 usage(const char *name){
 	diag("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
-				"\t[ -t|--target=path ] [ -n|--noimport ]\n",basename(name));
+				"\t[ -t|--target=path ] [ -i|--import ]\n",basename(name));
 }
 
 static int
@@ -1607,10 +1608,10 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			.flag = NULL,
 			.val = 'h',
 		},{
-			.name = "noimport",
+			.name = "import",
 			.has_arg = 0,
 			.flag = NULL,
-			.val = 'n',
+			.val = 'i',
 		},{
 			.name = "target",
 			.has_arg = 2,
@@ -1634,7 +1635,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		},
 	};
 	int fd,opt,longidx,udevfd,syswd,mdwd,bypathwd;
-	int noimport;
+	int import;
 	char buf[BUFSIZ];
 
 	gui = ui;
@@ -1643,7 +1644,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	SSL_library_init();
-	noimport = 0;
+	import = 0;
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
 	while((opt = getopt_long(argc,argv,":hnt:vV",ops,&longidx)) >= 0){
 		switch(opt){
@@ -1651,12 +1652,12 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			usage(argv[0]);
 			return -1;
 		}case 'n':{
-			if(noimport){
-				diag("Error: provided -n/--noimport twice\n");
+			if(import){
+				diag("Error: provided -i/--import twice\n");
 				usage(argv[0]);
 				return -1;
 			}
-			noimport = 1;
+			import = 1;
 			break;
 		}case 't':{
 			if(growlight_target){
@@ -1720,6 +1721,11 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	init_special_adapters();
 	if(init_zfs_support(gui)){
 		goto err;
+	}
+	if(import){
+		if(assemble_aggregates()){
+			goto err;
+		}
 	}
 	if(watch_dir(fd,SYSROOT,scan_device,&syswd)){
 		goto err;
