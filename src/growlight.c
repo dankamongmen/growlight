@@ -253,7 +253,13 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			}
 		}
 		c->transport = usbmodulep(module);
-		c->sysfs = sysfs;
+		if( (c->sysfs = sysfs) ){
+			char fwpath[PATH_MAX + 1];
+
+			if((unsigned)snprintf(fwpath,sizeof(fwpath),"%s/host0/scsi_host/host0/version_fw",c->sysfs) < sizeof(fwpath)){
+				c->fwver = get_sysfs_string(sysfd,fwpath);
+			}
+		}
 		c->driver = module;
 		c->bus = BUS_PCIe;
 		c->pcie.domain = domain;
