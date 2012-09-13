@@ -51,6 +51,7 @@
 #define MOUNTS	"/proc/mounts"
 #define FILESYSTEMS	"/proc/filesystems"
 #define DEVROOT "/dev"
+#define DEVMD DEVROOT "/md/"
 #define DEVBYPATH DEVROOT "/disk/by-path/"
 
 unsigned verbose = 0;
@@ -1177,6 +1178,46 @@ device *lookup_device(const char *name){
 }
 
 static void *
+scan_mdalias(void *vname){
+	char buf[PATH_MAX + 1],path[PATH_MAX + 1];
+	char *name = vname;
+	device *d;
+	int r;
+
+	if(!name){
+		return NULL;
+	}
+	if((unsigned)snprintf(path,sizeof(path),"%s/%s",DEVMD,name) >= sizeof(path)){
+		diag("Bad link: %s\n",name);
+		free(vname);
+		return NULL;
+	}
+	if((r = readlink(path,buf,sizeof(buf))) < 0){;
+		diag("Couldn't read link at %s\n",path);
+		free(vname);
+		return NULL;
+	}
+	buf[r] = '\0';
+	lock_growlight();
+	if( (d = lookup_device(buf)) ){
+		if(d->layout != LAYOUT_MDADM){
+			diag("Alias %s wasn't an md device (%s)\n",path,buf);
+		}else{
+			free(d->mddev.mdname);
+			d->mddev.mdname = name;
+			name = NULL;
+		}
+	}
+	unlock_growlight();
+	assert(pthread_mutex_lock(&barrier) == 0);
+	pthread_cond_signal(&barrier_cond);
+	--thrcount;
+	assert(pthread_mutex_unlock(&barrier) == 0);
+	free(name); // name was set to NULL on success
+	return NULL;
+}
+
+static void *
 scan_devbypath(void *vname){
 	char buf[PATH_MAX + 1],path[PATH_MAX + 1];
 	char *name = vname;
@@ -1357,6 +1398,7 @@ struct event_marshal {
 	int mfd;		// /proc/mounts fd
 	int sfd;		// /proc/swaps fd
 	int ffd;		// /proc/filesystems fd
+	int mdfd;		// /dev/md/ fd
 	int syswd;		// /sys/block watch descriptor
 	int bypathwd;		// /dev/disk/by-path watch descriptor
 };
@@ -1435,7 +1477,7 @@ event_posix_thread(void *unsafe){
 }
 
 static int
-event_thread(int ifd,int ufd,int syswd,int bypathwd){
+event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 	struct event_marshal *em;
 	struct epoll_event ev;
 	int r;
@@ -1467,6 +1509,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd){
 	}
 	em->ifd = ifd;
 	em->ufd = ufd;
+	em->mdfd = mdfd;
 	em->syswd = syswd;
 	em->bypathwd = bypathwd;
 	if((em->mfd = open(MOUNTS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
@@ -1585,7 +1628,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			.val = 0,
 		},
 	};
-	int fd,opt,longidx,udevfd,syswd,bypathwd;
+	int fd,opt,longidx,udevfd,syswd,mdwd,bypathwd;
 	char buf[BUFSIZ];
 
 	gui = ui;
@@ -1669,6 +1712,9 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd)){
 		goto err;
 	}
+	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd)){
+		goto err;
+	}
 	lock_growlight();
 	if(parse_filesystems(gui,FILESYSTEMS)){
 		goto err;
@@ -1683,7 +1729,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
-	if(event_thread(fd,udevfd,syswd,bypathwd)){
+	if(event_thread(fd,udevfd,syswd,bypathwd,mdwd)){
 		goto err;
 	}
 	return 0;
