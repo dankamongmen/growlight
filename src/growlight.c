@@ -549,7 +549,7 @@ check_slavery(device *d,int subfd){
 // ought be rerun to acquire a reference).
 static int
 explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse){
-	struct dirent *dire;
+	struct dirent *dire,dirst;
 	unsigned long ul;
 	unsigned b;
 	int sdevfd;
@@ -634,7 +634,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 	if((d->sched = get_sysfs_string(fd,"queue/scheduler")) == NULL){
 		diag("Couldn't determine scheduler for %s (%s)\n",name,strerror(errno));
 	}
-	while(errno = 0, (dire = readdir(dir)) ){
+	while(errno = 0, !readdir_r(dir,&dirst,&dire) && dire){
 		int subfd;
 
 		if(dire->d_type == DT_DIR){
