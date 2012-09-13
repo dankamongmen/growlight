@@ -270,7 +270,9 @@ setup_colors(void){
 	}
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
-	assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
+	if(init_pair(METADATA_COLOR,COLOR_LIGHTGREEN,-1) == ERR){
+		assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
+	}
 	if(init_pair(MDADM_COLOR,COLOR_LIGHTBLUE,-1) == ERR){
 		assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != ERR);
 	}
