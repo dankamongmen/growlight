@@ -280,7 +280,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections,int scroll){
 		}else{
 			destroy_agg_forms();
 		}
-		locked_diag("There are insufficiently many available devices for %s",pending_aggtype);
+		locked_diag("insufficiently many available devices for %s",pending_aggtype);
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
@@ -327,7 +327,7 @@ aggname_callback(const char *fn){
 		}else{
 			destroy_agg_forms();
 		}
-		locked_diag("There are insufficiently many available devices for %s",pending_aggtype);
+		locked_diag("insufficiently many available devices for %s",pending_aggtype);
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
