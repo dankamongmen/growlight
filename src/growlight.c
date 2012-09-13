@@ -379,6 +379,8 @@ internal_device_reset(device *d){
 			free(d->mddev.uuid); d->mddev.uuid = NULL;
 			free(d->mddev.mdname); d->mddev.mdname = NULL;
 			free(d->mddev.pttable); d->mddev.pttable = NULL;
+			d->mddev.degraded = 0;
+			d->mddev.resync = 0;
 			break;
 		}case LAYOUT_DM:{
 			mdslave *md;
@@ -392,6 +394,7 @@ internal_device_reset(device *d){
 			free(d->dmdev.uuid); d->dmdev.uuid = NULL;
 			free(d->dmdev.dmname); d->dmdev.dmname = NULL;
 			free(d->dmdev.pttable); d->dmdev.pttable = NULL;
+			d->mddev.degraded = 0;
 			break;
 		}case LAYOUT_PARTITION:{
 			free(d->partdev.pname); d->partdev.pname = NULL;

@@ -15,7 +15,17 @@ int explore_md_sysfs(device *d,int dirfd){
 	unsigned degraded = 0;
 	unsigned long rd;
 	mdslave **enqm;
+	char *syncpct;
 
+	if((syncpct = get_sysfs_string(dirfd,"sync_completed")) == NULL){
+		verbf("Warning: no 'sync_completed' content in mdadm device %s\n",d->name);
+	}else if(strcmp(syncpct,"none") == 0){
+		d->mddev.resync = 0;
+	}else{
+		// FIXME lex "%ju / %ju"
+		d->mddev.resync = 1;
+	}
+	free(syncpct);
 	// These files will be empty on incomplete arrays like the md0 that
 	// sometimes pops up.
 	if(get_sysfs_uint(dirfd,"raid_disks",&d->mddev.disks)){
@@ -121,11 +131,9 @@ int explore_md_sysfs(device *d,int dirfd){
 		}
 		unlock_growlight();
 	}
-	if(d->mddev.degraded != degraded){
-		diag("%s had %lu degraded, %u missing\n",d->name,d->mddev.degraded,degraded);
-		if(d->mddev.degraded < degraded){
-			d->mddev.degraded = degraded;
-		}
+	d->mddev.degraded = degraded;
+	if(d->mddev.resync && !d->mddev.degraded){
+		d->mddev.degraded = 1;
 	}
 	return 0;
 }
