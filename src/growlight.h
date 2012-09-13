@@ -131,6 +131,7 @@ typedef struct device {
 	struct controller *c;
 	char *sched;		// I/O scheduler (can be NULL)
 	unsigned roflag;	// Read-only flag (hdparm -r, blockdev --getro)
+	int slave;		// Number of owning devices
 	union {
 		struct {
 			transport_e transport;

@@ -410,6 +410,7 @@ internal_device_reset(device *d){
 	free(d->label); d->label = NULL;
 	free(d->model); d->model = NULL;
 	free(d->revision); d->revision = NULL;
+	d->slave = 0;
 }
 
 static void
@@ -516,6 +517,32 @@ add_partition_inner(device *d,const char *name,dev_t devno,unsigned pnum,
 	return p;
 }
 
+static int
+check_slavery(device *d,int subfd){
+	struct dirent ent,*eptr;
+	DIR *hdir;
+	int r;
+
+	if((hdir = fdopendir(subfd)) == NULL){
+		diag("Couldn't get DIR * from fd %d for %s (%s)\n",
+				subfd,d->name,strerror(errno));
+		close(subfd);
+		return -1;
+	}
+	while((r = readdir_r(hdir,&ent,&eptr)) == 0 && eptr){
+		if(eptr->d_type == DT_LNK){
+			++d->slave;
+		}
+	}
+	if(r){
+		diag("Error reading directory on %d for %s (%s)\n",
+				subfd,d->name,strerror(errno));
+		return -1;
+	}
+	closedir(hdir);
+	return 0;
+}
+
 // Pass a directory handle fd, and the bare name of the device
 // Return -1 on error, 0 on success, 1 if the device is a partition, and we
 // successfully look up the containing disk (in which case lookup_device()
@@ -529,14 +556,20 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 
 	if(sysfs_exist_p(fd,"partition")){
 		char buf[PATH_MAX],*dev;
-		int r;
+		int r,subfd;
 
+		if((subfd = openat(fd,"holders",O_RDONLY|O_CLOEXEC|O_DIRECTORY)) >= 0){
+			if(check_slavery(d,subfd)){
+				close(subfd);
+				return -1;
+			}
+		}
 		if(recurse){
 			verbf("Not recursing on partition %s\n",name);
 			return -1;
 		}
 		if((r = readlinkat(sysfd,name,buf,sizeof(buf))) < 0){
-			diag("Couldn't read link at %s%s (%s?)\n",
+			diag("Couldn't read link at %s%s (%s)\n",
 				SYSROOT,name,strerror(errno));
 			return -1;
 		}
@@ -569,23 +602,23 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 		}
 	}
 	if(get_sysfs_bool(fd,"removable",&b)){
-		diag("Couldn't determine removability for %s (%s?)\n",name,strerror(errno));
+		diag("Couldn't determine removability for %s (%s)\n",name,strerror(errno));
 	}else{
 		d->blkdev.removable = !!b;
 	}
 	if(get_sysfs_uint(fd,"size",&ul)){
-		diag("Couldn't determine size for %s (%s?)\n",name,strerror(errno));
+		diag("Couldn't determine size for %s (%s)\n",name,strerror(errno));
 	}else{
 		d->size = ul;
 	}
 	// Check for "device" to determine if it's real or virtual
-	if((sdevfd = openat(fd,"device",O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+	if((sdevfd = openat(fd,"device",O_RDONLY|O_CLOEXEC|O_DIRECTORY)) > 0){
 		d->blkdev.realdev = 1;
 		if((d->model = get_sysfs_string(sdevfd,"model")) == NULL){
-			verbf("Couldn't get a model for %s (%s?)\n",name,strerror(errno));
+			verbf("Couldn't get a model for %s (%s)\n",name,strerror(errno));
 		}
 		if((d->revision = get_sysfs_string(sdevfd,"rev")) == NULL){
-			verbf("Couldn't get a revision for %s (%s?)\n",name,strerror(errno));
+			verbf("Couldn't get a revision for %s (%s)\n",name,strerror(errno));
 		}
 		verbf("\tModel: %s revision %s S/N %s\n",
 				d->model ? d->model : "n/a",
@@ -595,7 +628,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 		// sysfs returns 1 for loop, mdadm, some other things...annoying :/ this
 		// does not apply to the physical/logical sector sizes (see below)
 		if(get_sysfs_bool(fd,"queue/rotational",&b)){
-			diag("Couldn't determine rotation for %s (%s?)\n",name,strerror(errno));
+			diag("Couldn't determine rotation for %s (%s)\n",name,strerror(errno));
 		}else{
 			if(!b){
 				d->blkdev.rotation = -1;
@@ -605,7 +638,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 		}
 	}
 	if((d->sched = get_sysfs_string(fd,"queue/scheduler")) == NULL){
-		diag("Couldn't determine scheduler for %s (%s?)\n",name,strerror(errno));
+		diag("Couldn't determine scheduler for %s (%s)\n",name,strerror(errno));
 	}
 	while(errno = 0, (dire = readdir(dir)) ){
 		int subfd;
@@ -613,16 +646,16 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 		if(dire->d_type == DT_DIR){
 			if(strcmp(dire->d_name,"queue") == 0){
 				if(get_sysfs_uint(fd,"queue/physical_block_size",&ul)){
-					diag("Couldn't get physical sector for %s (%s?)\n",name,strerror(errno));
+					diag("Couldn't get physical sector for %s (%s)\n",name,strerror(errno));
 				}else{
 					d->physsec = ul;
 				}
 				if(get_sysfs_uint(fd,"queue/logical_block_size",&ul)){
-					diag("Couldn't get logical sector for %s (%s?)\n",name,strerror(errno));
+					diag("Couldn't get logical sector for %s (%s)\n",name,strerror(errno));
 				}else{
 					d->logsec = ul;
 				}
-			}else if((subfd = openat(fd,dire->d_name,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY)) > 0){
+			}else if((subfd = openat(fd,dire->d_name,O_RDONLY|O_CLOEXEC|O_DIRECTORY)) > 0){
 				dev_t devno;
 
 				// Check for "md" to determine if it's an MDADM device
@@ -641,6 +674,11 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 						close(subfd);
 						return -1;
 					}
+				}else if(strcmp(dire->d_name,"holders") == 0){
+					if(check_slavery(d,subfd)){
+						close(subfd);
+						return -1;
+					}
 				}else if(sysfs_exist_p(subfd,"partition")){
 					unsigned long sz,pnum,fsect;
 
@@ -649,18 +687,18 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 						return -1;
 					}
 					if(get_sysfs_uint(subfd,"partition",&pnum)){
-						diag("Couldn't determine pnum for %s (%s?)\n",
+						diag("Couldn't determine pnum for %s (%s)\n",
 								dire->d_name,strerror(errno));
 						pnum = 0;
 					}
 					verbf("\tPartition %lu at %s\n",pnum,dire->d_name);
 					if(get_sysfs_uint(subfd,"start",&fsect)){
-						diag("Couldn't determine first sector for %s (%s?)\n",
+						diag("Couldn't determine first sector for %s (%s)\n",
 								dire->d_name,strerror(errno));
 						sz = 0;
 					}
 					if(get_sysfs_uint(subfd,"size",&sz)){
-						diag("Couldn't determine size for %s (%s?)\n",
+						diag("Couldn't determine size for %s (%s)\n",
 								dire->d_name,strerror(errno));
 						sz = 0;
 					}
@@ -671,14 +709,14 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 				}
 				close(subfd);
 			}else{
-				diag("Couldn't open directory at %s for %s (%s?)\n",
+				diag("Couldn't open directory at %s for %s (%s)\n",
 						dire->d_name,name,strerror(errno));
 				return -1;
 			}
 		}
 	}
 	if(errno){
-		diag("Error walking sysfs:%s (%s?)\n",name,strerror(errno));
+		diag("Error walking sysfs:%s (%s)\n",name,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -690,7 +728,7 @@ explore_sysfs_node(int fd,const char *name,device *d,int recurse){
 	int r;
 
 	if((dir = fdopendir(fd)) == NULL){
-		diag("Couldn't get DIR * from fd %d for %s (%s?)\n",
+		diag("Couldn't get DIR * from fd %d for %s (%s)\n",
 				fd,name,strerror(errno));
 		return -1;
 	}
@@ -779,12 +817,12 @@ parse_pci_busid(const char *busid,unsigned long *domain,unsigned long *bus,
 		return NULL;
 	}
 	if((dir = open(sysfs,O_RDONLY|O_CLOEXEC)) < 0){
-		diag("Couldn't open %s (%s?)\n",sysfs,strerror(errno));
+		diag("Couldn't open %s (%s)\n",sysfs,strerror(errno));
 		free(sysfs);
 		return NULL;
 	}
 	if((r = readlinkat(dir,"driver/module",buf,sizeof(buf))) < 0){
-		diag("Couldn't read link at %.*s/driver/module (%s?)\n",(int)(cur - busid),busid,strerror(errno));
+		diag("Couldn't read link at %.*s/driver/module (%s)\n",(int)(cur - busid),busid,strerror(errno));
 		free(sysfs);
 		return NULL;
 	}
@@ -854,7 +892,7 @@ rescan(const char *name,device *d){
 	}
 	d->swapprio = SWAP_INVALID;
 	if(readlinkat(sysfd,name,buf,sizeof(buf)) < 0){
-		diag("Couldn't read link at %s%s (%s?)\n",
+		diag("Couldn't read link at %s%s (%s)\n",
 			SYSROOT,name,strerror(errno));
 		clobber_device(d);
 		return NULL;
@@ -871,7 +909,7 @@ rescan(const char *name,device *d){
 		verbf("\tController: %s\n",d->c->name);
 	}
 	if((fd = openat(sysfd,buf,O_RDONLY|O_CLOEXEC)) < 0){
-		diag("Couldn't open link at %s%s (%s?)\n",
+		diag("Couldn't open link at %s%s (%s)\n",
 			SYSROOT,buf,strerror(errno));
 		clobber_device(d);
 		return NULL;
@@ -903,8 +941,8 @@ rescan(const char *name,device *d){
 		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
 			int roflag;
 
-			if((dfd = openat(devfd,name,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
-				diag("Couldn't open " DEVROOT "/%s (%s?)\n",name,strerror(errno));
+			if((dfd = openat(devfd,name,O_RDONLY|O_CLOEXEC)) < 0){
+				diag("Couldn't open " DEVROOT "/%s (%s)\n",name,strerror(errno));
 				clobber_device(d);
 				return NULL;
 			}
@@ -929,7 +967,7 @@ rescan(const char *name,device *d){
 				d->blkdev.transport = SERIAL_USB3;
 			}
 			if((d->blkdev.biossha1 = malloc(20)) == NULL){
-				diag("Couldn't alloc SHA1 buf (%s?)\n",strerror(errno));
+				diag("Couldn't alloc SHA1 buf (%s)\n",strerror(errno));
 				clobber_device(d);
 				return NULL;
 			}
@@ -948,7 +986,7 @@ rescan(const char *name,device *d){
 				device *p;
 
 				if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
-					diag("Couldn't probe partition table of %s (%s?)\n",name,strerror(errno));
+					diag("Couldn't probe partition table of %s (%s)\n",name,strerror(errno));
 					clobber_device(d);
 					blkid_free_probe(pr);
 					return NULL;
@@ -1016,7 +1054,7 @@ rescan(const char *name,device *d){
 			}
 			blkid_free_probe(pr);
 		}else if((d->layout != LAYOUT_NONE || !d->blkdev.removable) || errno != ENOMEDIUM){
-			diag("Couldn't probe %s (%s?)\n",name,strerror(errno));
+			diag("Couldn't probe %s (%s)\n",name,strerror(errno));
 			clobber_device(d);
 			return NULL;
 		}else{
@@ -1274,7 +1312,7 @@ inotify_fd(void){
 	int fd;
 
 	if((fd = inotify_init1(IN_NONBLOCK|IN_CLOEXEC)) < 0){
-		diag("Coudln't get inotify fd (%s?)\n",strerror(errno));
+		diag("Coudln't get inotify fd (%s)\n",strerror(errno));
 	}
 	return fd;
 }
@@ -1292,7 +1330,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 
 	if( (r = pthread_attr_init(&attr)) ||
 		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
-		diag("Couldn't set threads detachable (%s?)\n",strerror(errno));
+		diag("Couldn't set threads detachable (%s)\n",strerror(errno));
 	}
 	pthread_mutex_lock(&barrier);
 	assert(thrcount == 0);
@@ -1300,7 +1338,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	if(fd >= 0){
 		*wd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 		if(*wd < 0){
-			diag("Coudln't inotify on %s (%s?)\n",dfp,strerror(errno));
+			diag("Coudln't inotify on %s (%s)\n",dfp,strerror(errno));
 			return -1;
 		}else{
 			verbf("Watching %s on fd %d\n",dfp,*wd);
@@ -1308,13 +1346,13 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	}
 	r = 0;
 	if((dir = opendir(dfp)) == NULL){
-		diag("Coudln't open %s (%s?)\n",dfp,strerror(errno));
+		diag("Coudln't open %s (%s)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
 		pthread_attr_destroy(&attr);
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
-		diag("Coudln't get fd on %s (%s?)\n",dfp,strerror(errno));
+		diag("Coudln't get fd on %s (%s)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
 		closedir(dir);
 		pthread_attr_destroy(&attr);
@@ -1328,7 +1366,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
 			if( (r = pthread_create(&tid,NULL,fxn,strdup(d->d_name))) ){
-				diag("Couldn't create thread (%s?)\n",strerror(errno));
+				diag("Couldn't create thread (%s)\n",strerror(errno));
 				pthread_mutex_lock(&barrier);
 				--thrcount;
 				pthread_mutex_unlock(&barrier);
@@ -1338,7 +1376,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 		r = 0;
 	}
 	if(r == 0 && errno){
-		diag("Error reading %s (%s?)\n",dfp,strerror(errno));
+		diag("Error reading %s (%s)\n",dfp,strerror(errno));
 		r = -1;
 	}else if(r){
 		diag("Error processing %s\n",d->d_name);
@@ -1372,7 +1410,7 @@ get_dir_fd(const char *root){
 	int fd;
 
 	if((fd = open(root,O_RDONLY|O_CLOEXEC|O_DIRECTORY)) < 0){
-		diag("Couldn't get dirfd at %s (%s?)\n",root,strerror(errno));
+		diag("Couldn't get dirfd at %s (%s)\n",root,strerror(errno));
 	}
 	return fd;
 }
@@ -1447,7 +1485,7 @@ event_posix_thread(void *unsafe){
 					}
 				}
 				if(s && errno != EAGAIN && errno != EWOULDBLOCK){
-					diag("Error reading inotify event on %d (%s?)\n",
+					diag("Error reading inotify event on %d (%s)\n",
 							em->ifd,strerror(errno));
 				}
 			}else if(events[r].data.fd == em->ufd){
@@ -1473,7 +1511,7 @@ event_posix_thread(void *unsafe){
 			}
 		}
 	}while(e >= 0);
-	diag("Error processing event queue (%s?)\n",strerror(errno));
+	diag("Error processing event queue (%s)\n",strerror(errno));
 	return NULL;
 }
 
@@ -1486,24 +1524,24 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 	memset(&ev,0,sizeof(ev));
 	ev.events = EPOLLIN | EPOLLRDHUP;
 	if((em = malloc(sizeof(*em))) == NULL){
-		diag("Couldn't create event marshal (%s?)\n",strerror(errno));
+		diag("Couldn't create event marshal (%s)\n",strerror(errno));
 		return -1;
 	}
 	if((em->efd = epoll_create1(EPOLL_CLOEXEC)) < 0){
-		diag("Couldn't create epoll (%s?)\n",strerror(errno));
+		diag("Couldn't create epoll (%s)\n",strerror(errno));
 		free(em);
 		return -1;
 	}
 	ev.data.fd = ifd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,ifd,&ev)){
-		diag("Couldn't add %d to epoll (%s?)\n",ifd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s)\n",ifd,strerror(errno));
 		close(em->efd);
 		free(em);
 		return -1;
 	}
 	ev.data.fd = ufd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,ufd,&ev)){
-		diag("Couldn't add %d to epoll (%s?)\n",ufd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s)\n",ufd,strerror(errno));
 		close(em->efd);
 		free(em);
 		return -1;
@@ -1513,18 +1551,18 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 	em->mdfd = mdfd;
 	em->syswd = syswd;
 	em->bypathwd = bypathwd;
-	if((em->mfd = open(MOUNTS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+	if((em->mfd = open(MOUNTS,O_RDONLY|O_CLOEXEC)) < 0){
 		close(em->efd);
 		free(em);
 		return -1;
 	}
-	if((em->sfd = open(SWAPS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+	if((em->sfd = open(SWAPS,O_RDONLY|O_CLOEXEC)) < 0){
 		close(em->mfd);
 		close(em->efd);
 		free(em);
 		return -1;
 	}
-	if((em->ffd = open(FILESYSTEMS,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+	if((em->ffd = open(FILESYSTEMS,O_RDONLY|O_CLOEXEC)) < 0){
 		close(em->sfd);
 		close(em->mfd);
 		close(em->efd);
@@ -1535,7 +1573,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 	ev.events = EPOLLRDHUP;
 	ev.data.fd = em->ffd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->ffd,&ev)){
-		diag("Couldn't add %d to epoll (%s?)\n",em->ffd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s)\n",em->ffd,strerror(errno));
 		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
@@ -1545,7 +1583,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 	}
 	ev.data.fd = em->sfd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->sfd,&ev)){
-		diag("Couldn't add %d to epoll (%s?)\n",em->sfd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s)\n",em->sfd,strerror(errno));
 		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
@@ -1555,7 +1593,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 	}
 	ev.data.fd = em->mfd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->mfd,&ev)){
-		diag("Couldn't add %d to epoll (%s?)\n",em->mfd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s)\n",em->mfd,strerror(errno));
 		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
@@ -1564,7 +1602,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 		return -1;
 	}
 	if( (r = pthread_create(&eventtid,NULL,event_posix_thread,em)) ){
-		diag("Couldn't create event thread (%s?)\n",strerror(r));
+		diag("Couldn't create event thread (%s)\n",strerror(r));
 		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
@@ -1580,11 +1618,11 @@ kill_event_thread(void){
 	int r = 0,rr;
 
 	if( (rr = pthread_cancel(eventtid)) ){
-		diag("Couldn't cancel event thread (%s?)\n",strerror(rr));
+		diag("Couldn't cancel event thread (%s)\n",strerror(rr));
 		r |= -1;
 	}
 	if( (rr = pthread_join(eventtid,NULL)) ){
-		diag("Couldn't join event thread (%s?)\n",strerror(rr));
+		diag("Couldn't join event thread (%s)\n",strerror(rr));
 		r |= -1;
 	}
 	r |= shutdown_udev();
@@ -1640,7 +1678,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 
 	gui = ui;
 	if(setlocale(LC_ALL,"") == NULL){
-		diag("Couldn't set locale (%s?)\n",strerror(errno));
+		diag("Couldn't set locale (%s)\n",strerror(errno));
 		goto err;
 	}
 	SSL_library_init();
@@ -1701,12 +1739,12 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf,
 			gnu_get_libc_version(),gnu_get_libc_release());
 	if(glight_pci_init()){
-		diag("Couldn't init libpciaccess (%s?)\n",strerror(errno));
+		diag("Couldn't init libpciaccess (%s)\n",strerror(errno));
 	}else{
 		usepci = 1;
 	}
 	if(chdir(SYSROOT)){
-		diag("Couldn't cd to %s (%s?)\n",SYSROOT,strerror(errno));
+		diag("Couldn't cd to %s (%s)\n",SYSROOT,strerror(errno));
 		goto err;
 	}
 	if((sysfd = get_dir_fd(SYSROOT)) < 0){
@@ -1856,7 +1894,7 @@ int rescan_blockdev(const device *d){
 	}
 	diag("Syncing %s via %d...\n",d->name,fd);
 	if(fsync(fd)){
-		diag("Couldn't sync %d for %s (%s?)\n",fd,d->name,strerror(errno));
+		diag("Couldn't sync %d for %s (%s)\n",fd,d->name,strerror(errno));
 	}
 	close(fd);
 	rescan_device(d->name);
@@ -1988,23 +2026,23 @@ write_postbase_hook(const char *fmt,...){
 	FILE *fp;
 
 	if((fp = fopen(GROWLIGHT_SCRIPT,"w")) == NULL){
-		diag("Error opening %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		diag("Error opening %s (%s)\n",GROWLIGHT_SCRIPT,strerror(errno));
 		return -1;
 	}
 	va_start(va,fmt);
 	if(vfprintf(fp,fmt,va) < 0){
 		va_end(va);
-		diag("Error writing %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		diag("Error writing %s (%s)\n",GROWLIGHT_SCRIPT,strerror(errno));
 		fclose(fp);
 		return -1;
 	}
 	va_end(va);
 	if(fclose(fp)){
-		diag("Error closing %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		diag("Error closing %s (%s)\n",GROWLIGHT_SCRIPT,strerror(errno));
 		return -1;
 	}
 	if(chmod(GROWLIGHT_SCRIPT,S_IRUSR|S_IWUSR|S_IXUSR)){
-		diag("Error chmodding %s (%s?)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		diag("Error chmodding %s (%s)\n",GROWLIGHT_SCRIPT,strerror(errno));
 		return -1;
 	}
 	return 0;
