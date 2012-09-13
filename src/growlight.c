@@ -1773,10 +1773,12 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd)){
-		goto err;
+		// This is OK. Older kernels didn't have /dev/disk/by-path.
 	}
 	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd)){
-		goto err;
+		// They won't necessarily have a /dev/md, especially if they
+		// have no md devices. Unfortunately, if we then create one,
+		// they'll have one and it'll need monitoring. FIXME
 	}
 	lock_growlight();
 	if(parse_filesystems(gui,FILESYSTEMS)){
