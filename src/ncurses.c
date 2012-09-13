@@ -1359,7 +1359,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		}
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
 		assert(wprintw(w,"]") != ERR);
-		assert(wmove(w,0,cols - 4) != ERR);
+		assert(wmove(w,0,cols - 5) != ERR);
 		assert(wattron(w,A_BOLD) == OK);
 		waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
 		assert(wattron(w,attrs) != ERR);
