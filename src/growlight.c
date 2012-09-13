@@ -1688,12 +1688,12 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	SSL_library_init();
 	import = 0;
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
-	while((opt = getopt_long(argc,argv,":hnt:vV",ops,&longidx)) >= 0){
+	while((opt = getopt_long(argc,argv,":hit:vV",ops,&longidx)) >= 0){
 		switch(opt){
 		case 'h':{
 			usage(argv[0]);
 			return -1;
-		}case 'n':{
+		}case 'i':{
 			if(import){
 				diag("Error: provided -i/--import twice\n");
 				usage(argv[0]);
