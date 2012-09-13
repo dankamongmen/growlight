@@ -213,7 +213,7 @@ component_table(const aggregate_type *at,int *count,const char *match,int *defid
 		}
 		fo = tmp;
 	}
-	*defidx = (*defidx + 1) % *count;
+	*defidx = *count ? (*defidx + 1) % *count : -1;
 	return fo;
 
 err:
@@ -272,7 +272,15 @@ aggcomp_callback(const char *fn,char **selarray,int selections,int scroll){
 		}
 	}
 	if((comps_agg = component_table(at,&opcount,fn,&defidx,&selarray,&selections)) == NULL){
-		destroy_agg_forms();
+		struct form_option *ops_agg;
+
+		if( (ops_agg = agg_table(&opcount,pending_aggtype,&defidx)) ){
+			raise_form("select an aggregate type",agg_callback,ops_agg,
+					opcount,defidx,AGGTYPE_TEXT);
+		}else{
+			destroy_agg_forms();
+		}
+		locked_diag("There are insufficiently many available devices for %s",pending_aggtype);
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
@@ -311,7 +319,15 @@ aggname_callback(const char *fn){
 	}
 	selarray = NULL;
 	if((comps_agg = component_table(at,&opcount,NULL,&defidx,&selarray,&selections)) == NULL){
-		destroy_agg_forms();
+		struct form_option *ops_agg;
+
+		if( (ops_agg = agg_table(&opcount,pending_aggtype,&defidx)) ){
+			raise_form("select an aggregate type",agg_callback,ops_agg,
+					opcount,defidx,AGGTYPE_TEXT);
+		}else{
+			destroy_agg_forms();
+		}
+		locked_diag("There are insufficiently many available devices for %s",pending_aggtype);
 		return;
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
