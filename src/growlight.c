@@ -1436,7 +1436,7 @@ struct event_marshal {
 	int mfd;		// /proc/mounts fd
 	int sfd;		// /proc/swaps fd
 	int ffd;		// /proc/filesystems fd
-	int mdfd;		// /dev/md/ fd
+	int mdwd;		// /dev/md/ fd
 	int syswd;		// /sys/block watch descriptor
 	int bypathwd;		// /dev/disk/by-path watch descriptor
 };
@@ -1471,6 +1471,13 @@ event_posix_thread(void *unsafe){
 							++thrcount;
 							assert(pthread_mutex_unlock(&barrier) == 0);
 							scan_device(name);
+						}else if(in->wd == em->mdwd){
+							char *name = strdup(in->name);
+							assert(name);
+							assert(pthread_mutex_lock(&barrier) == 0);
+							++thrcount;
+							assert(pthread_mutex_unlock(&barrier) == 0);
+							scan_mdalias(name);
 						}else if(in->wd == em->bypathwd){
 							char *name = strdup(in->name);
 							assert(name);
@@ -1515,7 +1522,7 @@ event_posix_thread(void *unsafe){
 }
 
 static int
-event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
+event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdwd){
 	struct event_marshal *em;
 	struct epoll_event ev;
 	int r;
@@ -1547,7 +1554,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 	}
 	em->ifd = ifd;
 	em->ufd = ufd;
-	em->mdfd = mdfd;
+	em->mdwd = mdwd;
 	em->syswd = syswd;
 	em->bypathwd = bypathwd;
 	if((em->mfd = open(MOUNTS,O_RDONLY|O_CLOEXEC)) < 0){
