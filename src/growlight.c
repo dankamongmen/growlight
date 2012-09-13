@@ -1328,7 +1328,7 @@ typedef void *(*eventfxn)(void *);
 static inline int
 watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	pthread_attr_t attr;
-	struct dirent *d;
+	struct dirent d,*dp;
 	int r,dfd;
 	DIR *dir;
 
@@ -1362,28 +1362,23 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 		pthread_attr_destroy(&attr);
 		return -1;
 	}
-	while( errno = 0, (d = readdir(dir)) ){
+	while( dp = NULL, errno = 0, ((r = readdir_r(dir,&d,&dp)) == 0) && dp){
 		pthread_t tid;
-		r = -1;
-		if(d->d_type == DT_LNK){
+		if(dp->d_type == DT_LNK){
 			pthread_mutex_lock(&barrier);
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
-			if( (r = pthread_create(&tid,NULL,fxn,strdup(d->d_name))) ){
-				diag("Couldn't create thread (%s)\n",strerror(errno));
+			if( (r = pthread_create(&tid,NULL,fxn,strdup(dp->d_name))) ){
+				diag("Couldn't create thread (%s)\n",strerror(r));
 				pthread_mutex_lock(&barrier);
 				--thrcount;
 				pthread_mutex_unlock(&barrier);
 				break;
 			}
 		}
-		r = 0;
 	}
-	if(r == 0 && errno){
-		diag("Error reading %s (%s)\n",dfp,strerror(errno));
-		r = -1;
-	}else if(r){
-		diag("Error processing %s\n",d->d_name);
+	if(r && !dp){
+		diag("Error processing %s (%s)\n",dfp,strerror(errno));
 		r = -1;
 	}
 	closedir(dir);
