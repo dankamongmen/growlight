@@ -999,7 +999,7 @@ static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 			unsigned cols,int topp,unsigned endp){
 	char buf[PREFIXSTRLEN + 1];
-	int selected,co,x,rx,attr;
+	int selected,co,rx,attr;
 	char rolestr[12]; // taken from %-11.11s below
 
 	if(line >= rows - !endp){
@@ -1007,8 +1007,7 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 	}
 	strcpy(rolestr,"");
 	selected = line == rb->selline;
-	x = 1;
-	rx = cols - 78;
+	rx = cols - 79;
 	switch(bo->d->layout){
 case LAYOUT_NONE:
 		if(bo->d->blkdev.realdev){
@@ -1034,12 +1033,10 @@ case LAYOUT_NONE:
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
-					++x;
-					--rx;
 				}else if(selected){
 					wattron(rb->win,A_REVERSE);
 				}
-		mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision ? bo->d->revision : "n/a",
@@ -1069,12 +1066,10 @@ case LAYOUT_MDADM:
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
-					++x;
-					--rx;
 				}else if(selected){
 					wattron(rb->win,A_REVERSE);
 				}
-		mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision ? bo->d->revision : "n/a",
@@ -1098,12 +1093,10 @@ case LAYOUT_DM:
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
-					++x;
-					--rx;
 				}else if(selected){
 					wattron(rb->win,A_REVERSE);
 				}
-		mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision ? bo->d->revision : "n/a",
@@ -1128,12 +1121,10 @@ case LAYOUT_ZPOOL:
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
-					++x;
-					--rx;
 				}else if(selected){
 					wattron(rb->win,A_REVERSE);
 				}
-		mvwprintw(rb->win,line,x,"%-11.11s %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					(uintmax_t)bo->d->zpool.zpoolver,
