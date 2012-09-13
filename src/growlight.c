@@ -556,14 +556,8 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 
 	if(sysfs_exist_p(fd,"partition")){
 		char buf[PATH_MAX],*dev;
-		int r,subfd;
+		int r;
 
-		if((subfd = openat(fd,"holders",O_RDONLY|O_CLOEXEC|O_DIRECTORY)) >= 0){
-			if(check_slavery(d,subfd)){
-				close(subfd);
-				return -1;
-			}
-		}
 		if(recurse){
 			verbf("Not recursing on partition %s\n",name);
 			return -1;
@@ -681,6 +675,8 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 					}
 				}else if(sysfs_exist_p(subfd,"partition")){
 					unsigned long sz,pnum,fsect;
+					device *p;
+					int hfd;
 
 					if(sysfs_devno(subfd,&devno)){
 						close(subfd);
@@ -702,9 +698,17 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 								dire->d_name,strerror(errno));
 						sz = 0;
 					}
-					if(add_partition_inner(d,dire->d_name,devno,pnum,fsect,sz) == NULL){
+					if((p = add_partition_inner(d,dire->d_name,devno,pnum,fsect,sz)) == NULL){
 						close(subfd);
 						return -1;
+					}
+					if((hfd = openat(subfd,"holders",O_RDONLY|O_CLOEXEC|O_DIRECTORY)) >= 0){
+						// check_slavery() closes hfd on success
+						if(check_slavery(p,hfd)){
+							close(hfd);
+							close(subfd);
+							return -1;
+						}
 					}
 				}
 				close(subfd);
