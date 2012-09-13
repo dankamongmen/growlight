@@ -116,7 +116,7 @@ dump_device_targets(const device *d,FILE *fp){
 	for(z = 0 ; z < d->mnt.count ; ++z){
 		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target)) == 0){
 			if(fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",d->name,
-					d->mnt.list[z] + strlen(growlight_target),
+					d->mnt.list[z] + strlen(growlight_target) - 1,
 					d->mnttype,d->mntops.list[z],
 					strcmp(d->mnt.list[z],growlight_target) ? 2 : 1) < 0){
 				return -1;
