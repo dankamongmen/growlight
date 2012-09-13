@@ -1563,7 +1563,7 @@ multiform_options(struct form_state *fs){
 	wattron(fsw,A_BOLD);
 	mvwadd_wch(fsw,1,1,&bchr[2]);
 	mvwadd_wch(fsw,1,fs->longop + 4,&bchr[0]);
-	maxz = getmaxy(fsw) - 3 <= fs->opcount + 1 ? getmaxy(fsw) - 3 : fs->opcount + 1;
+	maxz = getmaxy(fsw) - 3;
 	for(z = 1 ; z < maxz ; ++z){
 		int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
@@ -1576,23 +1576,25 @@ multiform_options(struct form_state *fs){
 		}else if(fs->selections >= z){
 			mvwprintw(fsw,z + 2,START_COL * 2,"%d",z);
 		}
-		wattron(fsw,A_BOLD);
-		wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-		mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
-			fs->longop,fs->longop,opstrs[op].option);
-		if(op == fs->idx){
-			wattron(fsw,A_REVERSE);
-		}
-		wcolor_set(fsw,INPUT_COLOR,NULL);
-		for(selidx = 0 ; selidx < fs->selections ; ++selidx){
-			if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
-				wcolor_set(fsw,SELECTED_COLOR,NULL);
-				break;
+		if(z < fs->opcount + 1){
+			wattron(fsw,A_BOLD);
+			wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+			mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
+				fs->longop,fs->longop,opstrs[op].option);
+			if(op == fs->idx){
+				wattron(fsw,A_REVERSE);
 			}
+			wcolor_set(fsw,INPUT_COLOR,NULL);
+			for(selidx = 0 ; selidx < fs->selections ; ++selidx){
+				if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
+					wcolor_set(fsw,SELECTED_COLOR,NULL);
+					break;
+				}
+			}
+			wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 9,
+				cols - fs->longop * 2 - 9,opstrs[op].desc);
+			wattroff(fsw,A_REVERSE);
 		}
-		wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 9,
-			cols - fs->longop * 2 - 9,opstrs[op].desc);
-		wattroff(fsw,A_REVERSE);
 	}
 	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
 	wattron(fsw,A_BOLD);
