@@ -360,6 +360,7 @@ internal_device_reset(device *d){
 			free(d->blkdev.biossha1); d->blkdev.biossha1 = NULL;
 			free(d->blkdev.pttable); d->blkdev.pttable = NULL;
 			free(d->blkdev.serial); d->blkdev.serial = NULL;
+			free(d->blkdev.wwn); d->blkdev.wwn = NULL;
 			if(d->c){
 				d->c->demand -= transport_bw(d->blkdev.transport);
 			}
@@ -404,7 +405,6 @@ internal_device_reset(device *d){
 	}
 	free(d->sched); d->sched = NULL;
 	free(d->uuid); d->uuid = NULL;
-	free(d->wwn); d->wwn = NULL;
 	free(d->label); d->label = NULL;
 	free(d->model); d->model = NULL;
 	free(d->revision); d->revision = NULL;

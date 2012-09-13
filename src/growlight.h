@@ -103,10 +103,8 @@ typedef struct {
 typedef struct device {
 	char name[NAME_MAX + 1];	// Entry in /dev or /sys/block
 	struct device *next;		// next block device on this controller
-	// FIXME wwn and sn should only be in blockdev
 	// FIXME model/revision should not be in partition
-	char *model,*revision,*sn;	// Arbitrary UTF-8 strings
-	char *wwn;			// World Wide Name
+	char *model,*revision;		// Arbitrary UTF-8 strings
 	// FIXME add by-id, by-label, and by-uuid links?
 	// FIXME handle multiple by-path links?
 	char *bypath;			// Alias in /dev/disks/by-path/
@@ -149,6 +147,7 @@ typedef struct device {
 			void *biossha1;		// SHA1 of first 440 bytes
 			char *pttable;		// Partition table type (can be NULL)
 			char *serial;		// Serial number (can be NULL)
+			char *wwn;		// World Wide Name
 			int32_t rotation;	// Rotation rate:
 						// 0 == unknown, -1 == SSD
 

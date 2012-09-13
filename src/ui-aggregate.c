@@ -153,8 +153,10 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 			}
 		}
 	}
-	if((desc = strdup(d->bypath ? d->bypath : d->model ? d->model :
-				d->wwn ? d->wwn : d->name)) == NULL){
+	if((desc = strdup(d->bypath ? d->bypath :
+			(d->layout == LAYOUT_NONE && d->blkdev.serial) ?
+			d->blkdev.serial :
+			d->name)) == NULL){
 		free(key);
 		return NULL;
 	}

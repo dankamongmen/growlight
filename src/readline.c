@@ -432,7 +432,7 @@ print_drive(const device *d,int descend){
 			 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'⚠' : L'.',
 			d->blkdev.biosboot ? L'B' : L'.',
 			d->blkdev.pttable ? d->blkdev.pttable : "none",
-			d->wwn ? d->wwn : "n/a",
+			d->blkdev.wwn ? d->blkdev.wwn : "n/a",
 			d->blkdev.realdev ? transport_str(d->blkdev.transport) : "n/a"
 			);
 		break;
@@ -446,7 +446,7 @@ print_drive(const device *d,int descend){
 			d->physsec, L'V', L'M', L'.',
 			d->roflag ? L'r' : L'.', L'.',
 			d->mddev.pttable ? d->mddev.pttable : "none",
-			d->wwn ? d->wwn : "n/a",
+			d->mddev.mdname ? d->mddev.mdname : "n/a",
 			transport_str(d->mddev.transport)
 			);
 		break;
@@ -460,7 +460,7 @@ print_drive(const device *d,int descend){
 			d->physsec, L'V', L'D', L'.',
 			d->roflag ? L'r' : L'.', L'.',
 			"n/a",
-			d->wwn ? d->wwn : "n/a",
+			d->dmdev.dmname ? d->dmdev.dmname : "n/a",
 			transport_str(d->dmdev.transport)
 			);
 		break;
@@ -474,7 +474,7 @@ print_drive(const device *d,int descend){
 			d->physsec, L'V', L'Z', L'.',
 			d->roflag ? L'r' : L'.', L'.',
 			"spa",
-			d->wwn ? d->wwn : "n/a",
+			"n/a", // FIXME
 			transport_str(d->zpool.transport)
 			);
 		break;

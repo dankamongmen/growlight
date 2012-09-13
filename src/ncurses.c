@@ -1046,7 +1046,7 @@ case LAYOUT_NONE:
 					qprefix(bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
 					bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
-					bo->d->wwn ? bo->d->wwn : "n/a",
+					bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
 					bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
 					rx,rx,"");
 				if(bo->d->size){
@@ -1081,7 +1081,7 @@ case LAYOUT_MDADM:
 					qprefix(bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
 					bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
-					bo->d->wwn ? bo->d->wwn : "n/a",
+					bo->d->mddev.mdname ? bo->d->mddev.mdname : "n/a",
 					transport_str(bo->d->mddev.transport),
 					rx,rx,"");
 				if(bo->d->size){
@@ -1110,7 +1110,7 @@ case LAYOUT_DM:
 					qprefix(bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
 					bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
-					bo->d->wwn ? bo->d->wwn : "n/a",
+					bo->d->dmdev.dmname ? bo->d->dmdev.dmname : "n/a",
 					transport_str(bo->d->dmdev.transport),
 					rx,rx,"");
 				if(bo->d->size){
@@ -1140,7 +1140,7 @@ case LAYOUT_ZPOOL:
 					qprefix(bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
 					"spa",
-					bo->d->wwn ? bo->d->wwn : "n/a",
+					"n/a", // FIXME
 					transport_str(bo->d->zpool.transport),
 					rx,rx,"");
 				if(bo->d->size){

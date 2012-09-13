@@ -234,6 +234,7 @@ int sg_interrogate(device *d,int fd){
 	char sb[32];
 	unsigned n;
 
+	assert(d->layout == LAYOUT_NONE);
 	memset(buf,0,sizeof(buf));
 	memset(cdb,0,sizeof(cdb));
 	cdb[0]= SG_ATA_16;
@@ -318,11 +319,11 @@ int sg_interrogate(device *d,int fd){
 		verbf("\t%s write-cache: %s\n",d->name,d->blkdev.wcache ? "Enabled" : "Disabled/not present");
 	}
 	if(ntohs(buf[CMDS_SUPP_2]) & WWN_SUP){
-		free(d->wwn);
-		if((d->wwn = malloc(17)) == NULL){
+		free(d->blkdev.wwn);
+		if((d->blkdev.wwn = malloc(17)) == NULL){
 			return -1;
 		}
-		snprintf(d->wwn,17,"%04x%04x%04x%04x",buf[108],buf[109],buf[110],buf[111]);
+		snprintf(d->blkdev.wwn,17,"%04x%04x%04x%04x",buf[108],buf[109],buf[110],buf[111]);
 	}
 	if(buf[CMDS_SUPP_3] & FEATURE_READWRITEVERIFY){
 		if(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY){
