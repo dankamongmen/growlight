@@ -1332,10 +1332,6 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	int r,dfd;
 	DIR *dir;
 
-	if( (r = pthread_attr_init(&attr)) ||
-		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
-		diag("Couldn't set threads detachable (%s)\n",strerror(errno));
-	}
 	pthread_mutex_lock(&barrier);
 	assert(thrcount == 0);
 	pthread_mutex_unlock(&barrier);
@@ -1352,15 +1348,17 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	if((dir = opendir(dfp)) == NULL){
 		diag("Coudln't open %s (%s)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
-		pthread_attr_destroy(&attr);
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
 		diag("Coudln't get fd on %s (%s)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
 		closedir(dir);
-		pthread_attr_destroy(&attr);
 		return -1;
+	}
+	if( (r = pthread_attr_init(&attr)) ||
+		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
+		diag("Couldn't set threads detachable (%s)\n",strerror(errno));
 	}
 	while( dp = NULL, errno = 0, ((r = readdir_r(dir,&d,&dp)) == 0) && dp){
 		pthread_t tid;
@@ -1368,7 +1366,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 			pthread_mutex_lock(&barrier);
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
-			if( (r = pthread_create(&tid,NULL,fxn,strdup(dp->d_name))) ){
+			if( (r = pthread_create(&tid,&attr,fxn,strdup(dp->d_name))) ){
 				diag("Couldn't create thread (%s)\n",strerror(r));
 				pthread_mutex_lock(&barrier);
 				--thrcount;
@@ -1436,7 +1434,7 @@ struct event_marshal {
 	int mfd;		// /proc/mounts fd
 	int sfd;		// /proc/swaps fd
 	int ffd;		// /proc/filesystems fd
-	int mdfd;		// /dev/md/ fd
+	int mdwd;		// /dev/md/ fd
 	int syswd;		// /sys/block watch descriptor
 	int bypathwd;		// /dev/disk/by-path watch descriptor
 };
@@ -1471,6 +1469,13 @@ event_posix_thread(void *unsafe){
 							++thrcount;
 							assert(pthread_mutex_unlock(&barrier) == 0);
 							scan_device(name);
+						}else if(in->wd == em->mdwd){
+							char *name = strdup(in->name);
+							assert(name);
+							assert(pthread_mutex_lock(&barrier) == 0);
+							++thrcount;
+							assert(pthread_mutex_unlock(&barrier) == 0);
+							scan_mdalias(name);
 						}else if(in->wd == em->bypathwd){
 							char *name = strdup(in->name);
 							assert(name);
@@ -1515,7 +1520,7 @@ event_posix_thread(void *unsafe){
 }
 
 static int
-event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
+event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdwd){
 	struct event_marshal *em;
 	struct epoll_event ev;
 	int r;
@@ -1547,7 +1552,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdfd){
 	}
 	em->ifd = ifd;
 	em->ufd = ufd;
-	em->mdfd = mdfd;
+	em->mdwd = mdwd;
 	em->syswd = syswd;
 	em->bypathwd = bypathwd;
 	if((em->mfd = open(MOUNTS,O_RDONLY|O_CLOEXEC)) < 0){
@@ -1768,19 +1773,24 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd)){
-		goto err;
+		// This is OK. Older kernels didn't have /dev/disk/by-path.
 	}
 	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd)){
-		goto err;
+		// They won't necessarily have a /dev/md, especially if they
+		// have no md devices. Unfortunately, if we then create one,
+		// they'll have one and it'll need monitoring. FIXME
 	}
 	lock_growlight();
 	if(parse_filesystems(gui,FILESYSTEMS)){
+		unlock_growlight();
 		goto err;
 	}
 	if(parse_mounts(gui,MOUNTS)){
+		unlock_growlight();
 		goto err;
 	}
 	if(parse_swaps(gui,SWAPS)){
+		unlock_growlight();
 		goto err;
 	}
 	unlock_growlight();
@@ -1793,7 +1803,6 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 	return 0;
 
 err:
-	unlock_growlight();
 	growlight_stop();
 	return -1;
 }
