@@ -1332,10 +1332,6 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	int r,dfd;
 	DIR *dir;
 
-	if( (r = pthread_attr_init(&attr)) ||
-		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
-		diag("Couldn't set threads detachable (%s)\n",strerror(errno));
-	}
 	pthread_mutex_lock(&barrier);
 	assert(thrcount == 0);
 	pthread_mutex_unlock(&barrier);
@@ -1352,15 +1348,17 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	if((dir = opendir(dfp)) == NULL){
 		diag("Coudln't open %s (%s)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
-		pthread_attr_destroy(&attr);
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
 		diag("Coudln't get fd on %s (%s)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
 		closedir(dir);
-		pthread_attr_destroy(&attr);
 		return -1;
+	}
+	if( (r = pthread_attr_init(&attr)) ||
+		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
+		diag("Couldn't set threads detachable (%s)\n",strerror(errno));
 	}
 	while( dp = NULL, errno = 0, ((r = readdir_r(dir,&d,&dp)) == 0) && dp){
 		pthread_t tid;
@@ -1368,7 +1366,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 			pthread_mutex_lock(&barrier);
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
-			if( (r = pthread_create(&tid,NULL,fxn,strdup(dp->d_name))) ){
+			if( (r = pthread_create(&tid,&attr,fxn,strdup(dp->d_name))) ){
 				diag("Couldn't create thread (%s)\n",strerror(r));
 				pthread_mutex_lock(&barrier);
 				--thrcount;
