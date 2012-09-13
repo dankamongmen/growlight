@@ -25,6 +25,9 @@ device_aggregablep(const device *d){
 	if(!mnttype_aggregablep(d->mnttype)){
 		return 0;
 	}
+	if(d->slave){
+		return 0;
+	}
 	if(d->size == 0){
 		return 0;
 	}
