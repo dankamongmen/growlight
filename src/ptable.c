@@ -228,6 +228,10 @@ int make_partition_table(device *d,const char *ptype){
 		diag("Partition table already exists on %s\n",d->name);
 		return -1;
 	}
+	if(d->mnttype){
+		diag("Filesystem exists on %s\n",d->name);
+		return -1;
+	}
 	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,ptype) == 0){
 			if(pt->make(d)){
