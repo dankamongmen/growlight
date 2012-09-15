@@ -17,6 +17,34 @@
 #include "aggregate.h"
 
 static int
+make_parent_directories(const char *path){
+	char dir[PATH_MAX + 1];
+	char *next;
+
+	assert(strlen(path) < sizeof(dir));
+	strcpy(dir,path);
+	next = dir;
+	while(*next && (next = strchr(next,'/')) ){
+		if(next == dir){
+			++next;
+			continue;
+		}
+		*next = '\0';
+		if(mkdir(dir,0755) && errno != EEXIST){
+			diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
+			return -1;
+		}
+		*next = '/';
+		++next;
+	}
+	if(mkdir(dir,0755) && errno != EEXIST){
+		diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+static int
 parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops){
 	const char *t;
 	int r = 0;
@@ -141,9 +169,25 @@ int parse_mounts(const glightui *gui,const char *fn){
 		}
 		idx += r;
 		if(statvfs(mnt,&vfs)){
-			diag("Couldn't stat fs %s (%s?)\n",mnt,strerror(errno));
-			r = -1;
-			continue;
+			int skip = 0;
+
+			// We might have mounted a new target atop or above an
+			// already existing one, in which case we'll need
+			// possibly recreate the directory structure on the
+			// newly-mounted filesystem.
+			if(growlight_target){
+				if(strncmp(mnt,growlight_target,strlen(growlight_target)) == 0){
+					if(make_parent_directories(mnt) == 0){
+						skip = 1;
+					} // FIXME else remount? otherwise writes
+					// go to new filesystem rather than old...?
+				}
+			}
+			if(!skip){
+				diag("Couldn't stat fs %s (%s?)\n",mnt,strerror(errno));
+				r = -1;
+				continue;
+			}
 		}
 		if(*dev != '/'){ // have to get zfs's etc
 			if(fstype_virt_p(fs)){
@@ -210,34 +254,6 @@ err:
 	munmap_virt(map,len);
 	close(fd);
 	return -1;
-}
-
-static int
-make_parent_directories(const char *path){
-	char dir[PATH_MAX + 1];
-	char *next;
-
-	assert(strlen(path) < sizeof(dir));
-	strcpy(dir,path);
-	next = dir;
-	while(*next && (next = strchr(next,'/')) ){
-		if(next == dir){
-			++next;
-			continue;
-		}
-		*next = '\0';
-		if(mkdir(dir,0755) && errno != EEXIST){
-			diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
-			return -1;
-		}
-		*next = '/';
-		++next;
-	}
-	if(mkdir(dir,0755) && errno != EEXIST){
-		diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
-		return -1;
-	}
-	return 0;
 }
 
 int mmount(device *d,const char *targ){
