@@ -119,11 +119,12 @@ int parse_mounts(const glightui *gui,const char *fn){
 	char *mnt,*dev,*ops,*fs;
 	off_t len,idx;
 	char *map;
-	int fd;
+	int fd,r;
 
 	if((map = map_virt_file(fn,&fd,&len)) == MAP_FAILED){
 		return -1;
 	}
+	r = 0;
 	idx = 0;
 	dev = mnt = fs = ops = NULL;
 	while(idx < len){
@@ -140,8 +141,9 @@ int parse_mounts(const glightui *gui,const char *fn){
 		}
 		idx += r;
 		if(statvfs(mnt,&vfs)){
-			diag("Couldn't stat fs %s (%s?)\n",dev,strerror(errno));
-			return -1;
+			diag("Couldn't stat fs %s (%s?)\n",mnt,strerror(errno));
+			r = -1;
+			continue;
 		}
 		if(*dev != '/'){ // have to get zfs's etc
 			if(fstype_virt_p(fs)){
@@ -157,11 +159,13 @@ int parse_mounts(const glightui *gui,const char *fn){
 				if(S_ISLNK(st.st_mode)){
 					if((r = readlink(dev,buf,sizeof(buf))) < 0){
 						diag("Couldn't deref %s (%s?)\n",dev,strerror(errno));
-						goto err;
+						r = -1;
+						continue;
 					}
 					if((size_t)r >= sizeof(buf)){
 						diag("Name too long for %s (%d?)\n",dev,r);
-						goto err;
+						r = -1;
+						continue;
 					}
 					buf[r] = '\0';
 					rp = buf;
@@ -201,7 +205,7 @@ int parse_mounts(const glightui *gui,const char *fn){
 	mnt = fs = ops = NULL;
 	munmap_virt(map,len);
 	close(fd);
-	return 0;
+	return r;
 
 err:
 	free(dev); free(mnt); free(fs); free(ops);
