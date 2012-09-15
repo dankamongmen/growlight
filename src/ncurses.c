@@ -2493,6 +2493,31 @@ new_partition(void){
 // -------------------------------------------------------------------------
 // - partition tabletype form, for new partition table creation
 // -------------------------------------------------------------------------
+static inline int
+partition_table_makeablep(const blockobj *b){
+	if(!b){
+		locked_diag("Lost selection while choosing table type");
+		return 0;
+	}
+	if(blockobj_unloadedp(b)){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return 0;
+	}
+	if(!selected_unpartitionedp()){
+		locked_diag("Partition table exists on %s",b->d->name);
+		return 0;
+	}
+	if(b->d->layout != LAYOUT_NONE){
+		locked_diag("Will not create partition table on %s",b->d->name);
+		return 0;
+	}
+	if(b->d->mnttype){
+		locked_diag("Filesystem signature exists on %s",b->d->name);
+		return 0;
+	}
+	return 1;
+}
+
 static void
 pttype_callback(const char *pttype){
 	blockobj *b;
@@ -2501,11 +2526,14 @@ pttype_callback(const char *pttype){
 		locked_diag("Partition table creation cancelled by the user");
 		return;
 	}
-	if(!current_adapter || !(b = current_adapter->selected)){
+	if(!current_adapter){
 		locked_diag("Lost selection while choosing table type");
 		return;
 	}
 	b = current_adapter->selected;
+	if(!partition_table_makeablep(b)){
+		return;
+	}
 	if(make_partition_table(b->d,pttype) == 0){
 		locked_diag("Made %s table on %s",pttype,b->d->name);
 	}
@@ -4408,12 +4436,7 @@ make_ptable(void){
 		locked_diag("Partition table creation requires selection of a block device");
 		return;
 	}
-	if(selected_unloadedp()){
-		locked_diag("Media is not loaded on %s",b->d->name);
-		return;
-	}
-	if(!selected_unpartitionedp()){
-		locked_diag("Partition table already exists on %s",b->d->name);
+	if(!partition_table_makeablep(b)){
 		return;
 	}
 	if((ops_ptype = pttype_table(&opcount)) == NULL){
