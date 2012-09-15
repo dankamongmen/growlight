@@ -64,6 +64,7 @@
 			<arg>-i | --import</arg>
 			<arg>-v | --verbose</arg>
 			<arg>-V | --version</arg>
+			<arg>--disphelp</arg>
 			<arg>-t path | --target=path</arg>
 		</cmdsynopsis>
 	</refsynopsisdiv>
@@ -105,6 +106,12 @@ device scans at startup.</para>
 			<term>-V | --version</term>
 			<listitem>
 			<para>Print version information and exit.</para>
+			</listitem>
+		</varlistentry>
+		<varlistentry>
+			<term>--disphelp</term>
+			<listitem>
+			<para>Display the help subdisplay upon startup.</para>
 			</listitem>
 		</varlistentry>
 		<varlistentry>
