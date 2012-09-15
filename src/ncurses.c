@@ -169,7 +169,10 @@ enum {
 	METADATA_COLOR,			// Partition table metadata
 	MDADM_COLOR,
 	ZPOOL_COLOR,
-	PARTITION_COLOR,		// A defined but unused partition
+	PART_COLOR0,			// A defined but unused partition
+	PART_COLOR1,
+	PART_COLOR2,
+	PART_COLOR3,
 	FORMBORDER_COLOR,
 	FORMTEXT_COLOR,
 	INPUT_COLOR,			// Form input color
@@ -209,6 +212,14 @@ next_mountco(int mountco){
 	return mountco;
 }
 
+static inline int
+next_partco(int partco){
+	if(++partco > PART_COLOR3){
+		partco = PART_COLOR0;
+	}
+	return partco;
+}
+
 #define COLOR_LIGHTRED 9
 #define COLOR_LIGHTGREEN 10
 #define COLOR_LIGHTYELLOW 11
@@ -220,6 +231,10 @@ next_mountco(int mountco){
 #define COLOR_SKYBLUE 0x20 // 32 (xterm color cube)
 #define COLOR_PURPLE 0x39 // incredibly vibrant
 #define COLOR_LIGHTPURPLE 0x3f
+#define COLOR_CYAN0 0x21
+#define COLOR_CYAN1 0x23
+#define COLOR_CYAN2 0x2c
+#define COLOR_CYAN3 0x33
 #define COLOR_MAGENTA0 0x44
 #define COLOR_MAGENTA1 0x46
 #define COLOR_MAGENTA2 0x48
@@ -284,7 +299,18 @@ setup_colors(void){
 		assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != ERR);
 	}
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
-	assert(init_pair(PARTITION_COLOR,COLOR_CYAN,-1) == OK);
+	if(init_pair(PART_COLOR0,COLOR_CYAN0,-1) == ERR){
+		assert(init_pair(PART_COLOR0,COLOR_CYAN,-1) == OK);
+	}
+	if(init_pair(PART_COLOR1,COLOR_CYAN1,-1) == ERR){
+		assert(init_pair(PART_COLOR1,COLOR_CYAN,-1) == OK);
+	}
+	if(init_pair(PART_COLOR2,COLOR_CYAN2,-1) == ERR){
+		assert(init_pair(PART_COLOR2,COLOR_CYAN,-1) == OK);
+	}
+	if(init_pair(PART_COLOR3,COLOR_CYAN3,-1) == ERR){
+		assert(init_pair(PART_COLOR3,COLOR_CYAN,-1) == OK);
+	}
 	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
 	if(init_pair(FORMTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == ERR){
 		assert(init_pair(FORMTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != ERR);
@@ -358,7 +384,10 @@ form_colors(void){
 	init_pair(METADATA_COLOR,-1,-1);
 	init_pair(MDADM_COLOR,-1,-1);
 	init_pair(ZPOOL_COLOR,-1,-1);
-	init_pair(PARTITION_COLOR,-1,-1);
+	init_pair(PART_COLOR0,-1,-1);
+	init_pair(PART_COLOR1,-1,-1);
+	init_pair(PART_COLOR2,-1,-1);
+	init_pair(PART_COLOR3,-1,-1);
 	init_pair(MOUNT_COLOR0,-1,-1);
 	init_pair(MOUNT_COLOR1,-1,-1);
 	init_pair(MOUNT_COLOR2,-1,-1);
@@ -830,10 +859,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	char pre[PREFIXSTRLEN + 1];
 	const char *selstr = NULL;
 	wchar_t wbuf[ex - sx + 2];
+	int targco,mountco,partco;
 	const device *d = bo->d;
 	unsigned off = sx - 1;
 	char buf[ex - sx + 2];
-	int targco,mountco;
 	const zobj *z;
 
 	if(d->mnttype){
@@ -898,6 +927,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	if((z = bo->zchain) == NULL){
 		return;
 	}
+	partco = PART_COLOR0;
 	targco = TARGET_COLOR0;
 	mountco = MOUNT_COLOR0;
 	do{
@@ -928,7 +958,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 					assert(wattrset(w,A_BOLD|COLOR_PAIR(mountco)) == OK);
 					mountco = next_mountco(mountco);
 				}else{
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+					assert(wattrset(w,A_BOLD|COLOR_PAIR(partco)) == OK);
+					partco = next_partco(partco);
 				}
 				wattron(w,A_UNDERLINE);
 				// FIXME need to store pname as multibyte char *
@@ -943,7 +974,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 					assert(wattrset(w,COLOR_PAIR(mountco)) == OK);
 					mountco = next_mountco(mountco);
 				}else{
-					assert(wattrset(w,COLOR_PAIR(PARTITION_COLOR)) == OK);
+					assert(wattrset(w,COLOR_PAIR(partco)) == OK);
+					partco = next_partco(partco);
 				}
 			}
 			if(z->p->partdev.alignment < d->physsec){ // misaligned!
@@ -1226,9 +1258,9 @@ case LAYOUT_ZPOOL:
 	}
 
 	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PARTITION_COLOR)) == OK);
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PART_COLOR3)) == OK);
 	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PARTITION_COLOR)) == OK);
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PART_COLOR3)) == OK);
 	}
 	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
@@ -1243,7 +1275,7 @@ case LAYOUT_ZPOOL:
 		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
 					cols - START_COL - 1,selected);
 	}
-	attr = A_BOLD | COLOR_PAIR(PARTITION_COLOR);
+	attr = A_BOLD | COLOR_PAIR(PART_COLOR3);
 	if(selected){
 		attr |= A_REVERSE;
 	}
