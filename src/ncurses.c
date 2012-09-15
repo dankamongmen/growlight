@@ -155,7 +155,8 @@ enum {
 	STATUS_COLOR,
 	UHEADING_COLOR,
 	UNHEADING_COLOR,
-	UBORDER_COLOR,
+	UBORDER_COLOR,			// Adapters
+	SELBORDER_COLOR,		// Current adapter
 	PBORDER_COLOR,
 	PHEADING_COLOR,
 	SUBDISPLAY_COLOR,
@@ -217,11 +218,12 @@ next_mountco(int mountco){
 #define COLOR_LIGHTWHITE 15
 #define COLOR_HIDDEN 16
 #define COLOR_SKYBLUE 0x20 // 32 (xterm color cube)
+#define COLOR_PURPLE 0x39 // incredibly vibrant
 #define COLOR_LIGHTPURPLE 0x3f
-#define COLOR_MAGENTA0 0x33
-#define COLOR_MAGENTA1 0x34
-#define COLOR_MAGENTA2 0x35
-#define COLOR_MAGENTA3 0x36
+#define COLOR_MAGENTA0 0x44
+#define COLOR_MAGENTA1 0x46
+#define COLOR_MAGENTA2 0x48
+#define COLOR_MAGENTA3 0x4a
 #define COLOR_WHITE0 0xfc
 #define COLOR_WHITE1 0xfa
 #define COLOR_WHITE2 0xf8
@@ -252,11 +254,16 @@ setup_colors(void){
 	if(init_pair(STATUS_COLOR,COLOR_SKYBLUE,-1) == ERR){
 		assert(init_pair(STATUS_COLOR,COLOR_YELLOW,-1) != ERR);
 	}
-	assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) == OK);
+	if(init_pair(UHEADING_COLOR,COLOR_WHITE,-1) == ERR){
+		assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) != ERR);
+		assert(init_pair(SELBORDER_COLOR,COLOR_CYAN,-1) != ERR);
+	}else{
+		assert(init_pair(SELBORDER_COLOR,COLOR_BLUE,-1) != ERR);
+	}
 	if(init_pair(UNHEADING_COLOR,COLOR_SKYBLUE,-1) == ERR){
 		assert(init_pair(UNHEADING_COLOR,COLOR_BLUE,-1) != ERR);
 	}
-	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) == OK);
+	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) != ERR);
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,COLOR_BLACK) == OK);
@@ -335,11 +342,10 @@ setup_colors(void){
 static void
 form_colors(void){
 	// Don't reset the status color or header color, nor (obviously) the
-	// form nor splash colors
+	// form nor splash colors. We also leave on the adapter borders.
 	locked_diag("%s",""); // Don't leave a highlit status up from long ago
 	init_pair(UHEADING_COLOR,-1,-1);
 	init_pair(UNHEADING_COLOR,-1,-1);
-	init_pair(UBORDER_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
 	init_pair(PHEADING_COLOR,-1,-1);
 	init_pair(SUBDISPLAY_COLOR,-1,-1);
@@ -1312,13 +1318,15 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 	int attrs;
 
 	getmaxyx(w,rows,cols);
-	bcolor = UBORDER_COLOR;
 	if(current){
 		hcolor = UHEADING_COLOR; // plus A_BOLD
+		bcolor = SELBORDER_COLOR;
+		attrs = A_BOLD;
 	}else{
 		hcolor = UNHEADING_COLOR;;
+		bcolor = UBORDER_COLOR;
+		attrs = A_NORMAL;
 	}
-	attrs = current ? A_REVERSE : A_NORMAL;
 	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
 	if(abovetop == 0){
 		if(belowend == 0){
