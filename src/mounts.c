@@ -119,12 +119,11 @@ int parse_mounts(const glightui *gui,const char *fn){
 	char *mnt,*dev,*ops,*fs;
 	off_t len,idx;
 	char *map;
-	int fd,r;
+	int fd;
 
 	if((map = map_virt_file(fn,&fd,&len)) == MAP_FAILED){
 		return -1;
 	}
-	r = 0;
 	idx = 0;
 	dev = mnt = fs = ops = NULL;
 	while(idx < len){
@@ -159,12 +158,10 @@ int parse_mounts(const glightui *gui,const char *fn){
 				if(S_ISLNK(st.st_mode)){
 					if((r = readlink(dev,buf,sizeof(buf))) < 0){
 						diag("Couldn't deref %s (%s?)\n",dev,strerror(errno));
-						r = -1;
 						continue;
 					}
 					if((size_t)r >= sizeof(buf)){
 						diag("Name too long for %s (%d?)\n",dev,r);
-						r = -1;
 						continue;
 					}
 					buf[r] = '\0';
@@ -205,7 +202,7 @@ int parse_mounts(const glightui *gui,const char *fn){
 	mnt = fs = ops = NULL;
 	munmap_virt(map,len);
 	close(fd);
-	return r;
+	return 0;
 
 err:
 	free(dev); free(mnt); free(fs); free(ops);
