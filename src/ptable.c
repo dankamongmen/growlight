@@ -169,9 +169,10 @@ static const struct ptable {
 	}
 };
 
+// Only returns those ptable types we can create
 pttable_type *get_ptable_types(int *count){
 	pttable_type *pt;
-	int z;
+	int z,w;
 
 	*count = (sizeof(ptables) / sizeof(*ptables)) - 1;
 	if(*count <= 0){
@@ -182,21 +183,26 @@ pttable_type *get_ptable_types(int *count){
 		*count = 0;
 		return NULL;
 	}
-	for(z = 0 ; z < *count ; ++z){
-		if((pt[z].name = strdup(ptables[z].name)) == NULL){
+	for(w = 0, z = 0 ; z < *count ; ++z){
+		if(ptables[z].make == NULL){
+			continue;
+		}
+		if((pt[w].name = strdup(ptables[z].name)) == NULL){
 			goto err;
 		}
-		if((pt[z].desc = strdup(ptables[z].desc)) == NULL){
-			free(pt[z].name);
+		if((pt[w].desc = strdup(ptables[z].desc)) == NULL){
+			free(pt[w].name);
 			goto err;
 		}
+		++w;
 	}
+	*count = w;
 	return pt;
 
 err:
-	while(z--){
-		free(pt[z].name);
-		free(pt[z].desc);
+	while(w--){
+		free(pt[w].name);
+		free(pt[w].desc);
 	}
 	free(pt);
 	*count = 0;
