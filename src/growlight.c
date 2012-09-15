@@ -71,12 +71,6 @@ static pthread_mutex_t barrier = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t barrier_cond = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t discovery_cond = PTHREAD_COND_INITIALIZER;
 
-// Global state for a growlight instance
-typedef struct devtable {
-	controller *controllers;
-	device *virtual_blockdevs;
-} devtable;
-
 static controller virtual_bus = {
 	.name = "Virtual devices",
 	.next = NULL,
@@ -150,15 +144,6 @@ int get_logs(unsigned n,logent *cplogs){
 	}
 	return idx;
 }
-
-static void
-push_devtable(devtable *dt){
-	dt->controllers = controllers;
-	dt->virtual_blockdevs = virtual_bus.blockdevs;
-	virtual_bus.blockdevs = NULL;
-	controllers = &virtual_bus;
-}
-
 
 void diag(const char *fmt,...){
 	va_list vac,ap;
@@ -441,11 +426,10 @@ clobber_device(device *d){
 }
 
 static void
-free_devtable(devtable *dt){
+free_devtable(void){
 	controller *c;
-	device *d;
 
-	while( (c = dt->controllers) ){
+	while( (c = controllers) ){
 		device *d;
 
 		if(c->bus == BUS_VIRTUAL){
@@ -455,16 +439,12 @@ free_devtable(devtable *dt){
 			c->blockdevs = d->next;
 			clobber_device(d);
 		}
-		dt->controllers = c->next;
+		controllers = c->next;
 		if(c->uistate){
 			gui->adapter_free(c->uistate);
 		}
 		free_controller(c);
 		free(c);
-	}
-	while( (d = dt->virtual_blockdevs) ){
-		dt->virtual_blockdevs = d->next;
-		clobber_device(d);
 	}
 }
 
@@ -1840,14 +1820,16 @@ err:
 }
 
 int growlight_stop(void){
-	devtable dt;
 	int r = 0;
 
+	diag("Killing the event thread...\n");
 	r |= kill_event_thread();
+	diag("Closing libblkid...\n");
 	r |= close_blkid();
-	push_devtable(&dt);
-	free_devtable(&dt);
+	diag("Freeing devtable...\n");
+	free_devtable();
 	if(usepci){
+		diag("Closing libpci...\n");
 		pci_cleanup(pciacc);
 	}
 	usepci = 0;
@@ -1860,6 +1842,7 @@ int growlight_stop(void){
 			return -1;
 		}
 	}
+	diag("Returning %d...\n",r);
 	if(r){
 		return -1;
 	}

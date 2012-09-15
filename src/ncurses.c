@@ -522,16 +522,6 @@ selected_partitionp(void){
 }
 
 static inline int
-blockobj_inusep(const blockobj *b){
-	return (b->d && b->d->mnttype) || (b->zone);
-}
-
-static inline int
-selected_inusep(void){
-	return blockobj_inusep(get_selected_blockobj());
-}
-
-static inline int
 mkfs_safe_p(const device *d){
 	if(d->mnttype){
 		locked_diag("Filesystem signature already exists on %s",d->name);
@@ -4713,8 +4703,8 @@ delete_partition(void){
 		locked_diag("Cannot remove empty space; partition it instead");
 		return;
 	}
-	if(selected_inusep()){
-		locked_diag("%s is in use",b->zone->p->name);
+	if(b->zone->p->mnttype){
+		locked_diag("%s has a valid filesystem signature",b->zone->p->name);
 		return;
 	}
 	confirm_operation("delete the partition",delete_partition_confirm);
