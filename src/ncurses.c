@@ -4036,8 +4036,13 @@ map_details(WINDOW *hw){
 	rows = getmaxy(hw) - 1;
 	y = 1;
 	if(growlight_target){
-		wattrset(hw,A_BOLD|COLOR_PAIR(UHEADING_COLOR));
+		int blockout;
+
+		wattrset(hw,A_BOLD|COLOR_PAIR(PHEADING_COLOR));
 		mvwprintw(hw,y,1,"Operating in target mode (%s)",growlight_target);
+		if( (blockout = cols - getcurx(hw) - 1) ){
+			wprintw(hw,"%*.*s",blockout,blockout,"");
+		}
 		++y;
 	}
 	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
