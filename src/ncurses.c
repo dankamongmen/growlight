@@ -2103,7 +2103,7 @@ fs_do_internal(device *d,const char *fst,const char *name){
 	struct panel_state *ps;
 	int r;
 
-	if(mkfs_safe_p(d)){
+	if(!mkfs_safe_p(d)){
 		return -1;
 	}
 	ps = show_splash(L"Creating filesystem...");
