@@ -1400,9 +1400,10 @@ version(const char *name){
 }
 
 static void
-usage(const char *name){
+usage(const char *name,int disphelp){
 	diag("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
-				"\t[ -t|--target=path ] [ -i|--import ]\n",basename(name));
+		"\t[ -t|--target=path ] [ -i|--import ]%s\n",
+		basename(name),disphelp ? " [ --disphelp ]" : "");
 }
 
 static int
@@ -1645,7 +1646,7 @@ init_special_adapters(void){
 	}
 }
 
-int growlight_init(int argc,char * const *argv,const glightui *ui){
+int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp){
 	static const struct option ops[] = {
 		{
 			.name = "help",
@@ -1673,6 +1674,11 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			.flag = NULL,
 			.val = 'V',
 		},{
+			.name = "disphelp",
+			.has_arg = 0,
+			.flag = NULL,
+			.val = 'D',
+		},{
 			.name = NULL,
 			.has_arg = 0,
 			.flag = NULL,
@@ -1680,7 +1686,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		},
 	};
 	int fd,opt,longidx,udevfd,syswd,mdwd,bypathwd;
-	int import;
+	int import,detcopy;
 	char buf[BUFSIZ];
 
 	gui = ui;
@@ -1689,17 +1695,23 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		goto err;
 	}
 	SSL_library_init();
+	if(disphelp){
+		detcopy = *disphelp;
+		*disphelp = 0;
+	}else{
+		detcopy = 0;
+	}
 	import = 0;
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
 	while((opt = getopt_long(argc,argv,":hit:vV",ops,&longidx)) >= 0){
 		switch(opt){
 		case 'h':{
-			usage(argv[0]);
+			usage(argv[0],detcopy);
 			return -1;
 		}case 'i':{
 			if(import){
 				diag("Error: provided -i/--import twice\n");
-				usage(argv[0]);
+				usage(argv[0],detcopy);
 				return -1;
 			}
 			import = 1;
@@ -1708,15 +1720,15 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 			if(growlight_target){
 				diag("Error: defined -t/--target twice (%s, %s)\n",
 						growlight_target,optarg);
-				usage(argv[0]);
+				usage(argv[0],detcopy);
 				return -1;
 			}else if(optarg == NULL){
 				diag("-t|--target requires an argument\n");
-				usage(argv[0]);
+				usage(argv[0],detcopy);
 				return -1;
 			}else{
 				if(set_target(optarg)){
-					usage(argv[0]);
+					usage(argv[0],detcopy);
 					return -1;
 				}
 			}
@@ -1727,17 +1739,34 @@ int growlight_init(int argc,char * const *argv,const glightui *ui){
 		}case 'V':{
 			version(argv[0]);
 			return -1;
+		}case 'D':{
+			if(!detcopy){
+				diag("Error: unknown option --disphelp\n");
+				usage(argv[0],detcopy);
+				return -1;
+			}
+			if(*disphelp){
+				diag("Error: provided --disphelp twice\n");
+				usage(argv[0],detcopy);
+				return -1;
+			}
+			*disphelp = 1;
+			break;
 		}case ':':{
 			diag("Option requires argument: '%c'\n",optopt);
-			usage(argv[0]);
+			usage(argv[0],detcopy);
 			return -1;
 		}case '?':{
-			diag("Unknown option: '%c'\n",optopt);
-			usage(argv[0]);
+			if(isgraph(optopt)){
+				diag("Unknown option: '%c'\n",optopt);
+			}else{
+				diag("Unknown option: '%s'\n",argv[optind - 1]);
+			}
+			usage(argv[0],detcopy);
 			return -1;
 		}default:{
 			diag("Misuse of option: '%c'\n",optopt);
-			usage(argv[0]);
+			usage(argv[0],detcopy);
 			return -1;
 		} }
 	}

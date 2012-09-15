@@ -2148,7 +2148,7 @@ int main(int argc,char * const *argv){
 		.block_free = block_free,
 	};
 
-	if(growlight_init(argc,argv,&ui)){
+	if(growlight_init(argc,argv,&ui,NULL)){
 		return EXIT_FAILURE;
 	}
 	rl_readline_name = PACKAGE;

@@ -54,7 +54,7 @@ typedef struct growlight_ui {
 	void (*block_free)(void *,void *);
 } glightui;
 
-int growlight_init(int,char * const *,const glightui *);
+int growlight_init(int,char * const *,const glightui *,int *);
 int growlight_stop(void);
 
 struct device;

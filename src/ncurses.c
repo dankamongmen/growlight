@@ -6068,6 +6068,7 @@ int main(int argc,char * const *argv){
 	};
 	WINDOW *w;
 	struct panel_state *ps;
+	int showhelp = 1;
 
 	if(setlocale(LC_ALL,"") == NULL){
 		fprintf(stderr,"Couldn't find locale\n");
@@ -6077,13 +6078,19 @@ int main(int argc,char * const *argv){
 		return EXIT_FAILURE;
 	}
 	ps = show_splash(L"Initializing...");
-	if(growlight_init(argc,argv,&ui)){
+	if(growlight_init(argc,argv,&ui,&showhelp)){
 		kill_splash(ps);
 		ncurses_cleanup(&w);
 		dump_diags();
 		return EXIT_FAILURE;
 	}
+	lock_growlight();
 	kill_splash(ps);
+	if(showhelp){
+		toggle_panel(w,&help,display_help);
+		screen_update();
+	}
+	unlock_growlight();
 	handle_ncurses_input(w);
 	ps = show_splash(L"Shutting down...");
 	if(growlight_stop()){
