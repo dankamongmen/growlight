@@ -428,10 +428,10 @@ static struct fs virtfss[] = {
 		.name = "fusectl",
 		.desc = "Filesystem in UserSpacE management",
 	},{
-		.name = "fuseiso",
+		.name = "fuse.fuseiso",
 		.desc = "FUSE ISO9660 support",
 	},{
-		.name = "fuseiso9660",
+		.name = "fuse.fuseiso9660",
 		.desc = "FUSE ISO9660 support",
 	},{
 		.name = NULL,
