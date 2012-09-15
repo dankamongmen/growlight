@@ -3752,7 +3752,7 @@ dump_diags(void){
 			break;
 		}
 		assert(ctime_r(&l[r].when,tbuf));
-		fprintf(stderr,"%s %s\n",tbuf,l[r].msg);
+		fprintf(stderr,"%s %s",tbuf,l[r].msg);
 		free(l[r].msg);
 	}
 	return 0;
