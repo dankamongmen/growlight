@@ -145,9 +145,42 @@ const aggregate_type *get_aggregate_types(int *count){
 }
 
 int assemble_aggregates(void){
-	diag("Scanning for zpools...\n");
-	vspopen_drain("zpool import -a");
-	diag("Scanning for MD devices...\n");
-	vspopen_drain("mdadm --assemble --scan");
+	int zpool = 0,mdraid = 0;
+	const controller *c;
+
+	// FIXME maybe only do it if there are both aggregable devices and
+	// they're not currently slaves of anything?
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			const device *p;
+
+			if(d->mnttype){
+				if(zpool_p(d->mnttype)){
+					zpool = 1;
+				}else if(mdraid_p(d->mnttype)){
+					mdraid = 1;
+				}
+			}
+			for(p = d->parts ; p ; p = p->next){
+				if(p->mnttype){
+					if(zpool_p(p->mnttype)){
+						zpool = 1;
+					}else if(mdraid_p(p->mnttype)){
+						mdraid = 1;
+					}
+				}
+			}
+		}
+	}
+	if(zpool){
+		diag("Scanning for zpools...\n");
+		vspopen_drain("zpool import -a");
+	}
+	if(mdraid){
+		diag("Scanning for MD devices...\n");
+		vspopen_drain("mdadm --assemble --scan");
+	}
 	return 0;
 }

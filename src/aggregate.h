@@ -9,12 +9,28 @@ aggregate_default_p(const char *aggtype){
 }
 
 static inline int
+zpool_p(const char *mnttype){
+	if(strcmp(mnttype,"zfs_member") == 0){
+		return 1;
+	}
+	return 0;
+}
+
+static inline int
+mdraid_p(const char *mnttype){
+	if(strcmp(mnttype,"linux_raid_member") == 0){
+		return 1;
+	}
+	return 0;
+}
+
+static inline int
 mnttype_aggregablep(const char *mnttype){
 	if(mnttype == NULL){
 		return 1;
-	}else if(strcmp(mnttype,"zfs_member") == 0){
+	}else if(zpool_p(mnttype)){
 		return 1;
-	}else if(strcmp(mnttype,"linux_raid_member") == 0){
+	}else if(mdraid_p(mnttype)){
 		return 1;
 	}
 	return 0;
