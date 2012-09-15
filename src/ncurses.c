@@ -1018,12 +1018,12 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			mvwaddch(w,y,off,rep);
 		}
-		if(wcslen(wbuf) > och){
+		if(wcslen(wbuf) && wcslen(wbuf) > och){
 			assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",z->p->mnttype) <= sizeof(wbuf));
 		}
 		if(wcslen(wbuf) && och >= wcslen(wbuf)){
 			size_t start = ((och + wcslen(wbuf)) / 2) +
-					!((och + wcslen(wbuf)) % 2);
+					((och + wcslen(wbuf)) % 2);
 
 			wattron(w,A_BOLD);
 			mvwaddwstr(w,y,off - start,wbuf);
