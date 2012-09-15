@@ -3227,7 +3227,9 @@ static void
 push_adapters_above(reelbox *pusher,int rows,int cols,int delta){
 	reelbox *rb;
 
-	assert(delta < 0);
+	if(delta >= 0){
+		return;
+	}
 	//fprintf(stderr,"pushing up %d from %s@%d\n",delta,pusher ? pusher->as ? pusher->as->adapter->name : "destroyed" : "all",
 	//	      pusher ? pusher->scrline : rows);
 	rb = top_reelbox;

@@ -14,6 +14,7 @@
 #include "mmap.h"
 #include "mounts.h"
 #include "growlight.h"
+#include "aggregate.h"
 
 static int
 parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops){
@@ -249,6 +250,10 @@ int mmount(device *d,const char *targ){
 	}
 	if(!d->mnttype){
 		diag("%s does not have a filesystem signature\n",d->name);
+		return -1;
+	}
+	if(mnttype_aggregablep(d->mnttype)){
+		diag("not a mountable filesystem: %s \n",d->mnttype);
 		return -1;
 	}
 	if(growlight_target){
