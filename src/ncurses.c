@@ -494,8 +494,7 @@ selected_partitionp(void){
 
 static inline int
 blockobj_inusep(const blockobj *b){
-	return (b->d && b->d->mnt.count) ||
-		(b->zone && b->zone->p && b->zone->p->mnt.count);
+	return (b->d && b->d->mnttype) || (b->zone);
 }
 
 static inline int
@@ -1773,8 +1772,8 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,fs->boxstr);
-#define ESCSTR "'C' confirms setup, ⎋esc returns"
-	mvwprintw(fsw,getmaxy(fsw) - 1,cols - strlen(ESCSTR),ESCSTR);
+#define ESCSTR L"'C' confirms setup, ⎋esc returns"
+	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR),ESCSTR);
 #undef ESCSTR
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
@@ -1855,7 +1854,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,getmaxy(fsw) - 1,cols - strlen("⎋esc returns"),"⎋esc returns");
+	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
 	fs->ops = opstrs;
@@ -1926,7 +1925,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
-	mvwprintw(fsw,getmaxy(fsw) - 1,cols - strlen("⎋esc returns"),"⎋esc returns");
+	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
 	fs->inp.prompt = fs->boxstr;
 	def = def ? def : "";
 	fs->inp.buffer = strdup(def);
@@ -2052,11 +2051,23 @@ void kill_splash(struct panel_state *ps){
 	setup_colors();
 }
 
+static inline int
+mkfs_safe_p(const device *d){
+	if(d->mnttype){
+		locked_diag("Filesystem signature already exists on %s",d->name);
+		return 0;
+	}
+	return 1;
+}
+
 static int
 fs_do_internal(device *d,const char *fst,const char *name){
 	struct panel_state *ps;
 	int r;
 
+	if(mkfs_safe_p(d)){
+		return -1;
+	}
 	ps = show_splash(L"Creating filesystem...");
 	r = make_filesystem(d,fst,name);
 	if(ps){
@@ -5068,7 +5079,7 @@ handle_actform_string_input(int ch){
 		char *tmp;
 
 		if(ch >= 256 || !isgraph(ch)){
-			diag("please %s (⎋esc returns)",actform->boxstr);
+			diag("please %s, or cancel",actform->boxstr);
 		}
 		lock_ncurses();
 		if((tmp = realloc(fs->inp.buffer,strlen(fs->inp.buffer) + 2)) == NULL){
@@ -5216,7 +5227,7 @@ handle_actform_input(int ch){
 			unlock_ncurses();
 			// intentional fallthrough for non-multiform case
 		}default:{
-			diag("please %s (⎋esc returns)",actform->boxstr);
+			diag("please %s, or cancel",actform->boxstr);
 			break;
 		}
 	}
