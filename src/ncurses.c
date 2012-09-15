@@ -4443,7 +4443,7 @@ remove_ptable(void){
 		locked_diag("%s is not partitionable",b->d->name);
 		return;
 	}
-	if(b->d->blkdev.pttable == NULL){
+	if(blockobj_unpartitionedp(b)){
 		locked_diag("%s has no partition table",b->d->name);
 		return;
 	}
