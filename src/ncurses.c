@@ -531,6 +531,31 @@ selected_inusep(void){
 	return blockobj_inusep(get_selected_blockobj());
 }
 
+static inline int
+mkfs_safe_p(const device *d){
+	if(d->mnttype){
+		locked_diag("Filesystem signature already exists on %s",d->name);
+		return 0;
+	}
+	return 1;
+}
+
+static inline int
+selected_mkfs_safe_p(void){
+	const blockobj *bo = get_selected_blockobj();
+
+	if(bo && bo->d){
+		if(bo->zone && bo->zone->p){
+			return mkfs_safe_p(bo->zone->p);
+		}else if(bo->zone){
+			locked_diag("Can't make filesystem in empty space");
+			return 0;
+		}
+		return mkfs_safe_p(bo->d);
+	}
+	return 0;
+}
+
 static int
 selection_active(void){
 	if(current_adapter == NULL){
@@ -2081,15 +2106,6 @@ void kill_splash(struct panel_state *ps){
 	free(ps);
 	splash = NULL;
 	setup_colors();
-}
-
-static inline int
-mkfs_safe_p(const device *d){
-	if(d->mnttype){
-		locked_diag("Filesystem signature already exists on %s",d->name);
-		return 0;
-	}
-	return 1;
 }
 
 static int
@@ -4522,8 +4538,7 @@ new_filesystem(void){
 		locked_diag("Selected region of %s is empty space",b->d->name);
 		return;
 	}
-	if(selected_inusep()){
-		locked_diag("Selected region of %s is in use",b->d->name);
+	if(!selected_mkfs_safe_p()){
 		return;
 	}
 	if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
