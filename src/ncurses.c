@@ -157,6 +157,7 @@ enum {
 	UNHEADING_COLOR,
 	UBORDER_COLOR,			// Adapters
 	SELBORDER_COLOR,		// Current adapter
+	DBORDER_COLOR,			// Block bar borders
 	PBORDER_COLOR,
 	PHEADING_COLOR,
 	SUBDISPLAY_COLOR,
@@ -229,9 +230,10 @@ next_partco(int partco){
 #define COLOR_LIGHTWHITE 15
 #define COLOR_HIDDEN 16
 #define COLOR_SKYBLUE 0x20 // 32 (xterm color cube)
-#define COLOR_PURPLE 0x39 // incredibly vibrant
+#define COLOR_PURPLE 0x39 // incredibly vibrant 0x68
+#define COLOR_CRAP 0x6f
 #define COLOR_LIGHTPURPLE 0x3f
-#define COLOR_CYAN0 0x21
+#define COLOR_CYAN0 0x7b
 #define COLOR_CYAN1 0x23
 #define COLOR_CYAN2 0x2c
 #define COLOR_CYAN3 0x33
@@ -281,6 +283,7 @@ setup_colors(void){
 	}
 	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) != ERR);
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
+	assert(init_pair(DBORDER_COLOR,COLOR_CRAP,-1) == OK);
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,COLOR_BLACK) == OK);
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
@@ -291,28 +294,27 @@ setup_colors(void){
 	if(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
 		assert(init_pair(SSD_COLOR,COLOR_WHITE,-1) != ERR);
 	}
-	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
-	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
-	if(init_pair(EMPTY_COLOR,COLOR_MAIZE,-1) == ERR){
-		assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
+	assert(init_pair(FS_COLOR,COLOR_GREEN,COLOR_BLACK) == OK);
+	if(init_pair(EMPTY_COLOR,COLOR_MAIZE,COLOR_BLACK) == ERR){
+		assert(init_pair(EMPTY_COLOR,COLOR_GREEN,COLOR_BLACK) == OK);
 	}
-	if(init_pair(METADATA_COLOR,COLOR_LIGHTGREEN,-1) == ERR){
-		assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
+	if(init_pair(METADATA_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == ERR){
+		assert(init_pair(METADATA_COLOR,COLOR_RED,COLOR_BLACK) == OK);
 	}
 	if(init_pair(MDADM_COLOR,COLOR_LIGHTBLUE,-1) == ERR){
 		assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != ERR);
 	}
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
-	if(init_pair(PART_COLOR0,COLOR_CYAN0,-1) == ERR){
+	if(init_pair(PART_COLOR0,COLOR_CYAN0,COLOR_BLACK) == ERR){
 		assert(init_pair(PART_COLOR0,COLOR_CYAN,-1) == OK);
 	}
-	if(init_pair(PART_COLOR1,COLOR_CYAN1,-1) == ERR){
+	if(init_pair(PART_COLOR1,COLOR_CYAN1,COLOR_BLACK) == ERR){
 		assert(init_pair(PART_COLOR1,COLOR_CYAN,-1) == OK);
 	}
-	if(init_pair(PART_COLOR2,COLOR_CYAN2,-1) == ERR){
+	if(init_pair(PART_COLOR2,COLOR_CYAN2,COLOR_BLACK) == ERR){
 		assert(init_pair(PART_COLOR2,COLOR_CYAN,-1) == OK);
 	}
-	if(init_pair(PART_COLOR3,COLOR_CYAN3,-1) == ERR){
+	if(init_pair(PART_COLOR3,COLOR_CYAN3,COLOR_BLACK) == ERR){
 		assert(init_pair(PART_COLOR3,COLOR_CYAN,-1) == OK);
 	}
 	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
@@ -325,34 +327,34 @@ setup_colors(void){
 	if(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == ERR){
 		assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != ERR);
 	}
-	if(init_pair(MOUNT_COLOR0,COLOR_WHITE0,-1) == ERR){
+	if(init_pair(MOUNT_COLOR0,COLOR_WHITE0,COLOR_BLACK) == ERR){
 		assert(init_pair(MOUNT_COLOR0,COLOR_WHITE,-1) == OK);
 	}
-	if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,-1) == ERR){
+	if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,COLOR_BLACK) == ERR){
 		assert(init_pair(MOUNT_COLOR1,COLOR_WHITE,-1) == OK);
 	}
-	if(init_pair(MOUNT_COLOR2,COLOR_WHITE2,-1) == ERR){
+	if(init_pair(MOUNT_COLOR2,COLOR_WHITE2,COLOR_BLACK) == ERR){
 		assert(init_pair(MOUNT_COLOR2,COLOR_WHITE,-1) == OK);
 	}
-	if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,-1) == ERR){
+	if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,COLOR_BLACK) == ERR){
 		assert(init_pair(MOUNT_COLOR3,COLOR_WHITE,-1) == OK);
 	}
-	if(init_pair(TARGET_COLOR0,COLOR_MAGENTA0,-1) == ERR){
+	if(init_pair(TARGET_COLOR0,COLOR_MAGENTA0,COLOR_BLACK) == ERR){
 		assert(init_pair(TARGET_COLOR0,COLOR_MAGENTA,-1) == OK);
 	}
-	if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,-1) == ERR){
+	if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,COLOR_BLACK) == ERR){
 		assert(init_pair(TARGET_COLOR1,COLOR_MAGENTA,-1) == OK);
 	}
-	if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,-1) == ERR){
+	if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,COLOR_BLACK) == ERR){
 		assert(init_pair(TARGET_COLOR2,COLOR_MAGENTA,-1) == OK);
 	}
-	if(init_pair(TARGET_COLOR3,COLOR_MAGENTA3,-1) == ERR){
+	if(init_pair(TARGET_COLOR3,COLOR_MAGENTA3,COLOR_BLACK) == ERR){
 		assert(init_pair(TARGET_COLOR3,COLOR_MAGENTA,-1) == OK);
 	}
 	if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == ERR){
 		assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) != ERR);
 	}
-	if(init_pair(SPLASHBORDER_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == ERR){
+	if(init_pair(SPLASHBORDER_COLOR,COLOR_PURPLE,COLOR_BLACK) == ERR){
 		assert(init_pair(SPLASHBORDER_COLOR,COLOR_GREEN,COLOR_BLACK) != ERR);
 	}
 	if(init_pair(SPLASHTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == ERR){
@@ -377,6 +379,7 @@ form_colors(void){
 	init_pair(UHEADING_COLOR,-1,-1);
 	init_pair(UNHEADING_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
+	init_pair(DBORDER_COLOR,-1,-1);
 	init_pair(PHEADING_COLOR,-1,-1);
 	init_pair(SUBDISPLAY_COLOR,-1,-1);
 	init_pair(OPTICAL_COLOR,-1,-1);
@@ -1033,7 +1036,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}
 		wattron(w,A_REVERSE);
 		if(selstr){
-			if(off < ex / 2){
+			if(off - och < ex / 2u){
 				mvwprintw(w,y - 1,off - och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
 			}else{
 				mvwprintw(w,y - 1,off - 4 - strlen(selstr),"%.*s⇦⇦⇦⇖",(int)(ex - (off + ch + strlen(selstr) + 4)),selstr);
@@ -1286,9 +1289,9 @@ case LAYOUT_ZPOOL:
 	}
 
 	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(PART_COLOR3)) == OK);
+		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(DBORDER_COLOR)) == OK);
 	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(PART_COLOR3)) == OK);
+		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
 	}
 	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
@@ -1303,7 +1306,7 @@ case LAYOUT_ZPOOL:
 		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
 					cols - START_COL - 1,selected);
 	}
-	attr = A_BOLD | COLOR_PAIR(PART_COLOR3);
+	attr = A_BOLD | COLOR_PAIR(DBORDER_COLOR);
 	if(selected){
 		attr |= A_REVERSE;
 	}
