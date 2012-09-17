@@ -294,27 +294,27 @@ setup_colors(void){
 	if(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
 		assert(init_pair(SSD_COLOR,COLOR_WHITE,-1) != ERR);
 	}
-	assert(init_pair(FS_COLOR,COLOR_GREEN,COLOR_BLACK) == OK);
-	if(init_pair(EMPTY_COLOR,COLOR_MAIZE,COLOR_BLACK) == ERR){
-		assert(init_pair(EMPTY_COLOR,COLOR_GREEN,COLOR_BLACK) == OK);
+	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
+	if(init_pair(EMPTY_COLOR,COLOR_MAIZE,-1) == ERR){
+		assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
 	}
-	if(init_pair(METADATA_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == ERR){
-		assert(init_pair(METADATA_COLOR,COLOR_RED,COLOR_BLACK) == OK);
+	if(init_pair(METADATA_COLOR,COLOR_LIGHTGREEN,-1) == ERR){
+		assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
 	}
 	if(init_pair(MDADM_COLOR,COLOR_LIGHTBLUE,-1) == ERR){
 		assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != ERR);
 	}
 	assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
-	if(init_pair(PART_COLOR0,COLOR_CYAN0,COLOR_BLACK) == ERR){
+	if(init_pair(PART_COLOR0,COLOR_CYAN0,-1) == ERR){
 		assert(init_pair(PART_COLOR0,COLOR_CYAN,-1) == OK);
 	}
-	if(init_pair(PART_COLOR1,COLOR_CYAN1,COLOR_BLACK) == ERR){
+	if(init_pair(PART_COLOR1,COLOR_CYAN1,-1) == ERR){
 		assert(init_pair(PART_COLOR1,COLOR_CYAN,-1) == OK);
 	}
-	if(init_pair(PART_COLOR2,COLOR_CYAN2,COLOR_BLACK) == ERR){
+	if(init_pair(PART_COLOR2,COLOR_CYAN2,-1) == ERR){
 		assert(init_pair(PART_COLOR2,COLOR_CYAN,-1) == OK);
 	}
-	if(init_pair(PART_COLOR3,COLOR_CYAN3,COLOR_BLACK) == ERR){
+	if(init_pair(PART_COLOR3,COLOR_CYAN3,-1) == ERR){
 		assert(init_pair(PART_COLOR3,COLOR_CYAN,-1) == OK);
 	}
 	assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
@@ -327,28 +327,28 @@ setup_colors(void){
 	if(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == ERR){
 		assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != ERR);
 	}
-	if(init_pair(MOUNT_COLOR0,COLOR_WHITE0,COLOR_BLACK) == ERR){
+	if(init_pair(MOUNT_COLOR0,COLOR_WHITE0,-1) == ERR){
 		assert(init_pair(MOUNT_COLOR0,COLOR_WHITE,-1) == OK);
 	}
-	if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,COLOR_BLACK) == ERR){
+	if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,-1) == ERR){
 		assert(init_pair(MOUNT_COLOR1,COLOR_WHITE,-1) == OK);
 	}
-	if(init_pair(MOUNT_COLOR2,COLOR_WHITE2,COLOR_BLACK) == ERR){
+	if(init_pair(MOUNT_COLOR2,COLOR_WHITE2,-1) == ERR){
 		assert(init_pair(MOUNT_COLOR2,COLOR_WHITE,-1) == OK);
 	}
-	if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,COLOR_BLACK) == ERR){
+	if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,-1) == ERR){
 		assert(init_pair(MOUNT_COLOR3,COLOR_WHITE,-1) == OK);
 	}
-	if(init_pair(TARGET_COLOR0,COLOR_MAGENTA0,COLOR_BLACK) == ERR){
+	if(init_pair(TARGET_COLOR0,COLOR_MAGENTA0,-1) == ERR){
 		assert(init_pair(TARGET_COLOR0,COLOR_MAGENTA,-1) == OK);
 	}
-	if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,COLOR_BLACK) == ERR){
+	if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,-1) == ERR){
 		assert(init_pair(TARGET_COLOR1,COLOR_MAGENTA,-1) == OK);
 	}
-	if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,COLOR_BLACK) == ERR){
+	if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,-1) == ERR){
 		assert(init_pair(TARGET_COLOR2,COLOR_MAGENTA,-1) == OK);
 	}
-	if(init_pair(TARGET_COLOR3,COLOR_MAGENTA3,COLOR_BLACK) == ERR){
+	if(init_pair(TARGET_COLOR3,COLOR_MAGENTA3,-1) == ERR){
 		assert(init_pair(TARGET_COLOR3,COLOR_MAGENTA,-1) == OK);
 	}
 	if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == ERR){
