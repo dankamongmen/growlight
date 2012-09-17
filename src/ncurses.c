@@ -923,7 +923,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 		}
-		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,"No media detected in drive");
+		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx," No media detected in drive");
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
 		if(selected){
@@ -960,6 +960,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 					"unpartitioned space";
 				assert(wattrset(w,A_BOLD|co) == OK);
 				wattron(w,A_UNDERLINE);
+				if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",selstr) >= sizeof(wbuf) - 2){
+					wbuf[0] = L'\0';
+				}
 			}else{
 				assert(wattrset(w,co) == OK);
 			}
@@ -980,8 +983,12 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				// FIXME need to store pname as multibyte char *
 				// selstr = z->p->partdev.pname;
 				// selstr = selstr ? selstr : z->p->name;
-				selstr = z->p->name;
-			}else{ // device is not selected
+				if( (selstr = z->p->name) ){
+					if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",selstr) >= sizeof(wbuf) - 2){
+						wbuf[0] = L'\0';
+					}
+				}
+			}else{ // partition is not selected
 				if(targeted_p(z->p)){
 					assert(wattrset(w,COLOR_PAIR(targco)) == OK);
 					targco = next_targco(targco);
@@ -991,6 +998,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				}else{
 					assert(wattrset(w,COLOR_PAIR(partco)) == OK);
 					partco = next_partco(partco);
+				}
+				if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->name) >= sizeof(wbuf) - 2){
+					wbuf[0] = L'\0';
 				}
 			}
 			if(z->p->partdev.alignment < d->physsec){ // misaligned!
@@ -1033,9 +1043,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			mvwaddch(w,y,off,rep);
 		}
-		if(wcslen(wbuf) && wcslen(wbuf) > och){
+		// FIXME we're no longer always a fs if wbuf != L'\0'
+		/*if(wcslen(wbuf) && wcslen(wbuf) > och){
 			assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",z->p->mnttype) <= sizeof(wbuf));
-		}
+		}*/
 		if(wcslen(wbuf) && och >= wcslen(wbuf)){
 			size_t start = ((och + wcslen(wbuf)) / 2) +
 					((och + wcslen(wbuf)) % 2);
