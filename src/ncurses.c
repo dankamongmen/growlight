@@ -1783,6 +1783,10 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 		}
 	}
 	cols = longdesc + longop * 2 + 9;
+#define ESCSTR L"'C' confirms setup, ⎋esc returns"
+	if(cols < (int)wcslen(ESCSTR) + 2){
+		cols = wcslen(ESCSTR) + 2;
+	}
 	rows = (ops > selectno ? ops : selectno) + 4;
 	getmaxyx(stdscr,y,x);
 	if(x < cols){
@@ -1824,8 +1828,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
 	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,fs->boxstr);
-#define ESCSTR L"'C' confirms setup, ⎋esc returns"
-	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR),ESCSTR);
+	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
 #undef ESCSTR
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
