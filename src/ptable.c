@@ -254,11 +254,22 @@ int make_partition_table(device *d,const char *ptype){
 // type is specified, the detected type, if it exists, is used.
 int wipe_ptable(device *d,const char *ptype){
 	const struct ptable *ptp;
+	const device *p;
 	const char *pt;
 
 	if(d->layout != LAYOUT_NONE){
 		diag("Will only remove partition tables from raw block devices\n");
 		return -1;
+	}
+	if(d->mnt.count){
+		diag("%s is mounted on %s; not removing\n",d->mnt.list[0],d->name);
+		return -1;
+	}
+	for(p = d->parts ; p ; p = p->next){
+		if(p->mnt.count){
+			diag("%s is mounted on %s; not removing\n",p->mnt.list[0],p->name);
+			return -1;
+		}
 	}
 	if( !(pt = d->blkdev.pttable) ){
 		if( (pt = ptype) ){
