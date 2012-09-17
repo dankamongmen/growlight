@@ -1899,8 +1899,11 @@ int benchmark_blockdev(const device *d){
 // Tell the kernel to rescan the device. This shouldn't really ever be
 // necessary except (a) on initialization, if the kernel doesn't have an
 // understanding equivalent to what we detect or (b) if some external process
-// modifies the partitioning and doesn't notify the kernel itself.
-int rescan_blockdev(const device *d){
+// modifies the partitioning and doesn't notify the kernel itself. If we wiped
+// out the partition table, pass 1 as killedpart (since we didn't step through
+// and remove each partition by hand using BLKPG).
+static int
+rescan_blockdev_internal(const device *d,int killedpart){
 	char buf[PATH_MAX];
 	int fd;
 
@@ -1919,9 +1922,22 @@ int rescan_blockdev(const device *d){
 	if(fsync(fd)){
 		diag("Couldn't sync %d for %s (%s)\n",fd,d->name,strerror(errno));
 	}
+	if(killedpart){
+		if(ioctl(fd,BLKRRPART)){
+			diag("BLKRRPART failed on %s (%s)\n",d->name,strerror(errno));
+		}
+	}
 	close(fd);
 	rescan_device(d->name);
 	return 0;
+}
+
+int rescan_blockdev(const device *d){
+	return rescan_blockdev_internal(d,0);
+}
+
+int rescan_blockdev_blkrrpart(const device *d){
+	return rescan_blockdev_internal(d,1);
 }
 
 void lock_growlight(void){
@@ -1980,6 +1996,7 @@ int rescan_device(const char *name){
 				unlock_growlight();
 				return -1;
 			}
+			clear_mounts(controllers);
 			parse_mounts(gui,MOUNTS);
 			unlock_growlight();
 			return 0;

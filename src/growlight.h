@@ -330,6 +330,8 @@ int reset_controller(controller *);
 int rescan_controller(controller *);
 
 int rescan_blockdev(const device *);
+int rescan_blockdev_blkrrpart(const device *);
+
 int benchmark_blockdev(const device *);
 
 // Very coarse locking
