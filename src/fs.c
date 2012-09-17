@@ -593,7 +593,7 @@ int wipe_filesystem(device *d){
 		diag("%s is in use (%ux) and cannot be wiped\n",d->name,d->mnt.count);
 		return -1;
 	}
-	if(vspopen_drain("wipefs -t %s -a /dev/%s",d->mnttype,d->name)){
+	if(vspopen_drain("wipefs -a /dev/%s",d->name)){
 		return -1;
 	}
 	rescan_blockdev(d);
