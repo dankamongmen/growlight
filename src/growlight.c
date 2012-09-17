@@ -928,7 +928,7 @@ rescan(const char *name,device *d){
 		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
 			int roflag;
 
-			if((dfd = openat(devfd,name,O_RDONLY|O_CLOEXEC)) < 0){
+			if((dfd = openat(devfd,name,O_NONBLOCK|O_RDONLY|O_CLOEXEC)) < 0){
 				diag("Couldn't open " DEVROOT "/%s (%s)\n",name,strerror(errno));
 				clobber_device(d);
 				return NULL;
