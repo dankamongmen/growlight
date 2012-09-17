@@ -242,6 +242,11 @@ int parse_mounts(const glightui *gui,const char *fn){
 			d = d->partdev.parent;
 		}
 		d->uistate = gui->block_event(d,d->uistate);
+		if(growlight_target){
+			if(strcmp(mnt,growlight_target) == 0){
+				mount_target();
+			}
+		}
 	}
 	free(mnt); free(fs); free(ops);
 	mnt = fs = ops = NULL;
@@ -303,11 +308,6 @@ int mmount(device *d,const char *targ){
 		free(rname);
 		return -1;
 	}
-	if(growlight_target){
-		if(strcmp(rname,growlight_target) == 0){
-			mount_target();
-		}
-	}
 	diag("Mounted %s at %s\n",d->name,targ);
 	free(rname);
 	return 0;
@@ -338,6 +338,7 @@ int unmount(device *d,const char *path){
 }
 
 void clear_mounts(controller *c){
+	unmount_target();
 	while(c){
 		device *d;
 

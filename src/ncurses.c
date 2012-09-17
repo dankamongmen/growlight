@@ -239,6 +239,7 @@ next_partco(int partco){
 #define COLOR_MAGENTA1 0x46
 #define COLOR_MAGENTA2 0x48
 #define COLOR_MAGENTA3 0x4a
+#define COLOR_PINK 0xdb
 #define COLOR_WHITE0 0xfc
 #define COLOR_WHITE1 0xfa
 #define COLOR_WHITE2 0xf8
@@ -292,6 +293,9 @@ setup_colors(void){
 	}
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
+	if(init_pair(EMPTY_COLOR,COLOR_PINK,-1) == ERR){
+		assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
+	}
 	if(init_pair(METADATA_COLOR,COLOR_LIGHTGREEN,-1) == ERR){
 		assert(init_pair(METADATA_COLOR,COLOR_RED,-1) == OK);
 	}
@@ -415,7 +419,7 @@ typedef struct zobj {
 	device *p;			// partition/block device, NULL for empty space
 	wchar_t rep;			// character used for representation
 					//  if ->p is NULL
-	unsigned following;		// Number of zones following us on disk
+	int following;			// Number of zones following us on disk
 	struct zobj *prev,*next;
 } zobj;
 
@@ -851,20 +855,6 @@ hide_panel_locked(struct panel_state *ps){
 	}
 }
 
-static inline unsigned
-sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos,
-				unsigned following){
-	unsigned u = ((sec * d->logsec) / (float)d->size) * (ex - sx - 1) + sx;
-
-	if(u > ++*sectpos){
-		*sectpos = u;
-	}
-	if(*sectpos > ex - (following + 1)){
-		*sectpos = ex - following - 1;
-	}
-	return *sectpos;
-}
-
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
@@ -878,9 +868,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	wchar_t wbuf[ex - sx + 2];
 	int targco,mountco,partco;
 	const device *d = bo->d;
-	unsigned off = sx - 1;
 	char buf[ex - sx + 2];
 	const zobj *z;
+	int off = sx;
 
 	if(d->mnttype){
 
@@ -949,10 +939,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	mountco = MOUNT_COLOR0;
 	do{
 		unsigned ch,och;
-		int rep,x;
+		int rep;
 
 		wbuf[0] = L'\0';
-		x = sectpos(d,z->fsector,sx,ex,&off,z->following);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR);
@@ -961,8 +950,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 
 			if(selected && z == bo->zone){
 				selstr = repstr;
-				assert(wattrset(w,A_BOLD|co) == OK);
-				wattron(w,A_UNDERLINE);
+				assert(wattrset(w,A_BOLD|A_UNDERLINE|co) == OK);
 			}else{
 				assert(wattrset(w,co) == OK);
 			}
@@ -973,16 +961,15 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}else{ // dedicated partition
 			if(selected && z == bo->zone){ // partition and device are selected
 				if(targeted_p(z->p)){
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(targco)) == OK);
+					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(targco)) == OK);
 					targco = next_targco(targco);
 				}else if(z->p->mnt.count){
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(mountco)) == OK);
+					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(mountco)) == OK);
 					mountco = next_mountco(mountco);
 				}else{
-					assert(wattrset(w,A_BOLD|COLOR_PAIR(partco)) == OK);
+					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(partco)) == OK);
 					partco = next_partco(partco);
 				}
-				wattron(w,A_UNDERLINE);
 				// FIXME need to store pname as multibyte char *
 				// selstr = z->p->partdev.pname;
 				// selstr = selstr ? selstr : z->p->name;
@@ -1025,23 +1012,23 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 		}
 		ch = (((z->lsector - z->fsector) * 1000) / ((d->size * 1000 / d->logsec) / (ex - sx - 1)));
-		if(ch){
-			ch -= ch > z->following ? z->following : (ch - 1);
+		if(ch == 0){
+			ch = 1;
 		}
 		och = ch;
-		mvwaddch(w,y,x,rep);
 		while(ch--){
-			if(++off >= (unsigned)ex){
+			mvwaddch(w,y,off,rep);
+			if(++off >= ex - z->following){
+				och -= (ch + 1);
 				break;
 			}
-			mvwaddch(w,y,off,rep);
 		}
 		wattron(w,A_REVERSE);
 		if(selstr){
-			if(x < ex / 2){
-				mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
+			if(off < ex / 2){
+				mvwprintw(w,y - 1,off - och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
 			}else{
-				mvwprintw(w,y - 1,off - 3 - strlen(selstr),"%.*s⇦⇦⇦⇖",(int)(ex - (off + ch + strlen(selstr) + 4)),selstr);
+				mvwprintw(w,y - 1,off - 4 - strlen(selstr),"%.*s⇦⇦⇦⇖",(int)(ex - (off + ch + strlen(selstr) + 4)),selstr);
 			}
 		}
 		wattroff(w,A_REVERSE);
@@ -1055,13 +1042,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				wbuf[0] = L'\0';
 			}
 		}
-		if(wcslen(wbuf)){
-			size_t start = ((och + wcslen(wbuf)) / 2) - (wcslen(wbuf) % 2);
+		if(wcslen(wbuf) && wcslen(wbuf) + 2 < och){
+			size_t start = off - och + (och - wcslen(wbuf)) / 2;
 
 			wattron(w,A_BOLD);
-			mvwaddwstr(w,y,off - start,wbuf);
-			mvwaddch(w,y,off - start - 1,' ');
-			mvwaddch(w,y,off - start + wcslen(wbuf),' ');
+			mvwaddwstr(w,y,start,wbuf);
+			mvwaddch(w,y,start - 1,' ');
+			mvwaddch(w,y,start + wcslen(wbuf),' ');
 		}
 		selstr = NULL;
 	}while((z = z->next) != bo->zchain);
@@ -2915,26 +2902,17 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 static void
 detail_fs(WINDOW *hw,const device *d,int row){
 	char buf[BPREFIXSTRLEN + 1];
-	unsigned z;
 
-	if(d->mnt.count){
-		for(z = 0 ; z < d->mnt.count ; ++z){
-			mvwprintw(hw,row,START_COL,BPREFIXFMT "%c %s%s%s%s%s%s%s",
+	if(d->mnttype){
+		mvwprintw(hw,row,START_COL,BPREFIXFMT "%c %s%s%s%s%s%s",
 				d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
 				d->mntsize ? 'B' : ' ',
-				d->label ? "" : "unlabeled ",
-				"",
+				d->label ? "" : " unlabeled ",
 				d->mnttype,
 				d->label ? " named " : "",
 				d->label ? d->label : "",
-				" active at ",
-				d->mnt.list[z]);
-		}
-	}else if(d->mnttype){
-		mvwprintw(hw,row,START_COL,BPREFIXFMT "%c %s%s%s%s%s%s%s",
-			d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
-			'B',"unlabeled ","unmounted ",
-			d->mnttype,"","","","");
+				d->mnt.count ? " active at " : "",
+				d->mnt.count ? d->mnt.list[0] : "");
 	}else if(d->swapprio != SWAP_INVALID){
 		mvwprintw(hw,row,START_COL,BPREFIXFMT "B %sswap%s%s prio %d",
 			bprefix(d->mntsize,1,buf,sizeof(buf),0),

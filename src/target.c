@@ -166,7 +166,7 @@ int dump_targets(FILE *fp){
 int mount_target(void){
 	if(targfd >= 0){
 		diag("Targfd already opened at %d\n",targfd);
-		return -1;
+		close(targfd);
 	}
 	if((targfd = open(growlight_target,O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0){
 		diag("Couldn't open %s (%s?)\n",growlight_target,strerror(errno));
