@@ -415,6 +415,7 @@ typedef struct zobj {
 	device *p;			// partition/block device, NULL for empty space
 	wchar_t rep;			// character used for representation
 					//  if ->p is NULL
+	unsigned following;		// Number of zones following us on disk
 	struct zobj *prev,*next;
 } zobj;
 
@@ -851,14 +852,15 @@ hide_panel_locked(struct panel_state *ps){
 }
 
 static inline unsigned
-sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos){
+sectpos(const device *d,uintmax_t sec,unsigned sx,unsigned ex,unsigned *sectpos,
+				unsigned following){
 	unsigned u = ((sec * d->logsec) / (float)d->size) * (ex - sx - 1) + sx;
 
 	if(u > ++*sectpos){
 		*sectpos = u;
 	}
-	if(*sectpos >= ex){
-		*sectpos = ex - 1;
+	if(*sectpos > ex - (following + 1)){
+		*sectpos = ex - following - 1;
 	}
 	return *sectpos;
 }
@@ -950,7 +952,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		int rep,x;
 
 		wbuf[0] = L'\0';
-		x = sectpos(d,z->fsector,sx,ex,&off);
+		x = sectpos(d,z->fsector,sx,ex,&off,z->following);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR);
@@ -1022,21 +1024,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				rep = '0' + rep;	// FIXME lame
 			}
 		}
-		ch = ((z->lsector - z->fsector) / ((float)(d->size / d->logsec) / (ex - sx - 1)));
-		och = ch;
-		wattron(w,A_REVERSE);
-		if(selstr){
-			if(x < ex / 2){
-				mvwprintw(w,y - 1,off,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
-			}else{
-				int truech;
-
-				truech = (int)(off + ch) >= ex ? ex - off - 1 : ch;
-				mvwprintw(w,y - 1,off + truech - (strlen(selstr) + 4),"%.*s⇦⇦⇦⇖",
-						(int)(ex - (off + truech + strlen(selstr) + 4)),selstr);
-			}
+		ch = (((z->lsector - z->fsector) * 1000) / ((d->size * 1000 / d->logsec) / (ex - sx - 1)));
+		if(ch){
+			ch -= ch > z->following ? z->following : (ch - 1);
 		}
-		wattroff(w,A_REVERSE);
+		och = ch;
 		mvwaddch(w,y,x,rep);
 		while(ch--){
 			if(++off >= (unsigned)ex){
@@ -1044,6 +1036,15 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			mvwaddch(w,y,off,rep);
 		}
+		wattron(w,A_REVERSE);
+		if(selstr){
+			if(x < ex / 2){
+				mvwprintw(w,y - 1,x,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
+			}else{
+				mvwprintw(w,y - 1,off - 3 - strlen(selstr),"%.*s⇦⇦⇦⇖",(int)(ex - (off + ch + strlen(selstr) + 4)),selstr);
+			}
+		}
+		wattroff(w,A_REVERSE);
 		// Truncate it at whitespace until it's small enough to fit
 		while(wcslen(wbuf) && wcslen(wbuf) + 2 > och){
 			wchar_t *w = wcschr(wbuf,L' ');
@@ -1055,7 +1056,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 		}
 		if(wcslen(wbuf)){
-			size_t start = ((och + wcslen(wbuf)) / 2) + (wcslen(wbuf) % 2);
+			size_t start = ((och + wcslen(wbuf)) / 2) - (wcslen(wbuf) % 2);
 
 			wattron(w,A_BOLD);
 			mvwaddwstr(w,y,off - start,wbuf);
@@ -5880,10 +5881,12 @@ update_blockobj(blockobj *b,device *d){
 	}
 	zonesel = zones - zonesel;
 	if( (lastz = z) ){
+		z->following = 0;
 		while(z->prev){
 			if(zonesel-- == 1){
 				b->zone = z;
 			}
+			z->prev->following = z->following + 1;
 			z = z->prev;
 		}
 		if(zonesel-- == 1){
