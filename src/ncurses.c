@@ -1045,7 +1045,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			mvwaddch(w,y,off,rep);
 		}
 		// Truncate it at whitespace until it's small enough to fit
-		while(wcslen(wbuf) && wcslen(wbuf) > och){
+		while(wcslen(wbuf) && wcslen(wbuf) + 2 > och){
 			wchar_t *w = wcschr(wbuf,L' ');
 
 			if(w){
@@ -1055,8 +1055,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 		}
 		if(wcslen(wbuf)){
-			size_t start = ((och + wcslen(wbuf)) / 2) +
-					((och + wcslen(wbuf)) % 2);
+			size_t start = ((och + wcslen(wbuf)) / 2) + (wcslen(wbuf) % 2);
 
 			wattron(w,A_BOLD);
 			mvwaddwstr(w,y,off - start,wbuf);
