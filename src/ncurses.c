@@ -873,11 +873,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	int off = sx;
 
 	if(d->mnttype){
+		int co = mnttype_aggregablep(d->mnttype) ?
+			COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
 		if(selected){
-			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(FS_COLOR)) == OK);
+			assert(wattrset(w,A_BOLD|A_REVERSE|co) == OK);
 		}else{
-			assert(wattrset(w,A_BOLD|COLOR_PAIR(FS_COLOR)) == OK);
+			assert(wattrset(w,A_BOLD|co) == OK);
 		}
 		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s%ls%s%lsat %s ",
 			d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
@@ -966,6 +968,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				}else if(z->p->mnt.count){
 					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(mountco)) == OK);
 					mountco = next_mountco(mountco);
+				}else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
+					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(FS_COLOR)) == OK);
 				}else{
 					assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(partco)) == OK);
 					partco = next_partco(partco);
@@ -985,6 +989,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				}else if(z->p->mnt.count){
 					assert(wattrset(w,COLOR_PAIR(mountco)) == OK);
 					mountco = next_mountco(mountco);
+				}else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
+					assert(wattrset(w,COLOR_PAIR(FS_COLOR)) == OK);
 				}else{
 					assert(wattrset(w,COLOR_PAIR(partco)) == OK);
 					partco = next_partco(partco);
@@ -1000,7 +1006,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				if((!z->p->mnt.count || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s at %s",z->p->mnttype,z->p->mnt.list[0]) >= sizeof(wbuf) - 2)){
 					if(!z->p->label || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s “%s”",
 						z->p->mnttype,z->p->label) >= sizeof(buf) - 2){
-						assert((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->mnttype) < sizeof(wbuf) - 2);
+						if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->mnttype) >= sizeof(wbuf) - 2){
+							wbuf[0] = L'\0';
+						}
 					}
 				}
 			}
@@ -1011,7 +1019,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				rep = '0' + rep;	// FIXME lame
 			}
 		}
-		ch = (((z->lsector - z->fsector) * 1000) / ((d->size * 1000 / d->logsec) / (ex - sx - 1)));
+		ch = (((z->lsector - z->fsector) * 1000) / ((d->size * 1000 / d->logsec) / (ex - sx)));
 		if(ch == 0){
 			ch = 1;
 		}
@@ -1034,7 +1042,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		wattroff(w,A_REVERSE);
 		// Truncate it at whitespace until it's small enough to fit
 		while(wcslen(wbuf) && wcslen(wbuf) + 2 > och){
-			wchar_t *w = wcschr(wbuf,L' ');
+			wchar_t *w = wcsrchr(wbuf,L' ');
 
 			if(w){
 				*w = L'\0';
@@ -1042,7 +1050,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				wbuf[0] = L'\0';
 			}
 		}
-		if(wcslen(wbuf) && wcslen(wbuf) + 2 < och){
+		if(wcslen(wbuf)){
 			size_t start = off - och + (och - wcslen(wbuf)) / 2;
 
 			wattron(w,A_BOLD);
