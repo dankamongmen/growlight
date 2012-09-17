@@ -239,7 +239,7 @@ next_partco(int partco){
 #define COLOR_MAGENTA1 0x46
 #define COLOR_MAGENTA2 0x48
 #define COLOR_MAGENTA3 0x4a
-#define COLOR_PINK 0xdb
+#define COLOR_MAIZE 0xdc
 #define COLOR_WHITE0 0xfc
 #define COLOR_WHITE1 0xfa
 #define COLOR_WHITE2 0xf8
@@ -293,7 +293,7 @@ setup_colors(void){
 	}
 	assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
-	if(init_pair(EMPTY_COLOR,COLOR_PINK,-1) == ERR){
+	if(init_pair(EMPTY_COLOR,COLOR_MAIZE,-1) == ERR){
 		assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
 	}
 	if(init_pair(METADATA_COLOR,COLOR_LIGHTGREEN,-1) == ERR){
