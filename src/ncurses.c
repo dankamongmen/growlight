@@ -2931,7 +2931,7 @@ detail_fs(WINDOW *hw,const device *d,int row){
 			waddstr(hw,d->label);
 			wattron(hw,A_BOLD);
 		}
-		wprintw(hw,"%s",d->mnt.count ? " active at " : "");
+		wprintw(hw,"%s",d->mnt.count ? " at " : "");
 		wattroff(hw,A_BOLD);
 		wprintw(hw,"%s",d->mnt.count ? d->mnt.list[0] : "");
 	}else if(d->swapprio != SWAP_INVALID){
