@@ -133,7 +133,8 @@ ext4_mkfs(const char *dev,const char *name,int force){
 	if(name == NULL){
 		name = "SprezzaEXT4";
 	}
-	if(vspopen_drain("mkfs.ext4 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	//if(vspopen_drain("mkfs.ext4 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	if(vspopen_drain("mkfs.ext4 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
 				force ? "-F " : "",name,dev)){
 		return -1;
 	}
@@ -151,7 +152,8 @@ ext3_mkfs(const char *dev,const char *name,int force){
 	if(name == NULL){
 		name = "SprezzaEXT3";
 	}
-	if(vspopen_drain("mkfs.ext3 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	//if(vspopen_drain("mkfs.ext3 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	if(vspopen_drain("mkfs.ext3 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
 				force ? "-F ": "",name,dev)){
 		return -1;
 	}
@@ -170,7 +172,8 @@ ext2_mkfs(const char *dev,const char *name,int force){
 	if(name == NULL){
 		name = "SprezzaEXT2";
 	}
-	if(vspopen_drain("mkfs.ext2 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	//if(vspopen_drain("mkfs.ext2 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	if(vspopen_drain("mkfs.ext2 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
 				force ? "-F " : "",name,dev)){
 		return -1;
 	}
