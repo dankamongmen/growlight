@@ -954,17 +954,18 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR);
+			const char *repstr = z->rep == L'P' ?
+				"partition table metadata" : "unused space";
+
 			if(selected && z == bo->zone){
-				selstr = bo->zone->rep == L'P' ?
-					"partition table metadata" :
-					"unpartitioned space";
+				selstr = repstr;
 				assert(wattrset(w,A_BOLD|co) == OK);
 				wattron(w,A_UNDERLINE);
-				if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",selstr) >= sizeof(wbuf) - 2){
-					wbuf[0] = L'\0';
-				}
 			}else{
 				assert(wattrset(w,co) == OK);
+			}
+			if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",repstr) >= sizeof(wbuf) - 2){
+				wbuf[0] = L'\0';
 			}
 			rep = z->rep;
 		}else{ // dedicated partition
@@ -1007,9 +1008,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
 			if(z->p->mnttype){
-				if((!z->p->mnt.count || (unsigned)swprintf(wbuf,sizeof(wbuf),L"%s at %s",z->p->mnttype,z->p->mnt.list[0]) >= sizeof(wbuf))){
-					if(!z->p->label || swprintf(wbuf,sizeof(wbuf),L"%s “%s”",
-						z->p->mnttype,z->p->label) >= (int)sizeof(buf)){
+				if((!z->p->mnt.count || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s at %s",z->p->mnttype,z->p->mnt.list[0]) >= sizeof(wbuf) - 2)){
+					if(!z->p->label || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s “%s”",
+						z->p->mnttype,z->p->label) >= sizeof(buf) - 2){
 						assert((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->mnttype) < sizeof(wbuf) - 2);
 					}
 				}
@@ -1043,11 +1044,17 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			mvwaddch(w,y,off,rep);
 		}
-		// FIXME we're no longer always a fs if wbuf != L'\0'
-		/*if(wcslen(wbuf) && wcslen(wbuf) > och){
-			assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",z->p->mnttype) <= sizeof(wbuf));
-		}*/
-		if(wcslen(wbuf) && och >= wcslen(wbuf)){
+		// Truncate it at whitespace until it's small enough to fit
+		while(wcslen(wbuf) && wcslen(wbuf) > och){
+			wchar_t *w = wcschr(wbuf,L' ');
+
+			if(w){
+				*w = L'\0';
+			}else{
+				wbuf[0] = L'\0';
+			}
+		}
+		if(wcslen(wbuf)){
 			size_t start = ((och + wcslen(wbuf)) / 2) +
 					((och + wcslen(wbuf)) % 2);
 
