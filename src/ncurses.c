@@ -1838,7 +1838,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
-	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,fs->boxstr);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,"%s",fs->boxstr);
 	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
 #undef ESCSTR
 	wattroff(fsw,A_BOLD);
@@ -1919,7 +1919,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
-	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
 	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
 	wattroff(fsw,A_BOLD);
 	fs->longop = longop;
@@ -1990,7 +1990,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
-	mvwprintw(fsw,0,cols - strlen(fs->boxstr),fs->boxstr);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
 	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
 	fs->inp.prompt = fs->boxstr;
 	def = def ? def : "";
