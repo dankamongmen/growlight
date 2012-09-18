@@ -79,7 +79,7 @@ int parse_swaps(const glightui *gui,const char *name){
 	}
 	// First line is a legend
 	while(fgets(buf,sizeof(buf),fp)){
-		char *toke = buf,*type;
+		char *toke = buf,*type,*size,*e;
 		device *d;
 
 		if(++line == 1){
@@ -103,6 +103,17 @@ int parse_swaps(const glightui *gui,const char *name){
 		if((d = lookup_device(buf)) == NULL){
 			goto err;
 		}
+		size = toke++;		// Third field: "Size".
+		while(isgraph(*toke)){
+			++toke;
+		}
+		*toke++ = '\0';
+		errno = 0;
+		if(((d->mntsize = strtoull(size,&e,0)) == ULLONG_MAX && errno == ERANGE) ||
+				d->mntsize == 0 || *e){
+			goto err;
+		}
+		d->mntsize *= 1024;
 		if(d->swapprio == SWAP_INVALID){
 			if(d->mnttype){
 				diag("Warning: %s went from %s to swap\n",d->name,d->mnttype);
