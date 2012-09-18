@@ -78,7 +78,7 @@
 		aware of variable sector sizes, GPT, and UEFI. <emphasis>&dhpackage;</emphasis>
 		facilitates use of UUID/WWN- and HBA-based identification of block devices.</para>
 <para>This page describes the fullscreen <emphasis role="bold">ncurses(3ncurses)</emphasis> implementation.
-Consult <emphasis>growlight-readline(1)</emphasis> for a line-oriented <emphasis role="bold">readline(3)</emphasis>
+Consult <emphasis role="bold">growlight-readline(8)</emphasis> for a line-oriented <emphasis role="bold">readline(3)</emphasis>
 variant.</para>
 	</refsect1>
 	<refsect1 id="options">
