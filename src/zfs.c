@@ -163,7 +163,7 @@ zfscb(zfs_handle_t *zhf,void *arg){
 		return -1;
 	}
 	if((d = lookup_device(zname)) == NULL){
-		diag("Coudln't look up zpool named %s\n",zname);
+		diag("Couldn't look up zpool named %s\n",zname);
 		return -1;
 	}
 	if((version = zfs_prop_get_int(zhf,ZFS_PROP_VERSION)) < 0){
@@ -210,7 +210,7 @@ int scan_zpools(const glightui *gui){
 		return 0; // ZFS wasn't successfully initialized
 	}
 	if(zprop_get_list(zfs,props,&pools,ZFS_TYPE_POOL)){
-		diag("Coudln't list ZFS pools\n");
+		diag("Couldn't list ZFS pools\n");
 		return -1;
 	}
 	// FIXME do what with it?

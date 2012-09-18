@@ -1299,7 +1299,7 @@ inotify_fd(void){
 	int fd;
 
 	if((fd = inotify_init1(IN_NONBLOCK|IN_CLOEXEC)) < 0){
-		diag("Coudln't get inotify fd (%s)\n",strerror(errno));
+		diag("Couldn't get inotify fd (%s)\n",strerror(errno));
 	}
 	return fd;
 }
@@ -1321,7 +1321,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	if(fd >= 0){
 		*wd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 		if(*wd < 0){
-			diag("Coudln't inotify on %s (%s)\n",dfp,strerror(errno));
+			diag("Couldn't inotify on %s (%s)\n",dfp,strerror(errno));
 			return -1;
 		}else{
 			verbf("Watching %s on fd %d\n",dfp,*wd);
@@ -1329,12 +1329,12 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	}
 	r = 0;
 	if((dir = opendir(dfp)) == NULL){
-		diag("Coudln't open %s (%s)\n",dfp,strerror(errno));
+		diag("Couldn't open %s (%s)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
-		diag("Coudln't get fd on %s (%s)\n",dfp,strerror(errno));
+		diag("Couldn't get fd on %s (%s)\n",dfp,strerror(errno));
 		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
 		closedir(dir);
 		return -1;
