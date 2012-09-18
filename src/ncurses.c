@@ -1177,7 +1177,7 @@ case LAYOUT_DM:
 					transport_str(bo->d->dmdev.transport),
 					rx,rx,"");
 				if(bo->d->size){
-					line += 2;
+					line -= 2;
 				}
 			}
 		}
@@ -1205,7 +1205,7 @@ case LAYOUT_ZPOOL:
 					transport_str(bo->d->zpool.transport),
 					rx,rx,"");
 				if(bo->d->size){
-					line += 2;
+					line -= 2;
 				}
 			}
 		}
@@ -1230,7 +1230,6 @@ case LAYOUT_ZPOOL:
 			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
 		}
 	}
-
 	// ...and now the temperature...
 	if((line + 2 < rows - !endp) && (line + !!topp + 2 >= 1)){
 		if(bo->d->layout == LAYOUT_NONE){
@@ -1301,6 +1300,7 @@ case LAYOUT_ZPOOL:
 	if(++line >= rows - !endp){
 		return;
 	}
+
 	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
 		print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
