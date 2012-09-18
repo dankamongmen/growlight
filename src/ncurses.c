@@ -5676,7 +5676,7 @@ handle_ncurses_input(WINDOW *w){
 				}
 				break;
 			case 'q':
-				diag("User-initiated shutdown");
+				diag("User-initiated shutdown\n");
 				return;
 			default:{
 				const char *hstr = !help.p ? " ('H' for help)" : "";
