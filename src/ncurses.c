@@ -3072,8 +3072,11 @@ update_details(WINDOW *hw){
 	if(blockobj_unpartitionedp(b)){
 		char buf[BPREFIXSTRLEN + 1];
 
-		mvwprintw(hw,6,START_COL,BPREFIXFMT "B unpartitioned media",
+		wattroff(hw,A_BOLD);
+		mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
 				bprefix(d->size,1,buf,sizeof(buf),1));
+		wattron(hw,A_BOLD);
+		wprintw(hw,"%s","unpartitioned media");
 		detail_fs(hw,b->d,7);
 		return 0;
 	}
@@ -3085,8 +3088,11 @@ update_details(WINDOW *hw){
 			assert(b->zone->p->layout == LAYOUT_PARTITION);
 			bprefix(b->zone->p->partdev.alignment,1,align,sizeof(align),1);
 			// FIXME limit length!
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B P%02x %ju→%ju %s (%ls) %04x %sB align",
-					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
+			wattroff(hw,A_BOLD);
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1));
+			wattron(hw,A_BOLD);
+			wprintw(hw,"P%02x %ju→%ju %s (%ls) %04x %sB align",
 					b->zone->p->partdev.pnumber,
 					b->zone->fsector,b->zone->lsector,
 					b->zone->p->name,
@@ -3098,12 +3104,13 @@ update_details(WINDOW *hw){
 			// FIXME print alignment for unpartitioned space as well,
 			// but not until we implement zones in core (bug 252)
 			// or we'll need recreate alignment() etc here
-			mvwprintw(hw,6,START_COL,BPREFIXFMT "B %ju→%ju %s ",
-					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1),
-					b->zone->fsector,b->zone->lsector,
+			wattroff(hw,A_BOLD);
+			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1));
+			wattron(hw,A_BOLD);
+			wprintw(hw,"%ju→%ju %s ",b->zone->fsector,b->zone->lsector,
 					b->zone->rep == L'P' ?
-					"partition table metadata" :
-					"unpartitioned space");
+					"partition table metadata" : "unpartitioned space");
 		}
 	}
 	return 0;
