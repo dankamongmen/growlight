@@ -15,7 +15,7 @@ doc_DATA=
 doc_DATA+=README
 
 dist_doc_DATA=
-dist_doc_DATA+=COPYING
+dist_doc_DATA+=COPYING growlight-readline.xhtml growlight-curses.xhtml
 
 AM_CPPFLAGS=-D_GNU_SOURCE
 
