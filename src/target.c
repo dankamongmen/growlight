@@ -167,7 +167,7 @@ int dump_targets(FILE *fp){
 
 int mount_target(void){
 	if(targfd >= 0){
-		diag("Targfd already opened at %d\n",targfd);
+		verbf("Targfd already opened at %d\n",targfd);
 		close(targfd);
 	}
 	if((targfd = open(growlight_target,O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0){
@@ -179,7 +179,7 @@ int mount_target(void){
 
 int unmount_target(void){
 	if(targfd < 0){
-		diag("Targfd wasn't open\n");
+		verbf("Targfd wasn't open\n");
 		return -1;
 	}
 	if(close(targfd)){
