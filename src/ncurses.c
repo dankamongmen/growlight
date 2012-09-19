@@ -1076,7 +1076,7 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 		return;
 	}
 	strcpy(rolestr,"");
-	selected = line == rb->selline;
+	selected = line >= 1 && line == rb->selline;
 	rx = cols - 79;
 	switch(bo->d->layout){
 case LAYOUT_NONE:
