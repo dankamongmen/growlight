@@ -3461,8 +3461,24 @@ resize_adapter(reelbox *rb){
 			}
 		}
 		if(subrows != getmaxy(rb->win)){
-			assert(wresize(rb->win,subrows,PAD_COLS(cols)) != ERR);
-			assert(replace_panel(rb->panel,rb->win) != ERR);
+			if(subrows > 0){
+				assert(wresize(rb->win,subrows,PAD_COLS(cols)) != ERR);
+				assert(replace_panel(rb->panel,rb->win) != ERR);
+			}else{
+				assert(werase(rb->win) == OK);
+				assert(hide_panel(rb->panel) == OK);
+				if(rb->next){
+					rb->next->prev = rb->prev;
+				}else{
+					last_reelbox = rb->prev;
+				}
+				if(rb->prev){
+					rb->prev->next = rb->next;
+				}else{
+					top_reelbox = rb->next;
+				}
+				// need NULL out adapter reference FIXME
+			}
 		}
 	}
 	return OK;
