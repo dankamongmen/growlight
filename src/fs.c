@@ -528,7 +528,7 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 			if((mnttype = strdup(ptype)) == NULL){
 				return -1;
 			}
-			// FIXME needs accept/set UUID and label!
+			// FIXME needs accept/set UUID!
 			if(pt->mkfs(dbuf,name,force)){
 				free(mnttype);
 				return -1;
