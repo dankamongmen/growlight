@@ -1475,24 +1475,25 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		assert(wprintw(w,"]") != ERR);
 		assert(wmove(w,0,cols - 5) != ERR);
 		assert(wattron(w,A_BOLD) == OK);
+		if(current){
+			assert(wattron(w,A_REVERSE) == OK);
+		}
 		waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
 		assert(wattron(w,attrs) != ERR);
 		assert(wattroff(w,A_REVERSE) != ERR);
 	}
 	if(belowend == 0){
 		if(as->c->bus == BUS_PCIe){
+			assert(wcolor_set(w,bcolor,NULL) != ERR);
+			assert(wcolor_set(w,hcolor,NULL) != ERR);
 			if(current){
 				assert(wattron(w,A_BOLD) == OK);
+				assert(wattron(w,A_REVERSE) == OK);
 			}else{
 				assert(wattroff(w,A_BOLD) == OK);
 			}
 			assert(mvwprintw(w,rows - 1,2,"[") != ERR);
-			assert(wcolor_set(w,hcolor,NULL) != ERR);
-			if(current){
-				assert(wattron(w,A_BOLD) == OK);
-			}else{
-				assert(wattroff(w,A_BOLD) == OK);
-			}
+			//assert(wcolor_set(w,hcolor,NULL) != ERR);
 			if(as->c->pcie.lanes_neg == 0){
 				wprintw(w,"Southbridge device %04hx:%02x.%02x.%x",
 					as->c->pcie.domain,as->c->pcie.bus,
@@ -1503,11 +1504,9 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 						as->c->pcie.dev,as->c->pcie.func,
 						as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
 			}
-			assert(wcolor_set(w,bcolor,NULL) != ERR);
-			if(current){
-				assert(wattron(w,A_BOLD) == OK);
-			}
+			//assert(wcolor_set(w,bcolor,NULL) != ERR);
 			assert(wprintw(w,"]") != ERR);
+			assert(wattroff(w,A_REVERSE) == OK);
 		}
 	}
 }
