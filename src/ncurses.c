@@ -3091,11 +3091,30 @@ update_details(WINDOW *hw){
 					d->revision ? d->revision : "n/a",
 					qprefix(d->size,1,buf,sizeof(buf),0),
 					d->roflag ? L'+' : L'-');
+		if(d->layout == LAYOUT_MDADM){
+			wprintw(hw," Sde/SWidth:");
+			wattroff(hw,A_BOLD);
+			wprintw(hw," %u",d->mddev.stride);
+			wattron(hw,A_BOLD);
+			wprintw(hw,"/");
+			wattroff(hw,A_BOLD);
+			wprintw(hw,"%u",d->mddev.swidth);
+			wattron(hw,A_BOLD);
+		}
 		assert(d->physsec <= 4096);
-		mvwprintw(hw,4,START_COL,"%ju sectors (%uB logical / %uB physical)",
-					d->size / (d->logsec ? d->logsec : 1),
-					d->logsec,
-					d->physsec);
+		mvwprintw(hw,4,START_COL,"Sectors: ");
+		wattroff(hw,A_BOLD);
+		wprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
+		wattron(hw,A_BOLD);
+		wprintw(hw,"(");
+		wattroff(hw,A_BOLD);
+		wprintw(hw,"%uB ",d->logsec);
+		wattron(hw,A_BOLD);
+		wprintw(hw,"logical / ");
+		wattroff(hw,A_BOLD);
+		wprintw(hw,"%uB ",d->physsec);
+		wattron(hw,A_BOLD);
+		wprintw(hw,"physical)");
 	}
 	mvwprintw(hw,5,START_COL,"Partitioning: ");
 	wattroff(hw,A_BOLD);
