@@ -135,6 +135,9 @@ int explore_md_sysfs(device *d,int dirfd){
 	if(d->mddev.resync && !d->mddev.degraded){
 		d->mddev.degraded = 1;
 	}
+	d->mddev.stride = 512 * 1024; // 512KB default FIXME
+	// FIXME depends on aggregate type. number of non-parity disks
+	d->mddev.swidth = d->mddev.disks ? d->mddev.disks - 1 : 0;
 	return 0;
 }
 

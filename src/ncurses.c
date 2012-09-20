@@ -3092,11 +3092,11 @@ update_details(WINDOW *hw){
 					qprefix(d->size,1,buf,sizeof(buf),0),
 					d->roflag ? L'+' : L'-');
 		if(d->layout == LAYOUT_MDADM){
-			wprintw(hw," Sde/SWidth:");
+			wprintw(hw," Stride:");
 			wattroff(hw,A_BOLD);
-			wprintw(hw," %u",d->mddev.stride);
+			wprintw(hw," %sB",bprefix(d->mddev.stride,1,buf,sizeof(buf),1));
 			wattron(hw,A_BOLD);
-			wprintw(hw,"/");
+			wprintw(hw," SWidth: ");
 			wattroff(hw,A_BOLD);
 			wprintw(hw,"%u",d->mddev.swidth);
 			wattron(hw,A_BOLD);
