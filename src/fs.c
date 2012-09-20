@@ -557,6 +557,10 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 			// FIXME needs accept/set UUID!
 			marsh.name = name;
 			marsh.force = force;
+			if(d->layout == LAYOUT_MDADM){
+				marsh.stride = d->mddev.stride;
+				marsh.swidth = d->mddev.swidth;
+			}
 			if(pt->mkfs(dbuf,&marsh)){
 				free(mnttype);
 				return -1;
