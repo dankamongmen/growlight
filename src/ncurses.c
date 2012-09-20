@@ -23,6 +23,8 @@
 
 #define KEY_ESC 27
 
+static void shutdown_cycle(void) __attribute__ ((noreturn));
+
 void locked_diag(const char *fmt,...) __attribute__ ((format (printf,1,2)));
 
 // For the ANSI standard terminal, we can fit only 4 lines of explicative text
@@ -5292,7 +5294,7 @@ handle_actform_input(int ch){
 			unlock_ncurses();
 			break;
 		}case 'q':{
-			return 1;
+			return 'q';
 		}case 'C':{
 			int selections,scrolloff;
 			char **selarray;
@@ -5344,6 +5346,15 @@ destroy_aggregate_confirm(const char *op){
 	}else{
 		locked_diag("Unknown layout type %d on %s",b->d->layout,b->d->name);
 	}
+}
+
+static void
+untargeted_exit_confirm(const char *op){
+	if(!op || !approvedp(op)){
+		locked_diag("exit cancelled");
+		return;
+	}
+	shutdown_cycle();
 }
 
 static void
@@ -5419,13 +5430,15 @@ handle_ncurses_input(WINDOW *w){
 
 	while((ch = getch()) != ERR){
 		if(actform){
-			if(handle_actform_input(ch)){
-				return;
+			if((ch = handle_actform_input(ch)) == ERR){
+				break;
 			}
-			continue;
+			if(ch == 0){
+				continue;
+			}
 		}
 		if(active){
-			if((ch = handle_subwindow_input(ch)) == 0){
+			if((ch = handle_subwindow_input(ch)) == ERR){
 				return;
 			}
 		}
@@ -5699,8 +5712,13 @@ handle_ncurses_input(WINDOW *w){
 				}
 				break;
 			case 'q':
-				diag("User-initiated shutdown\n");
-				return;
+				if(!growlight_target){
+					return;
+				}else if(finalized){
+					return;
+				}
+				confirm_operation("exit without finalizing a target",untargeted_exit_confirm);
+				break;
 			default:{
 				const char *hstr = !help.p ? " ('H' for help)" : "";
 				// diag() locks/unlocks, and calls screen_update()
@@ -6098,6 +6116,27 @@ vdiag(const char *fmt,va_list v){
 	unlock_ncurses_growlight();
 }
 
+static void
+shutdown_cycle(void){
+	struct panel_state *ps;
+	WINDOW *w = stdscr;
+
+	diag("User-initiated shutdown\n");
+	ps = show_splash(L"Shutting down...");
+	if(growlight_stop()){
+		kill_splash(ps);
+		ncurses_cleanup(&w);
+		dump_diags();
+		exit(EXIT_FAILURE);
+	}
+	kill_splash(ps);
+	if(ncurses_cleanup(&w)){
+		dump_diags();
+		exit(EXIT_FAILURE);
+	}
+	exit(EXIT_SUCCESS);
+};
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = vdiag,
@@ -6132,17 +6171,5 @@ int main(int argc,char * const *argv){
 	}
 	unlock_growlight();
 	handle_ncurses_input(w);
-	ps = show_splash(L"Shutting down...");
-	if(growlight_stop()){
-		kill_splash(ps);
-		ncurses_cleanup(&w);
-		dump_diags();
-		return EXIT_FAILURE;
-	}
-	kill_splash(ps);
-	if(ncurses_cleanup(&w)){
-		dump_diags();
-		return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
+	shutdown_cycle(); // calls exit() on all paths
 }
