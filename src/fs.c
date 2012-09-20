@@ -200,7 +200,7 @@ ext2_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 		name = "SprezzaEXT2";
 	}
 	if(mkm->stride && mkm->swidth){
-		if(vspopen_drain("mkfs.ext2 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+		if(vspopen_drain("mkfs.ext2 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
 			mkm->stride,mkm->swidth,
 			mkm->force ? "-F " : "",mkm->name,dev)){
 		}
