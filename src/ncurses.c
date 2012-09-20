@@ -624,6 +624,43 @@ bevel_top(WINDOW *w){
 }
 
 static int
+bphat(WINDOW *w){
+	static const cchar_t bchr[] = {
+		{ .attr = 0, .chars = L"█", },
+		{ .attr = 0, .chars = L"█", },
+		{ .attr = 0, .chars = L"█", },
+		{ .attr = 0, .chars = L"█", },
+		{ .attr = 0, .chars = L"▌", },
+		{ .attr = 0, .chars = L"▀", },
+		{ .attr = 0, .chars = L"▐", },
+		{ .attr = 0, .chars = L"▄", },
+	};
+	int rows,cols,z;
+
+	getmaxyx(w,rows,cols);
+	assert(rows && cols);
+	// called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bchr[3]);'
+	// we get ERR returned. this is known behavior: fuck ncurses. instead,
+	// we use mvwins_wch, which doesn't update the cursor position.
+	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
+	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
+	for(z = 1 ; z < cols - 1 ; ++z){
+		assert(mvwadd_wch(w,0,z,&bchr[5]) != ERR);
+	}
+	for(z = rows - 2 ; z > 0 ; --z){
+		assert(mvwadd_wch(w,z,0,&bchr[4]) != ERR);
+		assert(mvwins_wch(w,z,cols - 1,&bchr[6]) != ERR);
+	}
+	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
+	assert(mvwadd_wch(w,rows - 1,0,&bchr[2]) != ERR);
+	for(z = 1 ; z < cols - 1 ; ++z){
+		assert(mvwadd_wch(w,rows - 1,z,&bchr[7]) != ERR);
+	}
+	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[3]) != ERR);
+	return OK;
+}
+
+static int
 bevel(WINDOW *w){
 	static const cchar_t bchr[] = {
 		{ .attr = 0, .chars = L"╭", },
@@ -1379,6 +1416,7 @@ static void
 adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend){
 	int current = as->rb == current_adapter;
 	int bcolor,hcolor,rows,cols;
+	int (*fullbevel)(WINDOW *);
 	int attrs;
 
 	getmaxyx(w,rows,cols);
@@ -1386,15 +1424,17 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		hcolor = UHEADING_COLOR; // plus A_BOLD
 		bcolor = SELBORDER_COLOR;
 		attrs = A_BOLD;
+		fullbevel = bphat;
 	}else{
 		hcolor = UNHEADING_COLOR;;
 		bcolor = UBORDER_COLOR;
 		attrs = A_NORMAL;
+		fullbevel = bevel;
 	}
 	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
 	if(abovetop == 0){
 		if(belowend == 0){
-			assert(bevel(w) == OK);
+			assert(fullbevel(w) == OK);
 		}else{
 			assert(bevel_top(w) == OK);
 		}
