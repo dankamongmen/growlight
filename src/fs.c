@@ -142,8 +142,6 @@ ufs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 
 static int
 ext4_mkfs(const char *dev,const struct mkfsmarshal *mkm){
-	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
-	// same for stripe_width FIXME
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
 	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
@@ -154,8 +152,13 @@ ext4_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 		name = "SprezzaEXT4";
 	}
 	//if(vspopen_drain("mkfs.ext4 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
-	if(vspopen_drain("mkfs.ext4 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
-				mkm->force ? "-F " : "",mkm->name,dev)){
+	if(mkm->stride && mkm->swidth){
+		if(vspopen_drain("mkfs.ext4 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+			mkm->stride,mkm->swidth,
+			mkm->force ? "-F " : "",mkm->name,dev)){
+		}
+	}else if(vspopen_drain("mkfs.ext4 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+			mkm->force ? "-F " : "",mkm->name,dev)){
 		return -1;
 	}
 	return 0;
@@ -163,8 +166,6 @@ ext4_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 
 static int
 ext3_mkfs(const char *dev,const struct mkfsmarshal *mkm){
-	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
-	// same for stripe_width FIXME
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
 	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
@@ -175,8 +176,13 @@ ext3_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 		name = "SprezzaEXT3";
 	}
 	//if(vspopen_drain("mkfs.ext3 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
-	if(vspopen_drain("mkfs.ext3 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
-				mkm->force ? "-F ": "",mkm->name,dev)){
+	if(mkm->stride && mkm->swidth){
+		if(vspopen_drain("mkfs.ext3 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+			mkm->stride,mkm->swidth,
+			mkm->force ? "-F ": "",mkm->name,dev)){
+		}
+	}else if(vspopen_drain("mkfs.ext3 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+			mkm->force ? "-F ": "",mkm->name,dev)){
 		return -1;
 	}
 	return 0;
@@ -184,9 +190,6 @@ ext3_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 
 static int
 ext2_mkfs(const char *dev,const struct mkfsmarshal *mkm){
-	// if we're an mdadm, get chunk size and pass it as -Estride= FIXME
-	// same for stripe_width FIXME
-	// need -F for non-partition or block special FIXME
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
 	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
@@ -196,9 +199,13 @@ ext2_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	if(name == NULL){
 		name = "SprezzaEXT2";
 	}
-	//if(vspopen_drain("mkfs.ext2 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
-	if(vspopen_drain("mkfs.ext2 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
-				mkm->force ? "-F " : "",mkm->name,dev)){
+	if(mkm->stride && mkm->swidth){
+		if(vspopen_drain("mkfs.ext2 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+			mkm->stride,mkm->swidth,
+			mkm->force ? "-F " : "",mkm->name,dev)){
+		}
+	}else if(vspopen_drain("mkfs.ext2 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+			mkm->force ? "-F " : "",mkm->name,dev)){
 		return -1;
 	}
 	return 0;
