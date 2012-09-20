@@ -752,8 +752,8 @@ static inline int
 adapter_lines_bounded(const adapterstate *as,int rows){
 	int l = lines_for_adapter(as);
 
-	if(l > rows - 2){ // top and bottom borders
-		l = rows - 2;
+	if(l > rows - 1){ // bottom summary line
+		l = rows - 1;
 	}
 	return l;
 }
@@ -1099,7 +1099,7 @@ case LAYOUT_NONE:
 			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
 			strncpy(rolestr,"virtual",sizeof(rolestr));
 		}
-		if(line + !!topp + 2 >= 1){
+		if(line + !!topp >= 1){
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
@@ -1132,7 +1132,7 @@ case LAYOUT_MDADM:
 			co = COLOR_PAIR(MDADM_COLOR);
 		}
 		assert(wattrset(rb->win,co) == OK);
-		if(line + !!topp + 2 >= 1){
+		if(line + !!topp >= 1){
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
@@ -1159,7 +1159,7 @@ case LAYOUT_MDADM:
 case LAYOUT_DM:
 		strncpy(rolestr,"dm",sizeof(rolestr));
 		assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
-		if(line + !!topp + 2 >= 1){
+		if(line + !!topp >= 1){
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
@@ -1187,7 +1187,7 @@ case LAYOUT_PARTITION:
 case LAYOUT_ZPOOL:
 		strncpy(rolestr,"zpool",sizeof(rolestr));
 		assert(wattrset(rb->win,COLOR_PAIR(ZPOOL_COLOR)) == OK);
-		if(line + !!topp + 2 >= 1){
+		if(line + !!topp >= 1){
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
