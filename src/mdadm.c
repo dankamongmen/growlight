@@ -158,7 +158,7 @@ int destroy_mdadm(device *d){
 
 static int
 generic_mdadm_create(const char *name,const char *metadata,const char *level,
-			char * const *comps,int num){
+			char * const *comps,int num,int bitmap){
 	char buf[BUFSIZ] = "";
 	size_t pos;
 	int z;
@@ -177,30 +177,31 @@ generic_mdadm_create(const char *name,const char *metadata,const char *level,
 	}
 #undef PREFIX
 	// FIXME provide a way to let user control write intent bitmap
-	return vspopen_drain("mdadm -C \"%s\" -e %s -l %s -N \"%s\" -n %d -b internal%s",
-				name,metadata,level,name,num,buf);
+	return vspopen_drain("mdadm -C \"%s\" -e %s -l %s -N \"%s\" -n %d%s%s",
+				name,metadata,level,name,num,
+				bitmap ? " -b internal" : "",buf);
 }
 
 int make_mdraid0(const char *name,char * const *comps,int num){
-	return generic_mdadm_create(name,"1.2","raid0",comps,num);
+	return generic_mdadm_create(name,"1.2","raid0",comps,num,0);
 }
 
 int make_mdraid1(const char *name,char * const *comps,int num){
-	return generic_mdadm_create(name,"1.2","raid1",comps,num);
+	return generic_mdadm_create(name,"1.2","raid1",comps,num,1);
 }
 
 int make_mdraid4(const char *name,char * const *comps,int num){
-	return generic_mdadm_create(name,"1.2","raid4",comps,num);
+	return generic_mdadm_create(name,"1.2","raid4",comps,num,1);
 }
 
 int make_mdraid5(const char *name,char * const *comps,int num){
-	return generic_mdadm_create(name,"1.2","raid5",comps,num);
+	return generic_mdadm_create(name,"1.2","raid5",comps,num,1);
 }
 
 int make_mdraid6(const char *name,char * const *comps,int num){
-	return generic_mdadm_create(name,"1.2","raid6",comps,num);
+	return generic_mdadm_create(name,"1.2","raid6",comps,num,1);
 }
 
 int make_mdraid10(const char *name,char * const *comps,int num){
-	return generic_mdadm_create(name,"1.2","raid10",comps,num);
+	return generic_mdadm_create(name,"1.2","raid10",comps,num,1);
 }
