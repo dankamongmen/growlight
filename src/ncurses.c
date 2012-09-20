@@ -652,11 +652,11 @@ bphat(WINDOW *w){
 		assert(mvwins_wch(w,z,cols - 1,&bchr[6]) != ERR);
 	}
 	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
-	assert(mvwadd_wch(w,rows - 1,0,&bchr[2]) != ERR);
+	assert(mvwadd_wch(w,rows - 1,0,&bchr[5]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
-		assert(mvwadd_wch(w,rows - 1,z,&bchr[7]) != ERR);
+		assert(mvwadd_wch(w,rows - 1,z,&bchr[5]) != ERR);
 	}
-	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[3]) != ERR);
+	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[5]) != ERR);
 	return OK;
 }
 
@@ -3153,9 +3153,15 @@ update_details(WINDOW *hw){
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1));
 			wattron(hw,A_BOLD);
-			wprintw(hw,"P%02x %ju→%ju %s (%ls) %04x %sB align",
-					b->zone->p->partdev.pnumber,
-					b->zone->fsector,b->zone->lsector,
+			wprintw(hw,"P%02x ",b->zone->p->partdev.pnumber);
+			wattroff(hw,A_BOLD);
+			wprintw(hw,"%ju",b->zone->fsector);
+			wattron(hw,A_BOLD);
+			wprintw(hw,"→");
+			wattroff(hw,A_BOLD);
+			wprintw(hw,"%ju ",b->zone->lsector);
+			wattron(hw,A_BOLD);
+			wprintw(hw,"%s (%ls) %04x %sB align",
 					b->zone->p->name,
 					b->zone->p->partdev.pname ?
 					 b->zone->p->partdev.pname : L"unnamed",
@@ -3169,8 +3175,14 @@ update_details(WINDOW *hw){
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1));
 			wattron(hw,A_BOLD);
-			wprintw(hw,"%ju→%ju %s ",b->zone->fsector,b->zone->lsector,
-					b->zone->rep == L'P' ?
+			wattroff(hw,A_BOLD);
+			wprintw(hw,"%ju",b->zone->fsector);
+			wattron(hw,A_BOLD);
+			wprintw(hw,"→");
+			wattroff(hw,A_BOLD);
+			wprintw(hw,"%ju ",b->zone->lsector);
+			wattron(hw,A_BOLD);
+			wprintw(hw,"%s ",b->zone->rep == L'P' ?
 					"partition table metadata" : "unpartitioned space");
 		}
 	}
