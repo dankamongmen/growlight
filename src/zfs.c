@@ -348,6 +348,6 @@ int make_raidz3(const char *name,char * const *vdevs,int num){
 	return generic_make_zpool("raidz3",name,vdevs,num);
 }
 
-int make_zfs(const char *dev,const char *name,int force __attribute__ ((unused))){
-	return vspopen_drain("zfs create -o mountpoint=%s %s",name,dev);
+int make_zfs(const char *dev,const struct mkfsmarshal *mkm){
+	return vspopen_drain("zfs create -o mountpoint=%s %s",mkm->name,dev);
 }
