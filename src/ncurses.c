@@ -643,15 +643,15 @@ bphat(WINDOW *w){
 	// we get ERR returned. this is known behavior: fuck ncurses. instead,
 	// we use mvwins_wch, which doesn't update the cursor position.
 	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
-	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
+	assert(mvwadd_wch(w,0,0,&bchr[7]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
-		assert(mvwadd_wch(w,0,z,&bchr[5]) != ERR);
+		assert(mvwadd_wch(w,0,z,&bchr[7]) != ERR);
 	}
 	for(z = rows - 2 ; z > 0 ; --z){
 		assert(mvwadd_wch(w,z,0,&bchr[4]) != ERR);
 		assert(mvwins_wch(w,z,cols - 1,&bchr[6]) != ERR);
 	}
-	assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
+	assert(mvwins_wch(w,0,cols - 1,&bchr[7]) != ERR);
 	assert(mvwadd_wch(w,rows - 1,0,&bchr[5]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
 		assert(mvwadd_wch(w,rows - 1,z,&bchr[5]) != ERR);
