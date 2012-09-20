@@ -854,7 +854,7 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
 		if(rows + ybelow >= y){
 			yabove = 0;
 		}else{
-			yabove -= rows + ybelow - y;
+			yabove = y - (rows + ybelow);
 		}
 	}else{
 		yabove += y - (rows + ybelow + yabove);
