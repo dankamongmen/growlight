@@ -14,6 +14,9 @@ int explore_dm_sysfs(device *d,int dirfd){
 	if((d->model = strdup("Linux devmapper")) == NULL){
 		return -1;
 	}
+	if((d->dmdev.uuid = get_sysfs_string(dirfd,"uuid")) == NULL){
+		verbf("Warning: no 'uuid' content in dm device %s\n",d->name);
+	}
 	if((d->dmdev.dmname = get_sysfs_string(dirfd,"name")) == NULL){
 		verbf("Warning: no 'name' content in dm device %s\n",d->name);
 	}

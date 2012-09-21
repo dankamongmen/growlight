@@ -175,9 +175,9 @@ typedef struct device {
 			unsigned swidth;	// Stripe width (non-parity drives)
 		} mddev;
 		struct { // Device Manager
-			unsigned long disks;	// RAID disks in md
-			char *level;		// RAID level
-			mdslave *slaves;	// RAID components
+			unsigned long disks;	// disks in DM
+			char *level;		// DM level
+			mdslave *slaves;	// DM components
 			char *uuid;
 			char *dmname;
 			transport_e transport;
