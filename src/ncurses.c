@@ -623,13 +623,13 @@ bevel_top(WINDOW *w){
 	return OK;
 }
 
-static int
+/*static int
 bphat(WINDOW *w){
 	static const cchar_t bchr[] = {
 		{ .attr = 0, .chars = L"█", },
 		{ .attr = 0, .chars = L"█", },
 		{ .attr = 0, .chars = L"█", },
-		{ .attr = 0, .chars = L"█", },
+		{ .attr = 0, .chars = L"▖", },
 		{ .attr = 0, .chars = L"▌", },
 		{ .attr = 0, .chars = L"▀", },
 		{ .attr = 0, .chars = L"▐", },
@@ -648,17 +648,17 @@ bphat(WINDOW *w){
 		assert(mvwadd_wch(w,0,z,&bchr[7]) != ERR);
 	}
 	for(z = rows - 2 ; z > 0 ; --z){
-		assert(mvwadd_wch(w,z,0,&bchr[4]) != ERR);
-		assert(mvwins_wch(w,z,cols - 1,&bchr[6]) != ERR);
+		assert(mvwadd_wch(w,z,0,&bchr[6]) != ERR);
+		assert(mvwins_wch(w,z,cols - 1,&bchr[4]) != ERR);
 	}
-	assert(mvwins_wch(w,0,cols - 1,&bchr[7]) != ERR);
+	assert(mvwins_wch(w,0,cols - 1,&bchr[3]) != ERR);
 	assert(mvwadd_wch(w,rows - 1,0,&bchr[5]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
 		assert(mvwadd_wch(w,rows - 1,z,&bchr[5]) != ERR);
 	}
 	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[5]) != ERR);
 	return OK;
-}
+}*/
 
 static int
 bevel(WINDOW *w){
@@ -1424,7 +1424,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		hcolor = UHEADING_COLOR; // plus A_BOLD
 		bcolor = SELBORDER_COLOR;
 		attrs = A_BOLD;
-		fullbevel = bphat;
+		fullbevel = bevel;
 	}else{
 		hcolor = UNHEADING_COLOR;;
 		bcolor = UBORDER_COLOR;
@@ -1443,8 +1443,6 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			assert(bevel_bottom(w) == OK);
 		} // otherwise it has no top or bottom visible
 	}
-	assert(wattroff(w,A_REVERSE) == OK);
-
 	if(abovetop == 0){
 		if(current){
 			assert(wattron(w,A_BOLD) == OK);
@@ -1475,25 +1473,19 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		assert(wprintw(w,"]") != ERR);
 		assert(wmove(w,0,cols - 5) != ERR);
 		assert(wattron(w,A_BOLD) == OK);
-		if(current){
-			assert(wattron(w,A_REVERSE) == OK);
-		}
 		waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
 		assert(wattron(w,attrs) != ERR);
-		assert(wattroff(w,A_REVERSE) != ERR);
 	}
 	if(belowend == 0){
 		if(as->c->bus == BUS_PCIe){
 			assert(wcolor_set(w,bcolor,NULL) != ERR);
-			assert(wcolor_set(w,hcolor,NULL) != ERR);
 			if(current){
 				assert(wattron(w,A_BOLD) == OK);
-				assert(wattron(w,A_REVERSE) == OK);
 			}else{
 				assert(wattroff(w,A_BOLD) == OK);
 			}
 			assert(mvwprintw(w,rows - 1,2,"[") != ERR);
-			//assert(wcolor_set(w,hcolor,NULL) != ERR);
+			assert(wcolor_set(w,hcolor,NULL) != ERR);
 			if(as->c->pcie.lanes_neg == 0){
 				wprintw(w,"Southbridge device %04hx:%02x.%02x.%x",
 					as->c->pcie.domain,as->c->pcie.bus,
@@ -1504,9 +1496,8 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 						as->c->pcie.dev,as->c->pcie.func,
 						as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
 			}
-			//assert(wcolor_set(w,bcolor,NULL) != ERR);
+			assert(wcolor_set(w,bcolor,NULL) != ERR);
 			assert(wprintw(w,"]") != ERR);
-			assert(wattroff(w,A_REVERSE) == OK);
 		}
 	}
 }
