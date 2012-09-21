@@ -37,10 +37,10 @@ int explore_md_sysfs(device *d,int dirfd){
 	}
 	if((d->mddev.level = get_sysfs_string(dirfd,"level")) == NULL){
 		verbf("Warning: no 'level' content in mdadm device %s\n",d->name);
+		d->mddev.level = 0;
 	}
 	if((d->revision = get_sysfs_string(dirfd,"metadata_version")) == NULL){
 		verbf("Warning: no 'metadata_version' content in mdadm device %s\n",d->name);
-		d->mddev.level = 0;
 	}
 	// FIXME there's some archaic rules on mdadm devices making some of them
 	// non-partitionable, but they're all partitionable after 2.6.38 or something
