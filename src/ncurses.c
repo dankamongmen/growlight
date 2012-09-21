@@ -2966,21 +2966,8 @@ detail_fs(WINDOW *hw,const device *d,int row){
 		wprintw(hw,"%s",d->mnt.count ? " at " : "");
 		wattroff(hw,A_BOLD);
 		wprintw(hw,"%s",d->mnt.count ? d->mnt.list[0] : "");
-	}else if(d->swapprio != SWAP_INVALID){
-		wattroff(hw,A_BOLD);
-		mvwprintw(hw,row,START_COL,BPREFIXFMT "B ",bprefix(d->mntsize,1,buf,sizeof(buf),0));
 		wattron(hw,A_BOLD);
-		wprintw(hw,"%sswap",d->label ? "" : "unlabeled ");
-		wattron(hw,A_BOLD);
-		wprintw(hw,"%s",d->label ? " named " : "n/a");
-		wattroff(hw,A_BOLD);
-		wprintw(hw,"%s",d->label ? d->label : "n/a");
-		wattron(hw,A_BOLD);
-		waddstr(hw," prio ");
-		wattroff(hw,A_BOLD);
-		wprintw(hw,"%d",d->swapprio);
 	}
-	wattron(hw,A_BOLD);
 }
 
 static int
