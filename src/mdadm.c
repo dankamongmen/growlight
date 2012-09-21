@@ -39,7 +39,7 @@ int explore_md_sysfs(device *d,int dirfd){
 		verbf("Warning: no 'level' content in mdadm device %s\n",d->name);
 	}
 	if((d->revision = get_sysfs_string(dirfd,"metadata_version")) == NULL){
-		verbf("Warning: no 'level' content in mdadm device %s\n",d->name);
+		verbf("Warning: no 'metadata_version' content in mdadm device %s\n",d->name);
 		d->mddev.level = 0;
 	}
 	// FIXME there's some archaic rules on mdadm devices making some of them
