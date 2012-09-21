@@ -171,7 +171,7 @@ typedef struct device {
 			unsigned long degraded;	// number of missing devices
 			char *pttable;		// Partition table type (can be NULL)
 			unsigned resync;
-			unsigned stride;	// Chunk (stride in ext4 talk)
+			uintmax_t stride;	// Chunk (stride in ext4 talk)
 			unsigned swidth;	// Stripe width (non-parity drives)
 		} mddev;
 		struct { // Device Manager

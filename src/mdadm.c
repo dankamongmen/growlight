@@ -32,8 +32,15 @@ int explore_md_sysfs(device *d,int dirfd){
 		verbf("Warning: no 'raid_disks' content in mdadm device %s\n",d->name);
 		d->mddev.disks = 0;
 	}
+	// Chunk size is only applicable for RAID[0456] and RAID10.
+	// It is *not* set and *not* applicable for RAID1 or linear.
+	if(get_sysfs_uint(dirfd,"chunk_size",&d->mddev.stride)){
+		verbf("Warning: no 'chunk_size' content in mdadm device %s\n",d->name);
+		d->mddev.stride = 0;
+	}
 	if(get_sysfs_uint(dirfd,"degraded",&d->mddev.degraded)){
 		verbf("Warning: no 'degraded' content in mdadm device %s\n",d->name);
+		d->mddev.degraded = 0;
 	}
 	if((d->mddev.level = get_sysfs_string(dirfd,"level")) == NULL){
 		verbf("Warning: no 'level' content in mdadm device %s\n",d->name);
@@ -135,9 +142,12 @@ int explore_md_sysfs(device *d,int dirfd){
 	if(d->mddev.resync && !d->mddev.degraded){
 		d->mddev.degraded = 1;
 	}
-	d->mddev.stride = 512 * 1024; // 512KB default FIXME
 	// FIXME depends on aggregate type. number of non-parity disks
-	d->mddev.swidth = d->mddev.disks ? d->mddev.disks - 1 : 0;
+	if(d->mddev.stride){
+		d->mddev.swidth = d->mddev.disks ? d->mddev.disks - 1 : 0;
+	}else{
+		d->mddev.swidth = 0;
+	}
 	return 0;
 }
 
