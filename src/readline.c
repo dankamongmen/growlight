@@ -1797,8 +1797,6 @@ version(wchar_t * const *args,const char *arghelp){
 "++'''''#++++++++++++++++++++++++++++++++'''''++++++++++##########++++''++++++'''"
 "++#++++++++++++++++++++++++++++++++++++++++#++++++++++++#########++++'+''''''+++\n");
 	use_terminfo_color(COLOR_WHITE,1);
-	ret |= popen_drain("parted --version");
-	printf("\n");
 	ret |= popen_drain("mkswap --version");
 	printf("\n");
 	ret |= popen_drain("grub-mkdevicemap --version");
