@@ -7,28 +7,20 @@
 #include "growlight.h"
 
 int explore_dm_sysfs(device *d,int dirfd){
-	unsigned long rd;
-	mdslave **enqm;
+	/*unsigned long rd;
+	mdslave **enqm;*/
 
-	// These files will be empty on incomplete arrays like the md0 that
-	// sometimes pops up.
-	if(get_sysfs_uint(dirfd,"raid_disks",&d->mddev.disks)){
-		verbf("Warning: no 'raid_disks' content in dm device %s\n",d->name);
-		d->mddev.disks = 0;
-	}
-	if((d->mddev.level = get_sysfs_string(dirfd,"level")) == NULL){
-		verbf("Warning: no 'level' content in dm device %s\n",d->name);
-	}
-	if((d->revision = get_sysfs_string(dirfd,"metadata_version")) == NULL){
-		verbf("Warning: no 'level' content in dm device %s\n",d->name);
-		d->mddev.level = 0;
-	}
+	d->dmdev.disks = 1;
 	if((d->model = strdup("Linux devmapper")) == NULL){
 		return -1;
 	}
-	enqm = &d->mddev.slaves;
-	d->mddev.transport = AGGREGATE_UNKNOWN;
-	for(rd = 0 ; rd < d->mddev.disks ; ++rd){
+	if((d->dmdev.dmname = get_sysfs_string(dirfd,"name")) == NULL){
+		verbf("Warning: no 'name' content in dm device %s\n",d->name);
+	}
+	d->dmdev.transport = AGGREGATE_UNKNOWN;
+	// FIXME need to browse slaves/ subdirectory in sysfs entry
+	/*enqm = &d->dmdev.slaves;
+	for(rd = 0 ; rd < d->dmdev.disks ; ++rd){
 		char buf[NAME_MAX],lbuf[NAME_MAX],*c;
 		device *subd;
 		mdslave *m;
@@ -66,7 +58,7 @@ int explore_dm_sysfs(device *d,int dirfd){
 		m->next = NULL;
 		*enqm = m;
 		enqm = &m->next;
-		/*m->component = subd;*/
+		//m->component = subd;
 		lock_growlight();
 		if((subd = lookup_device(c)) == NULL){
 			unlock_growlight();
@@ -74,31 +66,31 @@ int explore_dm_sysfs(device *d,int dirfd){
 		}
 		switch(subd->layout){
 			case LAYOUT_NONE:
-				if(d->mddev.transport == AGGREGATE_UNKNOWN){
-					d->mddev.transport = subd->blkdev.transport;
-				}else if(d->mddev.transport != subd->blkdev.transport){
-					d->mddev.transport = AGGREGATE_MIXED;
+				if(d->dmdev.transport == AGGREGATE_UNKNOWN){
+					d->dmdev.transport = subd->blkdev.transport;
+				}else if(d->dmdev.transport != subd->blkdev.transport){
+					d->dmdev.transport = AGGREGATE_MIXED;
 				}
 				break;
 			case LAYOUT_MDADM:
-				if(d->mddev.transport == AGGREGATE_UNKNOWN){
-					d->mddev.transport = subd->mddev.transport;
-				}else if(d->mddev.transport != subd->mddev.transport){
-					d->mddev.transport = AGGREGATE_MIXED;
+				if(d->dmdev.transport == AGGREGATE_UNKNOWN){
+					d->dmdev.transport = subd->dmdev.transport;
+				}else if(d->dmdev.transport != subd->dmdev.transport){
+					d->dmdev.transport = AGGREGATE_MIXED;
 				}
 				break;
 			case LAYOUT_PARTITION:
-				if(d->mddev.transport == AGGREGATE_UNKNOWN){
-					d->mddev.transport = subd->partdev.parent->blkdev.transport;
-				}else if(d->mddev.transport != subd->partdev.parent->blkdev.transport){
-					d->mddev.transport = AGGREGATE_MIXED;
+				if(d->dmdev.transport == AGGREGATE_UNKNOWN){
+					d->dmdev.transport = subd->partdev.parent->blkdev.transport;
+				}else if(d->dmdev.transport != subd->partdev.parent->blkdev.transport){
+					d->dmdev.transport = AGGREGATE_MIXED;
 				}
 				break;
 			case LAYOUT_ZPOOL:
-				if(d->mddev.transport == AGGREGATE_UNKNOWN){
-					d->mddev.transport = subd->zpool.transport;
-				}else if(d->mddev.transport != subd->zpool.transport){
-					d->mddev.transport = AGGREGATE_MIXED;
+				if(d->dmdev.transport == AGGREGATE_UNKNOWN){
+					d->dmdev.transport = subd->zpool.transport;
+				}else if(d->dmdev.transport != subd->zpool.transport){
+					d->dmdev.transport = AGGREGATE_MIXED;
 				}
 				break;
 			default:
@@ -106,6 +98,6 @@ int explore_dm_sysfs(device *d,int dirfd){
 				break;
 		}
 		unlock_growlight();
-	}
+	}*/
 	return 0;
 }
