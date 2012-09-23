@@ -114,12 +114,10 @@ typedef struct device {
 	// uuid and label can likewise only be set if mnttype is set.
 	char *uuid;			// *Filesystem* UUID
 	char *label;			// *Filesystem* label
-	char *mnttype;			// Type of mount
+	char *mnttype;			// Type of mount (can be "swap")
 	uintmax_t mntsize;		// Filesystem size in bytes
 	stringlist mnt;			// Active mount points
 	stringlist mntops;		// Corresponding mount options
-	unsigned logsec;		// Logical sector size in bytes
-	unsigned physsec;		// Physical sector size in bytes
 	// Ranges from 0 to 32565, 0 highest priority. For our purposes, we
 	// also use -1, indicating "unused", and -2, indicating "not swap".
 	enum {
@@ -128,6 +126,8 @@ typedef struct device {
 		SWAP_MAXPRIO = 0,
 		SWAP_MINPRIO = 65535,
 	} swapprio;		// Priority as a swap device
+	unsigned logsec;		// Logical sector size in bytes
+	unsigned physsec;		// Physical sector size in bytes
 	struct controller *c;
 	char *sched;		// I/O scheduler (can be NULL)
 	unsigned roflag;	// Read-only flag (hdparm -r, blockdev --getro)
