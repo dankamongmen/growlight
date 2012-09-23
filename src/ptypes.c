@@ -456,7 +456,6 @@ unsigned get_code_specific(const char *pttype,unsigned code){
 			if(pt->mbr_code == 0){
 				return code;
 			}
-			assert(0);
 			return pt->mbr_code;
 		}else if(strcmp(pttype,"mdp") == 0){
 			return code;
