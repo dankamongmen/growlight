@@ -343,6 +343,7 @@ static void
 internal_device_reset(device *d){
 	device *p;
 
+	lock_growlight();
 	switch(d->layout){
 		case LAYOUT_NONE:{
 			free(d->blkdev.biossha1); d->blkdev.biossha1 = NULL;
@@ -400,6 +401,7 @@ internal_device_reset(device *d){
 	free(d->model); d->model = NULL;
 	free(d->revision); d->revision = NULL;
 	d->slave = 0;
+	unlock_growlight();
 }
 
 static void
