@@ -249,6 +249,9 @@ next_partco(int partco){
 #define COLOR_WHITE2 0xf8
 #define COLOR_WHITE3 0xf6
 
+#define REP_METADATA L'\u1d50'//L'M', L'ᵐ'
+#define REP_EMPTY L'\u2091' //L'E', L'ₑ'
+
 static inline wchar_t
 subscript(int in){
 	assert(in >= 0 && in < 10);
@@ -989,13 +992,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	mountco = MOUNT_COLOR0;
 	do{
 		unsigned ch,och;
-		int rep;
+		wchar_t rep;
 
 		wbuf[0] = L'\0';
 		if(z->p == NULL){ // unused space among partitions, or metadata
-			int co = z->rep == 'P' ? COLOR_PAIR(METADATA_COLOR) :
-					COLOR_PAIR(EMPTY_COLOR);
-			const char *repstr = z->rep == L'P' ?
+			int co = (z->rep == REP_METADATA ? COLOR_PAIR(METADATA_COLOR) :
+					COLOR_PAIR(EMPTY_COLOR));
+			const char *repstr = z->rep == REP_METADATA ?
 				"partition table metadata" : "unused space";
 
 			if(selected && z == bo->zone){
@@ -1062,9 +1065,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 			rep = z->p->partdev.pnumber % 16;
 			if(rep >= 10){
-				rep = 'a' + (rep - 10); // FIXME lame
+				rep = L'a' + (rep - 10); // FIXME lame
 			}else{
-				rep = '0' + rep;	// FIXME lame
+				rep = L'0' + rep;	// FIXME lame
 			}
 		}
 		ch = (((z->lsector - z->fsector) * 1000) / ((d->size * 1000 / d->logsec) / (ex - sx)));
@@ -1073,7 +1076,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}
 		och = ch;
 		while(ch--){
-			mvwaddch(w,y,off,rep);
+			cchar_t crep[] = { { .attr = 0, .chars[0] = rep, }, };
+			mvwadd_wch(w,y,off,crep);
 			if(++off >= ex - z->following){
 				och -= (ch + 1);
 				break;
@@ -2346,7 +2350,7 @@ partition_base_p(void){
 		locked_diag("Partition creation requires a partition table");
 		return NULL;
 	}
-	if(b->zone->rep == 'P'){
+	if(b->zone->rep == REP_METADATA){
 		locked_diag("Remove partition table on %s to reclaim metadata",b->d->name);
 		return NULL;
 	}
@@ -3166,7 +3170,7 @@ update_details(WINDOW *hw){
 			wattroff(hw,A_BOLD);
 			wprintw(hw,"%ju ",b->zone->lsector);
 			wattron(hw,A_BOLD);
-			wprintw(hw,"%s ",b->zone->rep == L'P' ?
+			wprintw(hw,"%s ",b->zone->rep == REP_METADATA ?
 					"partition table metadata" : "unpartitioned space");
 		}
 	}
@@ -5940,7 +5944,7 @@ update_blockobj(blockobj *b,device *d){
 		sector = d->size / d->logsec + 1;
 	}else{
 		if( (sector = first_usable_sector(d)) ){
-			if((z = create_zobj(z,zones,0,sector - 1,NULL,L'P')) == NULL){
+			if((z = create_zobj(z,zones,0,sector - 1,NULL,REP_METADATA)) == NULL){
 				goto err;
 			}
 			++zones;
@@ -5948,7 +5952,7 @@ update_blockobj(blockobj *b,device *d){
 	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
-			if((z = create_zobj(z,zones,sector,p->partdev.fsector - 1,NULL,L'E')) == NULL){
+			if((z = create_zobj(z,zones,sector,p->partdev.fsector - 1,NULL,REP_EMPTY)) == NULL){
 				goto err;
 			}
 			++zones;
@@ -5962,14 +5966,14 @@ update_blockobj(blockobj *b,device *d){
 	if(d->logsec && d->size){
 		if(sector != d->size / d->logsec + 1){
 			if(sector != last_usable_sector(d) + 1){
-				if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL,L'E')) == NULL){
+				if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL,REP_EMPTY)) == NULL){
 					goto err;
 				}
 				++zones;
 				sector = last_usable_sector(d) + 1;
 			}
 			if(sector != d->size / d->logsec + 1){
-				if((z = create_zobj(z,zones,sector,d->size / d->logsec,NULL,L'P')) == NULL){
+				if((z = create_zobj(z,zones,sector,d->size / d->logsec,NULL,REP_METADATA)) == NULL){
 					goto err;
 				}
 				++zones;
