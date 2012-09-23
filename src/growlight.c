@@ -1383,6 +1383,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
 		diag("Couldn't set threads detachable (%s)\n",strerror(errno));
 	}
+	verbf("scanning %s on %d...\n",dfp,dfd);
 	while( dp = NULL, errno = 0, ((r = readdir_r(dir,&d,&dp)) == 0) && dp){
 		pthread_t tid;
 		if(dp->d_type == DT_LNK){
@@ -1405,10 +1406,9 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 	closedir(dir);
 	pthread_mutex_lock(&barrier);
 	while(thrcount){
-		verbf("Waiting on %u devices...\n",thrcount);
+		verbf("%s blocks on %u devices...\n",dfp,thrcount);
 		pthread_cond_wait(&barrier_cond,&barrier);
 	}
-	verbf("Device discovery completed\n");
 	pthread_mutex_unlock(&barrier);
 	pthread_attr_destroy(&attr);
 	return r;
