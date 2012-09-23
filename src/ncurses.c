@@ -1756,7 +1756,7 @@ raise_form_explication(const WINDOW *w,const char *text){
 	WINDOW *win;
 
 	// There's two columns of padding surrounding the subwindow
-	cols = getmaxx(w) - 2;
+	cols = getmaxx(w) - 1;
 	tot = 0;
 	for(y = 0 ; (unsigned)y < sizeof(linepre) / sizeof(*linepre) ; ++y){
 		while(isspace(text[tot])){
@@ -1783,6 +1783,9 @@ raise_form_explication(const WINDOW *w,const char *text){
 		tot -= (x - brk);
 		linelen[y] = brk - 1;
 		if(!text[tot]){
+			if(y == 0){
+				cols = x + 1;
+			}
 			break;
 		}
 	}
@@ -1790,7 +1793,7 @@ raise_form_explication(const WINDOW *w,const char *text){
 	// into the provided space. We don't yet deal with this situation FIXME
 	assert(!text[tot]);
 	assert( (ps = malloc(sizeof(*ps))) );
-	assert( (win = newwin(y + 3,cols,FORM_Y_OFFSET - (y + 2),1)) );
+	assert( (win = newwin(y + 3,cols,FORM_Y_OFFSET - (y + 2),getmaxx(w) - cols)) );
 	assert( (ps->p = new_panel(win)) );
 	wbkgd(win,COLOR_PAIR(BLACK_COLOR));
 	wattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
