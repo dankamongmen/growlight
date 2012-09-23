@@ -1215,17 +1215,17 @@ scan_mdalias(void *vname){
 	int r;
 
 	if(!name){
-		return NULL;
+		goto done;
 	}
 	if((unsigned)snprintf(path,sizeof(path),"%s/%s",DEVMD,name) >= sizeof(path)){
 		diag("Bad link: %s\n",name);
 		free(vname);
-		return NULL;
+		goto done;
 	}
 	if((r = readlink(path,buf,sizeof(buf))) < 0){;
 		diag("Couldn't read link at %s\n",path);
 		free(vname);
-		return NULL;
+		goto done;
 	}
 	buf[r] = '\0';
 	lock_growlight();
@@ -1239,11 +1239,13 @@ scan_mdalias(void *vname){
 		}
 	}
 	unlock_growlight();
-	assert(pthread_mutex_lock(&barrier) == 0);
-	pthread_cond_signal(&barrier_cond);
-	--thrcount;
-	assert(pthread_mutex_unlock(&barrier) == 0);
 	free(name); // name was set to NULL on success
+
+done:
+	assert(pthread_mutex_lock(&barrier) == 0);
+	--thrcount;
+	pthread_cond_signal(&barrier_cond);
+	assert(pthread_mutex_unlock(&barrier) == 0);
 	return NULL;
 }
 
@@ -1255,17 +1257,17 @@ scan_devbypath(void *vname){
 	int r;
 
 	if(!name){
-		return NULL;
+		goto done;
 	}
 	if((unsigned)snprintf(path,sizeof(path),"%s/%s",DEVBYPATH,name) >= sizeof(path)){
 		diag("Bad link: %s\n",name);
 		free(vname);
-		return NULL;
+		goto done;
 	}
 	if((r = readlink(path,buf,sizeof(buf))) < 0){;
 		diag("Couldn't read link at %s\n",path);
 		free(vname);
-		return NULL;
+		goto done;
 	}
 	buf[r] = '\0';
 	lock_growlight();
@@ -1275,11 +1277,13 @@ scan_devbypath(void *vname){
 		name = NULL;
 	}
 	unlock_growlight();
-	assert(pthread_mutex_lock(&barrier) == 0);
-	pthread_cond_signal(&barrier_cond);
-	--thrcount;
-	assert(pthread_mutex_unlock(&barrier) == 0);
 	free(name); // name was set to NULL on success
+
+done:
+	assert(pthread_mutex_lock(&barrier) == 0);
+	--thrcount;
+	pthread_cond_signal(&barrier_cond);
+	assert(pthread_mutex_unlock(&barrier) == 0);
 	return NULL;
 }
 
@@ -1291,17 +1295,17 @@ scan_devbyid(void *vname){
 	int r;
 
 	if(!name){
-		return NULL;
+		goto done;
 	}
 	if((unsigned)snprintf(id,sizeof(id),"%s/%s",DEVBYID,name) >= sizeof(id)){
 		diag("Bad link: %s\n",name);
 		free(vname);
-		return NULL;
+		goto done;
 	}
 	if((r = readlink(id,buf,sizeof(buf))) < 0){;
 		diag("Couldn't read link at %s\n",id);
 		free(vname);
-		return NULL;
+		goto done;
 	}
 	buf[r] = '\0';
 	lock_growlight();
@@ -1311,11 +1315,13 @@ scan_devbyid(void *vname){
 		name = NULL;
 	}
 	unlock_growlight();
-	assert(pthread_mutex_lock(&barrier) == 0);
-	pthread_cond_signal(&barrier_cond);
-	--thrcount;
-	assert(pthread_mutex_unlock(&barrier) == 0);
 	free(name); // name was set to NULL on success
+
+done:
+	assert(pthread_mutex_lock(&barrier) == 0);
+	--thrcount;
+	pthread_cond_signal(&barrier_cond);
+	assert(pthread_mutex_unlock(&barrier) == 0);
 	return NULL;
 }
 
@@ -1327,8 +1333,8 @@ scan_device(void *name){
 	d = name ? lookup_device(name) : NULL;
 	unlock_growlight();
 	assert(pthread_mutex_lock(&barrier) == 0);
-	pthread_cond_signal(&barrier_cond);
 	--thrcount;
+	pthread_cond_signal(&barrier_cond);
 	assert(pthread_mutex_unlock(&barrier) == 0);
 	free(name);
 	return d;
@@ -1830,16 +1836,16 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 	if(watch_dir(fd,SYSROOT,scan_device,&syswd)){
 		goto err;
 	}
+	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd)){
+		// They won't necessarily have a /dev/md, especially if they
+		// have no md devices. Unfortunately, if we then create one,
+		// they'll have one and it'll need monitoring. FIXME
+	}
 	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd)){
 		// This is OK. Older udevd didn't have /dev/disk/by-path.
 	}
 	if(watch_dir(fd,DEVBYID,scan_devbyid,&byidwd)){
 		// This is OK. Older udevd didn't have /dev/disk/by-id.
-	}
-	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd)){
-		// They won't necessarily have a /dev/md, especially if they
-		// have no md devices. Unfortunately, if we then create one,
-		// they'll have one and it'll need monitoring. FIXME
 	}
 	lock_growlight();
 	if(parse_filesystems(gui,FILESYSTEMS)){
