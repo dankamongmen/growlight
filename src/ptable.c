@@ -20,7 +20,7 @@
 #define LBA_SIZE 512
 #define MBR_SIZE (LBA_SIZE - MBR_OFFSET)
 
-static const unsigned char MBR_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
+static const unsigned char MBR_INITIAL_MBR[LBA_SIZE - MBR_OFFSET] =
  "\x00\x00\x00\x00\x00\x00"	// 6 bytes of zeros
  "\x80"				// bootable (violation of GPT spec, but some
  				//  BIOS/MBR *and* UEFI won't boot otherwise)
@@ -42,6 +42,7 @@ write_mbr(int fd,ssize_t lbasize){
 	void *map;
 	off_t off;
 
+	// MBR goes in first LBA
 	assert(pgsize > 0 && pgsize % lbasize == 0);
 	if((off = lbasize % pgsize) == 0){
 		mapsize = 0;
@@ -56,17 +57,8 @@ write_mbr(int fd,ssize_t lbasize){
 		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
 		return -1;
 	}
-	//ghead = (gpt_header *)((char *)map + off);
-	/*if(!realdata){
-		memset(ghead,0,gptlbas * lbasize);
-	}else{
-		if(initialize_gpt(ghead,lbasize,backuplba,gptlbas)){
-			munmap(map,mapsize);
-			return -1;
-		}
-		update_crc(ghead,(const gpt_entry *)((char *)ghead + lbasize));
-	}
-	*/
+	memset((char *)map,0,MBR_OFFSET);
+	memcpy((char *)map + MBR_OFFSET,MBR_INITIAL_MBR,MBR_SIZE);
 	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
 		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
 		munmap(map,mapsize);
@@ -81,8 +73,6 @@ write_mbr(int fd,ssize_t lbasize){
 
 static int
 dos_make_table(device *d){
-	size_t mapsize;
-	void *map;
 	int fd;
 
 	if(d->layout != LAYOUT_NONE){
@@ -100,19 +90,6 @@ dos_make_table(device *d){
 	}
 	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
 		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
-		return -1;
-	}
-	// protective MBR in first LBA
-	mapsize = getpagesize(); // FIXME check for insanity
-	if((map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0)) == MAP_FAILED){
-		diag("Couldn't map %s (%s?)\n",d->name,strerror(errno));
-		close(fd);
-		return -1;
-	}
-	memcpy((char *)map + MBR_OFFSET,MBR_PROTECTIVE_MBR,MBR_SIZE);
-	if(munmap(map,mapsize)){
-		diag("Couldn't unmap MBR for %s (%s?)\n",d->name,strerror(errno));
-		close(fd);
 		return -1;
 	}
 	if(write_mbr(fd,LBA_SIZE)){
