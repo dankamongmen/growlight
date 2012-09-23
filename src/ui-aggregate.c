@@ -256,6 +256,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections,int scroll){
 	const aggregate_type *at;
 	int opcount,defidx;
 
+	assert(selections >= 0);
 	if(fn == NULL){
 		raise_str_form("enter aggregate name",aggname_callback,
 				pending_aggname,AGGNAME_TEXT);
@@ -266,7 +267,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections,int scroll){
 		return;
 	}
 	if(strcmp(fn,"") == 0){
-		if(selections >= at->mindisks){
+		if((unsigned)selections >= at->mindisks){
 			do_agg(at,selarray,selections);
 			destroy_agg_forms();
 			return;
@@ -286,7 +287,7 @@ aggcomp_callback(const char *fn,char **selarray,int selections,int scroll){
 	}
 	raise_multiform("select aggregate components",aggcomp_callback,comps_agg,
 			opcount,defidx,at->mindisks,selarray,selections,AGGCOMP_TEXT,scroll);
-	if(selections < at->mindisks){
+	if((unsigned)selections < at->mindisks){
 		locked_diag("%s needs at least %d devices",pending_aggtype,at->mindisks);
 	}else{
 		locked_diag("%s device requirement (%d) satisfied",pending_aggtype,at->mindisks);
