@@ -249,6 +249,12 @@ next_partco(int partco){
 #define COLOR_WHITE2 0xf8
 #define COLOR_WHITE3 0xf6
 
+static inline wchar_t
+subscript(int in){
+	assert(in >= 0 && in < 10);
+	return L'\u2080' + in;
+}
+
 static inline void
 screen_update(void){
 	if(active){
@@ -3130,7 +3136,8 @@ update_details(WINDOW *hw){
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
 					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1));
 			wattron(hw,A_BOLD);
-			wprintw(hw,"P%02x ",b->zone->p->partdev.pnumber);
+			wprintw(hw,"P%lc%lc ",subscript((b->zone->p->partdev.pnumber % 100 / 10)),
+					subscript((b->zone->p->partdev.pnumber % 10)));
 			wattroff(hw,A_BOLD);
 			wprintw(hw,"%ju",b->zone->fsector);
 			wattron(hw,A_BOLD);
