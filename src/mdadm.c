@@ -10,12 +10,14 @@
 #include "mdadm.h"
 #include "popen.h"
 #include "growlight.h"
+#include "aggregate.h"
 
 int explore_md_sysfs(device *d,int dirfd){
 	unsigned degraded = 0;
 	unsigned long rd;
 	mdslave **enqm;
 	char *syncpct;
+	char buf[30];
 
 	if((syncpct = get_sysfs_string(dirfd,"sync_completed")) == NULL){
 		verbf("Warning: no 'sync_completed' content in mdadm device %s\n",d->name);
@@ -142,11 +144,19 @@ int explore_md_sysfs(device *d,int dirfd){
 	if(d->mddev.resync && !d->mddev.degraded){
 		d->mddev.degraded = 1;
 	}
-	// FIXME depends on aggregate type. number of non-parity disks
-	if(d->mddev.stride){
-		d->mddev.swidth = d->mddev.disks ? d->mddev.disks - 1 : 0;
-	}else{
-		d->mddev.swidth = 0;
+	d->mddev.swidth = 0;
+	if(d->mddev.level && d->mddev.disks){
+		const aggregate_type *agg;
+
+		strcpy(buf,"md");
+		strcat(buf,d->mddev.level);
+		if((agg = get_aggregate(buf)) == NULL){
+			diag("Didn't know %s type %s\n",d->name,buf);
+		}else if(d->mddev.disks < agg->maxfaulted){
+			diag("%s didn't have %u disks\n",d->name,agg->maxfaulted);
+		}else{
+			d->mddev.swidth -= agg->maxfaulted;
+		}
 	}
 	return 0;
 }
