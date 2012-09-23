@@ -53,6 +53,7 @@
 #define FILESYSTEMS	"/proc/filesystems"
 #define DEVROOT "/dev"
 #define DEVMD DEVROOT "/md/"
+#define DEVBYID DEVROOT "/disk/by-id/"
 #define DEVBYPATH DEVROOT "/disk/by-path/"
 
 unsigned verbose = 0;
@@ -416,6 +417,7 @@ free_device(device *d){
 		free_stringlist(&d->mnt);
 		free(d->mnttype);
 		free(d->bypath);
+		free(d->byid);
 	}
 }
 
@@ -1280,6 +1282,42 @@ scan_devbypath(void *vname){
 }
 
 static void *
+scan_devbyid(void *vname){
+	char buf[PATH_MAX + 1],id[PATH_MAX + 1];
+	char *name = vname;
+	device *d;
+	int r;
+
+	if(!name){
+		return NULL;
+	}
+	if((unsigned)snprintf(id,sizeof(id),"%s/%s",DEVBYID,name) >= sizeof(id)){
+		diag("Bad link: %s\n",name);
+		free(vname);
+		return NULL;
+	}
+	if((r = readlink(id,buf,sizeof(buf))) < 0){;
+		diag("Couldn't read link at %s\n",id);
+		free(vname);
+		return NULL;
+	}
+	buf[r] = '\0';
+	lock_growlight();
+	if( (d = lookup_device(buf)) ){
+		free(d->byid);
+		d->byid = name;
+		name = NULL;
+	}
+	unlock_growlight();
+	assert(pthread_mutex_lock(&barrier) == 0);
+	pthread_cond_signal(&barrier_cond);
+	--thrcount;
+	assert(pthread_mutex_unlock(&barrier) == 0);
+	free(name); // name was set to NULL on success
+	return NULL;
+}
+
+static void *
 scan_device(void *name){
 	device *d;
 
@@ -1421,6 +1459,7 @@ struct event_marshal {
 	int mdwd;		// /dev/md/ fd
 	int syswd;		// /sys/block watch descriptor
 	int bypathwd;		// /dev/disk/by-path watch descriptor
+	int byidwd;		// /dev/disk/by-id watch descriptor
 };
 
 static void *
@@ -1444,31 +1483,35 @@ event_posix_thread(void *unsafe){
 					if(s - idx >= (ptrdiff_t)sizeof(*in)){
 						in = (struct inotify_event *)(buf + idx);
 						idx += sizeof(*in);
+
 						if(in->len == 0){
 							diag("Nil-file event on unknown watch desc %d\n",in->wd);
-						}else if(in->wd == em->syswd){
-							char *name = strdup(in->name);
-							assert(name);
-							assert(pthread_mutex_lock(&barrier) == 0);
-							++thrcount;
-							assert(pthread_mutex_unlock(&barrier) == 0);
-							scan_device(name);
-						}else if(in->wd == em->mdwd){
-							char *name = strdup(in->name);
-							assert(name);
-							assert(pthread_mutex_lock(&barrier) == 0);
-							++thrcount;
-							assert(pthread_mutex_unlock(&barrier) == 0);
-							scan_mdalias(name);
-						}else if(in->wd == em->bypathwd){
-							char *name = strdup(in->name);
-							assert(name);
-							assert(pthread_mutex_lock(&barrier) == 0);
-							++thrcount;
-							assert(pthread_mutex_unlock(&barrier) == 0);
-							scan_devbypath(name);
 						}else{
-							diag("Event on unknown watch desc %d (%s)\n",in->wd,in->name);
+							assert(pthread_mutex_lock(&barrier) == 0);
+							++thrcount;
+							assert(pthread_mutex_unlock(&barrier) == 0);
+							if(in->wd == em->syswd){
+								char *name = strdup(in->name);
+								assert(name);
+								scan_device(name);
+							}else if(in->wd == em->mdwd){
+								char *name = strdup(in->name);
+								assert(name);
+								scan_mdalias(name);
+							}else if(in->wd == em->bypathwd){
+								char *name = strdup(in->name);
+								assert(name);
+								scan_devbypath(name);
+							}else if(in->wd == em->byidwd){
+								char *name = strdup(in->name);
+								assert(name);
+								scan_devbyid(name);
+							}else{
+								assert(pthread_mutex_lock(&barrier) == 0);
+								--thrcount;
+								assert(pthread_mutex_unlock(&barrier) == 0);
+								diag("Event on unknown watch desc %d (%s)\n",in->wd,in->name);
+							}
 						}
 					}
 				}
@@ -1504,7 +1547,7 @@ event_posix_thread(void *unsafe){
 }
 
 static int
-event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdwd){
+event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 	struct event_marshal *em;
 	struct epoll_event ev;
 	int r;
@@ -1539,6 +1582,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int mdwd){
 	em->mdwd = mdwd;
 	em->syswd = syswd;
 	em->bypathwd = bypathwd;
+	em->byidwd = byidwd;
 	if((em->mfd = open(MOUNTS,O_RDONLY|O_CLOEXEC)) < 0){
 		close(em->efd);
 		free(em);
@@ -1665,7 +1709,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 			.val = 0,
 		},
 	};
-	int fd,opt,longidx,udevfd,syswd,mdwd,bypathwd;
+	int fd,opt,longidx,udevfd,syswd,mdwd,bypathwd,byidwd;
 	int import,detcopy;
 	char buf[BUFSIZ];
 
@@ -1785,7 +1829,10 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 		goto err;
 	}
 	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd)){
-		// This is OK. Older kernels didn't have /dev/disk/by-path.
+		// This is OK. Older udevd didn't have /dev/disk/by-path.
+	}
+	if(watch_dir(fd,DEVBYID,scan_devbyid,&byidwd)){
+		// This is OK. Older udevd didn't have /dev/disk/by-id.
 	}
 	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd)){
 		// They won't necessarily have a /dev/md, especially if they
@@ -1809,7 +1856,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
-	if(event_thread(fd,udevfd,syswd,bypathwd,mdwd)){
+	if(event_thread(fd,udevfd,syswd,bypathwd,byidwd,mdwd)){
 		goto err;
 	}
 	return 0;

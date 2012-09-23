@@ -105,9 +105,9 @@ typedef struct device {
 	struct device *next;		// next block device on this controller
 	// FIXME model/revision should not be in partition
 	char *model,*revision;		// Arbitrary UTF-8 strings
-	// FIXME add by-id, by-label, and by-uuid links?
-	// FIXME handle multiple by-path links?
+	// FIXME add by-label, and by-uuid links? handle multiple by-* links?
 	char *bypath;			// Alias in /dev/disks/by-path/
+	char *byid;			// Alias in /dev/disks/by-id/
 	uintmax_t size;			// Size in bytes of device
 	// If the filesystem is not mounted, but is found, only mnttype and
 	// mntsize will be set from among mnt, mntops, mntsize and mnttype.
