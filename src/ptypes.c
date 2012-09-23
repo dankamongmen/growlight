@@ -407,7 +407,7 @@ int ptype_supported(const char *pttype,const ptype *pt){
 			return 0;
 		}
 		return 1;
-	}else if(strcmp(pttype,"mbr") == 0){
+	}else if(strcmp(pttype,"mbr") == 0 || strcmp(pttype,"dos") == 0){
 		if(pt->mbr_code == 0){
 			return 0;
 		}
@@ -452,12 +452,16 @@ unsigned get_code_specific(const char *pttype,unsigned code){
 		}
 		if(strcmp(pttype,"gpt") == 0){
 			return code;
-		}else if(strcmp(pttype,"mbr") == 0){
+		}else if(strcmp(pttype,"mbr") == 0 || strcmp(pttype,"dos") == 0){
 			if(pt->mbr_code == 0){
 				return code;
 			}
+			assert(0);
 			return pt->mbr_code;
 		}else if(strcmp(pttype,"mdp") == 0){
+			return code;
+		}else{
+			diag("No support for pttype %s\n",pttype);
 			return code;
 		}
 		return code;
