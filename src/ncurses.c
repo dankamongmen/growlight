@@ -2984,6 +2984,7 @@ static int
 update_details(WINDOW *hw){
 	const controller *c = get_current_adapter();
 	char buf[PREFIXSTRLEN + 1];
+	const char *pttype;
 	const blockobj *b;
 	const device *d;
 	int cols,rows,n;
@@ -3105,9 +3106,11 @@ update_details(WINDOW *hw){
 	}
 	mvwprintw(hw,5,START_COL,"Partitioning: ");
 	wattroff(hw,A_BOLD);
-	wprintw(hw,"%s",d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
+	pttype = (d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
 			d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
+			d->layout == LAYOUT_DM ? d->dmdev.pttable ? d->dmdev.pttable : "none" :
 			"n/a");
+	wprintw(hw,"%s",pttype);
 	wattron(hw,A_BOLD);
 	waddstr(hw," I/O scheduler: ");
 	wattroff(hw,A_BOLD);
@@ -3149,11 +3152,12 @@ update_details(WINDOW *hw){
 			wattroff(hw,A_BOLD);
 			wprintw(hw,"%ju ",b->zone->lsector);
 			wattron(hw,A_BOLD);
-			wprintw(hw,"%s (%ls) %04x %sB align",
+			wprintw(hw,"%s (%ls) 0x%x %sB align",
 					b->zone->p->name,
 					b->zone->p->partdev.pname ?
 					 b->zone->p->partdev.pname : L"unnamed",
-					b->zone->p->partdev.ptype,align);
+					get_code_specific(pttype,b->zone->p->partdev.ptype),
+					align);
 			detail_fs(hw,b->zone->p,7);
 		}else{
 			// FIXME print alignment for unpartitioned space as well,
