@@ -29,6 +29,8 @@ int get_mbr_code(unsigned,unsigned *);
 // Pass in a libblkid-style string representation, and get the common code
 unsigned get_str_code(const char *);
 
+unsigned get_code_specific(const char *,unsigned);
+
 static inline int
 ptype_default_p(unsigned code){
 	return code == PARTROLE_PRIMARY;

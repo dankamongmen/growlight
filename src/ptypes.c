@@ -442,3 +442,26 @@ unsigned get_str_code(const char *str){
 	}
 	return 0;
 }
+
+unsigned get_code_specific(const char *pttype,unsigned code){
+	const ptype *pt;
+
+	for(pt = ptypes ; pt->name ; ++pt){
+		if(pt->code != code){
+			continue;
+		}
+		if(strcmp(pttype,"gpt") == 0){
+			return code;
+		}else if(strcmp(pttype,"mbr") == 0){
+			if(pt->mbr_code == 0){
+				return code;
+			}
+			return pt->mbr_code;
+		}else if(strcmp(pttype,"mdp") == 0){
+			return code;
+		}
+		return code;
+	}
+	diag("No support for pttype %u\n",code);
+	return code;
+}
