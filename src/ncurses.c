@@ -249,8 +249,8 @@ next_partco(int partco){
 #define COLOR_WHITE2 0xf8
 #define COLOR_WHITE3 0xf6
 
-#define REP_METADATA L'\u1d50'//L'M', L'ᵐ'
-#define REP_EMPTY L'\u2091' //L'E', L'ₑ'
+#define REP_METADATA L'm' //L'\u1d50'//L'M', L'ᵐ'
+#define REP_EMPTY L'e' //L'\u2091' //L'E', L'ₑ'
 
 static inline wchar_t
 subscript(int in){
