@@ -385,8 +385,10 @@ setup_colors(void){
 static void
 form_colors(void){
 	// Don't reset the status color or header color, nor (obviously) the
-	// form nor splash colors. We also leave on the adapter borders.
+	// form nor splash colors.
 	locked_diag("%s",""); // Don't leave a highlit status up from long ago
+	init_pair(UBORDER_COLOR,-1,-1);
+	init_pair(SELBORDER_COLOR,-1,-1);
 	init_pair(UHEADING_COLOR,-1,-1);
 	init_pair(UNHEADING_COLOR,-1,-1);
 	init_pair(PBORDER_COLOR,-1,-1);
