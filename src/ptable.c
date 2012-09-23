@@ -20,15 +20,10 @@
 #define LBA_SIZE 512
 #define MBR_SIZE (LBA_SIZE - MBR_OFFSET)
 
-static const unsigned char MBR_INITIAL_MBR[LBA_SIZE - MBR_OFFSET] =
- "\x00\x00\x00\x00\x00\x00"	// 6 bytes of zeros
- "\x80"				// bootable (violation of GPT spec, but some
- 				//  BIOS/MBR *and* UEFI won't boot otherwise)
- "\x00\x00\x00"			// CHS of first absolute sector
- "\xee"				// Protective partition type
- "\xff\xff\xff"			// CHS of last absolute sector
- "\x01\x00\x00\x00"		// LBA of first absolute sector
- "\xff\xff\xff\xff"		// Sectors in partition
+static const unsigned char MBR_INITIAL_MBR[MBR_SIZE] =
+// 32-bit disk signature followed by 2 bytes of zeroes
+ "\x00\x00\x00\x00\x00\x00"
+ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -38,28 +33,25 @@ static int
 write_mbr(int fd,ssize_t lbasize){
 	//ssize_t s = lbasize;
 	int pgsize = getpagesize();
+	uint32_t disksig;
 	size_t mapsize;
 	void *map;
-	off_t off;
 
 	// MBR goes in first LBA
 	assert(pgsize > 0 && pgsize % lbasize == 0);
-	if((off = lbasize % pgsize) == 0){
-		mapsize = 0;
-	}else{
-		mapsize = lbasize;
-	}
-	mapsize += lbasize;
+	mapsize = lbasize;
 	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
-	assert(mapsize % pgsize == 0);
+	assert(mapsize && mapsize % pgsize == 0);
 	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
 	if(map == MAP_FAILED){
 		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
 		return -1;
 	}
+	disksig = random(); // FIXME use wwn if available?
 	memset((char *)map,0,MBR_OFFSET);
 	memcpy((char *)map + MBR_OFFSET,MBR_INITIAL_MBR,MBR_SIZE);
-	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
+	memcpy((char *)map + MBR_OFFSET,&disksig,sizeof(disksig));
+	if(msync(map,lbasize,MS_SYNC|MS_INVALIDATE)){
 		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
 		munmap(map,mapsize);
 		return -1;
