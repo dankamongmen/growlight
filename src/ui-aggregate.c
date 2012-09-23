@@ -154,6 +154,7 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 		}
 	}
 	if((desc = strdup(d->bypath ? d->bypath :
+			d->byid ? d->byid :
 			(d->layout == LAYOUT_NONE && d->blkdev.serial) ?
 			d->blkdev.serial :
 			d->name)) == NULL){
