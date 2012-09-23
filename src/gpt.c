@@ -15,7 +15,6 @@
 #include "growlight.h"
 
 #define LBA_SIZE 512u
-#define MBR_OFFSET 440u
 #define MBR_SIZE (LBA_SIZE - MBR_OFFSET)
 
 static const unsigned char GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =

@@ -1,9 +1,11 @@
 #include <assert.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <linux/blkpg.h>
 
@@ -15,9 +17,114 @@
 #include "ptable.h"
 #include "growlight.h"
 
+#define LBA_SIZE 512
+#define MBR_SIZE (LBA_SIZE - MBR_OFFSET)
+
+static const unsigned char MBR_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
+ "\x00\x00\x00\x00\x00\x00"	// 6 bytes of zeros
+ "\x80"				// bootable (violation of GPT spec, but some
+ 				//  BIOS/MBR *and* UEFI won't boot otherwise)
+ "\x00\x00\x00"			// CHS of first absolute sector
+ "\xee"				// Protective partition type
+ "\xff\xff\xff"			// CHS of last absolute sector
+ "\x01\x00\x00\x00"		// LBA of first absolute sector
+ "\xff\xff\xff\xff"		// Sectors in partition
+ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+ "\x55\xaa";			// MBR signature
+
+static int
+write_mbr(int fd,ssize_t lbasize){
+	//ssize_t s = lbasize;
+	int pgsize = getpagesize();
+	size_t mapsize;
+	void *map;
+	off_t off;
+
+	assert(pgsize > 0 && pgsize % lbasize == 0);
+	if((off = lbasize % pgsize) == 0){
+		mapsize = 0;
+	}else{
+		mapsize = lbasize;
+	}
+	mapsize += lbasize;
+	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
+	assert(mapsize % pgsize == 0);
+	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+	if(map == MAP_FAILED){
+		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
+		return -1;
+	}
+	//ghead = (gpt_header *)((char *)map + off);
+	/*if(!realdata){
+		memset(ghead,0,gptlbas * lbasize);
+	}else{
+		if(initialize_gpt(ghead,lbasize,backuplba,gptlbas)){
+			munmap(map,mapsize);
+			return -1;
+		}
+		update_crc(ghead,(const gpt_entry *)((char *)ghead + lbasize));
+	}
+	*/
+	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
+		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
+		munmap(map,mapsize);
+		return -1;
+	}
+	if(munmap(map,mapsize)){
+		diag("Error unmapping %d (%s?)\n",fd,strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 static int
 dos_make_table(device *d){
-	if(vspopen_drain("parted /dev/%s mklabel msdos",d->name)){
+	size_t mapsize;
+	void *map;
+	int fd;
+
+	if(d->layout != LAYOUT_NONE){
+		diag("Won't create partition table on non-disk %s\n",d->name);
+		return -1;
+	}
+	if(d->size % LBA_SIZE){
+		diag("Won't create MBR on (%ju %% %u == %juB) disk %s\n",
+			d->size,LBA_SIZE,d->size % LBA_SIZE,d->name);
+		return -1;
+	}
+	if(d->size < LBA_SIZE){
+		diag("Won't create MBR on %juB disk %s\n",d->size,d->name);
+		return -1;
+	}
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	// protective MBR in first LBA
+	mapsize = getpagesize(); // FIXME check for insanity
+	if((map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0)) == MAP_FAILED){
+		diag("Couldn't map %s (%s?)\n",d->name,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	memcpy((char *)map + MBR_OFFSET,MBR_PROTECTIVE_MBR,MBR_SIZE);
+	if(munmap(map,mapsize)){
+		diag("Couldn't unmap MBR for %s (%s?)\n",d->name,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if(write_mbr(fd,LBA_SIZE)){
+		diag("Couldn't write MBR on %s (%s?)\n",d->name,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if(fsync(fd)){
+		diag("Warning: error syncing %d for %s (%s?)\n",fd,d->name,strerror(errno));
+	}
+	if(close(fd)){
+		diag("Error closing %d for %s (%s?)\n",fd,d->name,strerror(errno));
 		return -1;
 	}
 	return 0;

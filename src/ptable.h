@@ -9,6 +9,8 @@ extern "C" {
 
 struct device;
 
+#define MBR_OFFSET 440u
+
 // Create the given type of partition table on this device
 int make_partition_table(struct device *,const char *);
 
