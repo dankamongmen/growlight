@@ -2962,9 +2962,9 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
 
 static void
 detail_fs(WINDOW *hw,const device *d,int row){
-	char buf[BPREFIXSTRLEN + 1];
-
 	if(d->mnttype){
+		char buf[BPREFIXSTRLEN + 1];
+
 		wattroff(hw,A_BOLD);
 		mvwprintw(hw,row,START_COL,BPREFIXFMT "%c ",
 				d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
@@ -3639,7 +3639,7 @@ top_space_p(int rows){
 //     be split across the top/bottom boundaries. adapters can be caused to
 //     lose or gain visibility.
 static void
-use_next_controller(WINDOW *w,struct panel_state *ps){
+use_next_controller(WINDOW *w){
 	int rows,cols,delta;
 	reelbox *oldrb;
 	reelbox *rb;
@@ -3678,9 +3678,6 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 				pull_adapters_up(NULL,rows,cols,delta);
 			}
 			redraw_adapter(is->rb);
-			if(ps->p){
-				update_details(panel_window(ps->p));
-			}
 			return;
 		}
 		current_adapter = is->rb; // it's at the top
@@ -3754,9 +3751,6 @@ use_next_controller(WINDOW *w,struct panel_state *ps){
 	if( (delta = top_space_p(rows)) ){
 		pull_adapters_up(NULL,rows,cols,delta);
 	}
-	if(ps->p){
-		update_details(panel_window(ps->p));
-	}
 }
 
 static void
@@ -3774,7 +3768,7 @@ use_next_zone(blockobj *b){
 }
 
 static void
-use_prev_controller(WINDOW *w,struct panel_state *ps){
+use_prev_controller(WINDOW *w){
 	reelbox *oldrb,*rb;
 	int rows,cols;
 
@@ -3805,9 +3799,6 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 			current_adapter->prev = NULL;
 			top_reelbox = current_adapter;
 			redraw_adapter(current_adapter);
-			if(ps->p){
-				update_details(panel_window(ps->p));
-			}
 			return;
 		}
 	}
@@ -3867,9 +3858,6 @@ use_prev_controller(WINDOW *w,struct panel_state *ps){
 			assert(replace_panel(rb->panel,rb->win) != ERR);
 			assert(redraw_adapter(rb) == OK);
 		}
-	}
-	if(ps->p){
-		update_details(panel_window(ps->p));
 	}
 }
 
@@ -5590,7 +5578,7 @@ handle_ncurses_input(WINDOW *w){
 			case KEY_UP: case 'k':{
 				lock_ncurses();
 				if(!selection_active()){
-					use_prev_controller(w,&details);
+					use_prev_controller(w);
 				}else{
 					use_prev_device();
 				}
@@ -5600,7 +5588,7 @@ handle_ncurses_input(WINDOW *w){
 			case KEY_DOWN: case 'j':{
 				lock_ncurses();
 				if(!selection_active()){
-					use_next_controller(w,&details);
+					use_next_controller(w);
 				}else{
 					use_next_device();
 				}
@@ -6152,9 +6140,7 @@ adapter_free(void *cv){
 			pull_adapters_up(rb,scrrows,scrcols,delta);
 			// give the details window to new current_iface
 			if(details.p){
-				if(current_adapter){
-					update_details(panel_window(details.p));
-				}else{
+				if(current_adapter == NULL){
 					hide_panel_locked(&details);
 					active = NULL;
 				}

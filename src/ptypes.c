@@ -446,6 +446,7 @@ unsigned get_str_code(const char *str){
 unsigned get_code_specific(const char *pttype,unsigned code){
 	const ptype *pt;
 
+	fprintf(stderr,"**********************CODE: %u\n",code);
 	for(pt = ptypes ; pt->name ; ++pt){
 		if(pt->code != code){
 			continue;
@@ -460,11 +461,11 @@ unsigned get_code_specific(const char *pttype,unsigned code){
 		}else if(strcmp(pttype,"mdp") == 0){
 			return code;
 		}else{
-			diag("No support for pttype %s\n",pttype);
+			diag("No support for %s table\n",pttype);
 			return code;
 		}
 		return code;
 	}
-	diag("No support for pttype %u\n",code);
+	diag("No support for ptype %u\n",code);
 	return code;
 }
