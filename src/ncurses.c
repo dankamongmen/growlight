@@ -5968,52 +5968,56 @@ unlock_ncurses_growlight(void){
 }
 
 static void *
-adapter_callback(controller *a, void *state){
+adapter_callback(controller *a,void *state){
 	adapterstate *as;
 	reelbox *rb;
 
 	lock_ncurses_growlight();
 	if((as = state) == NULL){
-		if( (state = as = create_adapter_state(a)) ){
-			int newrb,rows,cols;
+		if(a->blockdevs){
+			if( (state = as = create_adapter_state(a)) ){
+				int newrb,rows,cols;
 
-			getmaxyx(stdscr,rows,cols);
-			if( (newrb = bottom_space_p(rows)) ){
-				newrb = rows - newrb;
-				if((rb = create_reelbox(as,rows,newrb,cols)) == NULL){
-					free_adapter_state(as);
-					unlock_ncurses_growlight();
-					return NULL;
-				}
-				if(last_reelbox){
-					// set up the adapter list entries
-					as->next = last_reelbox->as->next;
-					as->next->prev = as;
-					as->prev = last_reelbox->as;
-					last_reelbox->as->next = as;
-					// and also the rb list entries
-					if( (rb->next = last_reelbox->next) ){
-						rb->next->prev = rb;
+				getmaxyx(stdscr,rows,cols);
+				if( (newrb = bottom_space_p(rows)) ){
+					newrb = rows - newrb;
+					if((rb = create_reelbox(as,rows,newrb,cols)) == NULL){
+						free_adapter_state(as);
+						unlock_ncurses_growlight();
+						return NULL;
 					}
-					rb->prev = last_reelbox;
-					last_reelbox->next = rb;
-				}else{
-					as->prev = as->next = as;
-					rb->next = rb->prev = NULL;
-					top_reelbox = rb;
-					current_adapter = rb;
+					if(last_reelbox){
+						// set up the adapter list entries
+						as->next = last_reelbox->as->next;
+						as->next->prev = as;
+						as->prev = last_reelbox->as;
+						last_reelbox->as->next = as;
+						// and also the rb list entries
+						if( (rb->next = last_reelbox->next) ){
+							rb->next->prev = rb;
+						}
+						rb->prev = last_reelbox;
+						last_reelbox->next = rb;
+					}else{
+						as->prev = as->next = as;
+						rb->next = rb->prev = NULL;
+						top_reelbox = rb;
+						current_adapter = rb;
+					}
+					last_reelbox = rb;
+				}else{ // insert it after the last visible one, no rb
+					as->next = top_reelbox->as;
+					top_reelbox->as->prev->next = as;
+					as->prev = top_reelbox->as->prev;
+					top_reelbox->as->prev = as;
+					as->rb = NULL;
+					rb = NULL;
 				}
-				last_reelbox = rb;
-			}else{ // insert it after the last visible one, no rb
-				as->next = top_reelbox->as;
-				top_reelbox->as->prev->next = as;
-				as->prev = top_reelbox->as->prev;
-				top_reelbox->as->prev = as;
-				as->rb = NULL;
+				++count_adapters;
+				draw_main_window(stdscr);
+			}else{
 				rb = NULL;
 			}
-			++count_adapters;
-			draw_main_window(stdscr);
 		}else{
 			rb = NULL;
 		}
@@ -6167,7 +6171,11 @@ block_callback(device *d,void *v){
 		return NULL; // FIXME ought be an assert; this shouldn't happen
 	}
 	lock_ncurses_growlight();
-	as = d->c->uistate;
+	if((as = d->c->uistate) == NULL){
+		if((as = d->c->uistate = adapter_callback(d->c,NULL)) == NULL){
+			return NULL;
+		}
+	}
 	if((b = v) == NULL){
 		if( (b = create_blockobj(d)) ){
 			if(as->devs == 0){
