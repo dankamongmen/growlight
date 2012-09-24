@@ -2970,7 +2970,7 @@ detail_fs(WINDOW *hw,const device *d,int row){
 				d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
 				d->mntsize ? 'B' : ' ');
 		wattron(hw,A_BOLD);
-		wprintw(hw,"%s%s",d->label ? "" : " unlabeled ",d->mnttype);
+		wprintw(hw,"%s%s",d->label ? "" : "unlabeled ",d->mnttype);
 		if(d->label){
 			wattroff(hw,A_BOLD);
 			wprintw(hw," %lc%s%lc",L'“',d->label,L'”');
