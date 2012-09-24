@@ -214,19 +214,14 @@ ext2_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 
 static int
 mkswap(const char *dev,const struct mkfsmarshal *mfm){
-	char fn[PATH_MAX];
 	const char *name;
 
-	if((unsigned)snprintf(fn,sizeof(fn),"/dev/%s",dev) >= sizeof(fn)){
-		diag("Bad dev for swap: %s\n",dev);
-		return -1;
-	}
 	name = mfm->name ? mfm->name : "SprezzaSwap";
-	if(vspopen_drain("mkswap -L %s %s",name,fn)){
+	if(vspopen_drain("mkswap -L %s %s",name,dev)){
 		return -1;
 	}
-	if(swapon(fn,0)){
-		diag("Couldn't swap on %s (%s?)\n",fn,strerror(errno));
+	if(swapon(dev,0)){
+		diag("Couldn't swap on %s (%s?)\n",dev,strerror(errno));
 		return -1;
 	}
 	return 0;
