@@ -35,6 +35,9 @@ static const char SEARCH_TEXT[] =
 "names, filesystem names (volume labels), manufacturers, model numbers, and "
 "serial numbers.";
 
+static const char PARTFLAG_TEXT[] =
+"Select a collection of flags to set on the partition.";
+
 static const char TARG_TEXT[] =
 "Enter a mount point relative to the target's root. It must already exist, and "
 "no other filesystem should yet be mounted there. The filesystem will be made "
@@ -1819,14 +1822,8 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 	WINDOW *fsw;
 	int x,y;
 
-	if(selectno < 1){
-		locked_diag("Need a positive number of selections");
-		return;
-	}
-	if(opstrs == NULL || !ops){
-		locked_diag("Passed empty %u-option string table",ops);
-		return;
-	}
+	assert(ops);
+	assert(opstrs);
 	if(actform){
 		locked_diag("An input dialog is already active");
 		return;
@@ -2485,19 +2482,19 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
 		}
 		switch(*el){
 			case 'E': case 'e':
-                                ull *= 1024llu * 1024 * 1024 * 1024 * 1024 * 1024; break;
-                        case 'P': case 'p':
-                                ull *= 1024llu * 1024 * 1024 * 1024 * 1024; break;
-                        case 'T': case 't':
-                                ull *= 1024llu * 1024 * 1024 * 1024; break;
-                        case 'G': case 'g':
-                                ull *= 1024llu * 1024 * 1024; break;
-                        case 'M': case 'm':
-                                ull *= 1024llu * 1024; break;
-                        case 'K': case 'k':
-                                ull *= 1024llu; break;
-                        default:
-                        return -1;
+				ull *= 1024llu * 1024 * 1024 * 1024 * 1024 * 1024; break;
+			case 'P': case 'p':
+				ull *= 1024llu * 1024 * 1024 * 1024 * 1024; break;
+			case 'T': case 't':
+				ull *= 1024llu * 1024 * 1024 * 1024; break;
+			case 'G': case 'g':
+				ull *= 1024llu * 1024 * 1024; break;
+			case 'M': case 'm':
+				ull *= 1024llu * 1024; break;
+			case 'K': case 'k':
+				ull *= 1024llu; break;
+			default:
+			return -1;
 		}
 	}
 	if(ull % sectsize){
@@ -3207,35 +3204,35 @@ update_details_cond(WINDOW *w){
 // minus two for the top/bottom screen border, minus one for mandatory
 // window top padding).
 static const wchar_t *helps[] = {
-	L"'q': quit                     ctrl+'L': redraw the screen",
+	L"'q': quit		     ctrl+'L': redraw the screen",
 	L"'e': view environment details 'H': toggle this help display",
 	L"'v': view selection details   'D': view recent diagnostics",
 	L"'E': view mounts / targets    'z': modify aggregate",
-	L"'A': create aggregate         'Z': destroy aggregate",
-	L"'-': collapse adapter         '+': expand adapter",
+	L"'A': create aggregate	 'Z': destroy aggregate",
+	L"'-': collapse adapter	 '+': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
-	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
+	L"'k'/'↑': navigate up	  'j'/'↓': navigate down",
 	// FIXME remove these!
-	L"'R': rescan selection         'S': reset controller",
+	L"'R': rescan selection	 'S': reset controller",
 	//L"'/': search",
 	NULL
 };
 
 static const wchar_t *helps_block[] = {
-	L"'h'/'←': navigate left        'l'/'→': navigate right",
+	L"'h'/'←': navigate left	'l'/'→': navigate right",
 	L"'m': make partition table     'r': remove partition table",
 	L"'W': wipe master boot record  'B': bad blocks check",
-	L"'n': new partition            'd': delete partition",
+	L"'n': new partition	    'd': delete partition",
 	L"'s': set partition attributes 'M': make filesystem/swap",
-	L"'F': fsck filesystem          'w': wipe filesystem",
-	L"'U': set UUID                 'L': set label/name",
-	L"'o': mount filesystem         'O': unmount filesystem",
+	L"'F': fsck filesystem	  'w': wipe filesystem",
+	L"'U': set UUID		 'L': set label/name",
+	L"'o': mount filesystem	 'O': unmount filesystem",
 	NULL
 };
 
 static const wchar_t *helps_target[] = {
-	L"'i': set target               'I': unset target",
-	L"'t': mount target             'T': unmount target",
+	L"'i': set target	       'I': unset target",
+	L"'t': mount target	     'T': unmount target",
 	L"'*' finalize UEFI / '#' finalize BIOS / '@' finalize fstab",
 	NULL
 };
@@ -4089,14 +4086,14 @@ env_details(WINDOW *hw,int rows){
 			c1 = c0 + (COLORSPERROW - 1);
 			assert(mvwprintw(hw,row + z,col,"0x%02x%lc0x%02x: ",c0,L'–',c1) == OK);
 			while(c0 <= c1){
-			        if(c0 < COLORS){
-			                assert(wattrset(hw,COLOR_PAIR(c0)) == OK);
-			                assert(wprintw(hw,"X") == OK);
-			        }else{
-			                assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
-			                assert(wprintw(hw," ") == OK);
-			        }
-			        ++c0;
+				if(c0 < COLORS){
+					assert(wattrset(hw,COLOR_PAIR(c0)) == OK);
+					assert(wprintw(hw,"X") == OK);
+				}else{
+					assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+					assert(wprintw(hw," ") == OK);
+				}
+				++c0;
 			}
 			--z;
 			assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
@@ -4104,7 +4101,7 @@ env_details(WINDOW *hw,int rows){
 	}case 1:{
 		mvwhline(hw,row + z,1,' ',cols - 2);
 		assert(mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
-			        COLORS,COLOR_PAIRS,srows,scols,
+				COLORS,COLOR_PAIRS,srows,scols,
 				can_change_color() ? "dynamic" : "fixed") != ERR);
 		--z;
 	}case 0:{
@@ -4705,8 +4702,135 @@ kill_filesystem(void){
 	confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
 }
 
+static const struct form_option gpt_flags[] = {
+	{
+		.option = "0x02",
+		.desc = "Legacy BIOS bootable",
+	},{
+		.option = "0x3c",
+		.desc = "Read-only",
+	},{
+		.option = "0x3e",
+		.desc = "Hidden",
+	},{
+		.option = "0x3f",
+		.desc = "Inhibit automounting",
+	},
+};
+
+static struct form_option *
+flag_table(int *count,const char *match,int *defidx,char ***selarray,int *selections){
+	struct form_option *fo = NULL;
+	int z = 0;
+
+	*count = 0;
+	*defidx = -1;
+	// FIXME if(gpt){
+	if((*count = sizeof(gpt_flags) / sizeof(*gpt_flags)) == 0){
+		goto err;
+	}
+	if((fo = malloc(sizeof(*fo) * *count)) == NULL){
+		goto err;
+	}
+	//}
+	while(z < *count){
+		const char *key = gpt_flags[z].option;
+
+		if((fo[z].desc = strdup(gpt_flags[z].desc)) == NULL){
+			goto err;
+		}
+		if((fo[z].option = strdup(key)) == NULL){
+			free(fo[z].desc);
+			goto err;
+		}
+		if(match && strcmp(match,fo[z].option) == 0){
+			*defidx = z;
+			for(z = 0 ; z < *selections ; ++z){
+				if(strcmp(key,(*selarray)[z]) == 0){
+					free((*selarray)[z]);
+					(*selarray)[z] = NULL;
+					if(z < *selections - 1){
+						memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * (*selections - 1 - z));
+					}
+					--*selections;
+					z = -1;
+					break;
+				}
+			}
+			if(z >= *selections){
+				typeof(*selarray) tmp;
+
+				if((tmp = realloc(*selarray,sizeof(**selarray) * (*selections + 1))) == NULL){
+					free(fo[z].option);
+					free(fo[z].desc);
+					goto err;
+				}
+				*selarray = tmp;
+				(*selarray)[*selections] = strdup(match);
+				++*selections;
+			}
+		}
+		++z;
+	}
+	*defidx = (*defidx + 1) % *count;
+	return fo;
+
+err:
+	while(--z){
+		free(fo[z].option);
+		free(fo[z].desc);
+	}
+	free(fo);
+	return NULL;
+}
+
+static void
+do_partflag(char **selarray,int selections){
+	uint64_t flags = 0;
+	device *d;
+	int z;
+
+	if(!selected_partitionp()){
+		locked_diag("Selected object is not a partition");
+		return;
+	}
+	d = get_selected_blockobj()->d;
+	for(z = 0 ; z < selections ; ++z){
+		assert(selarray[z]);
+		// FIXME bitwise OR closure onto flags
+	}
+	// FIXME takes one flag at a time, no good
+	if(partition_set_flag(d,flags,1)){
+		return;
+	}
+}
+
+static void
+partflag_callback(const char *fn,char **selarray,int selections,int scroll){
+	struct form_option *flags_agg;
+	int opcount,defidx;
+
+	if(fn == NULL){
+		// FIXME free selections
+		return;
+	}
+	if(strcmp(fn,"") == 0){
+		do_partflag(selarray,selections);
+		// FIXME free
+		return;
+	}
+	if((flags_agg = flag_table(&opcount,fn,&defidx,&selarray,&selections)) == NULL){
+		// FIXME free
+		return;
+	}
+	raise_multiform("set partition flags",partflag_callback,flags_agg,
+		opcount,defidx,0,selarray,selections,PARTFLAG_TEXT,scroll);
+}
+
 static void
 set_partition_attrs(void){
+	struct form_option *flags_agg;
+	int opcount,defidx;
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
@@ -4721,8 +4845,11 @@ set_partition_attrs(void){
 		locked_diag("Selected object is not a partition");
 		return;
 	}
-	locked_diag("FIXME not yet implemented");
-	// FIXME pop up a form allowing attr set
+	if((flags_agg = flag_table(&opcount,NULL,&defidx,NULL,NULL)) == NULL){
+		return;
+	}
+	raise_multiform("set partition flags",partflag_callback,flags_agg,
+			opcount,defidx,0,NULL,0,PARTFLAG_TEXT,0);
 }
 
 static inline int

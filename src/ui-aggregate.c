@@ -65,7 +65,7 @@ destroy_agg_forms(void){
 }
 
 static struct form_option *
-agg_table(int *count,char *match,int *defidx){
+agg_table(int *count,const char *match,int *defidx){
 	struct form_option *fo = NULL,*tmp;
 	const aggregate_type *types;
 	int z;
