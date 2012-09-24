@@ -20,6 +20,31 @@
 #define LBA_SIZE 512
 #define MBR_SIZE (LBA_SIZE - MBR_OFFSET)
 
+static inline const char *
+get_ptype(const device *d){
+	if(d->layout == LAYOUT_NONE){
+		if(d->blkdev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return NULL;
+		}
+		return d->blkdev.pttable;
+	}else if(d->layout == LAYOUT_MDADM){
+		if(d->mddev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return NULL;
+		}
+		return d->mddev.pttable;
+	}else if(d->layout == LAYOUT_DM){
+		if(d->dmdev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return NULL;
+		}
+		return d->dmdev.pttable;
+	}
+	diag("Not a partitionable device: %s\n",d->name);
+	return NULL;
+}
+
 static const unsigned char MBR_INITIAL_MBR[MBR_SIZE] =
 // 32-bit disk signature followed by 2 bytes of zeroes
  "\x00\x00\x00\x00\x00\x00"
@@ -372,31 +397,6 @@ int wipe_ptable(device *d,const char *ptype){
 	return -1;
 }
 
-static const char *
-get_ptype(const device *d){
-	if(d->layout == LAYOUT_NONE){
-		if(d->blkdev.pttable == NULL){
-			diag("No partition table on %s\n",d->name);
-			return NULL;
-		}
-		return d->blkdev.pttable;
-	}else if(d->layout == LAYOUT_MDADM){
-		if(d->mddev.pttable == NULL){
-			diag("No partition table on %s\n",d->name);
-			return NULL;
-		}
-		return d->mddev.pttable;
-	}else if(d->layout == LAYOUT_DM){
-		if(d->dmdev.pttable == NULL){
-			diag("No partition table on %s\n",d->name);
-			return NULL;
-		}
-		return d->dmdev.pttable;
-	}
-	diag("Not a partitionable device: %s\n",d->name);
-	return NULL;
-}
-
 int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
 	const struct ptable *pt;
 	const char *ptype;
@@ -543,13 +543,17 @@ int check_partition(device *d){
 
 int partition_set_flag(device *d,uint64_t flag,unsigned state){
 	const struct ptable *pt;
+	const char *pttable;
 
 	if(d->layout != LAYOUT_PARTITION){
 		diag("Will only set UUID of real partitions\n");
 		return -1;
 	}
+	if((pttable = get_ptype(d->partdev.parent)) == NULL){
+		return -1;
+	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
+		if(strcmp(pt->name,pttable) == 0){
 			if(!pt->flag){
 				diag("Partition flags not supported on %s\n",d->partdev.parent->blkdev.pttable);
 				return -1;
@@ -560,7 +564,7 @@ int partition_set_flag(device *d,uint64_t flag,unsigned state){
 			return 0;
 		}
 	}
-	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
+	diag("Unsupported partition table type: %s\n",pttable);
 	return -1;
 }
 

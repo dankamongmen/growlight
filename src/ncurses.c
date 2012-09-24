@@ -534,7 +534,7 @@ selected_emptyp(void){
 
 static inline int
 blockobj_partitionp(const blockobj *bo){
-	return bo && bo->zone->p;
+	return bo && bo->zone && bo->zone->p;
 }
 
 static inline int
@@ -4721,8 +4721,8 @@ set_partition_attrs(void){
 		locked_diag("Selected object is not a partition");
 		return;
 	}
+	locked_diag("FIXME not yet implemented");
 	// FIXME pop up a form allowing attr set
-	// FIXME set that fucker
 }
 
 static inline int
