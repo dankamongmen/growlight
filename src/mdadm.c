@@ -53,9 +53,10 @@ int explore_md_sysfs(device *d,int dirfd){
 	}
 	// FIXME there's some archaic rules on mdadm devices making some of them
 	// non-partitionable, but they're all partitionable after 2.6.38 or something
-	if((d->mddev.pttable = strdup("mdp")) == NULL){
+	/*if((d->mddev.pttable = strdup("mdp")) == NULL){
 		return -1;
-	}
+	}*/
+	d->mddev.pttable = NULL;
 	if((d->model = strdup("Linux mdadm")) == NULL){
 		return -1;
 	}
