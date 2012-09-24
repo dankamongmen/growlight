@@ -372,34 +372,44 @@ int wipe_ptable(device *d,const char *ptype){
 	return -1;
 }
 
+static const char *
+get_ptype(const device *d){
+	if(d->layout == LAYOUT_NONE){
+		if(d->blkdev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return NULL;
+		}
+		return d->blkdev.pttable;
+	}else if(d->layout == LAYOUT_MDADM){
+		if(d->mddev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return NULL;
+		}
+		return d->mddev.pttable;
+	}else if(d->layout == LAYOUT_DM){
+		if(d->dmdev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return NULL;
+		}
+		return d->dmdev.pttable;
+	}
+	diag("Not a partitionable device: %s\n",d->name);
+	return NULL;
+}
+
 int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
 	const struct ptable *pt;
+	const char *ptype;
 
 	if(d == NULL){
 		diag("Passed NULL device\n");
 		return -1;
 	}
-	if(d->layout == LAYOUT_NONE){
-		if(d->blkdev.pttable == NULL){
-			diag("No partition table on %s\n",d->name);
-			return -1;
-		}
-	}else if(d->layout == LAYOUT_MDADM){
-		if(d->mddev.pttable == NULL){
-			diag("No partition table on %s\n",d->name);
-			return -1;
-		}
-	}else if(d->layout == LAYOUT_DM){
-		if(d->dmdev.pttable == NULL){
-			diag("No partition table on %s\n",d->name);
-			return -1;
-		}
-	}else{
-		diag("Not a partitionable device: %s\n",d->name);
+	if((ptype = get_ptype(d)) == NULL){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,d->blkdev.pttable) == 0){
+		if(strcmp(pt->name,ptype) == 0){
 			if(pt->add(d,name,fsec,lsec,code)){
 				return -1;
 			}
@@ -409,7 +419,7 @@ int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,un
 			return 0;
 		}
 	}
-	diag("Unsupported partition table type: %s\n",d->blkdev.pttable);
+	diag("Unsupported partition table type: %s\n",ptype);
 	return -1;
 }
 
