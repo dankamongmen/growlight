@@ -1477,80 +1477,82 @@ event_posix_thread(void *unsafe){
 	int e,r;
 
 	do{
-		e = epoll_wait(em->efd,events,sizeof(events) / sizeof(*events),-1);
-		for(r = 0 ; r < e ; ++r){
-			if(events[r].data.fd == em->ifd){
-				char buf[BUFSIZ];
-				ssize_t s;
+		do{
+			e = epoll_wait(em->efd,events,sizeof(events) / sizeof(*events),-1);
+			for(r = 0 ; r < e ; ++r){
+				if(events[r].data.fd == em->ifd){
+					char buf[BUFSIZ];
+					ssize_t s;
 
-				assert(events[r].events == EPOLLIN);
-				while((s = read(em->ifd,buf,sizeof(buf))) > 0){
-					const struct inotify_event *in;
-					unsigned idx = 0;
+					assert(events[r].events == EPOLLIN);
+					while((s = read(em->ifd,buf,sizeof(buf))) > 0){
+						const struct inotify_event *in;
+						unsigned idx = 0;
 
-					if(s - idx >= (ptrdiff_t)sizeof(*in)){
-						in = (struct inotify_event *)(buf + idx);
-						idx += sizeof(*in);
+						if(s - idx >= (ptrdiff_t)sizeof(*in)){
+							in = (struct inotify_event *)(buf + idx);
+							idx += sizeof(*in);
 
-						if(in->len == 0){
-							diag("Nil-file event on unknown watch desc %d\n",in->wd);
-						}else{
-							assert(pthread_mutex_lock(&barrier) == 0);
-							++thrcount;
-							assert(pthread_mutex_unlock(&barrier) == 0);
-							if(in->wd == em->syswd){
-								char *name = strdup(in->name);
-								assert(name);
-								scan_device(name);
-							}else if(in->wd == em->mdwd){
-								char *name = strdup(in->name);
-								assert(name);
-								scan_mdalias(name);
-							}else if(in->wd == em->bypathwd){
-								char *name = strdup(in->name);
-								assert(name);
-								scan_devbypath(name);
-							}else if(in->wd == em->byidwd){
-								char *name = strdup(in->name);
-								assert(name);
-								scan_devbyid(name);
+							if(in->len == 0){
+								diag("Nil-file event on unknown watch desc %d\n",in->wd);
 							}else{
 								assert(pthread_mutex_lock(&barrier) == 0);
-								--thrcount;
+								++thrcount;
 								assert(pthread_mutex_unlock(&barrier) == 0);
-								diag("Event on unknown watch desc %d (%s)\n",in->wd,in->name);
+								if(in->wd == em->syswd){
+									char *name = strdup(in->name);
+									assert(name);
+									scan_device(name);
+								}else if(in->wd == em->mdwd){
+									char *name = strdup(in->name);
+									assert(name);
+									scan_mdalias(name);
+								}else if(in->wd == em->bypathwd){
+									char *name = strdup(in->name);
+									assert(name);
+									scan_devbypath(name);
+								}else if(in->wd == em->byidwd){
+									char *name = strdup(in->name);
+									assert(name);
+									scan_devbyid(name);
+								}else{
+									assert(pthread_mutex_lock(&barrier) == 0);
+									--thrcount;
+									assert(pthread_mutex_unlock(&barrier) == 0);
+									diag("Event on unknown watch desc %d (%s)\n",in->wd,in->name);
+								}
 							}
 						}
 					}
+					if(s && errno != EAGAIN && errno != EWOULDBLOCK){
+						diag("Error reading inotify event on %d (%s)\n",
+								em->ifd,strerror(errno));
+					}
+				}else if(events[r].data.fd == em->ufd){
+					udev_event();
+				}else if(events[r].data.fd == em->mfd){
+					verbf("Reparsing %s...\n",MOUNTS);
+					lock_growlight();
+					clear_mounts(controllers);
+					parse_mounts(gui,MOUNTS);
+					unlock_growlight();
+				}else if(events[r].data.fd == em->sfd){
+					verbf("Reparsing %s...\n",SWAPS);
+					lock_growlight();
+					parse_swaps(gui,SWAPS);
+					unlock_growlight();
+				}else if(events[r].data.fd == em->ffd){
+					verbf("Reparsing %s...\n",FILESYSTEMS);
+					lock_growlight();
+					parse_filesystems(gui,FILESYSTEMS);
+					unlock_growlight();
+				}else{
+					diag("Unknown fd %d saw event\n",events[r].data.fd);
 				}
-				if(s && errno != EAGAIN && errno != EWOULDBLOCK){
-					diag("Error reading inotify event on %d (%s)\n",
-							em->ifd,strerror(errno));
-				}
-			}else if(events[r].data.fd == em->ufd){
-				udev_event();
-			}else if(events[r].data.fd == em->mfd){
-				verbf("Reparsing %s...\n",MOUNTS);
-				lock_growlight();
-				clear_mounts(controllers);
-				parse_mounts(gui,MOUNTS);
-				unlock_growlight();
-			}else if(events[r].data.fd == em->sfd){
-				verbf("Reparsing %s...\n",SWAPS);
-				lock_growlight();
-				parse_swaps(gui,SWAPS);
-				unlock_growlight();
-			}else if(events[r].data.fd == em->ffd){
-				verbf("Reparsing %s...\n",FILESYSTEMS);
-				lock_growlight();
-				parse_filesystems(gui,FILESYSTEMS);
-				unlock_growlight();
-			}else{
-				diag("Unknown fd %d saw event\n",events[r].data.fd);
 			}
-		}
-	}while(e >= 0);
-	diag("Error processing event queue (%s)\n",strerror(errno));
+		}while(e >= 0);
+		diag("Error processing event queue (%s)\n",strerror(errno));
+	}while(1);
 	return NULL;
 }
 
