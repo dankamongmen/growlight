@@ -11,8 +11,6 @@
 #include "growlight.h"
 
 int mkswap(device *d){
-	char cmd[PATH_MAX];
-
 	if(d->mnttype){
 		diag("Won't create swap on %s filesystem at %s\n",
 				d->mnttype,d->name);
@@ -22,11 +20,7 @@ int mkswap(device *d){
 		diag("Already swapping on %s\n",d->name);
 		return -1;
 	}
-	if(snprintf(cmd,sizeof(cmd),"mkswap -L SprezzaSwap /dev/%s",d->name) >= (int)sizeof(cmd)){
-		diag("Error building command line for %s\n",d->name);
-		return -1;
-	}
-	if(popen_drain(cmd)){
+	if(vspopen_drain("mkswap -L SprezzaSwap /dev/%s",d->name)){
 		return -1;
 	}
 	return 0;

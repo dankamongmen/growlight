@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/swap.h>
 
 #include "zfs.h"
 #include "mmap.h"
@@ -211,6 +212,26 @@ ext2_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	return 0;
 }
 
+static int
+mkswap(const char *dev,const struct mkfsmarshal *mfm){
+	char fn[PATH_MAX];
+	const char *name;
+
+	if((unsigned)snprintf(fn,sizeof(fn),"/dev/%s",dev) >= sizeof(fn)){
+		diag("Bad dev for swap: %s\n",dev);
+		return -1;
+	}
+	name = mfm->name ? mfm->name : "SprezzaSwap";
+	if(vspopen_drain("mkswap -L %s %s",name,fn)){
+		return -1;
+	}
+	if(swapon(fn,0)){
+		diag("Couldn't swap on %s (%s?)\n",fn,strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 // FIXME surely there's a less grotesque way of doing this? parse blkid -k?
 static const struct fs {
 	const char *name;
@@ -234,6 +255,7 @@ static const struct fs {
 		.name = "swap",
 		.desc = "Swap device",
 		.nameparam = 'L',
+		.mkfs = mkswap,
 	},
 	{
 		.name = "xfs",

@@ -3220,7 +3220,7 @@ static const wchar_t *helps_block[] = {
 	L"'m': make partition table     'r': remove partition table",
 	L"'W': wipe master boot record  'B': bad blocks check",
 	L"'n': new partition            'd': delete partition",
-	L"'s': set partition attributes 'M': make new filesystem",
+	L"'s': set partition attributes 'M': make filesystem/swap",
 	L"'F': fsck filesystem          'w': wipe filesystem",
 	L"'U': set UUID                 'L': set label/name",
 	L"'o': mount filesystem         'O': unmount filesystem",
