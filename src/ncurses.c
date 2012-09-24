@@ -4713,8 +4713,11 @@ set_partition_attrs(void){
 		locked_diag("Partition modification requires selection of a partition");
 		return;
 	}
-	// FIXME surely this doesn't work?
-	if(b->d->layout != LAYOUT_PARTITION){
+	if(selected_unloadedp()){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(!selected_partitionp()){
 		locked_diag("Selected object is not a partition");
 		return;
 	}
