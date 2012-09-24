@@ -2983,6 +2983,8 @@ detail_fs(WINDOW *hw,const device *d,int row){
 	}
 }
 
+// One must not call diag() from any function called by update_details(), or
+// else you will get one of a deadlock or a stack overflow due to corecursion.
 static int
 update_details(WINDOW *hw){
 	const controller *c = get_current_adapter();
@@ -3213,6 +3215,7 @@ static const wchar_t *helps[] = {
 	L"'-': collapse adapter         '+': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
+	// FIXME remove these!
 	L"'R': rescan selection         'S': reset controller",
 	//L"'/': search",
 	NULL
