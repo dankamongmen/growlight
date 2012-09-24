@@ -3155,10 +3155,15 @@ update_details(WINDOW *hw){
 			wattroff(hw,A_BOLD);
 			wprintw(hw,"%ju ",b->zone->lsector);
 			wattron(hw,A_BOLD);
-			wprintw(hw,"%s (%ls) 0x%x %sB align",
-					b->zone->p->name,
-					b->zone->p->partdev.pname ?
-					 b->zone->p->partdev.pname : L"unnamed",
+			waddstr(hw,b->zone->p->name);
+			wattroff(hw,A_BOLD);
+			if(b->zone->p->partdev.pname){
+				wprintw(hw," “%ls” ",b->zone->p->partdev.pname);
+			}else{
+				wprintw(hw," (%s) ","unnamed");
+			}
+			wattron(hw,A_BOLD);
+			wprintw(hw,"0x%x %sB align",
 					get_code_specific(pttype,b->zone->p->partdev.ptype),
 					align);
 			detail_fs(hw,b->zone->p,7);
