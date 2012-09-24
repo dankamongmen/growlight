@@ -379,12 +379,23 @@ int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,un
 		diag("Passed NULL device\n");
 		return -1;
 	}
-	if(d->layout != LAYOUT_NONE){
-		diag("Will only add partitions to real block devices\n");
-		return -1;
-	}
-	if(d->blkdev.pttable == NULL){
-		diag("No partition table on %s\n",d->name);
+	if(d->layout == LAYOUT_NONE){
+		if(d->blkdev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return -1;
+		}
+	}else if(d->layout == LAYOUT_MDADM){
+		if(d->mddev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return -1;
+		}
+	}else if(d->layout == LAYOUT_DM){
+		if(d->dmdev.pttable == NULL){
+			diag("No partition table on %s\n",d->name);
+			return -1;
+		}
+	}else{
+		diag("Not a partitionable device: %s\n",d->name);
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
