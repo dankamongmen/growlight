@@ -152,13 +152,14 @@ ext4_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	if(name == NULL){
 		name = "SprezzaEXT4";
 	}
-	//if(vspopen_drain("mkfs.ext4 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	// FIXME Support a thorough mode or something where we use:
+	// -E lazy_itable_init=0,lazy_journal_init=0 -O ^uninit_bg" or something
 	if(mkm->stride && mkm->swidth){
-		if(vspopen_drain("mkfs.ext4 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+		if(vspopen_drain("mkfs.ext4 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent %s",
 			mkm->stride,mkm->swidth,
 			mkm->force ? "-F " : "",mkm->name,dev)){
 		}
-	}else if(vspopen_drain("mkfs.ext4 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	}else if(vspopen_drain("mkfs.ext4 %s-b -2048 -L \"%s\" -O dir_index,extent %s",
 			mkm->force ? "-F " : "",mkm->name,dev)){
 		return -1;
 	}
@@ -176,13 +177,13 @@ ext3_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	if(name == NULL){
 		name = "SprezzaEXT3";
 	}
-	//if(vspopen_drain("mkfs.ext3 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	//if(vspopen_drain("mkfs.ext3 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent %s",
 	if(mkm->stride && mkm->swidth){
-		if(vspopen_drain("mkfs.ext3 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+		if(vspopen_drain("mkfs.ext3 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent %s",
 			mkm->stride,mkm->swidth,
 			mkm->force ? "-F ": "",mkm->name,dev)){
 		}
-	}else if(vspopen_drain("mkfs.ext3 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	}else if(vspopen_drain("mkfs.ext3 %s-b -2048 -L \"%s\" -O dir_index,extent %s",
 			mkm->force ? "-F ": "",mkm->name,dev)){
 		return -1;
 	}
@@ -201,11 +202,11 @@ ext2_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 		name = "SprezzaEXT2";
 	}
 	if(mkm->stride && mkm->swidth){
-		if(vspopen_drain("mkfs.ext2 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+		if(vspopen_drain("mkfs.ext2 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent %s",
 			mkm->stride,mkm->swidth,
 			mkm->force ? "-F " : "",mkm->name,dev)){
 		}
-	}else if(vspopen_drain("mkfs.ext2 %s-b -2048 -L \"%s\" -O dir_index,extent,^uninit_bg %s",
+	}else if(vspopen_drain("mkfs.ext2 %s-b -2048 -L \"%s\" -O dir_index,extent %s",
 			mkm->force ? "-F " : "",mkm->name,dev)){
 		return -1;
 	}
