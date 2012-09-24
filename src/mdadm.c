@@ -197,7 +197,7 @@ generic_mdadm_create(const char *name,const char *metadata,const char *level,
 	}
 #undef PREFIX
 	// FIXME provide a way to let user control write intent bitmap
-	return vspopen_drain("mdadm -C \"%s\" -e %s -l %s -N \"%s\" -n %d%s%s",
+	return vspopen_drain("mdadm -C \"%s\" --auto=md -e %s -l %s -N \"%s\" -n %d%s%s",
 				name,metadata,level,name,num,
 				bitmap ? " -b internal" : "",buf);
 }
