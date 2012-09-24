@@ -2970,12 +2970,10 @@ detail_fs(WINDOW *hw,const device *d,int row){
 				d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
 				d->mntsize ? 'B' : ' ');
 		wattron(hw,A_BOLD);
-		wprintw(hw,"%s%s%s",d->label ? "" : " unlabeled ",
-				d->mnttype,
-				d->label ? " named " : "");
+		wprintw(hw,"%s%s",d->label ? "" : " unlabeled ",d->mnttype);
 		if(d->label){
 			wattroff(hw,A_BOLD);
-			waddstr(hw,d->label);
+			wprintw(hw," %lc%s%lc",L'“',d->label,L'”');
 			wattron(hw,A_BOLD);
 		}
 		wprintw(hw,"%s",d->mnt.count ? " at " : "");
