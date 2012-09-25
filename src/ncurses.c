@@ -98,6 +98,15 @@ static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
 static struct panel_state environment = PANEL_STATE_INITIALIZER;
 
+static int map_details(WINDOW *);
+
+static void
+update_map_cond(PANEL *p){
+	if(p){
+		map_details(panel_window(p));
+	}
+}
+
 struct form_option {
 	char *option;			// option key (the string passed to cb)
 	char *desc;			// longer description
@@ -2072,6 +2081,7 @@ targpoint_callback(const char *path){
 	if(blockobj_unpartitionedp(b)){
 		mmount(b->d,targ);
 		redraw_adapter(current_adapter);
+		update_map_cond(maps.p);
 		return;
 	}else if(blockobj_emptyp(b)){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
@@ -2079,6 +2089,7 @@ targpoint_callback(const char *path){
 	}else{
 		mmount(b->zone->p,targ);
 		redraw_adapter(current_adapter);
+		update_map_cond(maps.p);
 		return;
 	}
 	locked_diag("I'm confused. Aborting.\n");
@@ -5021,6 +5032,7 @@ mountpoint_callback(const char *path){
 		assert(selected_partitionp());
 		mmount(b->zone->p,path);
 	}
+	update_map_cond(maps.p);
 }
 
 static void
@@ -5078,6 +5090,7 @@ numount_target(void){
 			return;
 		}
 		redraw_adapter(current_adapter);
+		update_map_cond(maps.p);
 		return;
 	}else{
 		if(!targeted_p(b->d)){
@@ -5088,6 +5101,7 @@ numount_target(void){
 			return;
 		}
 		redraw_adapter(current_adapter);
+		update_map_cond(maps.p);
 		return;
 	}
 }
@@ -5249,6 +5263,7 @@ umount_filesystem(void){
 	}
 	if(!r){
 		redraw_adapter(current_adapter);
+		update_map_cond(maps.p);
 	}
 }
 
@@ -5569,6 +5584,7 @@ do_setup_target(const char *token){
 		return;
 	}
 	locked_diag("Now targeting %s",token);
+	update_map_cond(maps.p);
 }
 
 static void
@@ -5590,6 +5606,7 @@ unset_target(void){
 		return;
 	}
 	locked_diag("Successfully left target mode");
+	update_map_cond(maps.p);
 }
 
 static void
