@@ -31,11 +31,11 @@
 #else
 #ifdef HAVE_NCURSES_H
 #include <term.h>
-#include <ncursesw.h>
+#include <ncurses.h>
 #else
 #ifdef HAVE_NCURSESW_H
 #include <term.h>
-#include <ncurses.h>
+#include <ncursesw.h>
 #else
 #ifdef HAVE_NCURSES_CURSES_H
 #include <ncurses/term.h>
@@ -85,10 +85,6 @@ use_terminfo_color(int ansicolor,int boldp){
 #endif
 	return 0;
 }
-
-#ifndef HAVE_CURSES
-#define use_terminfo_color(color,bold) use_terminfo_color(0,bold)
-#endif
 
 static inline int
 usage(wchar_t * const *args,const char *arghelp){
