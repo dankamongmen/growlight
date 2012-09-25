@@ -38,6 +38,9 @@ static const char SEARCH_TEXT[] =
 static const char PARTFLAG_TEXT[] =
 "Select a collection of flags to set on the partition.";
 
+static const char TARGET_TEXT[] =
+"Enter a mount point relative to the target's root.";
+
 static const char TARG_TEXT[] =
 "Enter a mount point relative to the target's root. It must already exist, and "
 "no other filesystem should yet be mounted there. The filesystem will be made "
@@ -579,15 +582,6 @@ selection_active(void){
 		return 0;
 	}
 	return 1;
-}
-
-/* Action interface -- always require a selection */
-static adapterstate *
-get_selected_adapter(void){
-	if(!current_adapter){
-		return NULL;
-	}
-	return current_adapter->as;
 }
 
 static int
@@ -4951,39 +4945,6 @@ delete_partition(void){
 }
 
 static void
-rescan_selection(void){
-	blockobj *b;
-
-	if((b = get_selected_blockobj()) == NULL){
-		adapterstate *as;
-
-		if((as = get_selected_adapter()) == NULL){
-			locked_diag("Need a selected adapter or block device");
-			return;
-		}
-		locked_diag("Rescanning adapter %s",as->c->name);
-		rescan_controller(as->c);
-		return;
-	}
-	locked_diag("Rescanning block device %s",b->d->name);
-	rescan_blockdev(b->d); // first, have the kernel rescan
-	rescan_device(b->d->name); // then, force us to rescan the kernel
-	redraw_adapter(current_adapter);
-}
-
-static void
-reset_selection(void){
-	adapterstate *as;
-
-	if((as = get_selected_adapter()) == NULL){
-		locked_diag("Need a selected adapter");
-		return;
-	}
-	locked_diag("Resetting adapter %s",as->c->name);
-	reset_controller(as->c);
-}
-
-static void
 wipe_mbr_confirm(const char *op){
 	blockobj *b;
 
@@ -6080,7 +6041,9 @@ update_blockobj(blockobj *b,device *d){
 	zones = 0;
 	if(d->mnttype){
 		sector = d->size / d->logsec + 1;
-	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
+	}else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
+			(d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
+			(d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
 		sector = d->size / d->logsec + 1;
 	}else{
 		if( (sector = first_usable_sector(d)) ){
