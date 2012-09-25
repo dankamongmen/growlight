@@ -3229,8 +3229,8 @@ static const wchar_t *helps_block[] = {
 };
 
 static const wchar_t *helps_target[] = {
-	L"'i': set target	        'I': unset target",
 	L"'t': mount target	        'T': unmount target",
+	L"'i': enter target mode        'I': leave target mode",
 	L"'*' finalize UEFI / '#' finalize BIOS / '@' finalize fstab",
 	NULL
 };
@@ -5525,9 +5525,7 @@ destroy_aggregate_confirm(const char *op){
 	}
 	if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
 		locked_diag("%s is not an aggregate",b->d->name);
-		return;
-	}
-	if(b->d->layout == LAYOUT_ZPOOL){
+	}else if(b->d->layout == LAYOUT_ZPOOL){
 		destroy_zpool(b->d);
 	}else if(b->d->layout == LAYOUT_MDADM){
 		destroy_mdadm(b->d);
@@ -5593,13 +5591,32 @@ start_search(void){
 }
 
 static void
+do_setup_target(const char *token){
+	if(token == NULL){
+		locked_diag("Targeting was cancelled");
+		return;
+	}
+	if(token[0] != '/'){
+		locked_diag("Target must be an absolute path");
+		return;
+	}
+	if(target_mode_p()){
+		locked_diag("Already have a target at %s",growlight_target);
+		return;
+	}
+	if(set_target(token)){
+		return;
+	}
+	locked_diag("Now targeting %s",token);
+}
+
+static void
 setup_target(void){
 	if(target_mode_p()){
 		locked_diag("Already have a target at %s",growlight_target);
 		return;
 	}
-	// FIXME pop up a string input form and get the target path
-	locked_diag("Not yet implemented FIXME"); // FIXME
+	raise_str_form("enter target path",do_setup_target,"/target",TARGET_TEXT);
 }
 
 static void
