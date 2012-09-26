@@ -233,6 +233,7 @@ static const struct fs {
 	const char *name;
 	const char *desc;
 	int (*mkfs)(const char *,const struct mkfsmarshal *);
+	int (*uuidset)(const char *,const unsigned char *);
 	char nameparam;			// parameter on cmdline to name
 	int namemax;			// max length of name, if known
 } fss[] = {
@@ -242,16 +243,19 @@ static const struct fs {
 		.mkfs = vfat_mkfs,
 		.namemax = 11,
 		.nameparam = 'n',
+		.uuidset = NULL,
 	},
 	{
 		.name = "swsuspend",
 		.desc = "Software suspend block device",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "swap",
 		.desc = "Swap device",
 		.nameparam = 'L',
 		.mkfs = mkswap,
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "xfs",
@@ -259,10 +263,12 @@ static const struct fs {
 		.mkfs = xfs_mkfs,
 		.namemax = 12,
 		.nameparam = 'L',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ext4dev",
 		.desc = "Obsolete, development-series ext4",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ext4",
@@ -270,6 +276,7 @@ static const struct fs {
 		.mkfs = ext4_mkfs,
 		.namemax = 16,
 		.nameparam = 'L',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ext3",
@@ -277,6 +284,7 @@ static const struct fs {
 		.mkfs = ext3_mkfs,
 		.namemax = 16,
 		.nameparam = 'L',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ext2",
@@ -284,157 +292,191 @@ static const struct fs {
 		.mkfs = ext2_mkfs,
 		.namemax = 16,
 		.nameparam = 'L',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "jbd",
 		.desc = "Journaling Block Device",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "reiserfs",
 		.desc = "ReiserFS v3",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "reiser4",
 		.desc = "ReiserFS v4",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "jfs",
 		.desc = "IBM's Journaled Filesystem (AIX JFS2)",
 		.mkfs = jfs_mkfs,
 		.nameparam = 'L',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "udf",
 		.desc = "Universal Disk Format (ISO/IEC 13346)",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "iso9660",
 		.desc = "Compact Disc Filesystem (ISO 9660:1999)",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ozfs",
 		.desc = "Oracle's ZFS (Solaris 11 default)",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "zol",
 		.desc = "LLNL's ZoL (ZFS on Linux)",
 		.mkfs = make_zfs,
 		.nameparam = ' ',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "zfs_member",
 		.desc = "ZFS zpool member",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "hfsplus",
 		.desc = "HFS+ (Mac OS Extended) (OS X default)",
 		.mkfs = hfsplus_mkfs,
 		.nameparam = 'v',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "hfs",
 		.desc = "Hierarchal Filesystem (Mac OS Standard)",
 		.mkfs = hfs_mkfs,
 		.nameparam = 'v',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ufs",
 		.desc = "UNIX Filesystem 2 (BFFS) (BSD default)",
 		.nameparam = 'L',
 		.mkfs = ufs_mkfs,
+		.uuidset = NULL, // FIXME
 
 	},
 	{
 		.name = "hpfs",
 		.desc = "OS/2's High Performance Filesystem",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "sysv",
 		.desc = "System V Filesystem (S5FS) (XENIX default)",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ntfs",
 		.desc = "Microsoft's New Technology Filesystem (Windows default)",
 		.mkfs = create_ntfs,
 		.nameparam = 'L',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "cramfs",
 		.desc = "Compressed Read-Only Filesystem",
 		.mkfs = cramfs_mkfs,
 		.nameparam = 'n',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "romfs",
 		.desc = "Read-Only Filesystem",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "minix",
 		.desc = "MINIX Filesystem (MINIX default)",
+		.uuidset = NULL, // FIXME
        	},
 	{
 		.name = "gfs",
 		.desc = "Red Hat's Global Filesystem v1",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "gfs2",
 		.desc = "Red Hat's Global Filesystem v2",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ocfs",
 		.desc = "Oracle Cluster Filesystem v1",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ocfs2",
 		.desc = "Oracle Cluster Filesystem v2",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "oracleasm",
 		.desc = "Oracle Automatic Storage Management",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "vxfs",
 		.desc = "VERITAS Filesystem (HP-UX JFS) (HP-UX default)",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "squashfs",
 		.desc = "Squashed Read-Only Filesystem",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "nss",
 		.desc = "Novell Storage Services",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "btrfs",
 		.desc = "Oracle's B-Tree Filesystem",
 		.nameparam = 'L',
 		.mkfs = create_btrfs,
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "ubifs",
 		.desc = "Unsorted Block Image Filesystem",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "bfs",
 		.desc = "UNIXWare Boot Filesystem (SCO boot default)",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "VMFS",
 		.desc = "VMware's Virtual Machine Filesystem",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "befs",
 		.desc = "Be Filesystem (BeOS default)",
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "nilfs2",
 		.desc = "NTT's New Implementation of Log-structued FS v2",
 		.namemax = 80,
 		.nameparam = 'L',
+		.uuidset = NULL, // FIXME
 	},
 	{
 		.name = "exfat",
 		.desc = "Microsoft's Extented File Allocation Table",
+		.uuidset = NULL, // FIXME
 	},
 	{ .name = NULL, }
 };
@@ -654,6 +696,21 @@ int wipe_filesystem(device *d){
 		return -1;
 	}
 	rescan_blockdev(d);
+	return 0;
+}
+
+int fstype_uuid_p(const char *fstype){
+	const struct fs *pt;
+
+	for(pt = fss ; pt->name ; ++pt){
+		if(strcmp(pt->name,fstype) == 0){
+			if(pt->uuidset){
+				return 1;
+			}
+			return 0;
+		}
+	}
+	diag("Unknown filesystem type: %s\n",fstype);
 	return 0;
 }
 

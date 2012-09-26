@@ -37,6 +37,9 @@ struct mkfsmarshal {
 // Does the filesystem support the concept of a name/label?
 int fstype_named_p(const char *);
 
+// Does the filesystem support the concept of a UUID?
+int fstype_uuid_p(const char *);
+
 // Is the filesystem virtual (not backed by a single device entry)?
 int fstype_virt_p(const char *);
 
