@@ -197,7 +197,7 @@ int make_partition_table(device *d,const char *ptype){
 			if(pt->make(d)){
 				return -1;
 			}
-			if(rescan_blockdev(d)){
+			if(rescan_blockdev_blkrrpart(d)){
 				return -1;
 			}
 			return 0;
