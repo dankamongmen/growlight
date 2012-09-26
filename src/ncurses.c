@@ -3209,32 +3209,32 @@ update_details_cond(WINDOW *w){
 // minus two for the top/bottom screen border, minus one for mandatory
 // window top padding).
 static const wchar_t *helps[] = {
-	L"'q': quit		        ctrl+'L': redraw the screen",
+	L"'q': quit                     ctrl+'L': redraw the screen",
 	L"'e': view environment details 'H': toggle this help display",
 	L"'v': view selection details   'D': view recent diagnostics",
 	L"'E': view mounts / targets    'z': modify aggregate",
-	L"'A': create aggregate	        'Z': destroy aggregate",
-	L"'-': collapse adapter	        '+': expand adapter",
+	L"'A': create aggregate         'Z': destroy aggregate",
+	L"'-': collapse adapter         '+': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
-	L"'k'/'↑': navigate up	        'j'/'↓': navigate down",
+	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
 	//L"'/': search",
 	NULL
 };
 
 static const wchar_t *helps_block[] = {
-	L"'h'/'←': navigate left	'l'/'→': navigate right",
+	L"'h'/'←': navigate left        'l'/'→': navigate right",
 	L"'m': make partition table     'r': remove partition table",
 	L"'W': wipe master boot record  'B': bad blocks check",
-	L"'n': new partition	        'd': delete partition",
+	L"'n': new partition            'd': delete partition",
 	L"'s': set partition attributes 'M': make filesystem/swap",
-	L"'F': fsck filesystem	        'w': wipe filesystem",
-	L"'U': set UUID		        'L': set label/name",
-	L"'o': mount filesystem	        'O': unmount filesystem",
+	L"'F': fsck filesystem          'w': wipe filesystem",
+	L"'U': set UUID                 'L': set label/name",
+	L"'o': mount filesystem         'O': unmount filesystem",
 	NULL
 };
 
 static const wchar_t *helps_target[] = {
-	L"'t': mount target	        'T': unmount target",
+	L"'t': mount target             'T': unmount target",
 	L"'i': enter target mode        'I': leave target mode",
 	L"'*' finalize UEFI / '#' finalize BIOS / '@' finalize fstab",
 	NULL
