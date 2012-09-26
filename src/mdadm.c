@@ -156,7 +156,7 @@ int explore_md_sysfs(device *d,int dirfd){
 		}else if(d->mddev.disks < agg->maxfaulted){
 			diag("%s didn't have %u disks\n",d->name,agg->maxfaulted);
 		}else{
-			assert(d->mddev.swidth = d->mddev.disks - agg->maxfaulted);
+			d->mddev.swidth = d->mddev.disks - agg->maxfaulted;
 		}
 	}
 	return 0;
