@@ -146,7 +146,7 @@ int explore_md_sysfs(device *d,int dirfd){
 		d->mddev.degraded = 1;
 	}
 	d->mddev.swidth = 0;
-	if(d->mddev.level && d->mddev.disks){
+	if(d->mddev.level && d->mddev.disks && d->mddev.stride){
 		const aggregate_type *agg;
 
 		strcpy(buf,"md");
