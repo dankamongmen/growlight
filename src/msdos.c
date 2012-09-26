@@ -37,7 +37,7 @@ typedef struct __attribute__ ((packed)) msdos_entry {
 typedef struct __attribute__ ((packed)) msdos_header {
 	uint8_t bootstrap[MBR_OFFSET];
 	unsigned char disksig[DISKSIG_LEN];
-	uint32_t reserved;
+	uint16_t reserved;
 	msdos_entry table[MSDOS_ENTRIES];
 	uint16_t bootsig;
 } msdos_header;
@@ -68,7 +68,7 @@ write_msdos(int fd,ssize_t lbasize,unsigned realdata){
 	assert(pgsize > 0 && pgsize % lbasize == 0);
 	mapsize = lbasize;
 	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
-	assert(mapsize % pgsize == 0);
+	assert(mapsize % pgsize == 0 && mapsize);
 	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
 	if(map == MAP_FAILED){
 		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
