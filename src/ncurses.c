@@ -3125,13 +3125,21 @@ update_details(WINDOW *hw){
 					qprefix(d->size,1,buf,sizeof(buf),0),
 					d->roflag ? L'+' : L'-');
 		if(d->layout == LAYOUT_MDADM){
-			wprintw(hw," Stride:");
+			wprintw(hw," Stride: ");
 			wattroff(hw,A_BOLD);
-			wprintw(hw," %sB",bprefix(d->mddev.stride,1,buf,sizeof(buf),1));
+			if(d->mddev.stride == 0){
+				waddstr(hw,"n/a");
+			}else{
+				wprintw(hw,"%sB",bprefix(d->mddev.stride,1,buf,sizeof(buf),1));
+			}
 			wattron(hw,A_BOLD);
 			wprintw(hw," SWidth: ");
 			wattroff(hw,A_BOLD);
-			wprintw(hw,"%u",d->mddev.swidth);
+			if(d->mddev.swidth){
+				waddstr(hw,"n/a");
+			}else{
+				wprintw(hw,"%u",d->mddev.swidth);
+			}
 			wattron(hw,A_BOLD);
 		}
 		assert(d->physsec <= 4096);
