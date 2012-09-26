@@ -8,6 +8,9 @@ extern "C" {
 // Load the DMI configuration from sysfs
 int dmi_init(void);
 
+const char *get_bios_version(void);
+const char *get_bios_vendor(void);
+
 #ifdef __cplusplus
 }
 #endif

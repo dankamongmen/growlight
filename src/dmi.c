@@ -6,8 +6,8 @@
 
 #define DMI_PATH "/sys/devices/virtual/dmi/id"
 
-static const char *bios_vendor;
-static const char *bios_version;
+static char *bios_vendor;
+static char *bios_version;
 
 int dmi_init(void){
 	int dfd;
@@ -23,4 +23,12 @@ int dmi_init(void){
 		diag("Couldn't open %s/%s (%s)\n",DMI_PATH,"bios_vendor",strerror(errno));
 	}
 	return 0;
+}
+
+const char *get_bios_version(void){
+	return bios_version;
+}
+
+const char *get_bios_vendor(void){
+	return bios_vendor;
 }
