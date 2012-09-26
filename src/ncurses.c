@@ -2596,12 +2596,14 @@ psectors_callback(const char *psects){
 		return;
 	}
 	ps = show_splash(L"Creating partition...");
-	add_partition(b->d,NULL,fsect,lsect,pending_ptype);
+	r = add_partition(b->d,NULL,fsect,lsect,pending_ptype);
 	if(ps){
 		kill_splash(ps);
 	}
-	locked_diag("Created new partition on %s\n",b->d->name);
 	cleanup_new_partition();
+	if(!r){
+		locked_diag("Created new partition on %s\n",b->d->name);
+	}
 }
 
 // -------------------------------------------------------------------------
