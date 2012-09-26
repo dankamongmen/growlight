@@ -135,7 +135,7 @@ int zap_msdos(device *d){
 		diag("Won't zap partition table on non-disk %s\n",d->name);
 		return -1;
 	}
-	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"msdos")){
+	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"dos")){
 		diag("No msdos on disk %s\n",d->name);
 		return -1;
 	}
@@ -220,7 +220,7 @@ int add_msdos(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsign
 		diag("Won't add partition to non-disk %s\n",d->name);
 		return -1;
 	}
-	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"msdos")){
+	if(d->blkdev.pttable == NULL || strcmp(d->blkdev.pttable,"dos")){
 		diag("No msdos on disk %s\n",d->name);
 		return -1;
 	}
