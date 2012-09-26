@@ -104,7 +104,7 @@ static const struct ptable {
 		.make = new_msdos,
 		.zap = zap_msdos,
 		.add = add_msdos,
-		.del = NULL,
+		.del = del_msdos,
 		.pname = NULL,
 		.uuid = NULL,
 		.flag = flag_msdos,
