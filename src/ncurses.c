@@ -978,14 +978,17 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		}
 		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx," No media detected in drive");
 		return;
-	}else if(d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL){
+	}else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
+		(d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
+		(d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
 		if(selected){
 			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}else{
 			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		}
 		assert(snprintf(buf,sizeof(buf)," %s %s ",qprefix(d->size,1,pre,sizeof(pre),1),
-					"unpartitioned space") < (int)sizeof(buf));
+				d->layout == LAYOUT_NONE ? "unpartitioned space" :
+				"unpartitionable space") < (int)sizeof(buf));
 		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
 		mvwadd_wch(w,y,sx,&bchr[1]);
 		mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
