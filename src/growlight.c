@@ -31,6 +31,7 @@
 #include "fs.h"
 #include "sg.h"
 #include "dm.h"
+#include "dmi.h"
 #include "mbr.h"
 #include "zfs.h"
 #include "swap.h"
@@ -1817,6 +1818,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 		diag("Couldn't cd to %s (%s)\n",SYSROOT,strerror(errno));
 		goto err;
 	}
+	dmi_init();
 	if((sysfd = get_dir_fd(SYSROOT)) < 0){
 		goto err;
 	}
