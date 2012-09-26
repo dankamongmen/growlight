@@ -2559,6 +2559,7 @@ psectors_callback(const char *psects){
 	uintmax_t fsect,lsect;
 	struct panel_state *ps;
 	blockobj *b;
+	int r;
 
 	if((b = partition_base_p()) == NULL){
 		return;
@@ -6158,20 +6159,20 @@ update_blockobj(blockobj *b,device *d){
 		sector = p->partdev.lsector + 1;
 	}
 	if(d->logsec && d->size){
-		if(sector != d->size / d->logsec + 1){
-			if(sector != last_usable_sector(d) + 1){
+		if(sector < d->size / d->logsec){
+			if(sector < last_usable_sector(d) + 1){
 				if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL,REP_EMPTY)) == NULL){
 					goto err;
 				}
 				++zones;
 				sector = last_usable_sector(d) + 1;
 			}
-			if(sector != d->size / d->logsec + 1){
-				if((z = create_zobj(z,zones,sector,d->size / d->logsec,NULL,REP_METADATA)) == NULL){
+			if(sector < d->size / d->logsec){
+				if((z = create_zobj(z,zones,sector,d->size / d->logsec - 1,NULL,REP_METADATA)) == NULL){
 					goto err;
 				}
 				++zones;
-				sector = d->size / d->logsec + 1;
+				sector = d->size / d->logsec;
 			}
 		}
 	}

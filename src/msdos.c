@@ -415,5 +415,5 @@ uintmax_t first_msdos(const device *d __attribute__ ((unused))){
 }
 
 uintmax_t last_msdos(const device *d){
-	return d->logsec ? d->size / d->logsec : 0;
+	return d->logsec && d->size ? d->size / d->logsec - 1 : 0;
 }
