@@ -553,6 +553,7 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned
 		close(fd);
 		return -1;
 	}
+	gpe[z].flags = 0;
 	gpe[z].first_lba = fsec;
 	gpe[z].last_lba = lsec;
 	if(unmap_gpt(d,map,mapsize,fd,LBA_SIZE)){
