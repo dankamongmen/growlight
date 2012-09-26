@@ -3135,7 +3135,7 @@ update_details(WINDOW *hw){
 			wattron(hw,A_BOLD);
 			wprintw(hw," SWidth: ");
 			wattroff(hw,A_BOLD);
-			if(d->mddev.swidth){
+			if(d->mddev.swidth == 0){
 				waddstr(hw,"n/a");
 			}else{
 				wprintw(hw,"%u",d->mddev.swidth);
