@@ -3028,7 +3028,7 @@ detail_fs(WINDOW *hw,const device *d,int row){
 static int
 update_details(WINDOW *hw){
 	const controller *c = get_current_adapter();
-	char buf[PREFIXSTRLEN + 1];
+	char buf[BPREFIXSTRLEN + 1];
 	const char *pttype;
 	const blockobj *b;
 	const device *d;
@@ -3087,7 +3087,7 @@ update_details(WINDOW *hw){
 		waddstr(hw,d->model ? d->model : "n/a");
 		waddstr(hw,d->revision ? d->revision : "n/a");
 		wattron(hw,A_BOLD);
-		wprintw(hw," (%s) S/N: ",qprefix(d->size,1,buf,sizeof(buf),0));
+		wprintw(hw," (%sB) S/N: ",bprefix(d->size,1,buf,sizeof(buf),1));
 		wattroff(hw,A_BOLD);
 		waddstr(hw,sn ? sn : "n/a");
 		wattron(hw,A_BOLD);
@@ -3122,7 +3122,7 @@ update_details(WINDOW *hw){
 		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
 					d->model ? d->model : "n/a",
 					d->revision ? d->revision : "n/a",
-					qprefix(d->size,1,buf,sizeof(buf),0),
+					bprefix(d->size,1,buf,sizeof(buf),1),
 					d->roflag ? L'+' : L'-');
 		if(d->layout == LAYOUT_MDADM){
 			wprintw(hw," Stride: ");
