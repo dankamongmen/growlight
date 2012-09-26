@@ -5587,7 +5587,7 @@ modify_aggregate(void){
 	locked_diag("Aggregate modification not yet implemented FIXME");
 }
 
-static void
+/*static void
 search_callback(const char *term){
 	if(term == NULL){
 		locked_diag("Search was cancelled");
@@ -5600,7 +5600,7 @@ static void
 start_search(void){
 	raise_str_form("start typing an identifier",search_callback,NULL,
 			SEARCH_TEXT);
-}
+}*/
 
 static void
 set_label(void){
@@ -5901,11 +5901,12 @@ handle_ncurses_input(WINDOW *w){
 				unlock_ncurses();
 				break;
 			}
-			case '/':
+			/*case '/':{
 				lock_ncurses();
 				start_search();
 				unlock_ncurses();
 				break;
+			}*/
 			case 'I':{
 				lock_ncurses();
 				unset_target();
