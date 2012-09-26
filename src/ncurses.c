@@ -573,6 +573,27 @@ selected_partitionp(void){
 	return blockobj_partitionp(get_selected_blockobj());
 }
 
+static inline device *
+selected_filesystem(void){
+	blockobj *bo;
+
+	if((bo = get_selected_blockobj()) == NULL){
+		return NULL;
+	}
+	if(blockobj_unpartitionedp(bo)){
+		if(bo->d->mnttype){
+			return bo->d;
+		}
+	}else{
+		if(blockobj_partitionp(bo)){
+			if(bo->zone->p->mnttype){
+				return bo->zone->p;
+			}
+		}
+	}
+	return NULL;
+}
+
 static inline int
 mkfs_safe_p(const device *d){
 	if(d->mnttype){
@@ -3237,7 +3258,7 @@ static const wchar_t *helps_block[] = {
 	L"'n': new partition            'd': delete partition",
 	L"'s': set partition attributes 'M': make filesystem/swap",
 	L"'F': fsck filesystem          'w': wipe filesystem",
-	L"'U': set UUID                 'L': set label/name",
+	L"'U': set filesystem UUID      'L': set filesystem label/name",
 	L"'o': mount filesystem         'O': unmount filesystem",
 	NULL
 };
@@ -5583,12 +5604,32 @@ start_search(void){
 
 static void
 set_label(void){
+	device *d;
+
+	if((d = selected_filesystem()) == NULL){
+		locked_diag("No filesystem is selected");
+		return;
+	}
+	if(!fstype_named_p(d->mnttype)){
+		locked_diag("%s does not support labels",d->mnttype);
+		return;
+	}
 	// FIXME
 	locked_diag("FIXME not yet implemented");
 }
 
 static void
 set_uuid(void){
+	device *d;
+
+	if((d = selected_filesystem()) == NULL){
+		locked_diag("No filesystem is selected");
+		return;
+	}
+	if(!fstype_uuid_p(d->mnttype)){
+		locked_diag("%s does not support UUIDs",d->mnttype);
+		return;
+	}
 	// FIXME
 	locked_diag("FIXME not yet implemented");
 }
