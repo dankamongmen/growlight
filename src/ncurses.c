@@ -1136,7 +1136,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			if(off - och < ex / 2u){
 				mvwprintw(w,y - 1,off - och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
 			}else{
-				mvwprintw(w,y - 1,off - 4 - strlen(selstr),"%.*s⇦⇦⇦⇖",(int)(ex - (off + ch + strlen(selstr) + 4)),selstr);
+				mvwprintw(w,y - 1,off - 4 - strlen(selstr),"%s⇦⇦⇦⇖",selstr);
 			}
 		}
 		wattroff(w,A_REVERSE);
