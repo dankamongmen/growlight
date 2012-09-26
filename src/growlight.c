@@ -1972,7 +1972,7 @@ rescan_blockdev_internal(const device *d,int killedpart){
 		return -1;
 	}
 	diag("Wrote '1' to %s\n",buf);
-	if((fd = openat(devfd,d->name,O_RDONLY|O_CLOEXEC)) < 0){
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC)) < 0){
 		return -1;
 	}
 	diag("Syncing %s via %d...\n",d->name,fd);
