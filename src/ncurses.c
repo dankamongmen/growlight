@@ -1348,7 +1348,7 @@ case LAYOUT_ZPOOL:
 
 				if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-					rep = L'+'; //L'✓'; renders badly
+					rep = L'✓';
 				}else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
 						&& bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(ORANGE_COLOR));
