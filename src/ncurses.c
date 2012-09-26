@@ -3066,7 +3066,7 @@ update_details(WINDOW *hw){
 		wattroff(hw,A_BOLD);
 		waddstr(hw,c->biosver ? c->biosver : "Unknown");
 		wattron(hw,A_BOLD);
-		waddstr(hw," Theoretical demand: ");
+		waddstr(hw," Load: ");
 		qprefix(c->demand,1,buf,sizeof(buf),1);
 		wattroff(hw,A_BOLD);
 		waddstr(hw,buf);
