@@ -98,9 +98,25 @@ static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
 static struct panel_state environment = PANEL_STATE_INITIALIZER;
 
+static int helpstrs(WINDOW *);
 static int map_details(WINDOW *);
+static int update_details(WINDOW *);
 
-static void
+static inline void
+update_details_cond(PANEL *p){
+	if(p){
+		update_details(panel_window(p));
+	}
+}
+
+static inline void
+update_help_cond(PANEL *p){
+	if(p){
+		helpstrs(panel_window(p));
+	}
+}
+
+static inline void
 update_map_cond(PANEL *p){
 	if(p){
 		map_details(panel_window(p));
@@ -2084,7 +2100,6 @@ targpoint_callback(const char *path){
 	if(blockobj_unpartitionedp(b)){
 		mmount(b->d,targ);
 		redraw_adapter(current_adapter);
-		update_map_cond(maps.p);
 		return;
 	}else if(blockobj_emptyp(b)){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
@@ -2092,7 +2107,6 @@ targpoint_callback(const char *path){
 	}else{
 		mmount(b->zone->p,targ);
 		redraw_adapter(current_adapter);
-		update_map_cond(maps.p);
 		return;
 	}
 	locked_diag("I'm confused. Aborting.\n");
@@ -3196,14 +3210,6 @@ update_details(WINDOW *hw){
 	return 0;
 }
 
-static int
-update_details_cond(WINDOW *w){
-	if(details.p){
-		return update_details(w);
-	}
-	return 0;
-}
-
 // When this text is being displayed, the help window is the active window.
 // Thus we refer to other window commands as "viewing", while 'H' here is
 // described as "toggling". When other windows come up, they list their
@@ -3257,9 +3263,10 @@ max_helpstr_len(const wchar_t **h){
 }
 
 static int
-helpstrs(WINDOW *hw,int row){
+helpstrs(WINDOW *hw){
 	const wchar_t *hs;
 	int z,rows,cols;
+	int row = 1;
 
 	rows = getmaxy(hw);
 	cols = getmaxx(hw);
@@ -3291,14 +3298,6 @@ helpstrs(WINDOW *hw,int row){
 	return OK;
 }
 
-static int
-update_help_cond(WINDOW *w){
-	if(help.p){
-		return helpstrs(w,1);
-	}
-	return 0;
-}
-
 static inline void
 lock_ncurses(void){
 	lock_growlight();
@@ -3307,12 +3306,29 @@ lock_ncurses(void){
 
 static inline void
 unlock_ncurses(void){
-	update_details_cond(panel_window(details.p));
-	update_help_cond(panel_window(help.p));
+	update_details_cond(details.p);
+	update_help_cond(help.p);
+	update_map_cond(maps.p);
 	screen_update();
 	assert(pthread_mutex_unlock(&bfl) == 0);
 	unlock_growlight();
 }	
+
+// Used in growlight callbacks, since the growlight lock will already be held
+// in any such case.
+static inline void
+lock_ncurses_growlight(void){
+	assert(pthread_mutex_lock(&bfl) == 0);
+}
+
+static inline void
+unlock_ncurses_growlight(void){
+	update_details_cond(details.p);
+	update_help_cond(help.p);
+	update_map_cond(maps.p);
+	screen_update();
+	assert(pthread_mutex_unlock(&bfl) == 0);
+}
 
 static void pull_adapters_down(reelbox *,int,int,int);
 
@@ -4050,7 +4066,7 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 			PBORDER_COLOR)){
 		goto err;
 	}
-	if(helpstrs(panel_window(ps->p),1)){
+	if(helpstrs(panel_window(ps->p))){
 		goto err;
 	}
 	return OK;
@@ -5035,7 +5051,6 @@ mountpoint_callback(const char *path){
 		assert(selected_partitionp());
 		mmount(b->zone->p,path);
 	}
-	update_map_cond(maps.p);
 }
 
 static void
@@ -5093,7 +5108,6 @@ numount_target(void){
 			return;
 		}
 		redraw_adapter(current_adapter);
-		update_map_cond(maps.p);
 		return;
 	}else{
 		if(!targeted_p(b->d)){
@@ -5104,7 +5118,6 @@ numount_target(void){
 			return;
 		}
 		redraw_adapter(current_adapter);
-		update_map_cond(maps.p);
 		return;
 	}
 }
@@ -5266,7 +5279,6 @@ umount_filesystem(void){
 	}
 	if(!r){
 		redraw_adapter(current_adapter);
-		update_map_cond(maps.p);
 	}
 }
 
@@ -5599,7 +5611,6 @@ do_setup_target(const char *token){
 		return;
 	}
 	locked_diag("Now targeting %s",token);
-	update_map_cond(maps.p);
 }
 
 static void
@@ -5621,7 +5632,6 @@ unset_target(void){
 		return;
 	}
 	locked_diag("Successfully left target mode");
-	update_map_cond(maps.p);
 }
 
 static void
@@ -5958,21 +5968,6 @@ free_adapter_state(adapterstate *as){
 		}
 		free(as);
 	}
-}
-
-// Used in growlight callbacks, since the growlight lock will already be held
-// in any such case.
-static inline void
-lock_ncurses_growlight(void){
-	assert(pthread_mutex_lock(&bfl) == 0);
-}
-
-static inline void
-unlock_ncurses_growlight(void){
-	update_details_cond(panel_window(details.p));
-	update_help_cond(panel_window(help.p));
-	screen_update();
-	assert(pthread_mutex_unlock(&bfl) == 0);
 }
 
 static void *
