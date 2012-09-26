@@ -5570,6 +5570,18 @@ start_search(void){
 }
 
 static void
+set_label(void){
+	// FIXME
+	locked_diag("FIXME not yet implemented");
+}
+
+static void
+set_uuid(void){
+	// FIXME
+	locked_diag("FIXME not yet implemented");
+}
+
+static void
 do_setup_target(const char *token){
 	if(token == NULL){
 		locked_diag("Targeting was cancelled");
@@ -5763,6 +5775,18 @@ handle_ncurses_input(WINDOW *w){
 			case 'F':{
 				lock_ncurses();
 				fsck_partition();
+				unlock_ncurses();
+				break;
+			}
+			case 'U':{
+				lock_ncurses();
+				set_uuid();
+				unlock_ncurses();
+				break;
+			}
+			case 'L':{
+				lock_ncurses();
+				set_label();
 				unlock_ncurses();
 				break;
 			}
