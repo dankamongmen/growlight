@@ -13,6 +13,7 @@
 #include "gpt.h"
 #include "wchar.h"
 #include "popen.h"
+#include "msdos.h"
 #include "ptypes.h"
 #include "ptable.h"
 #include "growlight.h"
@@ -45,90 +46,6 @@ get_ptype(const device *d){
 	return NULL;
 }
 
-static const unsigned char MBR_INITIAL_MBR[MBR_SIZE] =
-// 32-bit disk signature followed by 2 bytes of zeroes
- "\x00\x00\x00\x00\x00\x00"
- "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
- "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
- "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
- "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
- "\x55\xaa";			// MBR signature
-
-static int
-write_mbr(int fd,ssize_t lbasize){
-	//ssize_t s = lbasize;
-	int pgsize = getpagesize();
-	uint32_t disksig;
-	size_t mapsize;
-	void *map;
-
-	// MBR goes in first LBA
-	assert(pgsize > 0 && pgsize % lbasize == 0);
-	mapsize = lbasize;
-	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
-	assert(mapsize && mapsize % pgsize == 0);
-	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-	if(map == MAP_FAILED){
-		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
-		return -1;
-	}
-	disksig = random(); // FIXME use wwn if available?
-	memset((char *)map,0,MBR_OFFSET);
-	memcpy((char *)map + MBR_OFFSET,MBR_INITIAL_MBR,MBR_SIZE);
-	memcpy((char *)map + MBR_OFFSET,&disksig,sizeof(disksig));
-	if(msync(map,lbasize,MS_SYNC|MS_INVALIDATE)){
-		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
-		munmap(map,mapsize);
-		return -1;
-	}
-	if(munmap(map,mapsize)){
-		diag("Error unmapping %d (%s?)\n",fd,strerror(errno));
-		return -1;
-	}
-	return 0;
-}
-
-static int
-dos_make_table(device *d){
-	int fd;
-
-	if(d->layout != LAYOUT_NONE){
-		diag("Won't create partition table on non-disk %s\n",d->name);
-		return -1;
-	}
-	if(d->size % LBA_SIZE){
-		diag("Won't create MBR on (%ju %% %u == %juB) disk %s\n",
-			d->size,LBA_SIZE,d->size % LBA_SIZE,d->name);
-		return -1;
-	}
-	if(d->size < LBA_SIZE){
-		diag("Won't create MBR on %juB disk %s\n",d->size,d->name);
-		return -1;
-	}
-	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
-		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
-		return -1;
-	}
-	if(write_mbr(fd,LBA_SIZE)){
-		diag("Couldn't write MBR on %s (%s?)\n",d->name,strerror(errno));
-		close(fd);
-		return -1;
-	}
-	if(fsync(fd)){
-		diag("Warning: error syncing %d for %s (%s?)\n",fd,d->name,strerror(errno));
-	}
-	if(close(fd)){
-		diag("Error closing %d for %s (%s?)\n",fd,d->name,strerror(errno));
-		return -1;
-	}
-	return 0;
-}
-
-static int
-dos_zap_table(device *d){
-	return wipe_dos_ptable(d);
-}
-
 static int
 mdp_add_part(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,
 				unsigned long long code __attribute__ ((unused))){
@@ -142,64 +59,6 @@ mdp_add_part(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,
 	}
 	diag("FIXME: I don't like mbp partitions! %s\n",d->name);
 	return -1;
-}
-
-static int
-dos_add_part(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,
-					unsigned long long code){
-	unsigned mbrcode;
-
-	if(name){
-		diag("Names are not supported for MBR partitions!\n");
-		return -1;
-	}
-	if((lsec - fsec) * d->logsec > 2ull * 1000ull * 1000ull * 1000ull * 1000ull){
-		diag("MBR partitions may not exceed 2TB\n");
-		return -1;
-	}
-	if(get_mbr_code(code,&mbrcode)){
-		diag("Illegal code for DOS/BIOS/MBR: %llu\n",code);
-		return -1;
-	}
-	// FIXME
-	diag("FIXME: I don't like dos partitions! %s\n",d->name);
-	return -1;
-}
-
-static int
-dos_set_flag(device *d,uint64_t flag,unsigned state __attribute__ ((unused))){
-	if(d->partdev.ptype != PARTROLE_PRIMARY || d->partdev.ptstate.logical || d->partdev.ptstate.extended){
-		diag("Flags are only set on primary partitions\n");
-		return -1;
-	}
-	if(flag != 0x80){
-		diag("Invalid flag for BIOS/MBR: 0x%016jx\n",(uintmax_t)flag);
-		return -1;
-	}
-	// FIXME set it!
-	diag("Sorry, this is not yet implemented FIXME\n");
-	return -1;
-}
-
-static int
-dos_set_code(device *d,unsigned long long code){
-	if(code > 0xff){
-		diag("Invalid type for BIOS/MBR: 0x%016jx\n",(uintmax_t)code);
-		return -1;
-	}
-	// FIXME set it!
-	diag("Sorry, this is not yet implemented for %s FIXME\n",d->name);
-	return -1;
-}
-
-static uintmax_t
-first_dos(const device *d __attribute__ ((unused))){
-	return 1;
-}
-
-static uintmax_t
-last_dos(const device *d){
-	return d->logsec ? d->size / d->logsec : 0;
 }
 
 static uintmax_t
@@ -242,16 +101,16 @@ static const struct ptable {
 	}, {
 		.name = "dos",
 		.desc = "IBMPC (DOS) / Master Boot Record",
-		.make = dos_make_table,
-		.zap = dos_zap_table,
-		.add = dos_add_part,
+		.make = new_msdos,
+		.zap = zap_msdos,
+		.add = add_msdos,
 		.del = NULL,
 		.pname = NULL,
 		.uuid = NULL,
-		.flag = dos_set_flag,
-		.code = dos_set_code,
-		.first = first_dos,
-		.last = last_dos,
+		.flag = flag_msdos,
+		.code = code_msdos,
+		.first = first_msdos,
+		.last = last_msdos,
 	}, {
 		.name = "mdp",
 		.desc = "Linux MD partitioning",
