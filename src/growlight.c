@@ -252,6 +252,12 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 				c->biosver = get_sysfs_string(sysfd,path);
 			}
 		}
+		if(c->fwver == NULL && get_bios_version()){
+			c->fwver = strdup(get_bios_version());
+		}
+		if(c->biosver == NULL && get_bios_vendor()){
+			c->biosver = strdup(get_bios_vendor());
+		}
 		c->driver = module;
 		c->bus = BUS_PCIe;
 		c->pcie.domain = domain;
