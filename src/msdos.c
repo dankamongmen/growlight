@@ -270,7 +270,7 @@ int add_msdos(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsign
 			(uintmax_t)lsec,
 			(uintmax_t)(lsec - fsec),
 			(uintmax_t)((lsec - fsec) * d->logsec));
-	memset(mpe,0,sizeof(*mpe));
+	memset(&mpe[z],0,sizeof(*mpe));
 	mpe[z].ptype = mbrcode;
 	mpe[z].lbafirst = fsec;
 	mpe[z].lbasect = lsec - fsec + 1;
