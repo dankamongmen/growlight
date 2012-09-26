@@ -67,9 +67,9 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 		diag("Bad device name: %s\n",d->name);
 		return -1;
 	}
-	if((fd = open(dbuf,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
 		int e = errno;
-		diag("Couldn't open %s (%s?)\n",dbuf,strerror(errno));
+		diag("Couldn't open /dev/%s (%s?)\n",d->name,strerror(errno));
 		errno = e;
 		return -1;
 	}

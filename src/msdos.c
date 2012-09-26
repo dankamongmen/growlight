@@ -44,12 +44,13 @@ typedef struct __attribute__ ((packed)) msdos_header {
 
 static int
 initialize_msdos(msdos_header *mh){
-	memset(mh,0,MBR_SIZE);
 	if(RAND_bytes(mh->disksig,sizeof(mh->disksig)) != 1){
 		diag("%s",ERR_error_string(ERR_get_error(),NULL));
 		return -1;
 	}
-	memcpy(&mh->bootsig,MBR_SIG,sizeof(MBR_SIG));
+	memset(&mh->reserved,0,sizeof(mh->reserved));
+	memset(&mh->table,0,sizeof(mh->table));
+	memcpy(&mh->bootsig,MBR_SIG,sizeof(mh->bootsig));
 	return 0;
 }
 
@@ -59,7 +60,6 @@ initialize_msdos(msdos_header *mh){
 // perform the latter.
 static int
 write_msdos(int fd,ssize_t lbasize,unsigned realdata){
-	const off_t off = MBR_OFFSET;
 	int pgsize = getpagesize();
 	msdos_header *mhead;
 	size_t mapsize;
@@ -74,9 +74,9 @@ write_msdos(int fd,ssize_t lbasize,unsigned realdata){
 		diag("Error mapping %zub at %d (%s?)\n",mapsize,fd,strerror(errno));
 		return -1;
 	}
-	mhead = (msdos_header *)((char *)map + off);
+	mhead = (msdos_header *)map;
 	if(!realdata){
-		memset(mhead,0,MBR_SIZE);
+		memset(mhead,0,MBR_OFFSET + MBR_SIZE);
 	}else{
 		if(initialize_msdos(mhead)){
 			munmap(map,mapsize);
