@@ -239,6 +239,10 @@ int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,un
 		diag("Passed NULL device\n");
 		return -1;
 	}
+	if(lsec < fsec || lsec > last_usable_sector(d) || fsec < first_usable_sector(d)){
+		diag("Bad sector spec (%ju:%ju) on %s\n",fsec,lsec,d->name);
+		return -1;
+	}
 	if((ptype = get_ptype(d)) == NULL){
 		return -1;
 	}
