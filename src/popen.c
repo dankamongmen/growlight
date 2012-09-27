@@ -58,7 +58,7 @@ sanitize_cmd(const char *cmd){
 }
 
 int popen_drain(const char *cmd){
-	char buf[BUFSIZ],*safecmd;
+	char buf[128],*safecmd;
 	FILE *fd;
 
 	if((safecmd = sanitize_cmd(cmd)) == NULL){
