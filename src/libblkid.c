@@ -83,10 +83,11 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 
 		for(i = 0 ; i < 3 ; ++i){
 			if((bp = blkid_new_probe_from_filename(dev)) == NULL){
-				if(errno == ENOMEDIUM){
+				if(errno != ENOMEDIUM && errno != ENOENT){
+					diag("Couldn't get blkid probe for %s (%s)\n",dev,strerror(errno));
 					return -1;
 				}
-				diag("Couldn't get blkid probe for %s (%s?), retrying...\n",dev,strerror(errno));
+				diag("Couldn't get blkid probe for %s (%s), retrying...\n",dev,strerror(errno));
 				sleep(1);
 			}else{
 				break;
@@ -95,35 +96,36 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 		if(bp == NULL){
 			if((bp = blkid_new_probe_from_filename(dev)) == NULL){
 				if(errno != ENOMEDIUM){
-					diag("Couldn't get blkid probe for %s (%s?), retrying...\n",dev,strerror(errno));
+					diag("Couldn't get blkid probe for %s (%s), retrying...\n",dev,strerror(errno));
 					return -1;
 				}
+				return blkid_exit(-1);
 			}
 		}
 	}
 	if(blkid_probe_enable_topology(bp,1)){
-		diag("Couldn't enable blkid topology for %s (%s?)\n",dev,strerror(errno));
+		diag("Couldn't enable blkid topology for %s (%s)\n",dev,strerror(errno));
 		return blkid_exit(-1);
 	}
 	if(blkid_probe_enable_partitions(bp,1)){
-		diag("Couldn't enable blkid partitionprobe for %s (%s?)\n",dev,strerror(errno));
+		diag("Couldn't enable blkid partitionprobe for %s (%s)\n",dev,strerror(errno));
 		goto err;
 	}
 	if(blkid_probe_set_partitions_flags(bp,BLKID_PARTS_ENTRY_DETAILS)){
-		diag("Couldn't set blkid partitionflags for %s (%s?)\n",dev,strerror(errno));
+		diag("Couldn't set blkid partitionflags for %s (%s)\n",dev,strerror(errno));
 		goto err;
 	}
 	if(blkid_probe_enable_superblocks(bp,1)){
-		diag("Couldn't enable blkid superprobe for %s (%s?)\n",dev,strerror(errno));
+		diag("Couldn't enable blkid superprobe for %s (%s)\n",dev,strerror(errno));
 		goto err;
 	}
 	if(blkid_probe_set_superblocks_flags(bp,BLKID_SUBLKS_DEFAULT |
 						BLKID_SUBLKS_VERSION)){
-		diag("Couldn't set blkid superflags for %s (%s?)\n",dev,strerror(errno));
+		diag("Couldn't set blkid superflags for %s (%s)\n",dev,strerror(errno));
 		goto err;
 	}
 	if(blkid_do_fullprobe(bp)){
-		diag("Couldn't run blkid fullprobe for %s (%s?)\n",dev,strerror(errno));
+		diag("Couldn't run blkid fullprobe for %s (%s)\n",dev,strerror(errno));
 		goto err;
 	}
 	n = blkid_probe_numof_values(bp);

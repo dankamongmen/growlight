@@ -920,7 +920,10 @@ rescan(const char *name,device *d){
 		// The device ought exist now. Don't continue trying to create
 		// a new one, but instead look up the one that now exists.
 		clobber_device(d);
-		return lookup_device(name);
+		lock_growlight();
+		d = lookup_device(name);
+		unlock_growlight();
+		return d;
 	}
 	if(d->c == &virtual_bus && d->layout == LAYOUT_NONE){
 		d->blkdev.realdev = 0;
@@ -966,6 +969,7 @@ rescan(const char *name,device *d){
 			}
 			if((d->blkdev.biossha1 = malloc(20)) == NULL){
 				diag("Couldn't alloc SHA1 buf (%s)\n",strerror(errno));
+				close(dfd);
 				clobber_device(d);
 				return NULL;
 			}
@@ -1127,7 +1131,6 @@ del_from_discovery_list(const char *name){
 
 	for(pre = &discovery_active ; *pre ; pre = &(*pre)->next){
 		if(strcmp((*pre)->name,name) == 0){
-
 			struct dlist *c = *pre;
 
 			*pre = c->next;
@@ -1175,6 +1178,7 @@ device *lookup_device(const char *name){
 	do{
 		for(dl = discovery_active ; dl ; dl = dl->next){
 			if(strcmp(name,dl->name) == 0){
+				verbf("Waiting for disclock on %s\n",name);
 				pthread_cond_wait(&discovery_cond,&lock);
 				break;
 			}
@@ -1229,7 +1233,7 @@ scan_mdalias(void *vname){
 		free(vname);
 		goto done;
 	}
-	if((r = readlink(path,buf,sizeof(buf))) < 0){;
+	if((r = readlink(path,buf,sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
 		diag("Couldn't read link at %s\n",path);
 		free(vname);
 		goto done;
@@ -1271,7 +1275,7 @@ scan_devbypath(void *vname){
 		free(vname);
 		goto done;
 	}
-	if((r = readlink(path,buf,sizeof(buf))) < 0){;
+	if((r = readlink(path,buf,sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
 		diag("Couldn't read link at %s\n",path);
 		free(vname);
 		goto done;
@@ -1309,7 +1313,7 @@ scan_devbyid(void *vname){
 		free(vname);
 		goto done;
 	}
-	if((r = readlink(id,buf,sizeof(buf))) < 0){;
+	if((r = readlink(id,buf,sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
 		diag("Couldn't read link at %s\n",id);
 		free(vname);
 		goto done;
@@ -1325,10 +1329,13 @@ scan_devbyid(void *vname){
 	free(name); // name was set to NULL on success
 
 done:
+	{unsigned e;
 	assert(pthread_mutex_lock(&barrier) == 0);
-	--thrcount;
+	e = --thrcount;
 	pthread_cond_signal(&barrier_cond);
 	assert(pthread_mutex_unlock(&barrier) == 0);
+	fprintf(stderr,"FINISHD %s %u\n",buf,e);
+	}
 	return NULL;
 }
 
