@@ -60,7 +60,7 @@ jfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 		name = "SprezzaJFS";
 	}
 	// FIXME what about external journals?
-	if(vspopen_drain("mkfs.jfs -L \"%s\" %s",mkm->name,dev)){
+	if(vspopen_drain("mkfs.jfs -q -L \"%s\" %s",mkm->name,dev)){
 		return -1;
 	}
 	return 0;
