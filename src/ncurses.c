@@ -6281,6 +6281,7 @@ block_free(void *cv,void *bv){
 			}
 		}
 	}
+	free_zchain(&bo->zchain);
 	if(bo->prev){
 		bo->prev->next = bo->next;
 	}
