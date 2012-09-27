@@ -1178,7 +1178,6 @@ device *lookup_device(const char *name){
 	do{
 		for(dl = discovery_active ; dl ; dl = dl->next){
 			if(strcmp(name,dl->name) == 0){
-				verbf("Waiting for disclock on %s\n",name);
 				pthread_cond_wait(&discovery_cond,&lock);
 				break;
 			}
@@ -1213,7 +1212,7 @@ device *lookup_device(const char *name){
 		}
 	}
 	if( (d = create_new_device(name)) ){
-		pthread_cond_signal(&discovery_cond);
+		pthread_cond_broadcast(&discovery_cond);
 	}
 	return d;
 }
@@ -1254,8 +1253,9 @@ scan_mdalias(void *vname){
 
 done:
 	assert(pthread_mutex_lock(&barrier) == 0);
-	--thrcount;
-	pthread_cond_signal(&barrier_cond);
+	if(--thrcount == 0){
+		pthread_cond_signal(&barrier_cond);
+	}
 	assert(pthread_mutex_unlock(&barrier) == 0);
 	return NULL;
 }
@@ -1292,8 +1292,9 @@ scan_devbypath(void *vname){
 
 done:
 	assert(pthread_mutex_lock(&barrier) == 0);
-	--thrcount;
-	pthread_cond_signal(&barrier_cond);
+	if(--thrcount == 0){
+		pthread_cond_signal(&barrier_cond);
+	}
 	assert(pthread_mutex_unlock(&barrier) == 0);
 	return NULL;
 }
@@ -1329,13 +1330,11 @@ scan_devbyid(void *vname){
 	free(name); // name was set to NULL on success
 
 done:
-	{unsigned e;
 	assert(pthread_mutex_lock(&barrier) == 0);
-	e = --thrcount;
-	pthread_cond_signal(&barrier_cond);
-	assert(pthread_mutex_unlock(&barrier) == 0);
-	fprintf(stderr,"FINISHD %s %u\n",buf,e);
+	if(--thrcount == 0){
+		pthread_cond_signal(&barrier_cond);
 	}
+	assert(pthread_mutex_unlock(&barrier) == 0);
 	return NULL;
 }
 
@@ -1347,8 +1346,9 @@ scan_device(void *name){
 	d = name ? lookup_device(name) : NULL;
 	unlock_growlight();
 	assert(pthread_mutex_lock(&barrier) == 0);
-	--thrcount;
-	pthread_cond_signal(&barrier_cond);
+	if(--thrcount == 0){
+		pthread_cond_signal(&barrier_cond);
+	}
 	assert(pthread_mutex_unlock(&barrier) == 0);
 	free(name);
 	return d;
