@@ -9,6 +9,7 @@ extern "C" {
 #include "gpt.h"
 
 #define PARTROLE_ESP		0xef00
+#define PARTROLE_BIOSBOOT	0xef02
 #define PARTROLE_PRIMARY	0x8300
 
 typedef struct ptype {

@@ -168,7 +168,7 @@ const ptype ptypes[] = {
 		.gpt_guid = "\x41\xEE\x4D\x02\xE7\x33\xD3\x11\x9D\x69\x00\x08\xC7\x81\xF3\x9F",
 		.mbr_code = 0,
 	}, {
-		.code = 0xef02,
+		.code = PARTROLE_BIOSBOOT,
 		.name = "BIOS boot partition",
 		.gpt_guid = "\x48\x61\x68\x21\x49\x64\x6F\x6E\x74\x4E\x65\x65\x64\x45\x46\x49",
 		.mbr_code = 0,

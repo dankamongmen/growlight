@@ -2169,7 +2169,7 @@ int prepare_bios_boot(device *d){
 		diag("%s is not mapped as the target root\n",d->name);
 		return -1;
 	}
-	if(d->partdev.ptype != PARTROLE_PRIMARY){
+	if(d->partdev.ptype != PARTROLE_BIOSBOOT && d->partdev.ptype != PARTROLE_PRIMARY){
 		diag("BIOS boots from GPT or MSDOS 'Primary' partitions only\n");
 		return -1;
 	}
