@@ -109,6 +109,7 @@ int finalize_target(void){
 	return 0;
 }
 
+// FIXME prefer labels or UUIDs for identification!
 static int
 dump_device_targets(const device *d,FILE *fp){
 	unsigned z;
@@ -122,6 +123,11 @@ dump_device_targets(const device *d,FILE *fp){
 				 !strcmp(d->mnt.list[z],growlight_target),
 				d->mnttype,d->mntops.list[z],
 				strcmp(d->mnt.list[z],growlight_target) ? 2 : 1) < 0){
+			return -1;
+		}
+	}
+	if(d->swapprio){
+		if(fprintf(fp,"/dev/%s\tnone\t\t%s\n",d->name,d->mnttype) < 0){
 			return -1;
 		}
 	}
