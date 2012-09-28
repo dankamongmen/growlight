@@ -36,9 +36,11 @@ int explore_md_sysfs(device *d,int dirfd){
 	}
 	// Chunk size is only applicable for RAID[0456] and RAID10.
 	// It is *not* set and *not* applicable for RAID1 or linear.
-	if(get_sysfs_uint(dirfd,"chunk_size",&d->mddev.stride)){
+	if(get_sysfs_uint(dirfd,"chunk_size",&rd)){
 		verbf("Warning: no 'chunk_size' content in mdadm device %s\n",d->name);
 		d->mddev.stride = 0;
+	}else{
+		d->mddev.stride = rd;
 	}
 	if(get_sysfs_uint(dirfd,"degraded",&d->mddev.degraded)){
 		verbf("Warning: no 'degraded' content in mdadm device %s\n",d->name);
