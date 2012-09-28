@@ -83,8 +83,8 @@ int probe_blkid_superblock(const char *dev,blkid_probe *sbp,device *d){
 
 		for(i = 0 ; i < 3 ; ++i){
 			if((bp = blkid_new_probe_from_filename(dev)) == NULL){
-				if(errno != ENOMEDIUM && errno != ENOENT){
-					diag("Couldn't get blkid probe for %s (%s)\n",dev,strerror(errno));
+				if(errno == ENOMEDIUM){
+					verbf("Couldn't get blkid probe for %s (%s)\n",dev,strerror(errno));
 					return -1;
 				}
 				diag("Couldn't get blkid probe for %s (%s), retrying...\n",dev,strerror(errno));
