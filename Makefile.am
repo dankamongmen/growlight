@@ -53,3 +53,6 @@ $(doc_DIR)/@PACKAGE_NAME@.ent:
 
 clean-local:
 	rm -rf $(MANS) $(doc_DIR)/@PACKAGE_NAME@.ent
+
+uninstall-local:
+	rmdir "$(DESTDIR)$(docdir)"
