@@ -27,7 +27,7 @@ Build-only dependencies:
 
 Building from a git checkout:
 
- - autoreconf -fi -Wall,error
+ - autoreconf -sfi -Wall,error
  - continue from "Building from a tarball"
 
 Building from a tarball:
