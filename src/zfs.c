@@ -63,12 +63,14 @@ static int
 zpoolcb(zpool_handle_t *zhp,void *arg){
 	char size[10],guid[21],ashift[5],health[20];
 	struct zpoolcb_t *cb = arg;
+	const glightui *gui;
 	uint64_t version;
 	const char *name;
 	nvlist_t *conf;
 	device *d;
 	int state;
 
+	gui = cb->gui;
 	name = zpool_get_name(zhp);
 	conf = zpool_get_config(zhp,NULL);
 	if(!name || !conf){
@@ -119,6 +121,27 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		diag("Couldn't get GUID for zpool '%s'\n",name);
 		zpool_close(zhp);
 		return -1;
+	}
+	if( (d = lookup_device(name)) ){
+		if(d->layout != LAYOUT_ZPOOL){
+			diag("Zpool %s collided with %s\n",name,d->name);
+			zpool_close(zhp);
+			return -1;
+		}
+		if(strcmp(d->uuid,guid)){
+			diag("UUID changed on %s\n",name);
+			free(d->uuid);
+		}
+		d->uuid = strdup(guid);
+		if(d->size != dehumanize(size)){
+			diag("Size changed on %s (%ju->%s)\n",name,d->size,size);
+		}
+		d->size = dehumanize(size);
+		d->zpool.state = state;
+		d->zpool.zpoolver = version;
+		zpool_close(zhp);
+		d->uistate = gui->block_event(d,d->uistate);
+		return 0;
 	}
 	if((d = malloc(sizeof(*d))) == NULL){
 		diag("Couldn't allocate device (%s?)\n",strerror(errno));
