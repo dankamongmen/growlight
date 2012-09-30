@@ -677,17 +677,17 @@ bevel_top(WINDOW *w){
 	return OK;
 }
 
-/*static int
+static int
 bphat(WINDOW *w){
 	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"█", },
-		{ .attr = 0, .chars = L"█", },
-		{ .attr = 0, .chars = L"█", },
-		{ .attr = 0, .chars = L"▖", },
-		{ .attr = 0, .chars = L"▌", },
-		{ .attr = 0, .chars = L"▀", },
-		{ .attr = 0, .chars = L"▐", },
-		{ .attr = 0, .chars = L"▄", },
+		{ .attr = 0, .chars = L"█", }, // lower-left
+		{ .attr = 0, .chars = L"▄", }, // bottom
+		{ .attr = 0, .chars = L"▀", }, // top
+		{ .attr = 0, .chars = L"▆", }, // upper-right
+		{ .attr = 0, .chars = L"▌", }, // left
+		{ .attr = 0, .chars = L"█", }, // lower-right
+		{ .attr = 0, .chars = L"▐", }, // right
+		{ .attr = 0, .chars = L"▆", }, // upper-left
 	};
 	int rows,cols,z;
 
@@ -699,20 +699,20 @@ bphat(WINDOW *w){
 	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
 	assert(mvwadd_wch(w,0,0,&bchr[7]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
-		assert(mvwadd_wch(w,0,z,&bchr[7]) != ERR);
+		assert(mvwadd_wch(w,0,z,&bchr[2]) != ERR);
 	}
 	for(z = rows - 2 ; z > 0 ; --z){
-		assert(mvwadd_wch(w,z,0,&bchr[6]) != ERR);
-		assert(mvwins_wch(w,z,cols - 1,&bchr[4]) != ERR);
+		assert(mvwadd_wch(w,z,0,&bchr[4]) != ERR);
+		assert(mvwins_wch(w,z,cols - 1,&bchr[6]) != ERR);
 	}
 	assert(mvwins_wch(w,0,cols - 1,&bchr[3]) != ERR);
-	assert(mvwadd_wch(w,rows - 1,0,&bchr[5]) != ERR);
+	assert(mvwadd_wch(w,rows - 1,0,&bchr[0]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
-		assert(mvwadd_wch(w,rows - 1,z,&bchr[5]) != ERR);
+		assert(mvwadd_wch(w,rows - 1,z,&bchr[1]) != ERR);
 	}
 	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[5]) != ERR);
 	return OK;
-}*/
+}
 
 static int
 bevel(WINDOW *w){
@@ -1482,7 +1482,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		hcolor = UHEADING_COLOR; // plus A_BOLD
 		bcolor = SELBORDER_COLOR;
 		attrs = A_BOLD;
-		fullbevel = bevel;
+		fullbevel = bphat;
 	}else{
 		hcolor = UNHEADING_COLOR;;
 		bcolor = UBORDER_COLOR;
@@ -1507,7 +1507,11 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		}else{
 			assert(wattroff(w,A_BOLD) == OK);
 		}
-		assert(mvwprintw(w,0,5,"[") != ERR);
+		if(current){
+			assert(mvwprintw(w,0,5,"%ls",L"▉▇[") != ERR);
+		}else{
+			assert(mvwprintw(w,0,7,"%ls",L"[") != ERR);
+		}
 		assert(wcolor_set(w,hcolor,NULL) == OK);
 		assert(waddstr(w,as->c->ident) != ERR);
 		if(as->c->bandwidth){
@@ -1529,9 +1533,17 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		}
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
 		assert(wprintw(w,"]") != ERR);
-		assert(wmove(w,0,cols - 5) != ERR);
+		if(current){
+			assert(waddwstr(w,L"▇▉") != ERR);
+		}
 		assert(wattron(w,A_BOLD) == OK);
-		waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
+		if(current){
+			assert(wmove(w,0,cols - 7) != ERR);
+			waddwstr(w,as->expansion != EXPANSION_MAX ? L"▉▇[+]▇" : L"▉▇[-]▇");
+		}else{
+			assert(wmove(w,0,cols - 5) != ERR);
+			waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
+		}
 		assert(wattron(w,attrs) != ERR);
 	}
 	if(belowend == 0){
@@ -1542,7 +1554,11 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			}else{
 				assert(wattroff(w,A_BOLD) == OK);
 			}
-			assert(mvwprintw(w,rows - 1,2,"[") != ERR);
+			if(current){
+				assert(mvwprintw(w,rows - 1,1,"%ls",L"▇▇▆▇[") != ERR);
+			}else{
+				assert(mvwprintw(w,rows - 1,6,"[") != ERR);
+			}
 			assert(wcolor_set(w,hcolor,NULL) != ERR);
 			if(as->c->pcie.lanes_neg == 0){
 				wprintw(w,"Southbridge device %04x:%02x.%02x.%x",
@@ -1556,6 +1572,9 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			}
 			assert(wcolor_set(w,bcolor,NULL) != ERR);
 			assert(wprintw(w,"]") != ERR);
+			if(current){
+				assert(waddwstr(w,L"▆▆") != ERR);
+			}
 		}
 	}
 }
