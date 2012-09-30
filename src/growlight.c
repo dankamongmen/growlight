@@ -933,10 +933,10 @@ rescan(const char *name,device *d){
 	if((d->layout == LAYOUT_NONE && (d->blkdev.realdev || d->model))
 			|| (d->layout == LAYOUT_MDADM) || (d->layout == LAYOUT_DM)){
 		char devbuf[PATH_MAX];
-		/*blkid_parttable ptbl;
+		blkid_parttable ptbl;
 		blkid_partlist ppl;
 		blkid_probe pr;
-		int pars;*/
+		int pars;
 		int dfd;
 
 		if(d->layout == LAYOUT_NONE && d->blkdev.realdev){
@@ -982,7 +982,7 @@ rescan(const char *name,device *d){
 		}
 		snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
 		// FIXME move all this to its own function
-		/*if(probe_blkid_superblock(devbuf,&pr,d) == 0){
+		if(probe_blkid_superblock(devbuf,&pr,d) == 0){
 			if( (ppl = blkid_probe_get_partitions(pr)) ){
 				const char *pttable;
 				device *p;
@@ -1062,7 +1062,7 @@ rescan(const char *name,device *d){
 		}else{
 			verbf("\tDevice is unloaded/inaccessible\n");
 			d->blkdev.unloaded = 1;
-		}*/
+		}
 	}
 	if(d->logsec || d->physsec){
 		device *p;
