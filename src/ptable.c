@@ -384,7 +384,7 @@ int partition_set_flag(device *d,uint64_t flag,unsigned state){
 	const char *pttable;
 
 	if(d->layout != LAYOUT_PARTITION){
-		diag("Will only set UUID of real partitions\n");
+		diag("Will only set flags on real partitions\n");
 		return -1;
 	}
 	if((pttable = get_ptype(d->partdev.parent)) == NULL){
