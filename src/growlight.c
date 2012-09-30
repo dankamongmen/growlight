@@ -1543,7 +1543,7 @@ event_posix_thread(void *unsafe){
 								em->ifd,strerror(errno));
 					}
 				}else if(events[r].data.fd == em->ufd){
-					udev_event();
+					udev_event(gui);
 				}else if(events[r].data.fd == em->mfd){
 					verbf("Reparsing %s...\n",MOUNTS);
 					lock_growlight();

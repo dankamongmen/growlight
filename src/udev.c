@@ -5,6 +5,7 @@
 #include <string.h>
 #include <libudev.h>
 
+#include "zfs.h"
 #include "udev.h"
 #include "pthread.h"
 #include "growlight.h"
@@ -12,16 +13,21 @@
 static struct udev *udev;
 struct udev_monitor *udmon;
 
-int udev_event(void){
+int udev_event(const glightui *gui){
 	struct udev_device *dev;
 
 	while( (dev = udev_monitor_receive_device(udmon)) ){
+		const char *subsys = udev_device_get_subsystem(dev);
 		verbf("udev: %s %s %s %s %s %s %s\n",
-			udev_device_get_devpath(dev),udev_device_get_subsystem(dev),
+			udev_device_get_devpath(dev),subsys,
 			udev_device_get_devtype(dev),udev_device_get_syspath(dev),
 			udev_device_get_sysname(dev),udev_device_get_sysnum(dev),
 			udev_device_get_devnode(dev));
-		rescan_device(udev_device_get_sysname(dev));
+		if(strcmp(subsys,"bdi") == 0){
+			scan_zpools(gui);
+		}else{
+			rescan_device(udev_device_get_sysname(dev));
+		}
 	}
 	return 0;
 }
@@ -38,14 +44,17 @@ int monitor_udev(void){
 		udev_unref(udev);
 		return -1;
 	}
+	if(udev_monitor_filter_add_match_subsystem_devtype(udmon,"bdi",NULL)){
+		diag("Warning: couldn't watch bdi events\n");
+	}
 	if(udev_monitor_filter_add_match_subsystem_devtype(udmon,"block",NULL)){
-		diag("Couldn't filter block events\n");
+		diag("Couldn't watch block events\n");
 		udev_monitor_unref(udmon);
 		udev_unref(udev);
 		return -1;
 	}
 	if(udev_monitor_enable_receiving(udmon)){
-		diag("Couldn't receive events from udev\n");
+		diag("Couldn't enable udev\n");
 		udev_monitor_unref(udmon);
 		udev_unref(udev);
 		return -1;

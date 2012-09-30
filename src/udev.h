@@ -5,8 +5,10 @@
 extern "C" {
 #endif
 
+#include "growlight.h"
+
 int monitor_udev(void);
-int udev_event(void);
+int udev_event(const glightui *);
 int shutdown_udev(void);
 
 #ifdef __cplusplus
