@@ -680,7 +680,7 @@ bevel_top(WINDOW *w){
 static const cchar_t bpchr[] = {
 	{ .attr = A_REVERSE, .chars = L"▙", }, // 0, lower-left
 	{ .attr = A_REVERSE, .chars = L"▄", }, // 1, bottom
-	{ .attr = 0, .chars = L"▀", }, // 2, top
+	{ .attr = 0, .chars = L"▄", }, // 2, top
 	{ .attr = 0, .chars = L"▆", }, // 3, upper-right
 	{ .attr = A_REVERSE, .chars = L"▌", }, // 4, left
 	{ .attr = 0, .chars = L"▀", }, // 5, lower-right
