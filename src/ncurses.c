@@ -1003,25 +1003,30 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		mvwadd_wch(w,y,sx,&bchr[1]);
 		mvwaddwstr(w,y,sx + (ex - sx + 1 - wcslen(wbuf)) / 2,wbuf);
 		mvwadd_wch(w,y,ex - 1,&bchr[2]);
-		return;
+		selstr = d->name;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
 		assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx," No media detected in drive");
-		return;
+		selstr = "No media detected in drive";
+		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,selstr);
 	}else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
 		(d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
 		(d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
 		assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
+		selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
+				"unpartitionable space";
 		assert(snprintf(buf,sizeof(buf)," %s %s ",qprefix(d->size,1,pre,sizeof(pre),1),
-				d->layout == LAYOUT_NONE ? "unpartitioned space" :
-				"unpartitionable space") < (int)sizeof(buf));
+				selstr) < (int)sizeof(buf));
 		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
 		mvwadd_wch(w,y,sx,&bchr[1]);
 		mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
 		mvwadd_wch(w,y,ex - 1,&bchr[2]);
-		return;
 	}
 	if((z = bo->zchain) == NULL){
+		if(selected){
+			wattron(w,A_REVERSE);
+			mvwprintw(w,y - 1,sx + 1,"⇗⇨⇨⇨%.*s",(int)(ex - (sx + 5)),selstr);
+			wattroff(w,A_REVERSE);
+		}
 		return;
 	}
 	partco = PART_COLOR0;
