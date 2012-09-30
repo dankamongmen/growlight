@@ -727,7 +727,7 @@ detail_controller(const controller *c){
 
 static int
 adapter(wchar_t * const *args,const char *arghelp){
-	const controller *c;
+	const controller *ci;
 	int descend;
 
 	if(args[1] == NULL){
@@ -735,9 +735,9 @@ adapter(wchar_t * const *args,const char *arghelp){
 	}else if(wcscmp(args[1],L"-v") == 0 && args[2] == NULL){
 		descend = 1;
 	}else{
-		if(args[2] && !args[3]){
-			controller *c;
+		controller *c;
 
+		if(args[2] && !args[3]){
 			if((c = lookup_wcontroller(args[2])) == NULL){
 				return -1;
 			}
@@ -761,8 +761,8 @@ adapter(wchar_t * const *args,const char *arghelp){
 		usage(args,arghelp);
 		return -1;
 	}
-	for(c = get_controllers() ; c ; c = c->next){
-		if(print_controller(c,descend) < 0){
+	for(ci = get_controllers() ; ci ; ci = ci->next){
+		if(print_controller(ci,descend) < 0){
 			return -1;
 		}
 	}
@@ -901,37 +901,37 @@ mdadm(wchar_t * const *args,const char *arghelp){
 
 static int
 print_tabletypes(void){
-	pttable_type *ptypes;
 	int z,count,rr,r = 0;
+	pttable_type *pty;
 
-	if((ptypes = get_ptable_types(&count)) == NULL){
+	if((pty = get_ptable_types(&count)) == NULL){
 		return -1;
 	}
 	for(z = 0 ; z < count ; ++z){
-		r += rr = printf("%-4.4s %s\n",ptypes[z].name,ptypes[z].desc);
+		r += rr = printf("%-4.4s %s\n",pty[z].name,pty[z].desc);
 		if(rr < 0){
 			return -1;
 		}
 	}
-	free_ptable_types(ptypes,count);
+	free_ptable_types(pty,count);
 	return r;
 }
 
 static int
 print_fstypes(void){
-	pttable_type *ptypes;
 	int z,count,rr,r = 0;
+	pttable_type *pty;
 
-	if((ptypes = get_fs_types(&count)) == NULL){
+	if((pty = get_fs_types(&count)) == NULL){
 		return -1;
 	}
 	for(z = 0 ; z < count ; ++z){
-		r += rr = printf("%-11.11s %s\n",ptypes[z].name,ptypes[z].desc);
+		r += rr = printf("%-11.11s %s\n",pty[z].name,pty[z].desc);
 		if(rr < 0){
 			return -1;
 		}
 	}
-	free_ptable_types(ptypes,count);
+	free_ptable_types(pty,count);
 	return r;
 }
 

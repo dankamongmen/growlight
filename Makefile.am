@@ -1,7 +1,7 @@
 LANG=C
 LC_ALL=c
 
-AM_CFLAGS=-Wall -O2 -g -W -Werror -Wextra -fvisibility=hidden \
+AM_CFLAGS=-Wall -g -W -Wshadow -Werror -Wextra -fvisibility=hidden \
 	$(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES)
 AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
 AM_CC=$(PTHREAD_CC)

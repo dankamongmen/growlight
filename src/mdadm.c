@@ -65,12 +65,12 @@ int explore_md_sysfs(device *d,int dirfd){
 	enqm = &d->mddev.slaves;
 	d->mddev.transport = AGGREGATE_UNKNOWN;
 	for(rd = 0 ; rd < d->mddev.disks ; ++rd){
-		char buf[NAME_MAX],lbuf[NAME_MAX],*c;
+		char rbuf[NAME_MAX],lbuf[NAME_MAX],*c;
 		device *subd;
 		mdslave *m;
 		int r;
 
-		if(snprintf(buf,sizeof(buf),"rd%lu",rd) >= (int)sizeof(buf)){
+		if(snprintf(rbuf,sizeof(rbuf),"rd%lu",rd) >= (int)sizeof(rbuf)){
 			diag("Couldn't look up raid device %lu\n",rd);
 			errno = ENAMETOOLONG;
 			return -1;

@@ -152,7 +152,7 @@ void free_ptable_types(pttable_type *pt,int count){
 	free(pt);
 }
 
-int make_partition_table(device *d,const char *ptype){
+int make_partition_table(device *d,const char *pty){
 	const struct ptable *pt;
 
 	if(d->layout != LAYOUT_NONE){
@@ -168,7 +168,7 @@ int make_partition_table(device *d,const char *ptype){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,ptype) == 0){
+		if(strcmp(pt->name,pty) == 0){
 			if(pt->make(d)){
 				return -1;
 			}
@@ -178,7 +178,7 @@ int make_partition_table(device *d,const char *ptype){
 			return 0;
 		}
 	}
-	diag("Unsupported partition table type: %s\n",ptype);
+	diag("Unsupported partition table type: %s\n",pty);
 	return -1;
 }
 
@@ -187,7 +187,7 @@ int make_partition_table(device *d,const char *ptype){
 // table type is being used, and we will zero out according to the specified
 // type, even if it doesn't match the detected type (very dangerous!). If no
 // type is specified, the detected type, if it exists, is used.
-int wipe_ptable(device *d,const char *ptype){
+int wipe_ptable(device *d,const char *pty){
 	const struct ptable *ptp;
 	const device *p;
 	const char *pt;
@@ -207,17 +207,17 @@ int wipe_ptable(device *d,const char *ptype){
 		}
 	}
 	if( !(pt = d->blkdev.pttable) ){
-		if( (pt = ptype) ){
+		if( (pt = pt) ){
 			diag("No partition table on %s; wiping anyway\n",d->name);
 		}else{
 			diag("No partition table detected on %s\n",d->name);
 			return -1;
 		}
-	}else if(ptype && strcmp(pt,ptype)){
-		diag("Wiping %s table despite %s detection on %s\n",ptype,pt,d->name);
+	}else if(pt && strcmp(pt,pt)){
+		diag("Wiping %s table despite %s detection on %s\n",pt,pt,d->name);
 	}
 	for(ptp = ptables ; ptp->name ; ++ptp){
-		if(strcmp(ptp->name,pt) == 0){
+		if(strcmp(ptp->name,pty) == 0){
 			if(ptp->zap(d)){
 				return -1;
 			}
@@ -233,7 +233,7 @@ int wipe_ptable(device *d,const char *ptype){
 
 int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
 	const struct ptable *pt;
-	const char *ptype;
+	const char *pty;
 
 	if(d == NULL){
 		diag("Passed NULL device\n");
@@ -243,11 +243,11 @@ int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,un
 		diag("Bad sector spec (%ju:%ju) on %s\n",fsec,lsec,d->name);
 		return -1;
 	}
-	if((ptype = get_ptype(d)) == NULL){
+	if((pty = get_ptype(d)) == NULL){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,ptype) == 0){
+		if(strcmp(pt->name,pty) == 0){
 			if(pt->add(d,name,fsec,lsec,code)){
 				return -1;
 			}
@@ -257,12 +257,12 @@ int add_partition(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,un
 			return 0;
 		}
 	}
-	diag("Unsupported partition table type: %s\n",ptype);
+	diag("Unsupported partition table type: %s\n",pty);
 	return -1;
 }
 
 int wipe_partition(const device *d){
-	const char *ptype = d->partdev.parent->blkdev.pttable;
+	const char *pty = d->partdev.parent->blkdev.pttable;
 	const struct ptable *pt;
 
 	if(d->layout != LAYOUT_PARTITION){
@@ -270,9 +270,9 @@ int wipe_partition(const device *d){
 		return -1;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
-		if(strcmp(pt->name,ptype) == 0){
+		if(strcmp(pt->name,pty) == 0){
 			if(pt->del == NULL){
-				diag("Partition deletion not supported on %s\n",ptype);
+				diag("Partition deletion not supported on %s\n",pty);
 				return -1;
 			}
 			if(pt->del(d)){

@@ -138,6 +138,7 @@ typedef enum {
 	FORM_SELECT,			// form_option[]
 	FORM_STRING_INPUT,		// form_input
 	FORM_MULTISELECT,		// form_options[]
+	FORM_CHECKBOXEN,		// form_options[]
 } form_enum;
 
 // Regarding scrolling selection windows: the movement model is the same as
@@ -1149,10 +1150,10 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		wattroff(w,A_REVERSE);
 		// Truncate it at whitespace until it's small enough to fit
 		while(wcslen(wbuf) && wcslen(wbuf) + 2 > och){
-			wchar_t *w = wcsrchr(wbuf,L' ');
+			wchar_t *wtrunc = wcsrchr(wbuf,L' ');
 
-			if(w){
-				*w = L'\0';
+			if(wtrunc){
+				*wtrunc = L'\0';
 			}else{
 				wbuf[0] = L'\0';
 			}
@@ -1684,6 +1685,7 @@ destroy_form_locked(struct form_state *fs){
 		switch(fs->formtype){
 			case FORM_SELECT:
 			case FORM_MULTISELECT:
+			case FORM_CHECKBOXEN:
 				for(z = 0 ; z < fs->opcount ; ++z){
 					free(fs->ops[z].option);
 					free(fs->ops[z].desc);
@@ -1732,9 +1734,7 @@ multiform_options(struct form_state *fs){
 	WINDOW *fsw = panel_window(fs->p);
 	int z,cols,selidx,maxz;
 
-	if(fs->formtype != FORM_MULTISELECT){
-		return;
-	}
+	assert(fs->formtype == FORM_MULTISELECT);
 	cols = getmaxx(fsw);
 	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
 	wattron(fsw,A_BOLD);
@@ -1780,6 +1780,48 @@ multiform_options(struct form_state *fs){
 	}
 	mvwadd_wch(fsw,fs->selectno + 2,1,&bchr[3]);
 	mvwadd_wch(fsw,fs->selectno + 2,fs->longop + 4,&bchr[1]);
+}
+
+static void
+check_options(struct form_state *fs){
+	const struct form_option *opstrs = fs->ops;
+	WINDOW *fsw = panel_window(fs->p);
+	int z,cols,selidx,maxz;
+
+	assert(fs->formtype == FORM_CHECKBOXEN);
+	cols = getmaxx(fsw);
+	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+	wattron(fsw,A_BOLD);
+	maxz = getmaxy(fsw) - 3;
+	for(z = 1 ; z < maxz ; ++z){
+		int op = ((z - 1) + fs->scrolloff) % fs->opcount;
+
+		assert(op >= 0);
+		assert(op < fs->opcount);
+		wattroff(fsw,A_BOLD);
+		wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+		if(z < fs->opcount + 1){
+			wattron(fsw,A_BOLD);
+			wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+			mvwprintw(fsw,z + 1,START_COL * 2 + 4,"%-*.*s ",
+				fs->longop,fs->longop,opstrs[op].option);
+			if(op == fs->idx){
+				wattron(fsw,A_REVERSE);
+			}
+			wcolor_set(fsw,INPUT_COLOR,NULL);
+			for(selidx = 0 ; selidx < fs->selections ; ++selidx){
+				if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
+					wcolor_set(fsw,SELECTED_COLOR,NULL);
+					break;
+				}
+			}
+			wprintw(fsw,"%-*.*s",cols - fs->longop - 9,
+				cols - fs->longop - 9,opstrs[op].desc);
+			wattroff(fsw,A_REVERSE);
+		}
+	}
+	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+	wattron(fsw,A_BOLD);
 }
 
 static void
@@ -1950,6 +1992,92 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 	fs->ops = opstrs;
 	fs->selectno = selectno;
 	multiform_options(fs);
+	fs->extext = raise_form_explication(stdscr,text);
+	actform = fs;
+	form_colors();
+	assert(top_panel(fs->p) != ERR);
+	screen_update();
+}
+
+// A collection of checkboxes
+static void
+raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
+		struct form_option *opstrs,int ops,int defidx,
+		char **selarray,int selections,const char *text,
+		int scrollidx){
+	size_t longop,longdesc;
+	struct form_state *fs;
+	int cols,rows;
+	WINDOW *fsw;
+	int x,y;
+
+	assert(ops);
+	assert(opstrs);
+	if(actform){
+		locked_diag("An input dialog is already active");
+		return;
+	}
+	longdesc = longop = 0;
+	for(x = 0 ; x < ops ; ++x){
+		if(strlen(opstrs[x].option) > longop){
+			longop = strlen(opstrs[x].option);
+		}
+		if(strlen(opstrs[x].desc) > longdesc){
+			longdesc = strlen(opstrs[x].desc);
+		}
+	}
+	cols = longdesc + longop * 2 + 9;
+#define ESCSTR L"'C' confirms setup, ⎋esc returns"
+	if(cols < (int)wcslen(ESCSTR) + 2){
+		cols = wcslen(ESCSTR) + 2;
+	}
+	rows = ops + 4;
+	getmaxyx(stdscr,y,x);
+	if(x < cols){
+		locked_diag("Window too thin for form, uh-oh");
+		return;
+	}
+	if(y <= rows + FORM_Y_OFFSET){
+		rows = y - FORM_Y_OFFSET - 1;
+		if(y < FORM_Y_OFFSET + 4 + 1){ // two boundaries + empties, at least 1 selection
+			locked_diag("Window too short for form, uh-oh");
+			return;
+		}
+	}
+	if((fs = create_form(str,NULL,FORM_CHECKBOXEN,scrollidx)) == NULL){
+		return;
+	}
+	fs->mcb = fxn;
+	if((fsw = newwin(rows,cols,FORM_Y_OFFSET,x - cols)) == NULL){
+		locked_diag("Couldn't create form window, uh-oh");
+		free_form(fs);
+		return;
+	}
+	if((fs->p = new_panel(fsw)) == NULL){
+		locked_diag("Couldn't create form panel, uh-oh");
+		delwin(fsw);
+		free_form(fs);
+		return;
+	}
+	wbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
+	// FIXME adapt for scrolling (default might be off-window at beginning)
+	if((fs->idx = defidx) < 0){
+		fs->idx = defidx = 0;
+	}
+	fs->opcount = ops;
+	fs->selarray = selarray;
+	fs->selections = selections;
+	wattroff(fsw,A_BOLD);
+	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+	bevel(fsw);
+	wattron(fsw,A_BOLD);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,"%s",fs->boxstr);
+	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
+#undef ESCSTR
+	wattroff(fsw,A_BOLD);
+	fs->longop = longop;
+	fs->ops = opstrs;
+	check_options(fs);
 	fs->extext = raise_form_explication(stdscr,text);
 	actform = fs;
 	form_colors();
@@ -2628,17 +2756,17 @@ psectors_callback(const char *psects){
 // - partition type form, for new partition creation
 // -------------------------------------------------------------------------
 static void
-ptype_callback(const char *ptype){
+ptype_callback(const char *pty){
 	unsigned long pt;
 	char *pend;
 
-	if(ptype == NULL){ // user cancelled
+	if(pty == NULL){ // user cancelled
 		locked_diag("Partition creation cancelled by the user");
 		cleanup_new_partition();
 		return;
 	}
-	if(((pt = strtoul(ptype,&pend,16)) == ULONG_MAX && errno == ERANGE) || *pend){
-		locked_diag("Bad partition type selection: %s",ptype);
+	if(((pt = strtoul(pty,&pend,16)) == ULONG_MAX && errno == ERANGE) || *pend){
+		locked_diag("Bad partition type selection: %s",pty);
 		cleanup_new_partition();
 		return;
 	}
@@ -3194,11 +3322,11 @@ update_details(WINDOW *hw){
 		return 0;
 	}
 	if(blockobj_unpartitionedp(b)){
-		char buf[BPREFIXSTRLEN + 1];
+		char ubuf[BPREFIXSTRLEN + 1];
 
 		wattroff(hw,A_BOLD);
 		mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-				bprefix(d->size,1,buf,sizeof(buf),1));
+				bprefix(d->size,1,ubuf,sizeof(ubuf),1));
 		wattron(hw,A_BOLD);
 		wprintw(hw,"%s","unpartitioned media");
 		detail_fs(hw,b->d,7);
@@ -3206,7 +3334,7 @@ update_details(WINDOW *hw){
 	}
 	if(b->zone){
 		char align[BPREFIXSTRLEN + 1];
-		char buf[BPREFIXSTRLEN + 1];
+		char zbuf[BPREFIXSTRLEN + 1];
 
 		if(b->zone->p){
 			assert(b->zone->p->layout == LAYOUT_PARTITION);
@@ -3214,7 +3342,7 @@ update_details(WINDOW *hw){
 			// FIXME limit length!
 			wattroff(hw,A_BOLD);
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1));
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,sizeof(zbuf),1));
 			wattron(hw,A_BOLD);
 			wprintw(hw,"P%lc%lc ",subscript((b->zone->p->partdev.pnumber % 100 / 10)),
 					subscript((b->zone->p->partdev.pnumber % 10)));
@@ -3243,7 +3371,7 @@ update_details(WINDOW *hw){
 			// or we'll need recreate alignment() etc here
 			wattroff(hw,A_BOLD);
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,buf,sizeof(buf),1));
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,sizeof(zbuf),1));
 			wattron(hw,A_BOLD);
 			wattroff(hw,A_BOLD);
 			wprintw(hw,"%ju",b->zone->fsector);
@@ -3728,8 +3856,6 @@ use_next_controller(WINDOW *w){
 		adapterstate *is = current_adapter->as->next;
 
 		if(is->rb == NULL){ // it's off-screen
-			int delta;
-
 			is->rb = create_reelbox(is,rows,(rows - 1) - adapter_lines_bounded(is,rows),cols);
 			assert(is->rb);
 			current_adapter = is->rb;
@@ -3786,8 +3912,7 @@ use_next_controller(WINDOW *w){
 	}else{ // new is partially visible...
 		if(rb->scrline > oldrb->scrline){ // ...at the bottom
 			adapterstate *is = current_adapter->as;
-			int delta = getmaxy(rb->win) - adapter_lines_bounded(is,rows);
-
+			delta = getmaxy(rb->win) - adapter_lines_bounded(is,rows);
 			rb->scrline = rows - (adapter_lines_bounded(is,rows) + 1);
 			push_adapters_above(rb,rows,cols,delta);
 			move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
@@ -3795,8 +3920,6 @@ use_next_controller(WINDOW *w){
 			assert(replace_panel(rb->panel,rb->win) != ERR);
 			assert(redraw_adapter(rb) == OK);
 		}else{ // ...at the top (rotate)
-			int delta;
-
 			assert(top_reelbox == rb);
 			rb->scrline = rows - 1 - adapter_lines_bounded(rb->as,rows);
 			top_reelbox->next->prev = NULL;
@@ -4815,25 +4938,28 @@ flag_table(int *count,const char *match,int *defidx,char ***selarray,int *select
 			goto err;
 		}
 		if(match && strcmp(match,fo[z].option) == 0){
+			int zz;
+
 			*defidx = z;
-			for(z = 0 ; z < *selections ; ++z){
-				if(strcmp(key,(*selarray)[z]) == 0){
-					free((*selarray)[z]);
-					(*selarray)[z] = NULL;
-					if(z < *selections - 1){
-						memmove(&(*selarray)[z],&(*selarray)[z + 1],sizeof(**selarray) * (*selections - 1 - z));
+			for(zz = 0 ; selections && zz < *selections ; ++zz){
+				if(strcmp(key,(*selarray)[zz]) == 0){
+					free((*selarray)[zz]);
+					(*selarray)[zz] = NULL;
+					if(zz < *selections - 1){
+						memmove(&(*selarray)[zz],&(*selarray)[zz + 1],sizeof(**selarray) * (*selections - 1 - zz));
 					}
 					--*selections;
-					z = -1;
+					zz = -1;
 					break;
 				}
 			}
-			if(z >= *selections){
+			if(zz >= *selections){
 				typeof(*selarray) tmp;
 
-				if((tmp = realloc(*selarray,sizeof(**selarray) * (*selections + 1))) == NULL){
-					free(fo[z].option);
-					free(fo[z].desc);
+				if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+					locked_diag("ERR!: %zu\n",sizeof(*selarray) * (*selections + 1));
+					free(fo[zz].option);
+					free(fo[zz].desc);
 					goto err;
 				}
 				*selarray = tmp;
@@ -4847,7 +4973,7 @@ flag_table(int *count,const char *match,int *defidx,char ***selarray,int *select
 	return fo;
 
 err:
-	while(--z){
+	while(z--){
 		free(fo[z].option);
 		free(fo[z].desc);
 	}
@@ -4890,12 +5016,15 @@ partflag_callback(const char *fn,char **selarray,int selections,int scroll){
 		// FIXME free
 		return;
 	}
+	locked_diag("ERP %d %p!",selections,selarray);
 	if((flags_agg = flag_table(&opcount,fn,&defidx,&selarray,&selections)) == NULL){
+		locked_diag("ERP3!");
 		// FIXME free
 		return;
 	}
-	raise_multiform("set partition flags",partflag_callback,flags_agg,
-		opcount,defidx,0,selarray,selections,PARTFLAG_TEXT,scroll);
+	locked_diag("ERP2!");
+	raise_checkform("set partition flags",partflag_callback,flags_agg,
+		opcount,defidx,selarray,selections,PARTFLAG_TEXT,scroll);
 }
 
 static void
@@ -4919,8 +5048,8 @@ set_partition_attrs(void){
 	if((flags_agg = flag_table(&opcount,NULL,&defidx,NULL,NULL)) == NULL){
 		return;
 	}
-	raise_multiform("set partition flags",partflag_callback,flags_agg,
-			opcount,defidx,0,NULL,0,PARTFLAG_TEXT,0);
+	raise_checkform("set partition flags",partflag_callback,flags_agg,
+			opcount,defidx,NULL,0,PARTFLAG_TEXT,0);
 }
 
 static inline int
@@ -5437,7 +5566,7 @@ handle_actform_input(int ch){
 	if(fs->formtype == FORM_STRING_INPUT){
 		handle_actform_string_input(ch);
 		return 0;
-	}else if(fs->formtype == FORM_MULTISELECT){
+	}else if(fs->formtype == FORM_MULTISELECT || fs->formtype == FORM_CHECKBOXEN){
 		mcb = actform->mcb;
 		cb = NULL;
 	}else{
@@ -5475,7 +5604,7 @@ handle_actform_input(int ch){
 			break;
 		}case KEY_ESC:{
 			lock_ncurses();
-			if(fs->formtype == FORM_MULTISELECT){
+			if(fs->formtype == FORM_MULTISELECT || fs->formtype == FORM_CHECKBOXEN){
 				int scrolloff = fs->scrolloff;
 				free_form(actform);
 				actform = NULL;
@@ -5499,6 +5628,8 @@ handle_actform_input(int ch){
 			}
 			if(fs->formtype == FORM_MULTISELECT){
 				multiform_options(fs);
+			}else if(fs->formtype == FORM_CHECKBOXEN){
+				check_options(fs);
 			}else{
 				form_options(fs);
 			}
@@ -5518,6 +5649,8 @@ handle_actform_input(int ch){
 			}
 			if(fs->formtype == FORM_MULTISELECT){
 				multiform_options(fs);
+			}else if(fs->formtype == FORM_CHECKBOXEN){
+				check_options(fs);
 			}else{
 				form_options(fs);
 			}
@@ -5530,7 +5663,7 @@ handle_actform_input(int ch){
 			char **selarray;
 
 			lock_ncurses();
-			if(fs->formtype == FORM_MULTISELECT){
+			if(fs->formtype == FORM_MULTISELECT || fs->formtype == FORM_CHECKBOXEN){
 				selarray = fs->selarray;
 				selections = fs->selections;
 				scrolloff = fs->scrolloff;

@@ -376,10 +376,10 @@ parttype_aggregablep(unsigned pt){
 
 // FIXME do away with this. use ptypes.[hc] exclusively
 static inline const char *
-partrole_str(unsigned ptype,uint64_t flags){
-	return ((ptype == PARTROLE_PRIMARY) && (flags & 0xffu) == 0x80) ? "Boot" :
-		ptype == PARTROLE_ESP ? "ESP" :
-		ptype == PARTROLE_PRIMARY ? "Lnx" : "Oth";
+partrole_str(unsigned pt,uint64_t flags){
+	return ((pt == PARTROLE_PRIMARY) && (flags & 0xffu) == 0x80) ? "Boot" :
+		pt == PARTROLE_ESP ? "ESP" :
+		pt == PARTROLE_PRIMARY ? "Lnx" : "Oth";
 }
 
 static inline const char *

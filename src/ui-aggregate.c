@@ -141,13 +141,13 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 				}
 			}
 			if(z >= *selections){
-				typeof(*selarray) tmp;
+				typeof(*selarray) stmp;
 
-				if((tmp = realloc(*selarray,sizeof(**selarray) * (*selections + 1))) == NULL){
+				if((stmp = realloc(*selarray,sizeof(**selarray) * (*selections + 1))) == NULL){
 					free(key);
 					return NULL;
 				}
-				*selarray = tmp;
+				*selarray = stmp;
 				(*selarray)[*selections] = strdup(match);
 				++*selections;
 			}

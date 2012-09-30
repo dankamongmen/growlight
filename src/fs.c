@@ -576,11 +576,11 @@ err:
 	return NULL;
 }
 
-int make_filesystem(device *d,const char *ptype,const char *name){
+int make_filesystem(device *d,const char *pty,const char *name){
 	const struct fs *pt;
 	int force = 0;
 
-	if(d == NULL || ptype == NULL){
+	if(d == NULL || pty == NULL){
 		diag("Passed NULL arguments, aborting\n");
 		return -1;
 	}
@@ -605,7 +605,7 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 		}
 	}
 	for(pt = fss ; pt->name ; ++pt){
-		if(strcmp(pt->name,ptype) == 0){
+		if(strcmp(pt->name,pty) == 0){
 			char dbuf[PATH_MAX],*mnttype;
 			struct mkfsmarshal marsh;
 
@@ -615,10 +615,10 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 				return -1;
 			}
 			if(pt->mkfs == NULL){
-				diag("Don't know how to make %s\n",ptype);
+				diag("Don't know how to make %s\n",pty);
 				return -1;
 			}
-			if((mnttype = strdup(ptype)) == NULL){
+			if((mnttype = strdup(pty)) == NULL){
 				return -1;
 			}
 			// FIXME needs accept/set UUID!
@@ -638,7 +638,7 @@ int make_filesystem(device *d,const char *ptype,const char *name){
 			return 0;
 		}
 	}
-	diag("Unsupported partition table type: %s\n",ptype);
+	diag("Unsupported partition table type: %s\n",pty);
 	return -1;
 }
 
