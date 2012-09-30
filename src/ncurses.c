@@ -677,40 +677,41 @@ bevel_top(WINDOW *w){
 	return OK;
 }
 
+static const cchar_t bpchr[] = {
+	{ .attr = 0, .chars = L"█", }, // 0, lower-left
+	{ .attr = 0, .chars = L"▄", }, // 1, bottom
+	{ .attr = 0, .chars = L"▀", }, // 2, top
+	{ .attr = 0, .chars = L"▆", }, // 3, upper-right
+	{ .attr = 0, .chars = L"▌", }, // 4, left
+	{ .attr = 0, .chars = L"█", }, // 5, lower-right
+	{ .attr = 0, .chars = L"▐", }, // 6, right
+	{ .attr = 0, .chars = L"▆", }, // 7, upper-left
+};
+
 static int
 bphat(WINDOW *w){
-	static const cchar_t bchr[] = {
-		{ .attr = 0, .chars = L"█", }, // lower-left
-		{ .attr = 0, .chars = L"▄", }, // bottom
-		{ .attr = 0, .chars = L"▀", }, // top
-		{ .attr = 0, .chars = L"▆", }, // upper-right
-		{ .attr = 0, .chars = L"▌", }, // left
-		{ .attr = 0, .chars = L"█", }, // lower-right
-		{ .attr = 0, .chars = L"▐", }, // right
-		{ .attr = 0, .chars = L"▆", }, // upper-left
-	};
 	int rows,cols,z;
 
 	getmaxyx(w,rows,cols);
 	assert(rows && cols);
-	// called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bchr[3]);'
+	// called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bpchr[3]);'
 	// we get ERR returned. this is known behavior: fuck ncurses. instead,
 	// we use mvwins_wch, which doesn't update the cursor position.
 	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
-	assert(mvwadd_wch(w,0,0,&bchr[7]) != ERR);
+	assert(mvwadd_wch(w,0,0,&bpchr[7]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
-		assert(mvwadd_wch(w,0,z,&bchr[2]) != ERR);
+		assert(mvwadd_wch(w,0,z,&bpchr[2]) != ERR);
 	}
 	for(z = rows - 2 ; z > 0 ; --z){
-		assert(mvwadd_wch(w,z,0,&bchr[4]) != ERR);
-		assert(mvwins_wch(w,z,cols - 1,&bchr[6]) != ERR);
+		assert(mvwadd_wch(w,z,0,&bpchr[4]) != ERR);
+		assert(mvwins_wch(w,z,cols - 1,&bpchr[6]) != ERR);
 	}
-	assert(mvwins_wch(w,0,cols - 1,&bchr[3]) != ERR);
-	assert(mvwadd_wch(w,rows - 1,0,&bchr[0]) != ERR);
+	assert(mvwins_wch(w,0,cols - 1,&bpchr[3]) != ERR);
+	assert(mvwadd_wch(w,rows - 1,0,&bpchr[0]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
-		assert(mvwadd_wch(w,rows - 1,z,&bchr[1]) != ERR);
+		assert(mvwadd_wch(w,rows - 1,z,&bpchr[1]) != ERR);
 	}
-	assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[5]) != ERR);
+	assert(mvwins_wch(w,rows - 1,cols - 1,&bpchr[5]) != ERR);
 	return OK;
 }
 
@@ -972,11 +973,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		int co = mnttype_aggregablep(d->mnttype) ?
 			COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
-		if(selected){
-			assert(wattrset(w,A_BOLD|A_REVERSE|co) == OK);
-		}else{
-			assert(wattrset(w,A_BOLD|co) == OK);
-		}
+		assert(wattrset(w,A_BOLD|co) == OK);
 		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s%ls%s%lsat %s ",
 			d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
 			d->mntsize ? " " : "",
@@ -1008,21 +1005,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		mvwadd_wch(w,y,ex - 1,&bchr[2]);
 		return;
 	}else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
-		if(selected){
-			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-		}else{
-			assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
-		}
+		assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
 		mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx," No media detected in drive");
 		return;
 	}else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
 		(d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
 		(d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
-		if(selected){
-			assert(wattrset(w,A_BOLD|A_REVERSE|COLOR_PAIR(EMPTY_COLOR)) == OK);
-		}else{
-			assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
-		}
+		assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		assert(snprintf(buf,sizeof(buf)," %s %s ",qprefix(d->size,1,pre,sizeof(pre),1),
 				d->layout == LAYOUT_NONE ? "unpartitioned space" :
 				"unpartitionable space") < (int)sizeof(buf));
@@ -1200,8 +1189,6 @@ case LAYOUT_NONE:
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
-				}else if(selected){
-					wattron(rb->win,A_REVERSE);
 				}
 		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
@@ -1233,8 +1220,6 @@ case LAYOUT_MDADM:
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
-				}else if(selected){
-					wattron(rb->win,A_REVERSE);
 				}
 		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
@@ -1260,8 +1245,6 @@ case LAYOUT_DM:
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
-				}else if(selected){
-					wattron(rb->win,A_REVERSE);
 				}
 		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
@@ -1288,8 +1271,6 @@ case LAYOUT_ZPOOL:
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
-				}else if(selected){
-					wattron(rb->win,A_REVERSE);
 				}
 		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
@@ -1310,9 +1291,6 @@ case LAYOUT_ZPOOL:
 	}
 	if(bo->d->size == 0){
 		return;
-	}
-	if(selected){
-		wattron(rb->win,A_REVERSE);
 	}
 	wattron(rb->win,A_BOLD);
 
@@ -1384,11 +1362,7 @@ case LAYOUT_ZPOOL:
 		}
 	}
 
-	if(selected){
-		assert(wattrset(rb->win,A_BOLD|A_REVERSE|COLOR_PAIR(DBORDER_COLOR)) == OK);
-	}else{
-		assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
-	}
+	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
 	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
 		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
@@ -1404,9 +1378,6 @@ case LAYOUT_ZPOOL:
 					cols - START_COL - 1,selected);
 	}
 	attr = A_BOLD | COLOR_PAIR(DBORDER_COLOR);
-	if(selected){
-		attr |= A_REVERSE;
-	}
 	wattrset(rb->win,attr);
 	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
