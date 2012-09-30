@@ -1506,7 +1506,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			assert(wattroff(w,A_BOLD) == OK);
 		}
 		if(current){
-			assert(mvwprintw(w,0,5,"%ls",L"▉▇[") != ERR);
+			assert(mvwprintw(w,0,4,"%ls",L"▉▇[") != ERR);
 		}else{
 			assert(mvwprintw(w,0,7,"%ls",L"[") != ERR);
 		}
