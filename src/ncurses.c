@@ -1801,27 +1801,29 @@ check_options(struct form_state *fs){
 		wattroff(fsw,A_BOLD);
 		wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 		if(z < fs->opcount + 1){
+			wchar_t ballot = L'☐';
+
 			wattron(fsw,A_BOLD);
 			wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-			mvwprintw(fsw,z + 1,START_COL * 2 + 4,"%-*.*s ",
-				fs->longop,fs->longop,opstrs[op].option);
-			if(op == fs->idx){
-				wattron(fsw,A_REVERSE);
-			}
-			wcolor_set(fsw,INPUT_COLOR,NULL);
 			for(selidx = 0 ; selidx < fs->selections ; ++selidx){
 				if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
-					wcolor_set(fsw,SELECTED_COLOR,NULL);
+					ballot = L'☒';
 					break;
 				}
 			}
-			wprintw(fsw,"%-*.*s",cols - fs->longop - 9,
-				cols - fs->longop - 9,opstrs[op].desc);
+			if(op == fs->idx){
+				wattron(fsw,A_REVERSE);
+			}else{
+				wcolor_set(fsw,INPUT_COLOR,NULL);
+			}
+			mvwprintw(fsw,z + 1,START_COL * 2,"%lc %-*.*s ",
+				ballot,fs->longop,fs->longop,opstrs[op].option);
+			wprintw(fsw,"%-*.*s",cols - fs->longop - 7,
+				cols - fs->longop - 7,opstrs[op].desc);
 			wattroff(fsw,A_REVERSE);
 		}
 	}
 	wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-	wattron(fsw,A_BOLD);
 }
 
 static void
@@ -2026,8 +2028,8 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
 			longdesc = strlen(opstrs[x].desc);
 		}
 	}
-	cols = longdesc + longop * 2 + 9;
-#define ESCSTR L"'C' confirms setup, ⎋esc returns"
+	cols = longdesc + longop + 7;
+#define ESCSTR L"'C' commits, ⎋esc returns"
 	if(cols < (int)wcslen(ESCSTR) + 2){
 		cols = wcslen(ESCSTR) + 2;
 	}
