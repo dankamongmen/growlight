@@ -4993,7 +4993,6 @@ err:
 
 static void
 do_partflag(char **selarray,int selections){
-	uint64_t flags = 0;
 	device *d;
 	int z;
 
@@ -5001,14 +5000,18 @@ do_partflag(char **selarray,int selections){
 		locked_diag("Selected object is not a partition");
 		return;
 	}
-	d = get_selected_blockobj()->d;
+	d = get_selected_blockobj()->zone->p;
 	for(z = 0 ; z < selections ; ++z){
-		assert(selarray[z]);
-		// FIXME bitwise OR closure onto flags
-	}
-	// FIXME takes one flag at a time, no good
-	if(partition_set_flag(d,flags,1)){
-		return;
+		char *eptr = selarray[z];
+		unsigned long ul;
+
+		errno = 0;
+		ul = strtoul(selarray[z],&eptr,16);
+		assert(ul && (ul < ULONG_MAX || errno != ERANGE) && !*eptr);
+		// FIXME need zero out unset flags!
+		if(partition_set_flag(d,ul,1)){
+			return;
+		}
 	}
 }
 
@@ -5076,7 +5079,7 @@ set_partition_attrs(void){
 		locked_diag("Selected object is not a partition");
 		return;
 	}
-	locked_diag("TYPE: %s\n",b->d->blkdev.pttable);
+	// FIXME need to initialize widget based off current flags
 	if(strcmp("gpt",b->d->blkdev.pttable) == 0){
 		if((flags_agg = flag_table(&opcount,NULL,&defidx,NULL,NULL,
 				gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
