@@ -2242,6 +2242,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 // -------------------------------------------------------------------------
 static void
 targpoint_callback(const char *path){
+	const char *mntops = NULL;
 	char targ[PATH_MAX + 1];
 	blockobj *b;
 
@@ -2266,14 +2267,14 @@ targpoint_callback(const char *path){
 		return;
 	}
 	if(blockobj_unpartitionedp(b)){
-		mmount(b->d,targ);
+		mmount(b->d,targ,mntops);
 		redraw_adapter(current_adapter);
 		return;
 	}else if(blockobj_emptyp(b)){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		mmount(b->zone->p,targ);
+		mmount(b->zone->p,targ,mntops);
 		redraw_adapter(current_adapter);
 		return;
 	}
@@ -5257,6 +5258,7 @@ badblock_check(void){
 
 static void
 mountpoint_callback(const char *path){
+	const char *mntops = NULL;
 	blockobj *b;
 
 	if((b = get_selected_blockobj()) == NULL){
@@ -5272,10 +5274,10 @@ mountpoint_callback(const char *path){
 		return;
 	}
 	if(selected_unpartitionedp()){
-		mmount(b->d,path);
+		mmount(b->d,path,mntops);
 	}else{
 		assert(selected_partitionp());
-		mmount(b->zone->p,path);
+		mmount(b->zone->p,path,mntops);
 	}
 }
 

@@ -261,11 +261,11 @@ err:
 	return -1;
 }
 
-int mmount(device *d,const char *targ){
+int mmount(device *d,const char *targ,const char *mntops){
 	char name[PATH_MAX + 1];
 	char *rname;
 
-	if(d == NULL || targ == NULL){
+	if(d == NULL || targ == NULL){ // mntops may be NULL
 		diag("Provided NULL arguments\n");
 		return -1;
 	}
@@ -302,7 +302,7 @@ int mmount(device *d,const char *targ){
 	}
 	snprintf(name,sizeof(name),"/dev/%s",d->name);
 	// Use the original path for the actual mount
-	if(mount(name,targ,d->mnttype,MS_NOATIME,NULL)){
+	if(mount(name,targ,d->mnttype,MS_NOATIME,mntops)){
 		diag("Error mounting %s at %s (%s?)\n",
 				name,targ,strerror(errno));
 		free(rname);

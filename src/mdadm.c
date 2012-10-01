@@ -144,7 +144,6 @@ int explore_md_sysfs(device *d,int dirfd){
 		unlock_growlight();
 	}
 	d->mddev.degraded = degraded;
-	diag("DEGRADED: %s %ld\n",d->name,d->mddev.degraded);
 	if(d->mddev.resync && !d->mddev.degraded){
 		d->mddev.degraded = 1;
 	}
