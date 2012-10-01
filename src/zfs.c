@@ -352,6 +352,7 @@ generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num
 		pos += strlen(buf + pos);
 	}
 #undef PREFIX
+	// FIXME see notes below regarding unsafe use of -f
 	return vspopen_drain("zpool create -f %s %s %s",name,type,buf);
 }
 
@@ -371,6 +372,13 @@ int make_raidz3(const char *name,char * const *vdevs,int num){
 	return generic_make_zpool("raidz3",name,vdevs,num);
 }
 
+// FIXME rather than using -f with creation, we ought make the vdevs conform to
+// the zpool create requirements:
+//
+// for entire devices:
+//  - blank out mbr
+//  - no partition table
+//  - no filesystem signature
 int make_zfs(const char *dev,const struct mkfsmarshal *mkm){
-	return vspopen_drain("zfs create -o mountpoint=%s %s",mkm->name,dev);
+	return vspopen_drain("zpool create -f %s %s",mkm->name,dev);
 }
