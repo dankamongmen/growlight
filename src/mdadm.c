@@ -75,11 +75,11 @@ int explore_md_sysfs(device *d,int dirfd){
 			errno = ENAMETOOLONG;
 			return -1;
 		}
-		r = readlinkat(dirfd,buf,lbuf,sizeof(lbuf));
+		r = readlinkat(dirfd,rbuf,lbuf,sizeof(lbuf));
 		if((r < 0 && errno != ENOENT) || r >= (int)sizeof(lbuf)){
 			int e = errno;
 
-			diag("Couldn't look up slave %s (%s?)\n",buf,strerror(errno));
+			diag("Couldn't look up slave %s (%s?)\n",rbuf,strerror(errno));
 			errno = e;
 			return -1;
 		}else if(r < 0 && errno == ENOENT){ // missing/faulted device
@@ -144,6 +144,7 @@ int explore_md_sysfs(device *d,int dirfd){
 		unlock_growlight();
 	}
 	d->mddev.degraded = degraded;
+	diag("DEGRADED: %s %ld\n",d->name,d->mddev.degraded);
 	if(d->mddev.resync && !d->mddev.degraded){
 		d->mddev.degraded = 1;
 	}
