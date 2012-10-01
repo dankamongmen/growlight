@@ -694,42 +694,6 @@ static const cchar_t bpchr[] = {
 };
 
 static int
-bphat(WINDOW *w){
-	int rows,cols,z;
-
-	getmaxyx(w,rows,cols);
-	assert(rows && cols);
-	// called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bpchr[3]);'
-	// we get ERR returned. this is known behavior: fuck ncurses. instead,
-	// we use mvwins_wch, which doesn't update the cursor position.
-	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
-	assert(mvwadd_wch(w,0,0,&bpchr[7]) != ERR);
-	for(z = 1 ; z < cols - 1 ; ++z){
-		assert(mvwadd_wch(w,0,z,&bpchr[2]) != ERR);
-	}
-	if(rows > 2){
-		unsigned left = 0xb;
-
-		for(z = rows - 2 ; z > 0 ; --z){
-			assert(mvwadd_wch(w,z,0,&bpchr[4]) != ERR);
-			assert(mvwins_wch(w,z,cols - 1,&bpchr[left]) != ERR);
-			if(left > 6){
-				if(--left == 7){
-					left = 6;
-				}
-			}
-		}
-	}
-	assert(mvwins_wch(w,0,cols - 1,&bpchr[3]) != ERR);
-	assert(mvwadd_wch(w,rows - 1,0,&bpchr[0]) != ERR);
-	for(z = 1 ; z < cols - 1 ; ++z){
-		assert(mvwadd_wch(w,rows - 1,z,&bpchr[1]) != ERR);
-	}
-	assert(mvwins_wch(w,rows - 1,cols - 1,&bpchr[5]) != ERR);
-	return OK;
-}
-
-static int
 bevel(WINDOW *w){
 	static const cchar_t bchr[] = {
 		{ .attr = 0, .chars = L"╭", },
@@ -1473,7 +1437,6 @@ static void
 adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend){
 	int current = as->rb == current_adapter;
 	int bcolor,hcolor,rows,cols;
-	int (*fullbevel)(WINDOW *);
 	int attrs;
 
 	getmaxyx(w,rows,cols);
@@ -1481,17 +1444,15 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		hcolor = UHEADING_COLOR; // plus A_BOLD
 		bcolor = SELBORDER_COLOR;
 		attrs = A_BOLD;
-		fullbevel = bphat;
 	}else{
 		hcolor = UNHEADING_COLOR;;
 		bcolor = UBORDER_COLOR;
 		attrs = A_NORMAL;
-		fullbevel = bevel;
 	}
 	assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
 	if(abovetop == 0){
 		if(belowend == 0){
-			assert(fullbevel(w) == OK);
+			assert(bevel(w) == OK);
 		}else{
 			assert(bevel_top(w) == OK);
 		}
@@ -1506,11 +1467,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		}else{
 			assert(wattroff(w,A_BOLD) == OK);
 		}
-		if(current){
-			assert(mvwprintw(w,0,4,"%ls",L"▉▇[") != ERR);
-		}else{
-			assert(mvwprintw(w,0,7,"%ls",L"[") != ERR);
-		}
+		assert(mvwprintw(w,0,7,"%ls",L"[") != ERR);
 		assert(wcolor_set(w,hcolor,NULL) == OK);
 		assert(waddstr(w,as->c->ident) != ERR);
 		if(as->c->bandwidth){
@@ -1532,17 +1489,9 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		}
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
 		assert(wprintw(w,"]") != ERR);
-		if(current){
-			assert(waddwstr(w,L"▇▉") != ERR);
-		}
 		assert(wattron(w,A_BOLD) == OK);
-		if(current){
-			assert(wmove(w,0,cols - 7) != ERR);
-			waddwstr(w,as->expansion != EXPANSION_MAX ? L"▉▇[+]▇" : L"▉▇[-]▇");
-		}else{
-			assert(wmove(w,0,cols - 5) != ERR);
-			waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
-		}
+		assert(wmove(w,0,cols - 5) != ERR);
+		waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
 		assert(wattron(w,attrs) != ERR);
 	}
 	if(belowend == 0){
@@ -1553,11 +1502,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			}else{
 				assert(wattroff(w,A_BOLD) == OK);
 			}
-			if(current){
-				assert(mvwprintw(w,rows - 1,1,"%ls",L"▇▇▆▇[") != ERR);
-			}else{
-				assert(mvwprintw(w,rows - 1,6,"[") != ERR);
-			}
+			assert(mvwprintw(w,rows - 1,6,"[") != ERR);
 			assert(wcolor_set(w,hcolor,NULL) != ERR);
 			if(as->c->pcie.lanes_neg == 0){
 				wprintw(w,"Southbridge device %04x:%02x.%02x.%x",
@@ -1571,9 +1516,6 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 			}
 			assert(wcolor_set(w,bcolor,NULL) != ERR);
 			assert(wprintw(w,"]") != ERR);
-			if(current){
-				assert(waddwstr(w,L"▆▆") != ERR);
-			}
 		}
 	}
 }
