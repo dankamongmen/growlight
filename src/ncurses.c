@@ -5958,7 +5958,7 @@ handle_ncurses_input(WINDOW *w){
 				lock_ncurses();
 				sel = selection_active();
 				deselect_adapter_locked();
-				use_prev_controller(w);
+				use_next_controller(w);
 				if(sel){
 					select_adapter();
 				}
