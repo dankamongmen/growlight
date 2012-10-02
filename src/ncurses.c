@@ -1003,7 +1003,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	if((z = bo->zchain) == NULL){
 		if(selected){
 			wattron(w,A_REVERSE);
-			mvwprintw(w,y - 1,sx + 1,"⇗⇨⇨⇨%.*s",(int)(ex - (sx + 5)),selstr);
+			mvwprintw(w,y - 1,sx + 1,"⇗➫➭➮%.*s",(int)(ex - (sx + 5)),selstr);
 			wattroff(w,A_REVERSE);
 		}
 		return;
@@ -1095,26 +1095,26 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		if(ch == 0){
 			ch = 1;
 		}
-		och = ch;
+		och = off;
 		while(ch--){
 			cchar_t crep[] = { { .attr = 0, .chars[0] = rep, }, };
 			mvwadd_wch(w,y,off,crep);
 			if(++off >= ex - z->following){
-				och -= (ch + 1);
+				off = ex - z->following - 1;
 				break;
 			}
 		}
 		wattron(w,A_REVERSE);
 		if(selstr){
-			if(off - och < ex / 2u){
-				mvwprintw(w,y - 1,off - och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
+			if(och < ex / 2u){
+				mvwprintw(w,y - 1,och,"⇗➫➭➮%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
 			}else{
 				mvwprintw(w,y - 1,off - 4 - strlen(selstr),"%s⇦⇦⇦⇖",selstr);
 			}
 		}
 		wattroff(w,A_REVERSE);
 		// Truncate it at whitespace until it's small enough to fit
-		while(wcslen(wbuf) && wcslen(wbuf) + 2 > och){
+		while(wcslen(wbuf) && wcslen(wbuf) + 2 > (off - och + 1)){
 			wchar_t *wtrunc = wcsrchr(wbuf,L' ');
 
 			if(wtrunc){
@@ -1124,7 +1124,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}
 		}
 		if(wcslen(wbuf)){
-			size_t start = off - och + (och - wcslen(wbuf)) / 2;
+			size_t start = och + ((off - och + 1) - wcslen(wbuf)) / 2;
 
 			wattron(w,A_BOLD);
 			mvwaddwstr(w,y,start,wbuf);
