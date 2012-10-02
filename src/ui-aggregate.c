@@ -114,6 +114,26 @@ err:
 	return NULL;
 }
 
+// On success, we must free input desc (hence it not being const)
+static char *
+prefix_desc_with_size(const device *d,char *desc){
+	char s[BPREFIXSTRLEN],*uni;
+	size_t sz;
+
+	bprefix(d->size,1,s,sizeof(s),1);
+	// Might be a bit overspacious due to full BPREFIXSTRLEN, but who cares
+	sz = (sizeof(s) / sizeof(*s)) + strlen(desc) + 5; // '(' 'B' ')' ' ' '\0'
+	if((uni = malloc(sz)) == NULL){
+		return NULL;
+	}
+	if((unsigned)snprintf(uni,sz,"("BPREFIXFMT"B) %s",s,desc) >= sz){
+		free(uni);
+		return NULL;
+	}
+	free(desc);
+	return uni;
+}
+
 static struct form_option *
 grow_component_table(const device *d,int *count,const char *match,int *defidx,
 			char ***selarray,int *selections,struct form_option *fo){
@@ -159,6 +179,11 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 			d->blkdev.serial :
 			d->name)) == NULL){
 		free(key);
+		return NULL;
+	}
+	if((desc = prefix_desc_with_size(d,desc)) == NULL){ // free()s old desc
+		free(key);
+		free(desc);
 		return NULL;
 	}
 	if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
