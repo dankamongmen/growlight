@@ -55,7 +55,8 @@ static const struct ptable {
 	int (*del)(const device *);			// Delete partition
 	int (*pname)(device *,const wchar_t *);		// Set partition name
 	int (*uuid)(device *,const void *);		// Set partition UUID
-	int (*flag)(device *,uint64_t,unsigned);	// Set partition flags
+	int (*flags)(device *,uint64_t);		// Reset partition flags
+	int (*flag)(device *,uint64_t,unsigned);	// Set a partition flag
 	int (*code)(device *,unsigned long long);	// Set partition code
 	uintmax_t (*first)(const device *);	// Get first usable sector
 	uintmax_t (*last)(const device *);	// Get last usable sector
@@ -69,6 +70,7 @@ static const struct ptable {
 		.del = del_gpt,
 		.pname = name_gpt,
 		.uuid = uuid_gpt,
+		.flags = flags_gpt,
 		.flag = flag_gpt,
 		.code = code_gpt,
 		.first = first_gpt,
@@ -377,6 +379,33 @@ int check_partition(device *d){
 		return -1;
 	}
 	return 0;
+}
+
+int partition_set_flags(device *d,uint64_t flag){
+	const struct ptable *pt;
+	const char *pttable;
+
+	if(d->layout != LAYOUT_PARTITION){
+		diag("Will only set flags on real partitions\n");
+		return -1;
+	}
+	if((pttable = get_ptype(d->partdev.parent)) == NULL){
+		return -1;
+	}
+	for(pt = ptables ; pt->name ; ++pt){
+		if(strcmp(pt->name,pttable) == 0){
+			if(!pt->flag){
+				diag("Partition flags not supported on %s\n",d->partdev.parent->blkdev.pttable);
+				return -1;
+			}
+			if(pt->flags(d,flag)){
+				return -1;
+			}
+			return 0;
+		}
+	}
+	diag("Unsupported partition table type: %s\n",pttable);
+	return -1;
 }
 
 int partition_set_flag(device *d,uint64_t flag,unsigned state){

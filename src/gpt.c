@@ -626,6 +626,29 @@ int uuid_gpt(device *d,const void *uuid){
 	return 0;
 }
 
+int flags_gpt(device *d,uint64_t flag){
+	gpt_entry *gpe;
+	size_t mapsize;
+	void *map;
+	int fd;
+
+	assert(d->layout == LAYOUT_PARTITION);
+	if((map = map_gpt(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return -1;
+	}
+	gpe = (gpt_entry *)((char *)map + 2 * LBA_SIZE);
+	gpe[d->partdev.pnumber].flags = flag;
+	if(unmap_gpt(d->partdev.parent,map,mapsize,fd,LBA_SIZE)){
+		close(fd);
+		return -1;
+	}
+	if(close(fd)){
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int flag_gpt(device *d,uint64_t flag,unsigned status){
 	gpt_entry *gpe;
 	size_t mapsize;
