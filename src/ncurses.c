@@ -1003,7 +1003,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	if((z = bo->zchain) == NULL){
 		if(selected){
 			wattron(w,A_REVERSE);
-			mvwprintw(w,y - 1,sx + 1,"⇗➫➭➮%.*s",(int)(ex - (sx + 5)),selstr);
+			mvwprintw(w,y - 1,sx + 1,"⇗⇨⇨⇨%.*s",(int)(ex - (sx + 5)),selstr);
 			wattroff(w,A_REVERSE);
 		}
 		return;
@@ -1107,7 +1107,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		wattron(w,A_REVERSE);
 		if(selstr){
 			if(och < ex / 2u){
-				mvwprintw(w,y - 1,och,"⇗➫➭➮%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
+				mvwprintw(w,y - 1,och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
 			}else{
 				mvwprintw(w,y - 1,off - 4 - strlen(selstr),"%s⇦⇦⇦⇖",selstr);
 			}
