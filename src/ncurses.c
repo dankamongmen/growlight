@@ -4883,14 +4883,12 @@ flag_table(int *count,const char *match,int *defidx,char ***selarray,int *select
 
 	*count = 0;
 	*defidx = -1;
-	// FIXME if(gpt){
 	if((*count = fcount) == 0){
 		goto err;
 	}
 	if((fo = malloc(sizeof(*fo) * *count)) == NULL){
 		goto err;
 	}
-	//}
 	while(z < *count){
 		const char *key = flags[z].option;
 
@@ -4921,7 +4919,6 @@ flag_table(int *count,const char *match,int *defidx,char ***selarray,int *select
 				typeof(*selarray) tmp;
 
 				if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
-					locked_diag("ERR!: %zu\n",sizeof(*selarray) * (*selections + 1));
 					free(fo[zz].option);
 					free(fo[zz].desc);
 					goto err;
@@ -5017,9 +5014,37 @@ dos_partflag_callback(const char *fn,char **selarray,int selections,int scroll){
 		opcount,defidx,selarray,selections,PARTFLAG_TEXT,scroll);
 }
 
+static int
+flag_to_selections(uint64_t flags,char ***selarray,int *selections,
+			const struct form_option *ops,unsigned opcount){
+	assert(selarray && selections);
+	assert(!*selarray && !*selections);
+	while(opcount--){
+		unsigned long long ul;
+		char *eptr;
+
+		ul = strtoull(ops[opcount].option,&eptr,16);
+		assert(ul && (ul < ULLONG_MAX || errno != ERANGE) && !*eptr);
+		if(flags & ul){
+			typeof(*selarray) tmp;
+
+			if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+				// FIXME backfree
+				return -1;
+			}
+			*selarray = tmp;
+			(*selarray)[*selections] = strdup(ops[opcount].option);
+			++*selections;
+		}
+	}
+	return 0;
+}
+
 static void
 set_partition_attrs(void){
 	struct form_option *flags_agg;
+	char **selarray = NULL;
+	int selections = 0;
 	int opcount,defidx;
 	blockobj *b;
 
@@ -5037,20 +5062,30 @@ set_partition_attrs(void){
 	}
 	// FIXME need to initialize widget based off current flags
 	if(strcmp("gpt",b->d->blkdev.pttable) == 0){
-		if((flags_agg = flag_table(&opcount,NULL,&defidx,NULL,NULL,
+		if(flag_to_selections(b->zone->p->partdev.flags,&selarray,&selections,
+					gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))){
+			return;
+		}
+		if((flags_agg = flag_table(&opcount,NULL,&defidx,&selarray,&selections,
 				gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
+			// FIXME free selarray
 			return;
 		}
 		raise_checkform("set GPT partition flags",partflag_callback,flags_agg,
-				opcount,defidx,NULL,0,PARTFLAG_TEXT,0);
+				opcount,defidx,selarray,selections,PARTFLAG_TEXT,0);
 	}else if(strcmp("dos",b->d->blkdev.pttable) == 0 ||
 		strcmp("msdos",b->d->blkdev.pttable) == 0){
-		if((flags_agg = flag_table(&opcount,NULL,&defidx,NULL,NULL,
+
+		if(flag_to_selections(b->zone->p->partdev.flags,&selarray,&selections,
+					dos_flags,sizeof(dos_flags) / sizeof(*dos_flags))){
+			return;
+		}
+		if((flags_agg = flag_table(&opcount,NULL,&defidx,&selarray,&selections,
 				dos_flags,sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
 			return;
 		}
 		raise_checkform("set DOS partition flags",dos_partflag_callback,flags_agg,
-				opcount,defidx,NULL,0,PARTFLAG_TEXT,0);
+				opcount,defidx,selarray,selections,PARTFLAG_TEXT,0);
 	}else{
 		assert(0);
 	}
