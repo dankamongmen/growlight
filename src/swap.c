@@ -109,13 +109,15 @@ int parse_swaps(const glightui *gui,const char *name){
 		}
 		d->mntsize *= 1024;
 		if(d->swapprio == SWAP_INVALID){
-			if(d->mnttype){
-				diag("Warning: %s went from %s to swap\n",d->name,d->mnttype);
-				free(d->mnttype);
-				// FIXME...
-			}
-			if((d->mnttype = strdup("swap")) == NULL){
-				goto err;
+			if(!d->mnttype || strcmp(d->mnttype,"swap")){
+				if(d->mnttype){
+					diag("Warning: %s went from %s to swap\n",d->name,d->mnttype);
+					free(d->mnttype);
+					d->mnttype = NULL;
+				}
+				if((d->mnttype = strdup("swap")) == NULL){
+					goto err;
+				}
 			}
 			// FIXME we can get the real priority from the last field
 			d->swapprio = SWAP_MAXPRIO; // FIXME
