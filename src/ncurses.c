@@ -11,6 +11,7 @@
 #include "fs.h"
 #include "mbr.h"
 #include "zfs.h"
+#include "swap.h"
 #include "mdadm.h"
 #include "config.h"
 #include "health.h"
@@ -3361,7 +3362,7 @@ static const wchar_t *helps_block[] = {
 	L"'s': set partition attributes 'M': make filesystem/swap",
 	L"'F': fsck filesystem          'w': wipe filesystem",
 	L"'U': set filesystem UUID      'L': set filesystem label/name",
-	L"'o': mount filesystem         'O': unmount filesystem",
+	L"'o': mount filesystem/swapon  'O': unmount filesystem/swapoff",
 	NULL
 };
 
@@ -5245,9 +5246,21 @@ mount_filesystem(void){
 			locked_diag("No filesystem detected on %s",b->zone->p->name);
 			return;
 		}
+		if(fstype_swap_p(b->zone->p->mnttype)){
+			if(swapondev(b->zone->p) == 0){
+				redraw_adapter(current_adapter);
+			}
+			return;
+		}
 	}else{
 		if(b->d->mnttype == NULL){
 			locked_diag("No filesystem detected on %s",b->d->name);
+			return;
+		}
+		if(fstype_swap_p(b->d->mnttype)){
+			if(swapondev(b->d) == 0){
+				redraw_adapter(current_adapter);
+			}
 			return;
 		}
 	}
@@ -5444,9 +5457,17 @@ umount_filesystem(void){
 			locked_diag("Cannot unmount unused space");
 			return;
 		}
-		r = unmount(b->zone->p,NULL);
+		if(fstype_swap_p(b->zone->p->mnttype)){
+			r = swapoffdev(b->zone->p);
+		}else{
+			r = unmount(b->zone->p,NULL);
+		}
 	}else{
-		r = unmount(b->d,NULL);
+		if(fstype_swap_p(b->d->mnttype)){
+			r = swapoffdev(b->d);
+		}else{
+			r = unmount(b->d,NULL);
+		}
 	}
 	if(!r){
 		redraw_adapter(current_adapter);

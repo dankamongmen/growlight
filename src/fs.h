@@ -22,6 +22,11 @@ fstype_default_p(const char *fstype){
 }
 
 static inline int
+fstype_swap_p(const char *fstype){
+	return !strcmp(fstype,"swap");
+}
+
+static inline int
 aggregate_fs_p(const char *fstype){
 	return !strcmp(fstype,"linux_raid_member") ||
 		!strcmp(fstype,"zfs_member");
