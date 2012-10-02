@@ -36,6 +36,7 @@
 #include "zfs.h"
 #include "swap.h"
 #include "udev.h"
+#include "crypt.h"
 #include "mdadm.h"
 #include "popen.h"
 #include "smart.h"
@@ -1842,6 +1843,9 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 		goto err;
 	}
 	init_special_adapters();
+	if(crypt_start()){
+		goto err;
+	}
 	if(init_zfs_support(gui)){
 		goto err;
 	}
@@ -1906,6 +1910,7 @@ int growlight_stop(void){
 	}
 	usepci = 0;
 	r |= stop_zfs_support();
+	r |= crypt_stop();
 	close(sysfd); sysfd = -1;
 	close(devfd); devfd = -1;
 	if(growlight_target){

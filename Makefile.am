@@ -31,7 +31,8 @@ common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 	src/health.c src/health.h src/udev.c src/udev.h src/msdos.c src/msdos.h \
 	src/smart.c src/smart.h src/zfs.c src/zfs.h src/secure.c src/secure.h \
 	src/gpt.c src/gpt.h src/crc32.c src/crc32.h src/ptypes.c src/ptypes.h \
-	src/dm.c src/dm.h src/aggregate.c src/aggregate.h
+	src/dm.c src/dm.h src/aggregate.c src/aggregate.h src/crypt.h \
+	src/crypt.c
 
 growlight_readline_SOURCES=$(common_SOURCES)
 growlight_readline_SOURCES+=src/readline.c
