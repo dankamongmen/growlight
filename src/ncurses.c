@@ -6445,6 +6445,11 @@ block_callback(device *d,void *v){
 		oldrows = getmaxy(as->rb->win);
 		resize_adapter(as->rb);
 		recompute_selection(as,old,oldrows,getmaxy(as->rb->win));
+		if(current_adapter == as->rb){
+			if(b->prev == NULL && b->next == NULL){
+				select_adapter();
+			}
+		}
 		redraw_adapter(as->rb);
 	}
 	unlock_ncurses_growlight();
