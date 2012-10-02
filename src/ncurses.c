@@ -4851,17 +4851,26 @@ static const struct form_option dos_flags[] = {
 };
 
 static const struct form_option gpt_flags[] = {
-	{
-		.option = "0x02",
-		.desc = "Legacy BIOS bootable",
+	{ // protects OEM partitions from being overwritten by windows
+		.option = "0x0000000000000001", // 2^0, 1
+		.desc = "System partition",
 	},{
-		.option = "0x3c",
+		.option = "0x0000000000000002", // 2^1, 2
+		.desc = "Hide from EFI",
+	},{
+		.option = "0x0000000000000004", // 2^2, 4
+		.desc = "Legacy BIOS bootable",
+	},{ // readonly for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+		.option = "0x1000000000000000", // 2^60
 		.desc = "Read-only",
 	},{
-		.option = "0x3e",
+		.option = "0x2000000000000000", // 2^61
+		.desc = "Shadow copy",
+	},{ // hidden for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+		.option = "0x4000000000000000", // 2^62
 		.desc = "Hidden",
-	},{
-		.option = "0x3f",
+	},{ // no default drive letter for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+		.option = "0x8000000000000000", // 2^63
 		.desc = "Inhibit automounting",
 	},
 };
@@ -4938,6 +4947,7 @@ err:
 
 static void
 do_partflag(char **selarray,int selections){
+	unsigned long long flags;
 	device *d;
 	int z;
 
@@ -4946,17 +4956,18 @@ do_partflag(char **selarray,int selections){
 		return;
 	}
 	d = get_selected_blockobj()->zone->p;
+	flags = 0;
 	for(z = 0 ; z < selections ; ++z){
 		char *eptr = selarray[z];
-		unsigned long ul;
+		unsigned long long ul;
 
 		errno = 0;
-		ul = strtoul(selarray[z],&eptr,16);
-		assert(ul && (ul < ULONG_MAX || errno != ERANGE) && !*eptr);
-		// FIXME need zero out unset flags!
-		if(partition_set_flag(d,ul,1)){
-			return;
-		}
+		ul = strtoull(selarray[z],&eptr,16);
+		assert(ul && (ul < ULLONG_MAX || errno != ERANGE) && !*eptr);
+		flags |= ul;
+	}
+	if(partition_set_flags(d,flags)){
+		return;
 	}
 }
 

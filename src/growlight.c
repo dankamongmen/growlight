@@ -1031,17 +1031,17 @@ rescan(const char *name,device *d){
 									d->blkdev.biosboot = !zerombrp(d->blkdev.biossha1);
 								}
 							}
+							if((flags & 0xff) != 0){
+								if(p->partdev.ptype != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)
+										|| p->partdev.ptstate.logical || p->partdev.ptstate.extended){
+									diag("Warning: BIOS+MBR boot byte was %02llx on %s (0x%u)\n",
+											flags & 0xffu,p->name,p->partdev.ptype);
+								}
+							}
 						}
 						p->partdev.flags = flags;
 // BIOS boot flag byte ought not be set to anything but 0 unless we're on a
 // primary partition and doing BIOS+MBR booting, in which case it must be 0x80.
-						if((flags & 0xff) != 0){
-							if(p->partdev.ptype != PARTROLE_PRIMARY || ((flags & 0xffu) != 0x80)
-									|| p->partdev.ptstate.logical || p->partdev.ptstate.extended){
-								diag("Warning: BIOS+MBR boot byte was %02llx on %s (0x%u)\n",
-										flags & 0xffu,p->name,p->partdev.ptype);
-							}
-						}
 					}
 				}
 			}else{
