@@ -1318,7 +1318,7 @@ case LAYOUT_ZPOOL:
 
 				if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-					rep = L'✓';
+					rep = L'+';
 				}else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
 						&& bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
 					wattrset(rb->win,A_BOLD|COLOR_PAIR(ORANGE_COLOR));
@@ -3348,6 +3348,7 @@ static const wchar_t *helps[] = {
 	L"'-': collapse adapter         '+': expand adapter",
 	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
+	L"'⇞PageUp': previous adapter   ⇟PageDown': next adapter",
 	//L"'/': search",
 	NULL
 };
@@ -5936,6 +5937,30 @@ handle_ncurses_input(WINDOW *w){
 					use_next_controller(w);
 				}else{
 					use_next_device();
+				}
+				unlock_ncurses();
+				break;
+			}
+			case KEY_PPAGE:{
+				int sel;
+				lock_ncurses();
+				sel = selection_active();
+				deselect_adapter_locked();
+				use_prev_controller(w);
+				if(sel){
+					select_adapter();
+				}
+				unlock_ncurses();
+				break;
+			}
+			case KEY_NPAGE:{
+				int sel;
+				lock_ncurses();
+				sel = selection_active();
+				deselect_adapter_locked();
+				use_prev_controller(w);
+				if(sel){
+					select_adapter();
 				}
 				unlock_ncurses();
 				break;
