@@ -1011,6 +1011,11 @@ rescan(const char *name,device *d){
 					if(part){
 						unsigned long long flags;
 
+						if(probe_blkid_superblock(p->name,NULL,p)){
+							clobber_device(d);
+							blkid_free_probe(pr);
+							return NULL;
+						}
 						flags = blkid_partition_get_flags(part);
 						if(strcmp(pttable,"gpt") == 0){
 							// FIXME verify bootable flag?
@@ -1028,11 +1033,6 @@ rescan(const char *name,device *d){
 							}
 						}
 						p->partdev.flags = flags;
-						if(probe_blkid_superblock(p->name,NULL,p)){
-							clobber_device(d);
-							blkid_free_probe(pr);
-							return NULL;
-						}
 // BIOS boot flag byte ought not be set to anything but 0 unless we're on a
 // primary partition and doing BIOS+MBR booting, in which case it must be 0x80.
 						if((flags & 0xff) != 0){
