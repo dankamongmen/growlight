@@ -1109,7 +1109,8 @@ static int
 print_partition_attributes(void){
 	printf("GPT flags:\n");
 	printf("\t0x%016llx %s\n",0x0000000000000001llu,"Required partition");
-	printf("\t0x%016llx %s\n",0x0000000000000002llu,"Legacy BIOS bootable");
+	printf("\t0x%016llx %s\n",0x0000000000000002llu,"Hide from EFI");
+	printf("\t0x%016llx %s\n",0x0000000000000004llu,"Legacy BIOS bootable");
 	printf("\t0x%016llx %s\n",0x1000000000000000llu,"Read-only");
 	printf("\t0x%016llx %s\n",0x2000000000000000llu,"Shadow copy");
 	printf("\t0x%016llx %s\n",0x4000000000000000llu,"Hidden");
