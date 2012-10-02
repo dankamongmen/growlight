@@ -1,8 +1,23 @@
 #include "zfs.h"
 #include "mdadm.h"
 #include "popen.h"
+#include "crypt.h"
 #include "growlight.h"
 #include "aggregate.h"
+
+static int
+make_crypt(const char *name __attribute__ ((unused)),char * const *argv,int argc){
+	device *d;
+
+	if(argc != 1){
+		diag("Wrong number of devices (%d != 1) for LUKS\n",argc);
+		return -1;
+	}
+	if((d = lookup_device(*argv)) == NULL){
+		return -1;
+	}
+	return cryptondev(d);
+}
 
 static const aggregate_type aggregates[] = {
 	{
@@ -116,10 +131,11 @@ static const aggregate_type aggregates[] = {
 		.mindisks = 2,
 		.maxfaulted = 0,
 	},{
-		.name = "crypt",
-		.desc = "Block encryption",
+		.name = "dmcrypt",
+		.desc = "LUKS block encryption (DM)",
 		.mindisks = 1,
 		.maxfaulted = 0,
+		.makeagg = make_crypt,
 	},{
 		.name = "dmmirror",
 		.desc = "Mirroring (DM)",
