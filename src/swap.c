@@ -11,7 +11,7 @@
 #include "growlight.h"
 
 int mkswap(device *d){
-	if(d->mnttype){
+	if(d->mnttype && strcmp(d->mnttype,"swap")){
 		diag("Won't create swap on %s filesystem at %s\n",
 				d->mnttype,d->name);
 		return -1;
