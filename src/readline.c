@@ -1108,14 +1108,14 @@ blockdev(wchar_t * const *args,const char *arghelp){
 static int
 print_partition_attributes(void){
 	printf("GPT flags:\n");
-	printf("\t%016llx %s\n",0x0000000000000001llu,"Required partition");
-	printf("\t%016llx %s\n",0x0000000000000002llu,"Legacy BIOS bootable");
-	printf("\t%016llx %s\n",0x1000000000000000llu,"Read-only");
-	printf("\t%016llx %s\n",0x2000000000000000llu,"Shadow copy");
-	printf("\t%016llx %s\n",0x4000000000000000llu,"Hidden");
-	printf("\t%016llx %s\n",0x8000000000000000llu,"No automount");
+	printf("\t0x%016llx %s\n",0x0000000000000001llu,"Required partition");
+	printf("\t0x%016llx %s\n",0x0000000000000002llu,"Legacy BIOS bootable");
+	printf("\t0x%016llx %s\n",0x1000000000000000llu,"Read-only");
+	printf("\t0x%016llx %s\n",0x2000000000000000llu,"Shadow copy");
+	printf("\t0x%016llx %s\n",0x4000000000000000llu,"Hidden");
+	printf("\t0x%016llx %s\n",0x8000000000000000llu,"No automount");
 	printf("MBR flags:\n");
-	printf("\t%02x %s\n",0x80u,"Bootable");
+	printf("\t0x%02x %s\n",0x80u,"Bootable");
 	return 0;
 }
 
@@ -1216,7 +1216,7 @@ partition(wchar_t * const *args,const char *arghelp){
 			}else if(wstrtoull(args[4],&ull)){
 				usage(args,arghelp);
 				return -1;
-			}else if(ull > (1ull << 62) || ull == 0){
+			}else if(ull > (1ull << 63) || ull == 0){
 				usage(args,arghelp);
 				return -1;
 			}else if( (ull & (ull - 1u)) ){ // ought be power of 2
