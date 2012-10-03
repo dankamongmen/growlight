@@ -209,17 +209,18 @@ int wipe_ptable(device *d,const char *pty){
 		}
 	}
 	if( !(pt = d->blkdev.pttable) ){
-		if( (pt = pt) ){
+		if( (pt = pty) ){
 			diag("No partition table on %s; wiping anyway\n",d->name);
 		}else{
 			diag("No partition table detected on %s\n",d->name);
 			return -1;
 		}
-	}else if(pt && strcmp(pt,pt)){
-		diag("Wiping %s table despite %s detection on %s\n",pt,pt,d->name);
+	}else if(strcmp(pty,pt)){
+		diag("Wiping %s table despite %s detection on %s\n",pty,pt,d->name);
+		pt = pty;
 	}
 	for(ptp = ptables ; ptp->name ; ++ptp){
-		if(strcmp(ptp->name,pty) == 0){
+		if(strcmp(ptp->name,pt) == 0){
 			if(ptp->zap(d)){
 				return -1;
 			}
