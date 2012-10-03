@@ -188,7 +188,8 @@ int make_partition_table(device *d,const char *pty){
 // it with zeroes). If a ptype is specified, it is assumed that this partition
 // table type is being used, and we will zero out according to the specified
 // type, even if it doesn't match the detected type (very dangerous!). If no
-// type is specified, the detected type, if it exists, is used.
+// type is specified, the detected type, if it exists, is used. If no type is
+// specified and none is detected, nothing is done.
 int wipe_ptable(device *d,const char *pty){
 	const struct ptable *ptp;
 	const device *p;
@@ -215,7 +216,7 @@ int wipe_ptable(device *d,const char *pty){
 			diag("No partition table detected on %s\n",d->name);
 			return -1;
 		}
-	}else if(strcmp(pty,pt)){
+	}else if(pty && strcmp(pty,pt)){
 		diag("Wiping %s table despite %s detection on %s\n",pty,pt,d->name);
 		pt = pty;
 	}
