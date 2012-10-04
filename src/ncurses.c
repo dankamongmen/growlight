@@ -4840,7 +4840,13 @@ kill_filesystem(void){
 		locked_diag("Filesystems cannot be wiped from empty space");
 		return;
 	}
-	confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
+	if(b->zone->p && !b->zone->p->mnttype){
+		locked_diag("No filesystem signature on %s\n",b->zone->p->name);
+	}else if(!b->zone->p && !b->d->mnttype){
+		locked_diag("No filesystem signature on %s\n",b->d->name);
+	}else{
+		confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
+	}
 }
 
 static const struct form_option dos_flags[] = {
