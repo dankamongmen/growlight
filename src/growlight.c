@@ -1179,7 +1179,13 @@ device *lookup_device(const char *name){
 	do{
 		for(dl = discovery_active ; dl ; dl = dl->next){
 			if(strcmp(name,dl->name) == 0){
-				pthread_cond_wait(&discovery_cond,&lock);
+				struct timespec ts;
+
+				// FIXME we're missing the signal somehow; see
+				// bug 387...
+				ts.tv_sec = 0;
+				ts.tv_nsec = 100000000;
+				pthread_cond_timedwait(&discovery_cond,&lock,&ts);
 				break;
 			}
 		}
