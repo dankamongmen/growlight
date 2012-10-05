@@ -751,7 +751,7 @@ static void
 locked_vdiag(const char *fmt,va_list v){
 	size_t off;
 
-	snprintf(statusmsg,sizeof(statusmsg) / sizeof(*statusmsg) - 1,fmt,v);
+	vsnprintf(statusmsg,sizeof(statusmsg) / sizeof(*statusmsg) - 1,fmt,v);
 	statusmsg[sizeof(statusmsg) / sizeof(*statusmsg) - 1] = '\0';
 	for(off = 0 ; off < sizeof(statusmsg) / sizeof(*statusmsg) - 1 ; ++off){
 		if(!isgraph(statusmsg[off])){
