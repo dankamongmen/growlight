@@ -299,7 +299,8 @@ int destroy_zpool(device *d){
 		diag("Couldn't open zpool %s\n",d->name);
 		return -1;
 	}
-	if(zpool_disable_datasets(zhp,0)){
+	// FIXME only pass force flag when necessary
+	if(zpool_disable_datasets(zhp,1)){
 		diag("Couldn't disable datasets on %s\n",d->name);
 		zpool_close(zhp);
 		return -1;
