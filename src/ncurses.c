@@ -512,6 +512,7 @@ typedef struct adapterstate {
 #define EXPANSION_MAX EXPANSION_FULL
 
 static char statusmsg[BUFSIZ];
+
 static unsigned count_adapters;
 // dequeue + single selection
 static reelbox *current_adapter,*top_reelbox,*last_reelbox;
@@ -750,9 +751,9 @@ static void
 locked_vdiag(const char *fmt,va_list v){
 	size_t off;
 
-	vsnprintf(statusmsg,sizeof(statusmsg) - 1,fmt,v);
-	statusmsg[sizeof(statusmsg) - 1] = '\0';
-	for(off = 0 ; off < sizeof(statusmsg) - 1 ; ++off){
+	snprintf(statusmsg,sizeof(statusmsg) / sizeof(*statusmsg) - 1,fmt,v);
+	statusmsg[sizeof(statusmsg) / sizeof(*statusmsg) - 1] = '\0';
+	for(off = 0 ; off < sizeof(statusmsg) / sizeof(*statusmsg) - 1 ; ++off){
 		if(!isgraph(statusmsg[off])){
 			if(!statusmsg[off]){
 				break;
@@ -953,25 +954,30 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
 		assert(wattrset(w,A_BOLD|co) == OK);
+		if(d->mntsize){
+			qprefix(d->mntsize,1,pre,sizeof(pre),1);
+		}else{
+			qprefix(d->size,1,pre,sizeof(pre),1);
+		}
 		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s%ls%s%lsat %s ",
-			d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
+			d->mntsize ? pre : "",
 			d->mntsize ? " " : "",
 			d->label ? "" : "nameless ",
 			d->mnttype,
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ",
-			d->mnt.list[0]) >= (int)sizeof(wbuf)){
+			d->mnt.list[0]) >= (int)(sizeof(wbuf))){
 			if(swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s%ls%s%ls",
-				d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
+				d->mntsize ? pre : "",
 				d->mntsize ? " " : "",
 				d->label ? "" : "nameless ",
 				d->mnttype,
 				d->label ? L" “" : L"",
 				d->label ? d->label : "",
-				d->label ? L"” " : L" ") >= (int)sizeof(wbuf)){
-				if((unsigned)swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s ",
-					d->mntsize ? qprefix(d->mntsize,1,pre,sizeof(pre),1) : "",
+				d->label ? L"” " : L" ") >= (int)(sizeof(wbuf))){
+				if((unsigned)swprintf(wbuf,sizeof(wbuf),L" %s%s%s ",
+					d->mntsize ? pre : "",
 					d->mntsize ? " " : "",
 					d->mnttype) >= sizeof(wbuf)){
 					assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",d->mnttype) < sizeof(wbuf));
@@ -993,7 +999,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
 		selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
 				"unpartitionable space";
-		assert(snprintf(buf,sizeof(buf)," %s %s ",qprefix(d->size,1,pre,sizeof(pre),1),
+		assert(snprintf(buf,sizeof(buf)," %s %s ",
+				qprefix(d->size,1,pre,sizeof(pre),1),
 				selstr) < (int)sizeof(buf));
 		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
 		mvwadd_wch(w,y,sx,&bchr[1]);
@@ -1013,14 +1020,17 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	mountco = MOUNT_COLOR0;
 	do{
 		unsigned ch,och;
+		uintmax_t zs;
 		wchar_t rep;
 
 		wbuf[0] = L'\0';
+		zs = (z->lsector - z->fsector + 1) * bo->d->physsec;
+		qprefix(zs,1,pre,sizeof(pre),1);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = (z->rep == REP_METADATA ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR));
 			const char *repstr = z->rep == REP_METADATA ?
-				"partition table metadata" : "unused space";
+				"partition table metadata" : "empty space";
 
 			if(selected && z == bo->zone){
 				selstr = repstr;
@@ -1028,8 +1038,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}else{
 				assert(wattrset(w,co) == OK);
 			}
-			if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",repstr) >= sizeof(wbuf) - 2){
-				wbuf[0] = L'\0';
+			if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s %s",
+					pre,repstr) >= sizeof(wbuf) - 2){
+				if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",repstr) >= sizeof(wbuf) - 2){
+					wbuf[0] = L'\0';
+				}
 			}
 			rep = z->rep;
 		}else{ // dedicated partition
@@ -1050,8 +1063,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				// selstr = z->p->partdev.pname;
 				// selstr = selstr ? selstr : z->p->name;
 				if( (selstr = z->p->name) ){
-					if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",selstr) >= sizeof(wbuf) - 2){
-						wbuf[0] = L'\0';
+					if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s %s",
+							pre,selstr) >= sizeof(wbuf) - 2){
+						if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",selstr) >= sizeof(wbuf) - 2){
+							wbuf[0] = L'\0';
+						}
 					}
 				}
 			}else{ // partition is not selected
@@ -1067,18 +1083,21 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 					assert(wattrset(w,COLOR_PAIR(partco)) == OK);
 					partco = next_partco(partco);
 				}
-				if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->name) >= sizeof(wbuf) - 2){
-					wbuf[0] = L'\0';
+				if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s %s",
+							pre,z->p->name) >= sizeof(wbuf) - 2){
+					if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->name) >= sizeof(wbuf) - 2){
+						wbuf[0] = L'\0';
+					}
 				}
 			}
 			if(z->p->partdev.alignment < d->physsec){ // misaligned!
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
 			if(z->p->mnttype){
-				if((!z->p->mnt.count || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s at %s",z->p->mnttype,z->p->mnt.list[0]) >= sizeof(wbuf) - 2)){
-					if(!z->p->label || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s “%s”",
-						z->p->mnttype,z->p->label) >= sizeof(buf) - 2){
-						if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->mnttype) >= sizeof(wbuf) - 2){
+				if((!z->p->mnt.count || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s at %s (%s)",z->p->mnttype,z->p->mnt.list[0],pre) >= sizeof(wbuf) - 2)){
+					if(!z->p->label || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s “%s” (%s)",
+						z->p->mnttype,z->p->label,pre) >= sizeof(wbuf) - 2){
+						if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s (%s)",z->p->mnttype,pre) >= sizeof(wbuf) - 2){
 							wbuf[0] = L'\0';
 						}
 					}
