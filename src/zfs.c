@@ -122,6 +122,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		zpool_close(zhp);
 		return -1;
 	}
+	lock_growlight();
 	if( (d = lookup_device(name)) ){
 		if(d->layout != LAYOUT_ZPOOL){
 			diag("Zpool %s collided with %s\n",name,d->name);
@@ -141,8 +142,10 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		d->zpool.zpoolver = version;
 		zpool_close(zhp);
 		d->uistate = gui->block_event(d,d->uistate);
+		unlock_growlight();
 		return 0;
 	}
+	unlock_growlight();
 	if((d = malloc(sizeof(*d))) == NULL){
 		diag("Couldn't allocate device (%s?)\n",strerror(errno));
 		zpool_close(zhp);
@@ -185,10 +188,13 @@ zfscb(zfs_handle_t *zhf,void *arg){
 		diag("Couldn't get ZFS name/type\n");
 		return -1;
 	}
+	lock_growlight();
 	if((d = lookup_device(zname)) == NULL){
+		unlock_growlight();
 		diag("Couldn't look up zpool named %s\n",zname);
 		return -1;
 	}
+	unlock_growlight();
 	if((version = zfs_prop_get_int(zhf,ZFS_PROP_VERSION)) < 0){
 		diag("Couldn't get dataset version for %s\n",zname);
 		return -1;
