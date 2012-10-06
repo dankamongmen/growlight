@@ -2199,13 +2199,63 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 	screen_update();
 }
 
+static void
+mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
+	struct form_option *ops_agg;
+	const char *mntops = NULL;
+	char targ[PATH_MAX + 1];
+	int opcount,defidx;
+	blockobj *b;
+
+	if(op == NULL){
+		locked_diag("User cancelled target operation");
+		return;
+	}
+	if(!growlight_target){
+		locked_diag("No target is set");
+		return;
+	}
+	if((unsigned)snprintf(targ,sizeof(targ),"%s%s",growlight_target,op) >= sizeof(targ)){
+		locked_diag("Bad mountpoint: %s",op);
+		return;
+	}
+	if((b = get_selected_blockobj()) == NULL){
+		locked_diag("Must select a filesystem to mount");
+		return;
+	}
+	if(selected_unloadedp()){
+		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	ops_agg = NULL;
+	opcount = 0;
+	defidx = 1;
+		raise_checkform("set mount options",mountop_callback,ops_agg,
+			opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollidx);
+	if(blockobj_unpartitionedp(b)){
+		mmount(b->d,targ,mntops);
+		redraw_adapter(current_adapter);
+		return;
+	}else if(blockobj_emptyp(b)){
+		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+		return;
+	}else{
+		mmount(b->zone->p,targ,mntops);
+		redraw_adapter(current_adapter);
+		return;
+	}
+	locked_diag("I'm confused. Aborting.\n");
+}
+
 // -------------------------------------------------------------------------
 // - target mountpoint form, for mapping within the target
 // -------------------------------------------------------------------------
 static void
 targpoint_callback(const char *path){
+	struct form_option *ops_agg;
 	const char *mntops = NULL;
 	char targ[PATH_MAX + 1];
+	int scrollidx = 0;
 	blockobj *b;
 
 	if(path == NULL){
@@ -2236,8 +2286,13 @@ targpoint_callback(const char *path){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		mmount(b->zone->p,targ,mntops);
-		redraw_adapter(current_adapter);
+		unsigned opcount = 0;
+		unsigned defidx = 0;
+		ops_agg = NULL;
+		char **selarray = NULL;
+		unsigned selections = 0;
+		raise_checkform("set mount options",mountop_callback,ops_agg,
+			opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollidx);
 		return;
 	}
 	locked_diag("I'm confused. Aborting.\n");
