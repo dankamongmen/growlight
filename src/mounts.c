@@ -261,7 +261,7 @@ err:
 	return -1;
 }
 
-int mmount(device *d,const char *targ,const char *mntops){
+int mmount(device *d,const char *targ,unsigned mntops,const void *data){
 	char name[PATH_MAX + 1];
 	char *rname;
 
@@ -302,9 +302,9 @@ int mmount(device *d,const char *targ,const char *mntops){
 	}
 	snprintf(name,sizeof(name),"/dev/%s",d->name);
 	// Use the original path for the actual mount
-	if(mount(name,targ,d->mnttype,MS_NOATIME,mntops)){
-		diag("Error mounting %s at %s (%s?)\n",
-				name,targ,strerror(errno));
+	if(mount(name,targ,d->mnttype,mntops,data)){
+		diag("Error mounting %s (%u) at %s (%s?)\n",
+				name,mntops,targ,strerror(errno));
 		free(rname);
 		return -1;
 	}
@@ -355,4 +355,62 @@ void clear_mounts(controller *c){
 		}
 		c = c->next;
 	}
+}
+
+unsigned flag_for_mountop(const char *op){
+	struct opmap {
+		const char *o;
+		unsigned v;
+	} map[] = {
+		{
+			.o = "ro",
+			.v = MS_RDONLY,
+		},{
+			.o = "dirsync",
+			.v = MS_DIRSYNC,
+		},{
+			.o = "mand",
+			.v = MS_MANDLOCK,
+		},{
+			.o = "noatime",
+			.v = MS_NOATIME,
+		},{
+			.o = "nodev",
+			.v = MS_NODEV,
+		},{
+			.o = "nodiratime",
+			.v = MS_NODIRATIME,
+		},{
+			.o = "noexec",
+			.v = MS_NOEXEC,
+		},{
+			.o = "nosuid",
+			.v = MS_NOSUID,
+		},{
+			.o = "ro",
+			.v = MS_RDONLY,
+		},{
+			.o = "relatime",
+			.v = MS_RELATIME,
+		},{
+			.o = "silent",
+			.v = MS_SILENT,
+		},{
+			.o = "strictatime",
+			.v = MS_STRICTATIME,
+		},{
+			.o = "sync",
+			.v = MS_SYNCHRONOUS,
+		},{
+			.o = NULL,
+			.v = 0,
+		}
+	},*cur;
+
+	for(cur = map ; cur->o ; ++cur){
+		if(strcmp(cur->o,op) == 0){
+			return cur->v;
+		}
+	}
+	return 0;
 }

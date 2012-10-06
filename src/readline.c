@@ -100,7 +100,7 @@ wmmount(device *d,const wchar_t *targ){
 		fprintf(stderr,"Bad path: %ls\n",targ);
 		return -1;
 	}
-	return mmount(d,path,NULL);
+	return mmount(d,path,0,NULL);
 }
 
 static int
@@ -253,7 +253,7 @@ prepare_wmount(device *d,const wchar_t *path,const wchar_t *ops){
 		fprintf(stderr,"Bad filesystem options: %ls\n",ops);
 		return -1;
 	}
-	return mmount(d,spath,sops);
+	return mmount(d,spath,0,sops);
 }
 
 #define ZERO_ARG_CHECK(args,arghelp) \
