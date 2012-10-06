@@ -136,6 +136,7 @@ static const aggregate_type aggregates[] = {
 		.mindisks = 1,
 		.maxfaulted = 0,
 		.makeagg = make_crypt,
+		.tokenreq = L"Select an encryption passphrase.";
 	},{
 		.name = "dmmirror",
 		.desc = "Mirroring (DM)",

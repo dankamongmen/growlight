@@ -322,6 +322,9 @@ typedef struct aggregate_type {
 	unsigned maxfaulted;
 	int (*makeagg)(const char *,char * const *,int);
 	const char *defname;
+	// If tokenreq is set, we need request some other token prior to
+	// creating the aggregate. Display this prompt and acquire it.
+	wchar_t *tokenreq;
 } aggregate_type;
 
 const aggregate_type *get_aggregate_types(int *);
