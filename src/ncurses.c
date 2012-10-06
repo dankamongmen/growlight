@@ -2328,16 +2328,28 @@ mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
 		locked_diag("No target is set");
 		return;
 	}
-	if((unsigned)snprintf(targ,sizeof(targ),"%s%s",growlight_target,op) >= sizeof(targ)){
-		locked_diag("Bad mountpoint: %s",op);
-		return;
-	}
 	if((b = get_selected_blockobj()) == NULL){
 		locked_diag("Must select a filesystem to mount");
 		return;
 	}
 	if(selected_unloadedp()){
 		locked_diag("Media is not loaded on %s",b->d->name);
+		return;
+	}
+	if(strcmp(op,"") == 0){
+		if(blockobj_unpartitionedp(b)){
+			mmount(b->d,targ,mntops);
+			redraw_adapter(current_adapter);
+		}else if(blockobj_emptyp(b)){
+			locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+		}else{
+			mmount(b->zone->p,targ,mntops);
+			redraw_adapter(current_adapter);
+		}
+		return;
+	}
+	if((unsigned)snprintf(targ,sizeof(targ),"%s%s",growlight_target,op) >= sizeof(targ)){
+		locked_diag("Bad mountpoint: %s",op);
 		return;
 	}
 	ops_agg = NULL;
@@ -2350,19 +2362,6 @@ mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
 	}
 	raise_checkform("set mount options",mountop_callback,ops_agg,
 		opcount,defidx,selarray,selections,MOUNTOPS_TEXT,scrollidx);
-	if(blockobj_unpartitionedp(b)){
-		mmount(b->d,targ,mntops);
-		redraw_adapter(current_adapter);
-		return;
-	}else if(blockobj_emptyp(b)){
-		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
-		return;
-	}else{
-		mmount(b->zone->p,targ,mntops);
-		redraw_adapter(current_adapter);
-		return;
-	}
-	locked_diag("I'm confused. Aborting.\n");
 }
 
 // -------------------------------------------------------------------------
@@ -4466,6 +4465,7 @@ detail_mounts(WINDOW *w,int *row,int both,const device *d){
 	int cols = getmaxx(w),r;
 	unsigned z;
 
+	assert(d->mnt.count == d->mntops.count);
 	for(z = 0 ; z < d->mnt.count ; ++z){
 		if(growlight_target && !strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
 			continue;
