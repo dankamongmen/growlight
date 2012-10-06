@@ -2309,11 +2309,33 @@ err:
 	return NULL;
 }
 
+static char *
+join_selarray(char * const *selarray,int selections,int sep){
+	char *news = NULL,*tmp;
+	size_t s = 0;
+	int z;
+
+	for(z = 0 ; z < selections ; ++z){
+		if((tmp = realloc(news,s + strlen(selarray[z]) + !!s + 1)) == NULL){
+			free(news);
+			return NULL;
+		}
+		if(s){
+			tmp[s] = sep;
+			++s;
+		}
+		strcpy(tmp + s,selarray[z]);
+		s += strlen(selarray[z]);
+		news = tmp;
+	}
+	return news;
+}
+
+static char forming_targ[PATH_MAX + 1];
+
 static void
 mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
 	struct form_option *ops_agg;
-	const char *mntops = NULL;
-	char targ[PATH_MAX + 1];
 	int opcount,defidx;
 	blockobj *b;
 
@@ -2334,18 +2356,23 @@ mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
 		return;
 	}
 	if(strcmp(op,"") == 0){
+		char *mntops;
+
+		if((mntops = join_selarray(selarray,selections,',')) == NULL){
+			return;
+		}
 		if(blockobj_unpartitionedp(b)){
-			mmount(b->d,targ,mntops);
+			mmount(b->d,forming_targ,mntops);
 			redraw_adapter(current_adapter);
 		}else if(blockobj_emptyp(b)){
 			locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		}else{
-			mmount(b->zone->p,targ,mntops);
+			mmount(b->zone->p,forming_targ,mntops);
 			redraw_adapter(current_adapter);
 		}
 		return;
 	}
-	if((unsigned)snprintf(targ,sizeof(targ),"%s%s",growlight_target,op) >= sizeof(targ)){
+	if((unsigned)snprintf(forming_targ,sizeof(forming_targ),"%s%s",growlight_target,op) >= sizeof(forming_targ)){
 		locked_diag("Bad mountpoint: %s",op);
 		return;
 	}
@@ -2368,7 +2395,6 @@ static void
 targpoint_callback(const char *path){
 	struct form_option *ops_agg;
 	const char *mntops = NULL;
-	char targ[PATH_MAX + 1];
 	int scrollidx = 0;
 	blockobj *b;
 
@@ -2380,7 +2406,7 @@ targpoint_callback(const char *path){
 		locked_diag("No target is set");
 		return;
 	}
-	if((unsigned)snprintf(targ,sizeof(targ),"%s%s",growlight_target,path) >= sizeof(targ)){
+	if((unsigned)snprintf(forming_targ,sizeof(forming_targ),"%s%s",growlight_target,path) >= sizeof(targ)){
 		locked_diag("Bad mountpoint: %s",path);
 		return;
 	}
