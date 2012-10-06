@@ -190,9 +190,10 @@ int assemble_aggregates(void){
 			}
 		}
 	}
+	// probably don't always want to use -f FIXME
 	if(zpool){
 		diag("Scanning for zpools...\n");
-		vspopen_drain("zpool import -a");
+		vspopen_drain("zpool import -a -f");
 	}
 	if(mdraid){
 		diag("Scanning for MD devices...\n");
