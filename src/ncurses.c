@@ -2372,10 +2372,6 @@ mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
 		}
 		return;
 	}
-	if((unsigned)snprintf(forming_targ,sizeof(forming_targ),"%s%s",growlight_target,op) >= sizeof(forming_targ)){
-		locked_diag("Bad mountpoint: %s",op);
-		return;
-	}
 	ops_agg = NULL;
 	opcount = 0;
 	defidx = 1;
