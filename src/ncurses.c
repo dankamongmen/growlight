@@ -3382,11 +3382,13 @@ update_details(WINDOW *hw){
 		wattroff(hw,A_BOLD);
 		waddstr(hw,sn ? sn : "n/a");
 		wattron(hw,A_BOLD);
-		wprintw(hw," WC%lc RWV%lc RO%lc",
-				d->blkdev.wcache ? L'+' : L'-',
-				d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
-				 d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
-				d->roflag ? L'+' : L'-');
+		if(getmaxx(hw) - getcurx(hw) >= 12){
+			wprintw(hw," WC%lc RWV%lc RO%lc",
+					d->blkdev.wcache ? L'+' : L'-',
+					d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
+					d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
+					d->roflag ? L'+' : L'-');
+		}
 		assert(d->physsec <= 4096);
 		mvwprintw(hw,4,START_COL,"Sectors: ");
 		wattroff(hw,A_BOLD);
