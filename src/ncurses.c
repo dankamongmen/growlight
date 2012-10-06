@@ -1024,7 +1024,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		wchar_t rep;
 
 		wbuf[0] = L'\0';
-		zs = (z->lsector - z->fsector + 1) * bo->d->physsec;
+		zs = (z->lsector - z->fsector + 1) * bo->d->logsec;
 		qprefix(zs,1,pre,sizeof(pre),1);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = (z->rep == REP_METADATA ? COLOR_PAIR(METADATA_COLOR) :
