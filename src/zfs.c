@@ -359,8 +359,9 @@ generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num
 		pos += strlen(buf + pos);
 	}
 #undef PREFIX
-	// FIXME see notes below regarding unsafe use of -f
-	return vspopen_drain("zpool create -f %s %s %s",name,type,buf);
+	// FIXME also, ashift with 512-byte sectors wastes space
+	// FIXME see notes below (make_zfs()) regarding unsafe use of -f
+	return vspopen_drain("zpool create -f -oashift=12 %s %s %s",name,type,buf);
 }
 
 int make_zmirror(const char *name,char * const *vdevs,int num){
