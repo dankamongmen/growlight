@@ -4457,13 +4457,16 @@ env_details(WINDOW *hw,int rows){
 }
 
 static void
-detail_mounts(WINDOW *w,int *row,int both,const device *d){
+detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
 	char buf[PREFIXSTRLEN + 1],b[256];
 	int cols = getmaxx(w),r;
 	unsigned z;
 
 	assert(d->mnt.count == d->mntops.count);
 	for(z = 0 ; z < d->mnt.count ; ++z){
+		if(*row == maxy){
+			return;
+		}
 		if(growlight_target && !strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
 			continue;
 		}
@@ -4476,8 +4479,7 @@ detail_mounts(WINDOW *w,int *row,int both,const device *d){
 				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 				d->name);
-		++*row;
-		if(!both){
+		if(++*row == maxy){
 			return;
 		}
 		wattroff(w,A_BOLD);
@@ -4488,7 +4490,6 @@ detail_mounts(WINDOW *w,int *row,int both,const device *d){
 		mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
 		wattron(w,A_BOLD);
 		++*row;
-		break; // FIXME no space currently
 	}
 }
 
@@ -4584,12 +4585,12 @@ map_details(WINDOW *hw){
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;
 
-			detail_mounts(hw,&y,y + 1 < rows,d);
+			detail_mounts(hw,&y,rows - y,d);
 			if(y >= rows){
 				return 0;
 			}
 			for(p = d->parts ; p ; p = p->next){
-				detail_mounts(hw,&y,y + 1 < rows,p);
+				detail_mounts(hw,&y,rows - y,p);
 				if(y >= rows){
 					return 0;
 				}
