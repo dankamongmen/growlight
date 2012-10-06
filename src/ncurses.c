@@ -967,7 +967,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ",
-			zs ? "(" : "", zs ? pre : "", zs ? ")" : "",
+			zs ? "(" : "", zs ? pre : "", zs ? ") " : "",
 			d->mnt.list[0]) >= (int)(sizeof(wbuf))){
 			if(swprintf(wbuf,sizeof(wbuf),L" %s%s%ls%s%ls%s%s%s ",
 				d->label ? "" : "nameless ",
