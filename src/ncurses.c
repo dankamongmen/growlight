@@ -39,6 +39,9 @@ static const char SEARCH_TEXT[] =
 static const char PARTFLAG_TEXT[] =
 "Select a collection of flags to set on the partition.";
 
+static const char MOUNTOPS_TEXT[] =
+"Select a collection of options to apply to this mount.";
+
 static const char TARGET_TEXT[] =
 "Enter a mount point relative to the target's root.";
 
@@ -2199,6 +2202,116 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 	screen_update();
 }
 
+static const struct form_option common_fsops[] = {
+	{
+		.option = "ro",
+		.desc = "Read-only",
+	//},{ // this is the default
+	//	.option = "rw",
+	//	.desc = "Read-write",
+	},{
+		.option = "async",
+		.desc = "Only asynchronous I/O",
+	},{
+		.option = "sync",
+		.desc = "Only synchronous I/O",
+	},{
+		.option = "noatime",
+		.desc = "No access time updates",
+	},{
+		.option = "relatime",
+		.desc = "Relative access time updates",
+	},{
+		.option = "strictatime",
+		.desc = "Full access time updates",
+	},{
+		.option = "noauto",
+		.desc = "Do not mount when running 'mount -a'",
+	},{
+		.option = "nofail",
+		.desc = "Don't halt the boot on filesystem error",
+	},{
+		.option = "nostrictatime",
+		.desc = "Use the kernel's default policy",
+	},{
+		.option = "suid",
+		.desc = "Honor set-user-ID and set-group-ID bits",
+	},{
+		.option = "nosuid",
+		.desc = "Ignore set-user-ID and set-group-ID bits",
+	},{
+		.option = "users",
+		.desc = "Allow arbitrary users to mount the filesystem",
+	},
+};
+
+static struct form_option *
+ops_table(int *count,const char *match,int *defidx,char ***selarray,int *selections,
+		const struct form_option *flags,unsigned fcount){
+	struct form_option *fo = NULL;
+	int z = 0;
+
+	*count = 0;
+	*defidx = -1;
+	if((*count = fcount) == 0){
+		goto err;
+	}
+	if((fo = malloc(sizeof(*fo) * *count)) == NULL){
+		goto err;
+	}
+	while(z < *count){
+		const char *key = flags[z].option;
+
+		if((fo[z].desc = strdup(flags[z].desc)) == NULL){
+			goto err;
+		}
+		if((fo[z].option = strdup(key)) == NULL){
+			free(fo[z].desc);
+			goto err;
+		}
+		if(match && strcmp(match,fo[z].option) == 0){
+			int zz;
+
+			*defidx = z;
+			for(zz = 0 ; selections && zz < *selections ; ++zz){
+				if(strcmp(key,(*selarray)[zz]) == 0){
+					free((*selarray)[zz]);
+					(*selarray)[zz] = NULL;
+					if(zz < *selections - 1){
+						memmove(&(*selarray)[zz],&(*selarray)[zz + 1],sizeof(**selarray) * (*selections - 1 - zz));
+					}
+					--*selections;
+					zz = -1;
+					break;
+				}
+			}
+			if(zz >= *selections){
+				typeof(*selarray) tmp;
+
+				if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+					free(fo[zz].option);
+					free(fo[zz].desc);
+					goto err;
+				}
+				*selarray = tmp;
+				(*selarray)[*selections] = strdup(match);
+				++*selections;
+			}
+		}
+		++z;
+	}
+	*defidx = (*defidx + 1) % *count;
+	return fo;
+
+err:
+	while(z--){
+		free(fo[z].option);
+		free(fo[z].desc);
+	}
+	free(fo);
+	return NULL;
+}
+
 static void
 mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
 	struct form_option *ops_agg;
@@ -2230,8 +2343,13 @@ mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
 	ops_agg = NULL;
 	opcount = 0;
 	defidx = 1;
-		raise_checkform("set mount options",mountop_callback,ops_agg,
-			opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollidx);
+	if((ops_agg = ops_table(&opcount,op,&defidx,&selarray,&selections,
+			common_fsops,sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
+		// FIXME free
+		return;
+	}
+	raise_checkform("set mount options",mountop_callback,ops_agg,
+		opcount,defidx,selarray,selections,MOUNTOPS_TEXT,scrollidx);
 	if(blockobj_unpartitionedp(b)){
 		mmount(b->d,targ,mntops);
 		redraw_adapter(current_adapter);
@@ -2286,13 +2404,18 @@ targpoint_callback(const char *path){
 		locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
 		return;
 	}else{
-		unsigned opcount = 0;
-		unsigned defidx = 0;
+		int opcount = 0,defidx = 0;
 		ops_agg = NULL;
 		char **selarray = NULL;
-		unsigned selections = 0;
+		int selections = 0;
+
+		if((ops_agg = ops_table(&opcount,NULL,&defidx,&selarray,&selections,
+				common_fsops,sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
+			// FIXME free
+			return;
+		}
 		raise_checkform("set mount options",mountop_callback,ops_agg,
-			opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollidx);
+			opcount,defidx,selarray,selections,MOUNTOPS_TEXT,scrollidx);
 		return;
 	}
 	locked_diag("I'm confused. Aborting.\n");
