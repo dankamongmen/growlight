@@ -951,38 +951,36 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	char buf[ex - sx + 2];
 	const zobj *z;
 	int off = sx;
+	uintmax_t zs;
 
+	zs = d->mntsize ? d->mntsize :
+		(last_usable_sector(d) - first_usable_sector(d) + 1) * bo->d->logsec;
 	if(d->mnttype){
 		int co = mnttype_aggregablep(d->mnttype) ?
 			COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
 		assert(wattrset(w,A_BOLD|co) == OK);
-		if(d->mntsize){
-			qprefix(d->mntsize,1,pre,sizeof(pre),1);
-		}else{
-			qprefix(d->size,1,pre,sizeof(pre),1);
-		}
-		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s%ls%s%lsat %s ",
-			d->mntsize ? pre : "",
-			d->mntsize ? " " : "",
+		qprefix(zs,1,pre,sizeof(pre),1);
+		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%ls%s%ls%s%s%sat %s ",
 			d->label ? "" : "nameless ",
 			d->mnttype,
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ",
+			zs ? "(" : "", zs ? pre : "", zs ? ")" : "",
 			d->mnt.list[0]) >= (int)(sizeof(wbuf))){
-			if(swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s%ls%s%ls",
-				d->mntsize ? pre : "",
-				d->mntsize ? " " : "",
+			if(swprintf(wbuf,sizeof(wbuf),L" %s%s%ls%s%ls%s%s%s ",
 				d->label ? "" : "nameless ",
 				d->mnttype,
 				d->label ? L" “" : L"",
 				d->label ? d->label : "",
-				d->label ? L"” " : L" ") >= (int)(sizeof(wbuf))){
-				if((unsigned)swprintf(wbuf,sizeof(wbuf),L" %s%s%s ",
-					d->mntsize ? pre : "",
-					d->mntsize ? " " : "",
-					d->mnttype) >= sizeof(wbuf)){
+				d->label ? L"” " : L" ",
+				zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
+				) >= (int)(sizeof(wbuf))){
+				if((unsigned)swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s ",
+					d->mnttype,
+					zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
+					) >= sizeof(wbuf)){
 					assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",d->mnttype) < sizeof(wbuf));
 				}
 			}
@@ -1023,7 +1021,6 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	mountco = MOUNT_COLOR0;
 	do{
 		unsigned ch,och;
-		uintmax_t zs;
 		wchar_t rep;
 
 		wbuf[0] = L'\0';

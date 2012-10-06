@@ -553,6 +553,20 @@ string_included_p(const stringlist *sl,const char *s){
 }
 
 static inline int
+add_string(stringlist *sl,const char *s){
+	char **tmp;
+
+	if((tmp = realloc(sl->list,sizeof(*sl->list) * (sl->count + 1))) == NULL){
+		return -1;
+	}
+	sl->list = tmp;
+	if((sl->list[sl->count++] = strdup(s)) == NULL){
+		return -1;
+	}
+	return 0;
+}
+
+static inline int
 add_string_exclusive(stringlist *sl,const char *s){
 	char **tmp;
 

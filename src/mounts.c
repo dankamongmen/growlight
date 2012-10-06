@@ -231,10 +231,10 @@ int parse_mounts(const glightui *gui,const char *fn){
 			free(fs);
 		}
 		fs = NULL;
-		if(add_string_exclusive(&d->mnt,mnt)){
+		if(add_string(&d->mnt,mnt)){
 			goto err;
 		}
-		if(add_string_exclusive(&d->mntops,ops)){
+		if(add_string(&d->mntops,ops)){
 			goto err;
 		}
 		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
