@@ -1375,6 +1375,9 @@ case LAYOUT_ZPOOL:
 	}
 
 	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
+	if(selected){
+		wattron(rb->win,A_REVERSE);
+	}
 	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
 		mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
@@ -1391,6 +1394,9 @@ case LAYOUT_ZPOOL:
 	}
 	attr = A_BOLD | COLOR_PAIR(DBORDER_COLOR);
 	wattrset(rb->win,attr);
+	if(selected){
+		wattron(rb->win,A_REVERSE);
+	}
 	if(line + !!topp >= 1){
 		mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
 	}
