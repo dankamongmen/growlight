@@ -25,6 +25,9 @@ int make_raidz3(const char *,char * const *,int);
 // Make a zpool from a single device (not recommended)
 int make_zfs(const char *,const struct mkfsmarshal *);
 
+// Remount a zfs
+int mount_zfs(device *,const char *,unsigned,const void *);
+
 #ifdef __cplusplus
 }
 #endif

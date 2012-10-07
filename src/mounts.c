@@ -11,6 +11,7 @@
 #include <sys/statvfs.h>
 
 #include "fs.h"
+#include "zfs.h"
 #include "mmap.h"
 #include "mounts.h"
 #include "growlight.h"
@@ -272,6 +273,9 @@ int mmount(device *d,const char *targ,unsigned mntops,const void *data){
 	if(!d->mnttype){
 		diag("%s does not have a filesystem signature\n",d->name);
 		return -1;
+	}
+	if(strcmp(d->mnttype,"zfs") == 0){
+		return mount_zfs(d,targ,mntops,data);
 	}
 	if(mnttype_aggregablep(d->mnttype)){
 		diag("not a mountable filesystem: %s \n",d->mnttype);
