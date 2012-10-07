@@ -1118,8 +1118,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		while(ch--){
 			cchar_t crep[] = { { .attr = 0, .chars[0] = rep, }, };
 			mvwadd_wch(w,y,off,crep);
-			if(++off >= ex - z->following){
-				off = ex - z->following - 1;
+			if(++off > ex - z->following){
+				off = ex - z->following;
 				break;
 			}
 		}
