@@ -21,10 +21,15 @@ int cryptondev(device *d){
 	params.hash = "sha1";
 	if(crypt_format(cctx,CRYPT_LUKS1,"aes","xts-plain64",NULL,NULL,256 / CHAR_BIT,&params)){
 		diag("Couldn't format LUKS on %s\n",d->name);
+		crypt_free(cctx);
 		return -1;
 	}
-	// FIXME still need to set up keyslots and activate, including
-	// acquisition of a passphrase
+	// FIXME acquire a real passphrase!
+	if(crypt_keyslot_add_by_volume_key(cctx,CRYPT_ANY_SLOT,NULL,0,"r00tme",6) < 0){
+		diag("Couldn't open LUKS on %s\n",d->name);
+		crypt_free(cctx);
+		return -1;
+	}
 	crypt_free(cctx);
 	return 0;
 }
