@@ -20,6 +20,14 @@ Dependencies:
  - mkswap(8) from util-linux
  - badblocks(8), mkfs.ext4(8), mkfs.ext3(8), mkfs.ext2(8) from e2fsprogs
 
+Kernel options:
+
+ - CONFIG_DM_CRYPT (for device mapper encrypt aka LUKS)
+ - CONFIG_MD_RAID* (for MDRAID)
+ - CONFIG_MSDOS_PARTITION (for msdos partition tables)
+ - CONFIG_EFI_PARTITION (for GPT partition tables)
+ ... almost certainly more
+
 Build-only dependencies:
 
  - xsltproc (tested with 20800/10126/815)
