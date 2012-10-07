@@ -5060,9 +5060,9 @@ kill_filesystem(void){
 		locked_diag("Filesystems cannot be wiped from empty space");
 		return;
 	}
-	if(b->zone->p && !b->zone->p->mnttype){
+	if(b->zone && b->zone->p && !b->zone->p->mnttype){
 		locked_diag("No filesystem signature on %s\n",b->zone->p->name);
-	}else if(!b->zone->p && !b->d->mnttype){
+	}else if(!b->zone && !b->d->mnttype){
 		locked_diag("No filesystem signature on %s\n",b->d->name);
 	}else{
 		confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
