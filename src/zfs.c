@@ -397,5 +397,10 @@ int mount_zfs(device *d,const char *targ,unsigned mntops,const void *data){
 		diag("Invalid arguments to zfs mount: %u %p\n",mntops,data);
 		return -1;
 	}
-	return vspopen_drain("zfs set mountpoint=%s %s",targ,d->name);
+	vspopen_drain("zfs unmount %s",d->name); // FIXME
+	if(vspopen_drain("zfs set mountpoint=%s %s",targ,d->name)){
+		vspopen_drain("zfs mount %s",d->name);
+		return -1;
+	}
+	return vspopen_drain("zfs mount %s",d->name);
 }
