@@ -390,3 +390,12 @@ int make_raidz3(const char *name,char * const *vdevs,int num){
 int make_zfs(const char *dev,const struct mkfsmarshal *mkm){
 	return vspopen_drain("zpool create -f %s %s",mkm->name,dev);
 }
+
+// Remount a zfs
+int mount_zfs(device *d,const char *targ,unsigned mntops,const void *data){
+	if(mntops || data){
+		diag("Invalid arguments to zfs mount: %u %p\n",mntops,data);
+		return -1;
+	}
+	return vspopen_drain("zfs set mountpoint=%s %s",targ,d->name);
+}
