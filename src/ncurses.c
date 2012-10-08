@@ -56,7 +56,8 @@ static const char MOUNT_TEXT[] =
 
 static const char PTTYPE_TEXT[] =
 "Select a partition table type. GPT is recommended unless you must use tools "
-"and/or hardware which don't understand it.";
+"and/or hardware which don't understand it. Please note that MSDOS partition "
+"tables do not support partitions in excess of 2TB.";
 
 static const char PSPEC_TEXT[] =
 "Specify the new partition size as either a percentage of the containing "
