@@ -97,6 +97,19 @@ create_ntfs(const char *dev,const struct mkfsmarshal *mkm){
 }
 
 static int
+f2fs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+	const char *name = mkm->name;
+
+	if(name == NULL){
+		name = "SprezzaF2FS";
+	}
+	if(vspopen_drain("mkfs.f2fs -l \"%s\" %s",mkm->name,dev)){
+		return -1;
+	}
+	return 0;
+}
+
+static int
 cramfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	const char *name = mkm->name;
 
@@ -387,6 +400,13 @@ static const struct fs {
 		.desc = "Compressed Read-Only Filesystem",
 		.mkfs = cramfs_mkfs,
 		.nameparam = 'n',
+		.uuidset = NULL, // FIXME
+	},
+	{
+		.name = "f2fs",
+		.desc = "Samsung's Flash-Friendly Filesystem (for NAND flash)",
+		.mkfs = f2fs_mkfs,
+		.nameparam = 'l',
 		.uuidset = NULL, // FIXME
 	},
 	{
