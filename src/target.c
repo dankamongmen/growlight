@@ -165,8 +165,7 @@ int dump_targets(FILE *fp){
 			}
 		}
 	}
-	if(fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n"
-			"sys\t\t/sys\t\tsysfs\tnodev,noexec,nosuid\t0\t0\n") < 0){
+	if(fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n") < 0){
 		return -1;
 	}
 	return 0;
