@@ -1906,8 +1906,8 @@ int growlight_stop(void){
 
 	diag("Killing the event thread...\n");
 	r |= kill_event_thread();
-	diag("Closing libblkid...\n");
-	r |= close_blkid();
+	/*diag("Closing libblkid...\n");
+	r |= close_blkid();*/
 	diag("Freeing devtable...\n");
 	free_devtable();
 	if(usepci){
