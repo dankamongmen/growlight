@@ -126,7 +126,7 @@ dump_device_targets(const device *d,FILE *fp){
 			return -1;
 		}
 	}
-	if(d->swapprio){
+	if(d->swapprio != SWAP_INVALID){
 		if(fprintf(fp,"/dev/%s\tnone\t\t%s\n",d->name,d->mnttype) < 0){
 			return -1;
 		}
