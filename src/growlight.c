@@ -2189,7 +2189,7 @@ int prepare_bios_boot(device *d){
 		// FIXME restore this once we can set flags in UI!
 		// FIXME return -1;
 	}
-	if(write_postbase_hook("#!/bin/sh\nset -e\napt-install grub-pc\n"
+	if(write_postbase_hook("#!/bin/sh\nset -e\napt-install grub-pc memtest86+\n"
 		"in-target grub-install --boot-directory=/boot/grub --no-floppy /dev/%s\n",
 		d->name)){
 		return -1;
