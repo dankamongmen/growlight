@@ -3566,7 +3566,6 @@ static const wchar_t *helps[] = {
 	L"'E': view mounts / targets    'z': modify aggregate",
 	L"'A': create aggregate         'Z': destroy aggregate",
 	L"'-': collapse adapter         '+': expand adapter",
-	L"'⏎Enter': browse adapter      '⌫BkSpc': leave adapter browser",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
 	L"'⇞PageUp': previous adapter   ⇟PageDown': next adapter",
 	//L"'/': search",
@@ -4230,6 +4229,7 @@ use_prev_device(void){
 		return;
 	}
 	if(rb->selected == NULL || rb->selected->prev == NULL){
+		locked_diag("Press PageUp to go to the previous adapter");
 		return;
 	}
 	delta = -device_lines(rb->as->expansion,rb->selected->prev);
@@ -4248,6 +4248,7 @@ use_next_device(void){
 		return;
 	}
 	if(rb->selected == NULL || rb->selected->next == NULL){
+		locked_diag("Press PageDown to go to the previous adapter");
 		return;
 	}
 	delta = device_lines(rb->as->expansion,rb->selected);
@@ -6171,16 +6172,6 @@ handle_ncurses_input(WINDOW *w){
 				unlock_ncurses();
 				break;
 			}
-			case KEY_BACKSPACE: case KEY_ESC:
-				lock_ncurses();
-				deselect_adapter_locked();
-				unlock_ncurses();
-				break;
-			case '\r': case '\n': case KEY_ENTER:
-				lock_ncurses();
-				select_adapter();
-				unlock_ncurses();
-				break;
 			case 12: // CTRL+L FIXME
 				lock_ncurses();
 				unlock_ncurses();
@@ -6216,21 +6207,13 @@ handle_ncurses_input(WINDOW *w){
 			}
 			case KEY_UP: case 'k':{
 				lock_ncurses();
-				if(!selection_active()){
-					use_prev_controller(w);
-				}else{
-					use_prev_device();
-				}
+				use_prev_device();
 				unlock_ncurses();
 				break;
 			}
 			case KEY_DOWN: case 'j':{
 				lock_ncurses();
-				if(!selection_active()){
-					use_next_controller(w);
-				}else{
-					use_next_device();
-				}
+				use_next_device();
 				unlock_ncurses();
 				break;
 			}
