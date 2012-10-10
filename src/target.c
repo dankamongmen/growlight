@@ -110,6 +110,11 @@ int finalize_target(void){
 }
 
 // FIXME prefer labels or UUIDs for identification!
+static const char *
+fstab_name(const device *d){
+	return d->name;
+}
+
 static int
 dump_device_targets(const device *d,FILE *fp){
 	unsigned z;
@@ -118,7 +123,7 @@ dump_device_targets(const device *d,FILE *fp){
 		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target)) == 0){
 			continue;
 		}
-		if(fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",d->name,
+		if(fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",fstab_name(d),
 				d->mnt.list[z] + strlen(growlight_target) -
 				 !strcmp(d->mnt.list[z],growlight_target),
 				d->mnttype,d->mntops.list[z],
@@ -127,7 +132,7 @@ dump_device_targets(const device *d,FILE *fp){
 		}
 	}
 	if(d->swapprio != SWAP_INVALID){
-		if(fprintf(fp,"/dev/%s\tnone\t\t%s\n",d->name,d->mnttype) < 0){
+		if(fprintf(fp,"/dev/%s\tnone\t\t%s\n",fstab_name(d),d->mnttype) < 0){
 			return -1;
 		}
 	}
@@ -149,7 +154,7 @@ int dump_targets(FILE *fp){
 
 			if(d->layout == LAYOUT_NONE && d->blkdev.removable){
 				// FIXME differentiate USB etc
-				if(fprintf(fp,"/dev/%s\t%s\t%s\t%s\t0\t0\n",d->name,
+				if(fprintf(fp,"/dev/%s\t%s\t%s\t%s\t0\t0\n",fstab_name(d),
 						"/media/cdrom","auto","noauto,user") < 0){
 					return -1;
 				}
