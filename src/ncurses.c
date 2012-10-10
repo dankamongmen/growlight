@@ -6590,7 +6590,7 @@ update_blockobj(blockobj *b,device *d){
 	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
-			if((z = create_zobj(z,zones,sector,p->partdev.fsector - 1,NULL,REP_EMPTY)) == NULL){
+			if((z = create_zobj(z,0,sector,p->partdev.fsector - 1,NULL,REP_EMPTY)) == NULL){
 				goto err;
 			}
 			++zones;
@@ -6604,14 +6604,14 @@ update_blockobj(blockobj *b,device *d){
 	if(d->logsec && d->size){
 		if(sector < d->size / d->logsec){
 			if(sector < last_usable_sector(d) + 1){
-				if((z = create_zobj(z,zones,sector,last_usable_sector(d),NULL,REP_EMPTY)) == NULL){
+				if((z = create_zobj(z,0,sector,last_usable_sector(d),NULL,REP_EMPTY)) == NULL){
 					goto err;
 				}
 				++zones;
 				sector = last_usable_sector(d) + 1;
 			}
 			if(sector < d->size / d->logsec){
-				if((z = create_zobj(z,zones,sector,d->size / d->logsec - 1,NULL,REP_METADATA)) == NULL){
+				if((z = create_zobj(z,0,sector,d->size / d->logsec - 1,NULL,REP_METADATA)) == NULL){
 					goto err;
 				}
 				++zones;
@@ -6624,17 +6624,19 @@ update_blockobj(blockobj *b,device *d){
 	if(zonesel >= zones){
 		zonesel = zones ? zones - 1 : 0;
 	}
-	zonesel = zones - zonesel;
 	if( (lastz = z) ){
 		z->following = 0;
+		// If we hadn't selected one before, select the first
+		// empty space (where we can make a partition)
 		while(z->prev){
-			if(zonesel-- == 1){
+			if((zonesel == z->zoneno) && (zonesel ||
+					(!zonesel && !z->p && z->rep == REP_EMPTY))){
 				b->zone = z;
 			}
 			z->prev->following = z->following + 1;
 			z = z->prev;
 		}
-		if(zonesel-- == 1){
+		if((zonesel == z->zoneno) && (zonesel || (!zonesel && !z->p && z->rep == REP_EMPTY))){
 			b->zone = z;
 		}
 		z->prev = lastz;
