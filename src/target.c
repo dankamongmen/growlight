@@ -147,15 +147,15 @@ int dump_targets(FILE *fp){
 		for(d = c->blockdevs ; d ; d = d->next){
 			const device *p;
 
-			if(dump_device_targets(d,fp)){
-				return -1;
-			}
-			if(d->layout == LAYOUT_NONE){
-				if(d->blkdev.removable){
-					if(fprintf(fp,"/dev/%s\t%s\t%s\t%s\t0\t0\n",d->name,
-							"/media/cdrom","auto","noauto,user") < 0){
-						return -1;
-					}
+			if(d->layout == LAYOUT_NONE && d->blkdev.removable){
+				// FIXME differentiate USB etc
+				if(fprintf(fp,"/dev/%s\t%s\t%s\t%s\t0\t0\n",d->name,
+						"/media/cdrom","auto","noauto,user") < 0){
+					return -1;
+				}
+			}else{
+				if(dump_device_targets(d,fp)){
+					return -1;
 				}
 			}
 			for(p = d->parts ; p ; p = p->next){
