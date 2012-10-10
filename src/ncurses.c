@@ -6555,9 +6555,9 @@ free_zchain(zobj **z){
 // b->zone->p: partition
 static void
 update_blockobj(blockobj *b,device *d){
+	zobj *z,*lastz,*firstchoice;
 	unsigned zones,zonesel;
 	uintmax_t sector;
-	zobj *z,*lastz;
 	device *p;
 
 	if(blockobj_unloadedp(b)){
@@ -6621,6 +6621,7 @@ update_blockobj(blockobj *b,device *d){
 	}
 	free_zchain(&b->zchain);
 	b->zone = NULL;
+	firstchoice = NULL;
 	if(zonesel >= zones){
 		zonesel = zones ? zones - 1 : 0;
 	}
@@ -6632,6 +6633,8 @@ update_blockobj(blockobj *b,device *d){
 			if((zonesel == z->zoneno) && (zonesel ||
 					(!zonesel && !z->p && z->rep == REP_EMPTY))){
 				b->zone = z;
+			}else if(z->zoneno){
+				firstchoice = z;
 			}
 			z->prev->following = z->following + 1;
 			z = z->prev;
@@ -6641,6 +6644,11 @@ update_blockobj(blockobj *b,device *d){
 		}
 		z->prev = lastz;
 		lastz->next = z;
+	}
+	if(b->zone == NULL){
+		if((b->zone = firstchoice) == NULL){
+			b->zone = z;
+		}
 	}
 	b->zchain = z;
 	return;
