@@ -2,11 +2,11 @@ LANG=C
 LC_ALL=c
 
 AM_CFLAGS=-Wall -O2 -W -Wshadow -Werror -Wextra -fvisibility=hidden \
-	$(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES)
+	$(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES) $(ZFS_CFLAGS)
 AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
 AM_CC=$(PTHREAD_CC)
 
-LIBS+=$(PTHREAD_LIBS) $(OPENSSL_LIBS)
+LIBS+=$(PTHREAD_LIBS) $(OPENSSL_LIBS) $(ZFS_LIBS)
 
 dist_man_MANS = growlight-readline.8 growlight-curses.8
 
