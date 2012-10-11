@@ -115,8 +115,7 @@ fstab_name(const device *d){
 	return d->name;
 }
 
-static int
-dump_device_targets(const device *d,FILE *fp){
+int dump_device_targets(const device *d,FILE *fp){
 	unsigned z;
 
 	for(z = 0 ; z < d->mnt.count ; ++z){
