@@ -347,8 +347,8 @@ static const struct fs {
 	{
 		.name = "zol",
 		.desc = "LLNL's ZoL (ZFS on Linux)",
-		.mkfs = make_zfs,
-		.nameparam = ' ',
+		//.mkfs = make_zfs,
+		//.nameparam = ' ',
 		.uuidset = NULL, // FIXME
 	},
 	{
