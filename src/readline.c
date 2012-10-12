@@ -1399,9 +1399,16 @@ map(wchar_t * const *args,const char *arghelp){
 	device *d;
 
 	if(!args[1]){
-		if(dump_targets(stdout) < 0){
+		char *s;
+
+		if((s = dump_targets()) == NULL){
 			return -1;
 		}
+		if(printf("%s",s) < 0){
+			free(s);
+			return -1;
+		}
+		free(s);
 		return 0;
 	}
 	if(!args[2] || !args[3] || args[4]){

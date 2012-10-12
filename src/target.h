@@ -11,7 +11,7 @@ struct device;
 
 int set_target(const char *);
 int finalize_target(void);
-int dump_targets(FILE *);
+char *dump_targets(void);
 
 // don't muck around with me externally. use set_target() and get_target().
 extern const char *growlight_target;

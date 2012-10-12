@@ -65,9 +65,9 @@ int set_target(const char *path){
 }
 
 int finalize_target(void){
-	char pathext[PATH_MAX + 1];
+	char pathext[PATH_MAX + 1],*fstab;
 	FILE *fp;
-	int fd;
+	int fd,r;
 
 	if(!growlight_target){
 		diag("No target is defined\n");
@@ -95,11 +95,18 @@ int finalize_target(void){
 		close(fd);
 		return -1;
 	}
-	if(dump_targets(fp)){
+	if((fstab = dump_targets()) == NULL){
 		diag("Couldn't write targets to %s/etc/fstab (%s?)\n",growlight_target,strerror(errno));
 		close(fd);
 		return -1;
 	}
+	if((r = fprintf(fp,"%s",fstab)) < 0 || (size_t)r < strlen(fstab)){
+		diag("Couldn't write data to %s/etc/fstab (%s?)\n",growlight_target,strerror(errno));
+		free(fstab);
+		close(fd);
+		return -1;
+	}
+	free(fstab);
 	if(fclose(fp)){
 		diag("Couldn't close FILE * from %d (%s?)\n",fd,strerror(errno));
 		close(fd);
@@ -115,8 +122,11 @@ fstab_name(const device *d){
 	return d->name;
 }
 
-int dump_device_targets(const device *d,FILE *fp){
+static char *
+dump_device_targets(char *s,const device *d){
 	unsigned z;
+	char *tmp;
+	int r;
 
 	// ZFS maintains its own mountpoint tracking, external to /etc/fstab
 	if(strcmp(d->mnttype,"zfs") == 0){
@@ -126,24 +136,40 @@ int dump_device_targets(const device *d,FILE *fp){
 		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target)) == 0){
 			continue;
 		}
-		if(fprintf(fp,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",fstab_name(d),
+		r = snprintf(NULL,0,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",fstab_name(d),
 				d->mnt.list[z] + strlen(growlight_target) -
 				 !strcmp(d->mnt.list[z],growlight_target),
 				d->mnttype,d->mntops.list[z],
-				strcmp(d->mnt.list[z],growlight_target) ? 2 : 1) < 0){
-			return -1;
+				strcmp(d->mnt.list[z],growlight_target) ? 2 : 1);
+		if((tmp = realloc(s,sizeof(*s) * (strlen(s) + r + 1))) == NULL){
+			goto err;
 		}
+		s = tmp;
+		sprintf(s + strlen(s),"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",fstab_name(d),
+				d->mnt.list[z] + strlen(growlight_target) -
+				 !strcmp(d->mnt.list[z],growlight_target),
+				d->mnttype,d->mntops.list[z],
+				strcmp(d->mnt.list[z],growlight_target) ? 2 : 1);
 	}
 	if(d->swapprio != SWAP_INVALID){
-		if(fprintf(fp,"/dev/%s\tnone\t\t%s\n",fstab_name(d),d->mnttype) < 0){
-			return -1;
+		r = snprintf(NULL,0,"/dev/%s\tnone\t\t%s\n",fstab_name(d),d->mnttype);
+		if((tmp = realloc(s,sizeof(*s) * (strlen(s) + r + 1))) == NULL){
+			goto err;
 		}
+		s = tmp;
+		sprintf(s + strlen(s),"/dev/%s\tnone\t\t%s\n",fstab_name(d),d->mnttype);
 	}
-	return 0;
+	return s;
+
+err:
+	return NULL;
 }
 
-int dump_targets(FILE *fp){
+char *dump_targets(void){
+	char *out = NULL,*tmp;
 	const controller *c;
+	size_t off = 0;
+	int z;
 
 	if(targfd < 0){
 		return 0;
@@ -157,26 +183,44 @@ int dump_targets(FILE *fp){
 
 			if(d->layout == LAYOUT_NONE && d->blkdev.removable){
 				// FIXME differentiate USB etc
-				if(fprintf(fp,"/dev/%s\t%s\t%s\t%s\t0\t0\n",fstab_name(d),
-						"/media/cdrom","auto","noauto,user") < 0){
-					return -1;
+				z = snprintf(NULL,0,"/dev/%s\t%s\t%s\t%s\t0\t0\n",fstab_name(d),
+						"/media/cdrom","auto","noauto,user");
+				if((tmp = realloc(out,sizeof(*out) * (z + off + 1))) == NULL){
+					goto err;
 				}
+				out = tmp;
+				sprintf(out + off,"/dev/%s\t%s\t%s\t%s\t0\t0\n",fstab_name(d),
+						"/media/cdrom","auto","noauto,user");
+				off += z;
 			}else{
-				if(dump_device_targets(d,fp)){
-					return -1;
+				if((tmp = dump_device_targets(out,d)) == NULL){
+					goto err;
 				}
+				out = tmp;
+				off += strlen(out + off);
 			}
 			for(p = d->parts ; p ; p = p->next){
-				if(dump_device_targets(p,fp)){
-					return -1;
+				if((tmp = dump_device_targets(out,p)) == NULL){
+					goto err;
 				}
+				out = tmp;
+				off += strlen(out + off);
 			}
 		}
 	}
-	if(fprintf(fp,"proc\t\t/proc\t\tproc\tdefaults\t0\t0\n") < 0){
-		return -1;
+#define PROCLINE "proc\t\t/proc\t\tproc\tdefaults\t0\t0\n"
+	if((tmp = realloc(out,sizeof(*out) * (off + strlen(PROCLINE) + 1))) == NULL){
+		goto err;
 	}
-	return 0;
+	out = tmp;
+	sprintf(out + off,"%s",PROCLINE);
+	off += strlen(PROCLINE);
+#undef PROCLINE
+	return out;
+
+err:
+	free(out);
+	return NULL;
 }
 
 int mount_target(void){
