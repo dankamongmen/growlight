@@ -4560,6 +4560,7 @@ static int
 map_details(WINDOW *hw){
 	const controller *c;
 	int y,rows,cols;
+	char *fstab;
 
 	cols = getmaxx(hw);
 	rows = getmaxy(hw) - 1;
@@ -4582,8 +4583,13 @@ map_details(WINDOW *hw){
 	if(++y >= rows){
 		return -1;
 	}
-	// First we list the targets
 	wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
+	// First we list the target fstab, and then the targets
+	if( (fstab = dump_targets()) ){
+			// FIXME
+			mvwprintw(hw,y++,START_COL,"%s",fstab);
+		free(fstab);
+	}
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
@@ -4622,6 +4628,7 @@ map_details(WINDOW *hw){
 			}
 		}
 	}
+
 	while(y < rows){
 		mvwhline(hw,y++,1,' ',cols - 2);
 	}

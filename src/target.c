@@ -129,6 +129,9 @@ dump_device_targets(char *s,const device *d){
 	int r;
 
 	// ZFS maintains its own mountpoint tracking, external to /etc/fstab
+	if(!d->mnttype){
+		return 0;
+	}
 	if(strcmp(d->mnttype,"zfs") == 0){
 		return 0;
 	}
@@ -166,13 +169,18 @@ err:
 }
 
 char *dump_targets(void){
-	char *out = NULL,*tmp;
 	const controller *c;
-	size_t off = 0;
+	char *out,*tmp;
+	size_t off;
 	int z;
 
+	off = 0;
+	if((out = malloc(sizeof(*out) * (off + 1))) == NULL){
+		return NULL;
+	}
+	out[0] = '\0';
 	if(targfd < 0){
-		return 0;
+		return out;
 	}
 	// FIXME allow various naming schemes
 	for(c = get_controllers() ; c ; c = c->next){
