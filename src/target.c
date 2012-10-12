@@ -118,6 +118,10 @@ fstab_name(const device *d){
 int dump_device_targets(const device *d,FILE *fp){
 	unsigned z;
 
+	// ZFS maintains its own mountpoint tracking, external to /etc/fstab
+	if(strcmp(d->mnttype,"zfs") == 0){
+		return 0;
+	}
 	for(z = 0 ; z < d->mnt.count ; ++z){
 		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target)) == 0){
 			continue;
