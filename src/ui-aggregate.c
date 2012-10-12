@@ -136,14 +136,13 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 			char ***selarray,int *selections,struct form_option *fo){
 	struct form_option *tmp;
 	char *key,*desc;
+	int z;
 
 	if((key = strdup(d->name)) == NULL){
 		return NULL;
 	}
 	if(match){
 		if(strcmp(key,match) == 0){
-			int z;
-
 			*defidx = *count;
 			for(z = 0 ; z < *selections ; ++z){
 				if(strcmp(key,(*selarray)[z]) == 0){
@@ -189,8 +188,14 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 		return NULL;
 	}
 	fo = tmp;
-	fo[*count].option = key;
-	fo[*count].desc = desc;
+	for(z = 0 ; z < *count ; ++z){
+		if(strcmp(desc,fo[z].desc) < 0){
+			memmove(&fo[z + 1],&fo[z],sizeof(*fo) * (*count - z));
+			break;
+		}
+	}
+	fo[z].option = key;
+	fo[z].desc = desc;
 	++*count;
 	return fo;
 }
