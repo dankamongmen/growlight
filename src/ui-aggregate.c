@@ -66,12 +66,15 @@ destroy_agg_forms(void){
 
 static struct form_option *
 agg_table(int *count,const char *match,int *defidx){
-	struct form_option *fo = NULL,*tmp;
 	const aggregate_type *types;
+	struct form_option *fo;
 	int z;
 
 	*defidx = -1;
 	if((types = get_aggregate_types(count)) == NULL){
+		return NULL;
+	}
+	if((fo = malloc(sizeof(*fo) * *count)) == NULL){
 		return NULL;
 	}
 	for(z = 0 ; z < *count ; ++z){
@@ -93,12 +96,6 @@ agg_table(int *count,const char *match,int *defidx){
 			free(key);
 			goto err;
 		}
-		if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
-			free(key);
-			free(desc);
-			goto err;
-		}
-		fo = tmp;
 		fo[z].option = key;
 		fo[z].desc = desc;
 	}
