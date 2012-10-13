@@ -23,7 +23,7 @@ bin_PROGRAMS=growlight-readline
 bin_PROGRAMS+=growlight-curses
 
 common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
-	src/libblkid.c src/libblkid.h \
+	src/libblkid.c src/libblkid.h src/apm.c src/apm.h \
 	src/mdadm.c src/mdadm.h src/sysfs.c src/sysfs.h \
 	src/mounts.c src/mounts.h src/mmap.c src/mmap.h src/dmi.c src/dmi.h \
 	src/target.c src/target.h src/sg.c src/sg.h src/ptable.c src/ptable.h \

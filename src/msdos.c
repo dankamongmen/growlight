@@ -54,7 +54,7 @@ initialize_msdos(msdos_header *mh){
 	return 0;
 }
 
-// Write out a msdos and its backup on the device represented by fd, using
+// Write out a msdos partition map on the device represented by fd, using
 // lbasize-byte LBA. We will write to the first sector only. We can either zero
 // it all out, or create a new empty msdos. Set realdata not equal to 0 to
 // perform the latter.

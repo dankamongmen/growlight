@@ -10,6 +10,7 @@
 #include <linux/blkpg.h>
 
 #include "mbr.h"
+#include "apm.h"
 #include "gpt.h"
 #include "wchar.h"
 #include "popen.h"
@@ -88,6 +89,19 @@ static const struct ptable {
 		.code = code_msdos,
 		.first = first_msdos,
 		.last = last_msdos,
+	}, {
+		.name = "apm",
+		.desc = "Apple Partition Map",
+		.make = new_apm,
+		.zap = zap_apm,
+		.add = NULL,
+		.del = NULL,
+		.pname = NULL,
+		.uuid = NULL,
+		.flag = NULL,
+		.code = NULL,
+		.first = first_apm,
+		.last = last_apm,
 	}, {
 		.name = "mdp",
 		.desc = "Linux MD partitioning",
