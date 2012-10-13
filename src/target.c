@@ -133,24 +133,28 @@ dump_device_targets(char *s,const device *d){
 		return s;
 	}
 	for(z = 0 ; z < d->mnt.count ; ++z){
+		const char *mnt;
+		int dump;
+
 		// Don't write mounts external to the target
 		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
 			continue;
 		}
-		r = snprintf(NULL,0,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",fstab_name(d),
-				d->mnt.list[z] + strlen(growlight_target) -
-				 !strcmp(d->mnt.list[z],growlight_target),
-				d->mnttype,d->mntops.list[z],
-				strcmp(d->mnt.list[z],growlight_target) ? 2 : 1);
+		if(strcmp(d->mnt.list[z],growlight_target) == 0){
+			mnt = "/";
+			dump = 1;
+		}else{
+			mnt = d->mnt.list[z] + strlen(growlight_target);
+			dump = 2;
+		}
+		r = snprintf(NULL,0,"/dev/%s %s %s %s 0 %u\n",fstab_name(d),
+				mnt,d->mnttype,d->mntops.list[z],dump);
 		if((tmp = realloc(s,sizeof(*s) * (strlen(s) + r + 1))) == NULL){
 			goto err;
 		}
 		s = tmp;
-		sprintf(s + strlen(s),"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",fstab_name(d),
-				d->mnt.list[z] + strlen(growlight_target) -
-				 !strcmp(d->mnt.list[z],growlight_target),
-				d->mnttype,d->mntops.list[z],
-				strcmp(d->mnt.list[z],growlight_target) ? 2 : 1);
+		sprintf(s + strlen(s),"/dev/%s %s %s %s 0 %u\n",fstab_name(d),
+				mnt,d->mnttype,d->mntops.list[z],dump);
 	}
 	if(d->swapprio != SWAP_INVALID){
 		r = snprintf(NULL,0,"/dev/%s\tnone\t\t%s\n",fstab_name(d),d->mnttype);
