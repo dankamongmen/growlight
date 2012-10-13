@@ -57,10 +57,7 @@ int set_target(const char *path){
 		return -1;
 	}
 	growlight_target = NULL;
-	if(targfd >= 0){
-		close(targfd);
-		targfd = -1;
-	}
+	unmount_target();
 	return 0;
 }
 
@@ -130,13 +127,14 @@ dump_device_targets(char *s,const device *d){
 
 	// ZFS maintains its own mountpoint tracking, external to /etc/fstab
 	if(!d->mnttype){
-		return 0;
+		return s;
 	}
 	if(strcmp(d->mnttype,"zfs") == 0){
-		return 0;
+		return s;
 	}
 	for(z = 0 ; z < d->mnt.count ; ++z){
-		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target)) == 0){
+		// Don't write mounts external to the target
+		if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
 			continue;
 		}
 		r = snprintf(NULL,0,"/dev/%s\t%s\t\t%s\t%s\t0\t%u\n",fstab_name(d),
@@ -180,6 +178,7 @@ char *dump_targets(void){
 	}
 	out[0] = '\0';
 	if(targfd < 0){
+		out = strdup("NO FSTAB NO TARGFD\n");
 		return out;
 	}
 	// FIXME allow various naming schemes

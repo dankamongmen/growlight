@@ -4576,20 +4576,44 @@ map_details(WINDOW *hw){
 		++y;
 	}
 	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+	// First we list the target fstab, and then the targets
+	// FIXME this is probably multibyte input and needs be handled as such
+	if( (fstab = dump_targets()) ){
+		unsigned pos,linestart;
+
+		pos = 0;
+		linestart = 0;
+		while(fstab[pos]){
+			if(fstab[pos] == '\n'){
+				fstab[pos] = '\0';
+				if(pos != linestart){
+					mvwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
+					if(++y >= rows){
+						return 0;
+					}
+				}
+				linestart = pos + 1;
+			}else if(fstab[pos] == '\t'){
+				fstab[pos] = ' ';
+			}
+			++pos;
+		}
+		if(pos != linestart){
+			mvwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
+			if(++y >= rows){
+				return 0;
+			}
+		}
+		free(fstab);
+	}
 	mvwhline(hw,y,1,' ',cols - 2);
 	mvwprintw(hw,y,1,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
 			FSLABELSIZ,FSLABELSIZ,"Label",
 			"Type","UUID","Bytes","Device");
 	if(++y >= rows){
-		return -1;
+		return 0;
 	}
 	wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
-	// First we list the target fstab, and then the targets
-	if( (fstab = dump_targets()) ){
-			// FIXME
-			mvwprintw(hw,y++,START_COL,"%s",fstab);
-		free(fstab);
-	}
 	for(c = get_controllers() ; c ; c = c->next){
 		const device *d;
 
