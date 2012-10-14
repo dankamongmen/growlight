@@ -1497,6 +1497,9 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 		assert(mvwprintw(w,0,7,"%ls",L"[") != ERR);
 		assert(wcolor_set(w,hcolor,NULL) == OK);
 		assert(waddstr(w,as->c->ident) != ERR);
+		if(as->c->numa_node >= 0){
+			assert(wprintw(w," [%d]",as->c->numa_node) != ERR);
+		}
 		if(as->c->bandwidth){
 			char buf[PREFIXSTRLEN + 1],dbuf[PREFIXSTRLEN + 1];
 

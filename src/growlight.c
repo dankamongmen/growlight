@@ -252,6 +252,13 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			if((unsigned)snprintf(path,sizeof(path),"%s/host0/scsi_host/host0/version_bios",c->sysfs) < sizeof(path)){
 				c->biosver = get_sysfs_string(sysfd,path);
 			}
+			if((unsigned)snprintf(path,sizeof(path),"%s/numa_node",c->sysfs) < sizeof(path)){
+				if(get_sysfs_int(sysfd,path,&c->numa_node) == 0){
+					diag("Numa node %d (%s)\n",c->numa_node,path);
+				}
+			}else{
+				c->numa_node = -1;
+			}
 		}
 		if(c->fwver == NULL && get_bios_version()){
 			c->fwver = strdup(get_bios_version());

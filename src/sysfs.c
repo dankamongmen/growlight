@@ -128,6 +128,41 @@ int get_sysfs_uint(int dirfd,const char *node,unsigned long *b){
 	return 0;
 }
 
+int get_sysfs_int(int dirfd,const char *node,int *b){
+	char *end,buf[512]; // FIXME
+	ssize_t r;
+	long ll;
+	int fd;
+
+	if((fd = openat(dirfd,node,O_RDONLY|O_NONBLOCK|O_CLOEXEC)) < 0){
+		return -1;
+	}
+	if((r = read(fd,buf,sizeof(buf))) <= 0){
+		int e = errno;
+		close(fd);
+		errno = e;
+		return -1;
+	}
+	if((size_t)r >= sizeof(buf) || buf[r - 1] != '\n'){
+		close(fd);
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+	close(fd);
+	buf[r - 1] = '\0';
+	ll = strtol(buf,&end,0);
+	if(ll > INT_MAX){
+		diag("Invalid sysfs int: %s\n",buf);
+		return -1;
+	}
+	*b = ll;
+	if(*end){
+		diag("Malformed sysfs uint: %s\n",buf);
+		return -1;
+	}
+	return 0;
+}
+
 int write_sysfs(const char *name,const char *str){
 	ssize_t w;
 	int fd;

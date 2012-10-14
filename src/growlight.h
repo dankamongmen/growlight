@@ -244,6 +244,7 @@ typedef struct controller {
 		TRANSPORT_USB2,
 		TRANSPORT_USB3,
 	} transport;
+	int numa_node;		// -1: no NUMA in use
 	// Union parameterized on bus type
 	union {
 		struct {
