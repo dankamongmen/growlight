@@ -254,7 +254,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			}
 			if((unsigned)snprintf(path,sizeof(path),"%s/numa_node",c->sysfs) < sizeof(path)){
 				if(get_sysfs_int(sysfd,path,&c->numa_node) == 0){
-					diag("Numa node %d (%s)\n",c->numa_node,path);
+					verbf("Numa node %d (%s)\n",c->numa_node,path);
 				}
 			}else{
 				c->numa_node = -1;
