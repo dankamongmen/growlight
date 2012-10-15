@@ -189,7 +189,7 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 	}
 	fo = tmp;
 	for(z = 0 ; z < *count ; ++z){
-		if(strcmp(desc,fo[z].desc) < 0){
+		if(strcmp(desc,fo[z].desc) > 0){
 			memmove(&fo[z + 1],&fo[z],sizeof(*fo) * (*count - z));
 			break;
 		}
