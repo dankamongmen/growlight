@@ -40,7 +40,7 @@ typedef struct __attribute__ ((packed)) apm_entry {
 	uint32_t reserved3;
 	uint32_t boot_cksum;
 	uint8_t proctype[16];
-	uint8_t reserved4[366];
+	uint8_t reserved4[376];
 } apm_entry;
 
 // Initialize an apple partition map having block 0 starting at |map|, on a
