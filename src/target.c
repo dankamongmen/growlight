@@ -182,7 +182,6 @@ char *dump_targets(void){
 	}
 	out[0] = '\0';
 	if(targfd < 0){
-		out = strdup("NO FSTAB NO TARGFD\n");
 		return out;
 	}
 	// FIXME allow various naming schemes
