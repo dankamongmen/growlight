@@ -16,7 +16,7 @@
 #define DEFAULT_APM_ENTRIES 32
 #define LBA_SIZE 512u
 
-static const uint8_t APM_SIG[2] = { 0x50, 0x4d };
+static const uint8_t APM_SIG[2] = { 0x4d, 0x50 };
 
 // 512-byte apm partition entry. As many of these as can be fit between the
 // Driver Description Block / Driver Description Record (sector 0) and the data

@@ -4251,7 +4251,7 @@ use_next_device(void){
 		return;
 	}
 	if(rb->selected == NULL || rb->selected->next == NULL){
-		locked_diag("Press PageDown to go to the previous adapter");
+		locked_diag("Press PageDown to go to the next adapter");
 		return;
 	}
 	delta = device_lines(rb->as->expansion,rb->selected);
@@ -4578,7 +4578,7 @@ map_details(WINDOW *hw){
 		}
 		++y;
 	}
-	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+	wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
 	// First we list the target fstab, and then the targets
 	// FIXME this is probably multibyte input and needs be handled as such
 	if( (fstab = dump_targets()) ){
@@ -4609,6 +4609,7 @@ map_details(WINDOW *hw){
 		}
 		free(fstab);
 	}
+	wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
 	mvwhline(hw,y,1,' ',cols - 2);
 	mvwprintw(hw,y,1,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
 			FSLABELSIZ,FSLABELSIZ,"Label",
