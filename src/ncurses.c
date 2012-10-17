@@ -314,6 +314,7 @@ static int
 setup_colors(void){
 	int z;
 
+	printf("PAIRS: %d\n",COLOR_PAIRS);
 	if(init_pair(HEADER_COLOR,COLOR_LIGHTPURPLE,-1) == ERR){
 		assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
 	}
@@ -331,7 +332,9 @@ setup_colors(void){
 	}
 	assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) != ERR);
 	assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
-	assert(init_pair(DBORDER_COLOR,COLOR_CRAP,-1) == OK);
+	if(init_pair(DBORDER_COLOR,COLOR_CRAP,-1) == ERR){
+		assert(init_pair(DBORDER_COLOR,COLOR_RED,-1) != ERR);
+	}
 	assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
 	assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,COLOR_BLACK) == OK);
 	assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
