@@ -91,7 +91,7 @@ write_apm(int fd,ssize_t lbasize,uintmax_t sectors,unsigned realdata){
 	void *map;
 
 	assert(pgsize > 0 && pgsize % lbasize == 0);
-	mapsize = lbasize;
+	mapsize = lbasize * (DEFAULT_APM_ENTRIES + 1);
 	mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
 	assert(mapsize % pgsize == 0 && mapsize);
 	map = mmap(NULL,mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
@@ -101,7 +101,8 @@ write_apm(int fd,ssize_t lbasize,uintmax_t sectors,unsigned realdata){
 	}
 	mhead = (apm_entry *)map;
 	if(!realdata){
-		memset(mhead,0,lbasize * 2);
+		memset(mhead,0,lbasize * (sectors > DEFAULT_APM_ENTRIES + 1 ?
+				DEFAULT_APM_ENTRIES + 1 : sectors));
 	}else{
 		if(initialize_apm(mhead,lbasize,sectors,DEFAULT_APM_ENTRIES)){
 			munmap(map,mapsize);
@@ -202,7 +203,7 @@ map_apm(const device *d,size_t *mapsize,int *fd,size_t lbasize){
 		diag("Couldn't open %s (%s?)\n",d->name,strerror(errno));
 		return MAP_FAILED;
 	}
-	*mapsize = lbasize;
+	*mapsize = lbasize * (DEFAULT_APM_ENTRIES + 1);
 	*mapsize = ((*mapsize / pgsize) + !!(*mapsize % pgsize)) * pgsize;
 	assert(*mapsize % pgsize == 0);
 	map = mmap(NULL,*mapsize,PROT_READ|PROT_WRITE,MAP_SHARED,*fd,0);
@@ -244,8 +245,8 @@ uintmax_t first_apm(const device *d){
 	if((map = map_apm(d,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
 		return -1;
 	}
-	if(mapsize < LBA_SIZE * 2){
-		diag("APM size too small (%zu < %u)\n",mapsize,LBA_SIZE * 2);
+	if(mapsize < LBA_SIZE * (DEFAULT_APM_ENTRIES + 1)){
+		diag("APM size too small (%zu < %u)\n",mapsize,LBA_SIZE * (DEFAULT_APM_ENTRIES + 1));
 		unmap_apm(d,map,mapsize,fd);
 		return -1;
 	}
