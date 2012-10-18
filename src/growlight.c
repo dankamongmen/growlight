@@ -472,7 +472,10 @@ alignment(uintmax_t val){
 	uintmax_t a = 1;
 
 	do{
-		a <<= 1u;
+		if((a <<= 1u) == 0){
+			a = 1ull << (sizeof(a) * CHAR_BIT - 1);
+			return a;
+		}
 	}while(val % a == 0);
 	return a >> 1u;
 }
