@@ -61,7 +61,7 @@ static const char PTTYPE_TEXT[] =
 
 static const char PSPEC_TEXT[] =
 "Specify the new partition size as either a percentage of the containing "
-"space, a number of sectors, or a starting and ending sector (inclusive), "
+"space, a number of bytes, or a starting and ending sector (inclusive), "
 "separated by a colon (':').";
 
 static const char FSNAME_TEXT[] =
