@@ -4235,7 +4235,9 @@ use_prev_device(void){
 		return;
 	}
 	if(rb->selected == NULL || rb->selected->prev == NULL){
-		locked_diag("Press PageUp to go to the previous adapter");
+		if(rb->prev){
+			locked_diag("Press PageUp to go to the previous adapter");
+		}
 		return;
 	}
 	delta = -device_lines(rb->as->expansion,rb->selected->prev);
@@ -4254,7 +4256,9 @@ use_next_device(void){
 		return;
 	}
 	if(rb->selected == NULL || rb->selected->next == NULL){
-		locked_diag("Press PageDown to go to the next adapter");
+		if(rb->next){
+			locked_diag("Press PageDown to go to the next adapter");
+		}
 		return;
 	}
 	delta = device_lines(rb->as->expansion,rb->selected);
