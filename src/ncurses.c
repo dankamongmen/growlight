@@ -5104,10 +5104,18 @@ kill_filesystem(void){
 		locked_diag("Filesystems cannot be wiped from empty space");
 		return;
 	}
-	if(b->zone && b->zone->p && !b->zone->p->mnttype){
-		locked_diag("No filesystem signature on %s\n",b->zone->p->name);
-	}else if(!b->zone && !b->d->mnttype){
-		locked_diag("No filesystem signature on %s\n",b->d->name);
+	if(b->zone){
+		if(b->zone->p && !b->zone->p->mnttype){
+			locked_diag("No filesystem signature on %s\n",b->zone->p->name);
+		}else if(b->zone->p->mnt.count){
+			locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n",b->zone->p->name);
+		}
+	}else if(!b->zone){
+		if(!b->d->mnttype){
+			locked_diag("No filesystem signature on %s\n",b->d->name);
+		}else if(b->d->mnt.count){
+			locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n",b->d->name);
+		}
 	}else{
 		confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
 	}
@@ -5455,7 +5463,7 @@ delete_partition(void){
 		return;
 	}
 	if(b->zone->p->mnttype){
-		locked_diag("%s has a valid filesystem signature",b->zone->p->name);
+		locked_diag("%s has a valid filesystem signature. Wipe it with 'w'.",b->zone->p->name);
 		return;
 	}
 	confirm_operation("delete the partition",delete_partition_confirm);
