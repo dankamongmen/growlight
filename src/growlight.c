@@ -1384,9 +1384,15 @@ inotify_fd(void){
 typedef void *(*eventfxn)(void *);
 
 // If fd >= 0, we use it as an inotify fd, and will set *wd to the
-// acquired watch descriptor.
+// acquired watch descriptor. If timeout is set, we will only wait for some
+// finite amount of time for all the threads to complete (see function's end);
+// this is to work around busted hardware, since libblkid doesn't give us a
+// timeout. Theoretically, we oughtn't need a timeout at all, and we should be
+// able to just advance; otherwise, the timeout is buying us anything but
+// hidden bugs. We need address some things before that can happen, though.
+// FIXME
 static inline int
-watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
+watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 	pthread_attr_t attr;
 	struct dirent d,*dp;
 	int r,dfd;
@@ -1441,13 +1447,24 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd){
 		r = -1;
 	}
 	closedir(dir);
+	pthread_attr_destroy(&attr);
 	pthread_mutex_lock(&barrier);
 	while(thrcount){
-		verbf("%s blocks on %u devices...\n",dfp,thrcount);
-		pthread_cond_wait(&barrier_cond,&barrier);
+		struct timespec ts;
+
+		if(timeout){
+			verbf("%s blocks on %u devices for up to 1s\n",dfp,thrcount);
+			ts.tv_sec = 0;
+			ts.tv_nsec = 100000000;
+			pthread_cond_timedwait(&discovery_cond,&lock,&ts);
+			pthread_cond_wait(&barrier_cond,&barrier);
+			break;
+		}else{
+			verbf("%s blocks on %u devices\n",dfp,thrcount);
+			pthread_cond_wait(&barrier_cond,&barrier);
+		}
 	}
 	pthread_mutex_unlock(&barrier);
-	pthread_attr_destroy(&attr);
 	return r;
 }
 
@@ -1870,18 +1887,18 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 			goto err;
 		}
 	}
-	if(watch_dir(fd,SYSROOT,scan_device,&syswd)){
+	if(watch_dir(fd,SYSROOT,scan_device,&syswd,1)){
 		goto err;
 	}
-	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd)){
+	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd,0)){
 		// They won't necessarily have a /dev/md, especially if they
 		// have no md devices. Unfortunately, if we then create one,
 		// they'll have one and it'll need monitoring. FIXME
 	}
-	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd)){
+	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd,0)){
 		// This is OK. Older udevd didn't have /dev/disk/by-path.
 	}
-	if(watch_dir(fd,DEVBYID,scan_devbyid,&byidwd)){
+	if(watch_dir(fd,DEVBYID,scan_devbyid,&byidwd,0)){
 		// This is OK. Older udevd didn't have /dev/disk/by-id.
 	}
 	lock_growlight();
