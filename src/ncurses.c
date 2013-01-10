@@ -2235,14 +2235,14 @@ static const struct form_option common_fsops[] = {
 		.option = "strictatime",
 		.desc = "Full access time updates",
 	},{
+		.option = "nostrictatime",
+		.desc = "Use the kernel's default policy",
+	},{
 		.option = "noauto",
 		.desc = "Do not mount when running 'mount -a'",
 	},{
 		.option = "nofail",
 		.desc = "Don't halt the boot on filesystem error",
-	},{
-		.option = "nostrictatime",
-		.desc = "Use the kernel's default policy",
 	},{
 		.option = "suid",
 		.desc = "Honor set-user-ID and set-group-ID bits",
