@@ -3574,7 +3574,7 @@ static const wchar_t *helps[] = {
 	L"'-': collapse adapter         '+': expand adapter",
 	L"'k'/'↑': navigate up          'j'/'↓': navigate down",
 	L"'⇞PageUp': previous adapter   ⇟PageDown': next adapter",
-	//L"'/': search",
+	L"'/': search                   'p': configure loop device",
 	NULL
 };
 
@@ -6085,7 +6085,7 @@ modify_aggregate(void){
 	locked_diag("Aggregate modification not yet implemented FIXME");
 }
 
-/*static void
+static void
 search_callback(const char *term){
 	if(term == NULL){
 		locked_diag("Search was cancelled");
@@ -6098,7 +6098,12 @@ static void
 start_search(void){
 	raise_str_form("start typing an identifier",search_callback,NULL,
 			SEARCH_TEXT);
-}*/
+}
+
+static void
+configure_loop_dev(void){
+	locked_diag("Loop device configuration not yet implemented FIXME");
+}
 
 static void
 set_label(void){
@@ -6405,12 +6410,18 @@ handle_ncurses_input(WINDOW *w){
 				unlock_ncurses();
 				break;
 			}
-			/*case '/':{
+			case '/':{
 				lock_ncurses();
 				start_search();
 				unlock_ncurses();
 				break;
-			}*/
+			}
+			case 'p':{
+				lock_ncurses();
+				configure_loop_dev();
+				unlock_ncurses();
+				break;
+			}
 			case 'I':{
 				lock_ncurses();
 				unset_target();
