@@ -36,6 +36,10 @@ static const char SEARCH_TEXT[] =
 "names, filesystem names (volume labels), manufacturers, model numbers, and "
 "serial numbers.";
 
+static const char LOOP_TEXT[] =
+"The specified file will be treated as a block device once associated with "
+"the selected loop device.";
+
 static const char PARTFLAG_TEXT[] =
 "Select a collection of flags to set on the partition.";
 
@@ -6101,8 +6105,18 @@ start_search(void){
 }
 
 static void
+loop_callback(const char *term){
+	if(term == NULL){
+		locked_diag("Loop device setup cancelled");
+		return;
+	}
+	locked_diag("Looping not yet implemented FIXME");
+}
+
+static void
 configure_loop_dev(void){
-	locked_diag("Loop device configuration not yet implemented FIXME");
+	raise_str_form("Select a file to loop",loop_callback,NULL,
+			LOOP_TEXT);
 }
 
 static void
