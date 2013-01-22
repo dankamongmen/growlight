@@ -18,6 +18,38 @@ char real_target[PATH_MAX + 1]; // Only used when we set or unset the target
 
 static int targfd = -1; // reference to target root, once defined
 
+static char *
+dump_controller_modules(void){
+	const controller *c;
+	char *out,*tmp;
+	size_t off;
+
+	off = 0;
+	if((out = malloc(sizeof(*out) * (off + 1))) == NULL){
+		return NULL;
+	}
+	out[0] = '\0';
+	if(targfd < 0){
+		return out;
+	}
+	for(c = get_controllers() ; c ; c = c->next){
+		if(strstr(out,c->driver)){
+			continue;
+		}
+		if((tmp = realloc(out,sizeof(*out) * (strlen(c->driver) + off + 1))) == NULL){
+			goto err;
+		}
+		out = tmp;
+		snprintf(out + off,strlen(c->driver) + 1,"%s\n",c->driver);
+		off += strlen(c->driver) + 1;
+	}
+	return out;
+
+err:
+	free(out);
+	return NULL;
+}
+
 static void
 use_new_target(const char *path){
 	const controller *c;
@@ -62,7 +94,7 @@ int set_target(const char *path){
 }
 
 int finalize_target(void){
-	char pathext[PATH_MAX + 1],*fstab;
+	char pathext[PATH_MAX + 1],*fstab,*ftargs;
 	FILE *fp;
 	int fd,r;
 
@@ -74,7 +106,7 @@ int finalize_target(void){
 		diag("No target mappings are defined\n");
 		return -1;
 	}
-	if((unsigned)snprintf(pathext,sizeof(pathext),"%s/etc",growlight_target) >= sizeof(pathext)){
+	if((unsigned)snprintf(pathext,sizeof(pathext),"%s/etc/initramfs-tools",growlight_target) >= sizeof(pathext)){
 		diag("Name too long (%s/etc)\n",growlight_target);
 		return -1;
 	}
@@ -104,6 +136,34 @@ int finalize_target(void){
 		return -1;
 	}
 	free(fstab);
+	if(fclose(fp)){
+		diag("Couldn't close FILE * from %d (%s?)\n",fd,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if((fd = openat(targfd,"etc/initramfs-tools/modules",
+				O_WRONLY|O_CLOEXEC|O_CREAT,
+				S_IROTH | S_IRGRP | S_IWGRP | S_IRUSR | S_IWUSR)) < 0){
+		diag("Couldn't open etc/initramfs-tools/modules in target root (%s?)\n",strerror(errno));
+		return -1;
+	}
+	if((fp = fdopen(fd,"w")) == NULL){
+		diag("Couldn't get FILE * from %d (%s?)\n",fd,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if((ftargs = dump_controller_modules()) == NULL){
+		diag("Couldn't write targets to %s/etc/initramfs-tools/modules (%s?)\n",growlight_target,strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if((r = fprintf(fp,"%s",ftargs)) < 0 || (size_t)r < strlen(ftargs)){
+		diag("Couldn't write data to %s/etc/initramfs-tools/modules (%s?)\n",growlight_target,strerror(errno));
+		free(ftargs);
+		close(fd);
+		return -1;
+	}
+	free(ftargs);
 	if(fclose(fp)){
 		diag("Couldn't close FILE * from %d (%s?)\n",fd,strerror(errno));
 		close(fd);
