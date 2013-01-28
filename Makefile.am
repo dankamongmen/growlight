@@ -14,6 +14,8 @@ doc_DIR=doc
 doc_DATA=
 doc_DATA+=README
 
+EXTRA_DIST=zfs
+
 dist_doc_DATA=
 dist_doc_DATA+=COPYING growlight-readline.xhtml growlight-curses.xhtml
 
