@@ -106,8 +106,16 @@ int finalize_target(void){
 		diag("No target mappings are defined\n");
 		return -1;
 	}
-	if((unsigned)snprintf(pathext,sizeof(pathext),"%s/etc/initramfs-tools",growlight_target) >= sizeof(pathext)){
+	if((unsigned)snprintf(pathext,sizeof(pathext),"%s/etc",growlight_target) >= sizeof(pathext)){
 		diag("Name too long (%s/etc)\n",growlight_target);
+		return -1;
+	}
+	if(mkdir(pathext,0755) && errno != EEXIST){
+		diag("Couldn't mkdir %s (%s?)\n",pathext,strerror(errno));
+		return -1;
+	}
+	if((unsigned)snprintf(pathext,sizeof(pathext),"%s/etc/initramfs-tools",growlight_target) >= sizeof(pathext)){
+		diag("Name too long (%s/etc/initramfs-tools)\n",growlight_target);
 		return -1;
 	}
 	if(mkdir(pathext,0755) && errno != EEXIST){
