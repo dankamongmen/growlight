@@ -430,9 +430,11 @@ free_device(device *d){
 			}
 		}
 		internal_device_reset(d);
+		// FIXME might these not belong in internal_device_reset() also?
 		free_stringlist(&d->mntops);
 		free_stringlist(&d->mnt);
 		free(d->mnttype);
+		d->mntsize = 0;
 		free(d->bypath);
 		free(d->byid);
 	}
@@ -2022,10 +2024,12 @@ rescan_blockdev_internal(const device *d,int killedpart){
 		return -1;
 	}
 	if(write_sysfs(buf,"1\n")){
+		diag("Failed writing to %s/rescan (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
 	diag("Wrote '1' to %s\n",buf);
 	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC)) < 0){
+		diag("Couldn't open /dev/%s (%s?)\n",d->name,strerror(errno));
 		return -1;
 	}
 	diag("Syncing %s via %d...\n",d->name,fd);

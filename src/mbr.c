@@ -123,7 +123,6 @@ int wipe_biosboot(device *d){
 
 int wipe_dosmbr(device *d){
 	if(wipe_first_sector(d,0,MBR_SIZE)){
-		assert(0);
 		return -1;
 	}
 	return 0;
