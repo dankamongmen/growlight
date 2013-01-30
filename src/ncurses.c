@@ -5113,12 +5113,16 @@ kill_filesystem(void){
 			locked_diag("No filesystem signature on %s\n",b->zone->p->name);
 		}else if(b->zone->p->mnt.count){
 			locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n",b->zone->p->name);
+		}else{
+			confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
 		}
 	}else if(!b->zone){
 		if(!b->d->mnttype){
 			locked_diag("No filesystem signature on %s\n",b->d->name);
 		}else if(b->d->mnt.count){
 			locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n",b->d->name);
+		}else{
+			confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
 		}
 	}else{
 		confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
