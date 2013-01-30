@@ -18,7 +18,11 @@
 #define MBR_CODE_SIZE 440
 
 int mbrsha1(int fd,void *buf){
-	unsigned char mbr[MBR_CODE_SIZE];
+	// We only check the first MBR_CODE_SIZE bytes, but must read in
+	// multiples of the sector size. This code might in fact be broken
+	// for 4k sector disks -- I'm unsure whether it's logical or physical.
+	// FIXME find out!
+	unsigned char mbr[MBR_SIZE];
 	ssize_t r;
 
 	if(lseek(fd,0,SEEK_SET)){
@@ -28,10 +32,10 @@ int mbrsha1(int fd,void *buf){
 		return -1;
 	}
 	if((r = read(fd,mbr,sizeof(mbr))) < 0 || r < (int)sizeof(mbr)){
-		verbf("Read %zd/%zu of %d (%s?)\n",r,sizeof(mbr),fd,strerror(errno));
+		diag("Read %zd/%zu of %d (%s?)\n",r,sizeof(mbr),fd,strerror(errno));
 		return -1;
 	}
-	if(SHA1(mbr,sizeof(mbr),buf) == NULL){
+	if(SHA1(mbr,MBR_CODE_SIZE,buf) == NULL){
 		diag("Couldn't perform SHA1 for %d (%s)\n",fd,ERR_lib_error_string(ERR_get_error()));
 		return -1;
 	}
@@ -119,6 +123,7 @@ int wipe_biosboot(device *d){
 
 int wipe_dosmbr(device *d){
 	if(wipe_first_sector(d,0,MBR_SIZE)){
+		assert(0);
 		return -1;
 	}
 	return 0;
