@@ -70,7 +70,22 @@ use_new_target(const char *path){
 	}
 }
 
-const char TARGETINFO[] = "FIXME!";
+const char TARGETINFO[] = "Growlight will attempt to prepare a bootable system "
+"at %s. At minimum, a target root filesystem must be mounted at this location, "
+"so that /etc/fstab and other files can be prepared. The target root must not "
+"be mounted with any of the ro, nodev, noexec or nosuid options. "
+"You must target a root filesystem first; "
+"having done so, you can set up other targets underneath it. Some typical "
+"subtargets, none of them required, include /usr/local (so that it can be "
+"preserved across installs/machines), /home (for the same reason, and so that "
+"nosuid/nodev and/or encryption can be applied), and /var (to protect against "
+"its arbitrary growth). Any variety of filesystem can be targeted, but "
+"bootloaders typically have their own requirements. Some BIOS firmwares will "
+"not attempt to boot from a hard drive lacking an MSDOS partition table, or a "
+"partition marked with the bootable flag. UEFI requires a GPT table and an "
+"EFI System Partition. Once your targets are configured, finalize the "
+"appropriate configuration (one of UEFI, BIOS, or no firmware). Any swap that "
+"is enabled will be configured for use on the target machine.";
 
 int set_target(const char *path){
 	if(path){
@@ -82,7 +97,7 @@ int set_target(const char *path){
 			diag("Couldn't resolve %s (%s?)\n",path,strerror(errno));
 			return -1;
 		}
-		get_glightui()->boxinfo(TARGETINFO);
+		get_glightui()->boxinfo(TARGETINFO,real_target);
 		use_new_target(real_target);
 		growlight_target = real_target;
 		return 0;
