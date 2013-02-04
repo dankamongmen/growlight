@@ -148,6 +148,7 @@ typedef enum {
 	FORM_STRING_INPUT,		// form_input
 	FORM_MULTISELECT,		// form_options[]
 	FORM_CHECKBOXEN,		// form_options[]
+	FORM_SPLASH_PROMPT,		// form_input
 } form_enum;
 
 // Regarding scrolling selection windows: the movement model is the same as
@@ -305,6 +306,9 @@ screen_update(void){
 		assert(top_panel(active->p) != ERR);
 	}
 	if(actform){
+		if(actform->extext){
+			assert(top_panel(actform->extext->p) != ERR);
+		}
 		assert(top_panel(actform->p) != ERR);
 	}
 	if(splash){
@@ -1681,6 +1685,8 @@ destroy_form_locked(struct form_state *fs){
 				fs->inp.prompt = NULL;
 				fs->inp.buffer = NULL;
 				break;
+			case FORM_SPLASH_PROMPT:
+				break;
 		}
 		actform = NULL;
 	}
@@ -1881,7 +1887,7 @@ raise_form_explication(const WINDOW *w,const char *text,int linesz){
 	// into the provided space. We don't yet deal with this situation FIXME
 	assert(!text[tot]);
 	assert( (ps = malloc(sizeof(*ps))) );
-	assert( (win = newwin(y + 3,cols,lines - (y + 2),getmaxx(w) - cols)) );
+	assert( (win = newwin(y + 3,cols,linesz - (y + 2),getmaxx(w) - cols)) );
 	assert( (ps->p = new_panel(win)) );
 	wbkgd(win,COLOR_PAIR(BLACK_COLOR));
 	wattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
@@ -2515,10 +2521,11 @@ destroy_fs_forms(void){
 }
 
 void kill_splash(struct panel_state *ps){
-	assert(ps == splash);
+	if(splash == ps){
+		splash = NULL;
+	}
 	hide_panel_locked(ps);
 	free(ps);
-	splash = NULL;
 	setup_colors();
 }
 
@@ -5899,6 +5906,15 @@ handle_subwindow_input(int ch){
 	return ch;
 }
 
+static void
+handle_actform_splash_input(void){
+	lock_ncurses();
+	free_form(actform);
+	actform = NULL;
+	curs_set(0);
+	unlock_ncurses();
+}
+
 // We received input while a modal form was active. Divert it from the typical
 // UI, and handle it according to the form. Returning non-zero quits the
 // program, and should pretty much only indicate that 'q' was pressed.
@@ -5910,6 +5926,9 @@ handle_actform_input(int ch){
 
 	if(fs->formtype == FORM_STRING_INPUT){
 		handle_actform_string_input(ch);
+		return 0;
+	}else if(fs->formtype == FORM_SPLASH_PROMPT){
+		handle_actform_splash_input();
 		return 0;
 	}else if(fs->formtype == FORM_MULTISELECT || fs->formtype == FORM_CHECKBOXEN){
 		mcb = actform->mcb;
@@ -6212,6 +6231,9 @@ handle_ncurses_input(WINDOW *w){
 		if(active){
 			if((ch = handle_subwindow_input(ch)) == ERR){
 				return;
+			}
+			if(ch == 0){ // intercepted
+				continue;
 			}
 		}
 		switch(ch){
@@ -6931,10 +6953,6 @@ shutdown_cycle(void){
 	exit(EXIT_SUCCESS);
 };
 
-/*static void
-dismiss_info(const char *keypress){
-}*/
-
 static void raise_info_form(const char *str,const char *text){
 	struct form_state *fs;
 	WINDOW *fsw;
@@ -6946,7 +6964,7 @@ static void raise_info_form(const char *str,const char *text){
 		locked_diag("An input dialog is already active");
 		return;
 	}
-	if((fs = create_form(str,NULL,FORM_STRING_INPUT,0)) == NULL){
+	if((fs = create_form(str,NULL,FORM_SPLASH_PROMPT,0)) == NULL){
 		return;
 	}
 	fs->longop = strlen(str);
@@ -6970,8 +6988,6 @@ static void raise_info_form(const char *str,const char *text){
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
-	mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
-	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
 	fs->inp.prompt = fs->boxstr;
 	fs->inp.buffer = strdup(""); // FIXME
 	form_string_options(fs);
@@ -7000,7 +7016,7 @@ boxinfo(const char *text,...){
 		buf[max - 1] = '\0';
 	}
 	lock_ncurses_growlight();
-	raise_info_form("Press any key",text);
+	raise_info_form("Press any key",buf);
 	unlock_ncurses_growlight();
 	va_end(v);
 }
