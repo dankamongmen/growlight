@@ -6931,9 +6931,17 @@ shutdown_cycle(void){
 	exit(EXIT_SUCCESS);
 };
 
+static void
+boxinfo(const char *text){
+	lock_ncurses_growlight();
+	locked_diag("%s",text); // FIXME text will be too large
+	unlock_ncurses_growlight();
+}
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = vdiag,
+		.boxinfo = boxinfo,
 		.adapter_event = adapter_callback,
 		.block_event = block_callback,
 		.adapter_free = adapter_free,
