@@ -92,6 +92,10 @@ static unsigned rblast;
 static logent logs[MAXIMUM_LOG_ENTRIES];
 static pthread_mutex_t loglock = PTHREAD_MUTEX_INITIALIZER;
 
+const glightui *get_glightui(void){
+	return gui;
+}
+
 static void
 add_log(const char *fmt,va_list vac){
 	va_list vacc;
