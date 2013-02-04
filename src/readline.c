@@ -2141,9 +2141,15 @@ static void *new_adapter(controller *c,void *v){ assert(c); return v; }
 static void adapter_free(void *cv){ assert(cv); }
 static void block_free(void *cv,void *bv){ assert(cv && bv); }
 
+static void
+vinfo(const char *text){
+	fprintf(stdout,"\n%s\n",text);
+}
+
 int main(int argc,char * const *argv){
 	const glightui ui = {
 		.vdiag = vdiag,
+		.boxinfo = vinfo,
 		.adapter_event = new_adapter,
 		.block_event = block_event,
 		.adapter_free = adapter_free,

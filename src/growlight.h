@@ -41,6 +41,8 @@ struct controller;
 typedef struct growlight_ui {
 	void (*vdiag)(const char *,va_list); // free-form diagnostics
 
+	void (*boxinfo)(const char *);	// bulk information requiring receipt
+
 	// Called on a new adapter, or when one changes
 	void *(*adapter_event)(struct controller *,void *);
 
