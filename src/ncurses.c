@@ -1698,7 +1698,9 @@ free_form(struct form_state *fs){
 		free(fs->boxstr);
 		destroy_form_locked(fs);
 		free(fs);
-		setup_colors();
+		if(splash == NULL){
+			setup_colors();
+		}
 		if(current_adapter){
 			touchwin(current_adapter->win);
 		}
@@ -2526,7 +2528,14 @@ void kill_splash(struct panel_state *ps){
 	}
 	hide_panel_locked(ps);
 	free(ps);
-	setup_colors();
+	if(actform == NULL){
+		setup_colors();
+	}else{
+		/*assert(top_panel(actform->p) != ERR);
+		if(actform->extext){
+			assert(top_panel(actform->extext->p) != ERR);
+		}*/
+	}
 }
 
 static int
@@ -5836,11 +5845,6 @@ handle_actform_string_input(int ch){
 
 	cb = actform->fxn;
 	switch(ch){
-	case 12: // CTRL+L, redraw screen FIXME
-		lock_ncurses();
-		wrefresh(curscr);
-		unlock_ncurses();
-		break;
 	case 21: // CTRL+u, clear input line FIXME
 		lock_ncurses();
 		fs->inp.buffer[0] = '\0';
@@ -6220,6 +6224,12 @@ handle_ncurses_input(WINDOW *w){
 	int ch,r;
 
 	while((ch = getch()) != ERR){
+		if(ch == 12){ // CTRL+L FIXME
+			lock_ncurses();
+			wrefresh(curscr);
+			unlock_ncurses();
+			continue;
+		}
 		if(actform){
 			if((ch = handle_actform_input(ch)) == ERR){
 				break;
@@ -6267,10 +6277,6 @@ handle_ncurses_input(WINDOW *w){
 				unlock_ncurses();
 				break;
 			}
-			case 12: // CTRL+L FIXME
-				lock_ncurses();
-				unlock_ncurses();
-				break;
 			case '+':
 				lock_ncurses();
 				expand_adapter_locked();
@@ -6955,11 +6961,12 @@ shutdown_cycle(void){
 
 static void raise_info_form(const char *str,const char *text){
 	struct form_state *fs;
+	int lineguess;
 	WINDOW *fsw;
 	int cols;
 	int x,y;
 
-	assert(str);
+	assert(str && text);
 	if(actform){
 		locked_diag("An input dialog is already active");
 		return;
@@ -6968,11 +6975,15 @@ static void raise_info_form(const char *str,const char *text){
 		return;
 	}
 	fs->longop = strlen(str);
-	cols = fs->longop + 40 + 1; // FIXME? 40 for input currently
+	cols = fs->longop; // FIXME? 40 for input currently
 	getmaxyx(stdscr,y,x);
 	assert(x >= cols + 3);
 	assert(y >= 3);
-	if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET,x - cols - 3)) == NULL){
+	// It could be more than this due to line breaking, so add a fudge
+	// factor of 2...FIXME
+	lineguess = 2; // yuck
+	lineguess += strlen(text) / (x - 2) + 1;
+	if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET + lineguess,x - cols - 3)) == NULL){
 		locked_diag("Couldn't create form window, uh-oh");
 		free_form(fs);
 		return;
@@ -6988,12 +6999,10 @@ static void raise_info_form(const char *str,const char *text){
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
-	fs->inp.prompt = fs->boxstr;
-	fs->inp.buffer = strdup(""); // FIXME
+	mvwprintw(fsw,1,START_COL,"%-*.*s",cols,cols,str);
 	form_string_options(fs);
 	actform = fs;
 	fs->extext = raise_form_explication(stdscr,text,20);
-	curs_set(1);
 	form_colors();
 	screen_update();
 }
@@ -7016,7 +7025,7 @@ boxinfo(const char *text,...){
 		buf[max - 1] = '\0';
 	}
 	lock_ncurses_growlight();
-	raise_info_form("Press any key",buf);
+	raise_info_form("Press any key to continue...",buf);
 	unlock_ncurses_growlight();
 	va_end(v);
 }
