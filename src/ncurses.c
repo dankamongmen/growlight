@@ -1836,9 +1836,9 @@ form_options(struct form_state *fs){
 
 #define FORM_Y_OFFSET 5
 static struct panel_state *
-raise_form_explication(const WINDOW *w,const char *text){
-	int linepre[FORM_Y_OFFSET - 1];
-	int linelen[FORM_Y_OFFSET - 1];
+raise_form_explication(const WINDOW *w,const char *text,int linesz){
+	int linepre[linesz - 1];
+	int linelen[linesz - 1];
 	struct panel_state *ps;
 	int cols,x,y,brk,tot;
 	WINDOW *win;
@@ -1881,7 +1881,7 @@ raise_form_explication(const WINDOW *w,const char *text){
 	// into the provided space. We don't yet deal with this situation FIXME
 	assert(!text[tot]);
 	assert( (ps = malloc(sizeof(*ps))) );
-	assert( (win = newwin(y + 3,cols,FORM_Y_OFFSET - (y + 2),getmaxx(w) - cols)) );
+	assert( (win = newwin(y + 3,cols,lines - (y + 2),getmaxx(w) - cols)) );
 	assert( (ps->p = new_panel(win)) );
 	wbkgd(win,COLOR_PAIR(BLACK_COLOR));
 	wattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
@@ -1973,7 +1973,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 	fs->ops = opstrs;
 	fs->selectno = selectno;
 	multiform_options(fs);
-	fs->extext = raise_form_explication(stdscr,text);
+	fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
 	actform = fs;
 	form_colors();
 	assert(top_panel(fs->p) != ERR);
@@ -2059,7 +2059,7 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
 	fs->longop = longop;
 	fs->ops = opstrs;
 	check_options(fs);
-	fs->extext = raise_form_explication(stdscr,text);
+	fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
 	actform = fs;
 	form_colors();
 	assert(top_panel(fs->p) != ERR);
@@ -2139,7 +2139,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	fs->ops = opstrs;
 	form_options(fs);
 	actform = fs;
-	fs->extext = raise_form_explication(stdscr,text);
+	fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
 	form_colors();
 	assert(top_panel(fs->p) != ERR);
 	screen_update();
@@ -2210,7 +2210,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 	fs->inp.buffer = strdup(def);
 	form_string_options(fs);
 	actform = fs;
-	fs->extext = raise_form_explication(stdscr,text);
+	fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
 	curs_set(1);
 	form_colors();
 	screen_update();
@@ -6931,13 +6931,76 @@ shutdown_cycle(void){
 	exit(EXIT_SUCCESS);
 };
 
+/*static void
+dismiss_info(const char *keypress){
+}*/
+
+static void raise_info_form(const char *str,const char *text){
+	struct form_state *fs;
+	WINDOW *fsw;
+	int cols;
+	int x,y;
+
+	assert(str);
+	if(actform){
+		locked_diag("An input dialog is already active");
+		return;
+	}
+	if((fs = create_form(str,NULL,FORM_STRING_INPUT,0)) == NULL){
+		return;
+	}
+	fs->longop = strlen(str);
+	cols = fs->longop + 40 + 1; // FIXME? 40 for input currently
+	getmaxyx(stdscr,y,x);
+	assert(x >= cols + 3);
+	assert(y >= 3);
+	if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET,x - cols - 3)) == NULL){
+		locked_diag("Couldn't create form window, uh-oh");
+		free_form(fs);
+		return;
+	}
+	if((fs->p = new_panel(fsw)) == NULL){
+		locked_diag("Couldn't create form panel, uh-oh");
+		delwin(fsw);
+		free_form(fs);
+		return;
+	}
+	assert(top_panel(fs->p) != ERR);
+	wattroff(fsw,A_BOLD);
+	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+	bevel(fsw);
+	wattron(fsw,A_BOLD);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
+	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
+	fs->inp.prompt = fs->boxstr;
+	fs->inp.buffer = strdup(""); // FIXME
+	form_string_options(fs);
+	actform = fs;
+	fs->extext = raise_form_explication(stdscr,text,20);
+	curs_set(1);
+	form_colors();
+	screen_update();
+}
+
 static void
 boxinfo(const char *text,...){
 	va_list v;
+	char *buf;
+	int max;
 
+	max = BUFSIZ;
+	if((buf = malloc(max)) == NULL){
+		lock_ncurses_growlight();
+		locked_diag("Couldn't display boxinfo");
+		unlock_ncurses_growlight();
+		return;
+	}
 	va_start(v,text);
+	if(vsnprintf(buf,max,text,v) >= max){
+		buf[max - 1] = '\0';
+	}
 	lock_ncurses_growlight();
-	locked_vdiag(text,v); // FIXME text will be too large
+	raise_info_form("Press any key",text);
 	unlock_ncurses_growlight();
 	va_end(v);
 }
