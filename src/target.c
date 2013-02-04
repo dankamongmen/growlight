@@ -70,6 +70,8 @@ use_new_target(const char *path){
 	}
 }
 
+const char TARGETINFO[] = "FIXME!";
+
 int set_target(const char *path){
 	if(path){
 		if(growlight_target){
@@ -80,6 +82,7 @@ int set_target(const char *path){
 			diag("Couldn't resolve %s (%s?)\n",path,strerror(errno));
 			return -1;
 		}
+		get_glightui()->boxinfo(TARGETINFO);
 		use_new_target(real_target);
 		growlight_target = real_target;
 		return 0;
