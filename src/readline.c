@@ -2142,8 +2142,14 @@ static void adapter_free(void *cv){ assert(cv); }
 static void block_free(void *cv,void *bv){ assert(cv && bv); }
 
 static void
-vinfo(const char *text){
-	fprintf(stdout,"\n%s\n",text);
+vinfo(const char *text,...){
+	va_list v;
+
+	fprintf(stdout,"\n");
+	va_start(v,text);
+	vfprintf(stdout,text,v);
+	va_end(v);
+	fprintf(stdout,"\n\n");
 }
 
 int main(int argc,char * const *argv){

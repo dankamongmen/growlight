@@ -6932,10 +6932,14 @@ shutdown_cycle(void){
 };
 
 static void
-boxinfo(const char *text){
+boxinfo(const char *text,...){
+	va_list v;
+
+	va_start(v,text);
 	lock_ncurses_growlight();
-	locked_diag("%s",text); // FIXME text will be too large
+	locked_vdiag(text,v); // FIXME text will be too large
 	unlock_ncurses_growlight();
+	va_end(v);
 }
 
 int main(int argc,char * const *argv){
