@@ -2825,16 +2825,30 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
 	}else if( (col = strchr(psects,':')) ){
 		unsigned long long ull2;
 
-		if((ull = strtoull(psects,&el,0)) == ULLONG_MAX){
+		if(*psects == '-'){ // reject negative numbers
+			locked_diag("Not a number: %s",psects);
 			return -1;
 		}
-		if(*el != ':'){
+		if((ull = strtoull(psects,&el,0)) == ULLONG_MAX){
+			locked_diag("Not a number: %s",psects);
+			return -1;
+		}
+		if(el != col){
+			locked_diag("Invalid delimiter: %s",psects);
+			return -1;
+		}
+		++el;
+		++col;
+		if(*col == '-'){ // reject negative numbers
+			locked_diag("Not a number: %s",psects);
 			return -1;
 		}
 		if((ull2 = strtoull(col,&el,0)) == ULLONG_MAX){
+			locked_diag("Not a number: %s",col);
 			return -1;
 		}
 		if(*el){
+			locked_diag("Not a number: %s",col);
 			return -1;
 		}
 		*fsect = ull;
@@ -2845,9 +2859,11 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
 		++psects;
 	}
 	if(*psects == '-'){ // reject negative numbers
+		locked_diag("Not a number: %s",psects);
 		return -1;
 	}
 	if((ull = strtoull(psects,&el,0)) == ULLONG_MAX && errno == ERANGE){
+		locked_diag("Not a number: %s",psects);
 		return -1;
 	}
 	if(el == psects){
