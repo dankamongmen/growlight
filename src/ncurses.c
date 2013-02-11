@@ -2060,7 +2060,7 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
 	wattron(fsw,A_BOLD);
-	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,"%s",fs->boxstr);
+	mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 2,"%s",fs->boxstr);
 	mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
 #undef ESCSTR
 	wattroff(fsw,A_BOLD);
