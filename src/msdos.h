@@ -17,6 +17,7 @@ int add_msdos(struct device *,const wchar_t *,uintmax_t,uintmax_t,unsigned long 
 // Pass the partition
 int del_msdos(const struct device *);
 int flag_msdos(struct device *,uint64_t,unsigned);
+int flags_msdos(struct device *,uint64_t);
 int code_msdos(struct device *,unsigned long long);
 
 uintmax_t first_msdos(const struct device *);

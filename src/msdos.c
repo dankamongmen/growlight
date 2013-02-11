@@ -294,6 +294,43 @@ int add_msdos(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsign
 	return r;
 }
 
+int flags_msdos(device *d,uint64_t flags){
+	msdos_entry *mpe;
+	size_t mapsize;
+	unsigned g;
+	void *map;
+	int fd;
+
+	if(flags != 0x80 && flags != 0){
+		diag("Invalid flags for BIOS/MBR: 0x%016jx\n",(uintmax_t)flags);
+		return -1;
+	}
+	assert(d->layout == LAYOUT_PARTITION);
+	if(d->partdev.ptype != PARTROLE_PRIMARY || d->partdev.ptstate.logical || d->partdev.ptstate.extended){
+		diag("Flags are only set on primary partitions\n");
+		return -1;
+	}
+	if(d->partdev.pnumber == 0 || d->partdev.pnumber > MSDOS_ENTRIES){
+		diag("No support for partnumber %u\n",d->partdev.pnumber);
+		return -1;
+	}
+	g = d->partdev.pnumber - 1;
+	if((map = map_msdos(d->partdev.parent,&mapsize,&fd,LBA_SIZE)) == MAP_FAILED){
+		return -1;
+	}
+	mpe = (msdos_entry *)((char *)map + MBR_OFFSET + 6);
+	mpe[g].flags = flags;
+	if(unmap_msdos(d->partdev.parent,map,mapsize,fd)){
+		close(fd);
+		return -1;
+	}
+	if(close(fd)){
+		diag("Error closing %s (%s?)\n",d->name,strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int flag_msdos(device *d,uint64_t flag,unsigned status){
 	msdos_entry *mpe;
 	size_t mapsize;

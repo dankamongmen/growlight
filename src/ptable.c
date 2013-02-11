@@ -85,6 +85,7 @@ static const struct ptable {
 		.del = del_msdos,
 		.pname = NULL,
 		.uuid = NULL,
+		.flags = flags_msdos,
 		.flag = flag_msdos,
 		.code = code_msdos,
 		.first = first_msdos,
@@ -401,6 +402,7 @@ int partition_set_flags(device *d,uint64_t flag){
 	const struct ptable *pt;
 	const char *pttable;
 
+	assert(d);
 	if(d->layout != LAYOUT_PARTITION){
 		diag("Will only set flags on real partitions\n");
 		return -1;
@@ -410,7 +412,7 @@ int partition_set_flags(device *d,uint64_t flag){
 	}
 	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,pttable) == 0){
-			if(!pt->flag){
+			if(!pt->flags){
 				diag("Partition flags not supported on %s\n",d->partdev.parent->blkdev.pttable);
 				return -1;
 			}
