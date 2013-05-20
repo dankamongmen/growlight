@@ -7060,8 +7060,8 @@ int main(int argc,char * const *argv){
 	int showhelp = 1;
 
 	if(setlocale(LC_ALL,"") == NULL){
-		fprintf(stderr,"Couldn't find locale\n");
-		return EXIT_FAILURE;
+		fprintf(stderr,"Warning: couldn't load locale\n");
+		//return EXIT_FAILURE;
 	}
 	if((w = ncurses_setup()) == NULL){
 		return EXIT_FAILURE;
