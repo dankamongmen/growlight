@@ -1,7 +1,7 @@
 AC_PREREQ([2.61])
 AC_INIT([growlight], [1.0.4.6], [sprezzos-dev@sprezzatech.com], [growlight], [http://http://nick-black.com/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-xz std-options subdir-objects nostdinc color-tests])
+AM_INIT_AUTOMAKE([-Wall foreign dist-xz std-options subdir-objects nostdinc color-tests])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/])
 
@@ -10,6 +10,7 @@ CXXFLAGS="-O2 -Wall -W"
 AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_CC_C_O
+AM_PROG_CC_C_O
 AC_PROG_CC_C99
 AC_C_INLINE
 AC_C_RESTRICT
