@@ -1622,7 +1622,8 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 		diag("Couldn't create event marshal (%s)\n",strerror(errno));
 		return -1;
 	}
-	if((em->efd = epoll_create1(EPOLL_CLOEXEC)) < 0){
+	// FIXME: use epoll_create1(EPOLL_CLOEXEC) based on configure settings
+	if((em->efd = epoll_create(5)) < 0){
 		diag("Couldn't create epoll (%s)\n",strerror(errno));
 		free(em);
 		return -1;
