@@ -23,8 +23,8 @@ if test "$XSLTPROC" = no ; then
 	AC_MSG_ERROR([Cannot find xsltproc.])
 fi
 
-# FIXME check for epoll_create1 (only available since linux 2.6.27 / glibc 2.9)
 AC_CHECK_FUNC(epoll_create,[],[AC_MSG_ERROR([Cannot use epoll_create()])])
+AC_CHECK_FUNCS_ONCE(epoll_create1)
 
 AX_CHECK_DOCBOOK_XSLT
 
