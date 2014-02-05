@@ -38,11 +38,11 @@ common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 
 growlight_readline_SOURCES=$(common_SOURCES)
 growlight_readline_SOURCES+=src/readline.c
-growlight_readline_LDADD:=$(CURSES_LIB)
+growlight_readline_LDADD=$(CURSES_LIB)
 
 growlight_curses_SOURCES=$(common_SOURCES)
 growlight_curses_SOURCES+=src/ncurses.c src/ncurses.h src/ui-aggregate.h src/ui-aggregate.c
-growlight_curses_LDADD:=$(PANEL_LIB) $(CURSES_LIB)
+growlight_curses_LDADD=$(PANEL_LIB) $(CURSES_LIB)
 
 %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl $<
