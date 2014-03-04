@@ -437,24 +437,24 @@ genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
 			int omitdec,unsigned mult,int uprefix){
 	const char prefixes[] = "KMGTPEY";
 	unsigned consumed = 0;
-	uintmax_t div;
+	uintmax_t dv;
 
-	div = mult;
-	while((val / decimal) >= div && consumed < strlen(prefixes)){
-		div *= mult;
-		if(UINTMAX_MAX / div < mult){ // watch for overflow
+	dv = mult;
+	while((val / decimal) >= dv && consumed < strlen(prefixes)){
+		dv *= mult;
+		if(UINTMAX_MAX / dv < mult){ // watch for overflow
 			break;
 		}
 		++consumed;
 	}
-	if(div != mult){
-		div /= mult;
+	if(dv != mult){
+		dv /= mult;
 		val /= decimal;
-		if((val % div) / ((div + 99) / 100) || omitdec == 0){
-			snprintf(buf,bsize,"%ju.%02ju%c%c",val / div,(val % div) / ((div + 99) / 100),
+		if((val % dv) / ((dv + 99) / 100) || omitdec == 0){
+			snprintf(buf,bsize,"%ju.%02ju%c%c",val / dv,(val % dv) / ((dv + 99) / 100),
 					prefixes[consumed - 1],uprefix);
 		}else{
-			snprintf(buf,bsize,"%ju%c%c",val / div,prefixes[consumed - 1],uprefix);
+			snprintf(buf,bsize,"%ju%c%c",val / dv,prefixes[consumed - 1],uprefix);
 		}
 	}else{
 		if(val % decimal || omitdec == 0){
