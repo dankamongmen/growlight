@@ -4006,7 +4006,7 @@ pull_adapters_down(reelbox *puller,int rows,int cols,int delta){
 	}
 	while(top_reelbox){
 		struct adapterstate *i;
-		int maxl,nl;
+		int maxl,newl;
 
 		if(top_reelbox->scrline <= 2){
 			return;
@@ -4015,9 +4015,9 @@ pull_adapters_down(reelbox *puller,int rows,int cols,int delta){
 		if(i->rb){
 			return; // already visible
 		}
-		nl = adapter_lines_bounded(i,top_reelbox->scrline);
+		newl = adapter_lines_bounded(i,top_reelbox->scrline);
 		maxl = top_reelbox->scrline;
-		if((rb = create_reelbox(i,maxl,top_reelbox->scrline - 1 - nl,cols)) == NULL){
+		if((rb = create_reelbox(i,maxl,top_reelbox->scrline - 1 - newl,cols)) == NULL){
 			return;
 		}
 		rb->next = top_reelbox;
@@ -5287,7 +5287,7 @@ do_partflag(char **selarray,int selections){
 }
 
 static void
-partflag_callback(const char *fn,char **selarray,int selections,int scroll){
+partflag_callback(const char *fn,char **selarray,int selections,int scrollp){
 	struct form_option *flags_agg;
 	int opcount,defidx;
 
@@ -5306,11 +5306,11 @@ partflag_callback(const char *fn,char **selarray,int selections,int scroll){
 		return;
 	}
 	raise_checkform("set GPT partition flags",partflag_callback,flags_agg,
-		opcount,defidx,selarray,selections,PARTFLAG_TEXT,scroll);
+		opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollp);
 }
 
 static void
-dos_partflag_callback(const char *fn,char **selarray,int selections,int scroll){
+dos_partflag_callback(const char *fn,char **selarray,int selections,int scrollp){
 	struct form_option *flags_agg;
 	int opcount,defidx;
 
@@ -5329,7 +5329,7 @@ dos_partflag_callback(const char *fn,char **selarray,int selections,int scroll){
 		return;
 	}
 	raise_checkform("set DOS partition flags",dos_partflag_callback,flags_agg,
-		opcount,defidx,selarray,selections,PARTFLAG_TEXT,scroll);
+		opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollp);
 }
 
 static int
