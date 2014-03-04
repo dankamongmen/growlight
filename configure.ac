@@ -19,7 +19,7 @@ AC_CHECK_HEADERS([wchar.h])
 AX_PTHREAD
 
 AX_PROG_XSLTPROC
-if test "$XSLTPROC" = no ; then
+if test "x$XSLTPROC" = "x" ; then
 	AC_MSG_ERROR([Cannot find xsltproc.])
 fi
 
