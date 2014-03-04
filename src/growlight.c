@@ -2155,7 +2155,7 @@ device *match_device(const device *d){
 		device *cd;
 
 		for(cd = c->blockdevs ; cd ; cd = cd->next){
-			int r;
+			int r = 0;
 
 			if(d->layout == LAYOUT_PARTITION){
 				device *dp;
