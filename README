@@ -31,6 +31,7 @@ Kernel options:
 Build-only dependencies:
 
  - xsltproc (tested with 20800/10126/815)
+ - docbook-xsl (tested with 4.5)
  - autotools (tested with 1.11)
 
 Building from a git checkout:
