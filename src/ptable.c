@@ -336,22 +336,22 @@ int name_partition(device *d,const wchar_t *name){
 	}
 	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,d->partdev.parent->blkdev.pttable) == 0){
-			wchar_t *dup;
+			wchar_t *dp;
 
 			if(!pt->pname){
 				diag("Partition naming not supported on %s\n",d->partdev.parent->blkdev.pttable);
 				return -1;
 			}
-			if((dup = wcsdup(name)) == NULL){
+			if((dp = wcsdup(name)) == NULL){
 				diag("Bad name: %ls\n",name);
 				return -1;
 			}
 			if(pt->pname(d,name)){
-				free(dup);
+				free(dp);
 				return -1;
 			}
 			free(d->partdev.pname);
-			d->partdev.pname = dup;
+			d->partdev.pname = dp;
 			return 0;
 		}
 	}
