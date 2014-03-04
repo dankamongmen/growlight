@@ -1,3 +1,4 @@
+#include <stdio.h> // libcryptsetup.h needs size_t
 #include <libcryptsetup.h>
 
 #include "crypt.h"
