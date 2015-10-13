@@ -46,14 +46,3 @@ Building from a tarball:
 ===Using it===
 
 See the man page.
-
-
-===ZFS Support===
-
-This is tricky, and not recommended unless you want to experiment. You'll need
-installed SPL/ZFS libraries. You'll be using the include files from the
-checkout, since by default using the SPL headers hides the real system headers.
-Unfortunately, the headers I've copied into libzfs/ in the checkout quite
-likely don't match yours. Have fun!
-
- ./configure --enable-zfs --with-zfs-include=`pwd`/libzfs
