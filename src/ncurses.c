@@ -695,6 +695,7 @@ bevel_top(WINDOW *w){
 	return OK;
 }
 
+/*
 static const cchar_t bpchr[] = {
 	{ .attr = A_REVERSE, .chars = L"▙", }, // 0, lower-left
 	{ .attr = A_REVERSE, .chars = L"▄", }, // 1, bottom
@@ -709,6 +710,7 @@ static const cchar_t bpchr[] = {
 	{ .attr = 0, .chars = L"▋", }, // a, left
 	{ .attr = 0, .chars = L"█", }, // b, left
 };
+*/
 
 static int
 bevel(WINDOW *w){

@@ -530,9 +530,8 @@ add_partition_inner(device *d,const char *name,dev_t devno,unsigned pnum,
 
 static int
 check_slavery(device *d,int subfd){
-	struct dirent ent,*eptr;
+	struct dirent *eptr;
 	DIR *hdir;
-	int r;
 
 	if((hdir = fdopendir(subfd)) == NULL){
 		diag("Couldn't get DIR * from fd %d for %s (%s)\n",
@@ -540,14 +539,18 @@ check_slavery(device *d,int subfd){
 		close(subfd);
 		return -1;
 	}
-	while((r = readdir_r(hdir,&ent,&eptr)) == 0 && eptr){
+	// readdir_r() has been deprecated in glibc. readdir() is now
+	// threadsafe when called on distinct directories, apparently.
+	errno = 0;
+	while((eptr = readdir(hdir)) != NULL){
 		if(eptr->d_type == DT_LNK){
 			++d->slave;
 		}
 	}
-	if(r){
+	if(errno){
 		diag("Error reading directory on %d for %s (%s)\n",
 				subfd,d->name,strerror(errno));
+		closedir(hdir);
 		return -1;
 	}
 	closedir(hdir);
@@ -560,7 +563,7 @@ check_slavery(device *d,int subfd){
 // ought be rerun to acquire a reference).
 static int
 explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse){
-	struct dirent *dire,dirst;
+	struct dirent *dire;
 	unsigned long ul;
 	unsigned b;
 	int sdevfd;
@@ -645,7 +648,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 	if((d->sched = get_sysfs_string(fd,"queue/scheduler")) == NULL){
 		diag("Couldn't determine scheduler for %s (%s)\n",name,strerror(errno));
 	}
-	while(errno = 0, !readdir_r(dir,&dirst,&dire) && dire){
+	while(errno = 0, (dire = readdir(dir)) != NULL){
 		int subfd;
 
 		if(dire->d_type == DT_DIR){
@@ -1400,7 +1403,7 @@ typedef void *(*eventfxn)(void *);
 static inline int
 watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 	pthread_attr_t attr;
-	struct dirent d,*dp;
+	struct dirent *d;
 	int r,dfd;
 	DIR *dir;
 
@@ -1433,13 +1436,13 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 		diag("Couldn't set threads detachable (%s)\n",strerror(errno));
 	}
 	verbf("scanning %s on %d...\n",dfp,dfd);
-	while( dp = NULL, errno = 0, ((r = readdir_r(dir,&d,&dp)) == 0) && dp){
+	while(d = NULL, errno = 0, (d = readdir(dir)) != NULL){
 		pthread_t tid;
-		if(dp->d_type == DT_LNK){
+		if(d->d_type == DT_LNK){
 			pthread_mutex_lock(&barrier);
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
-			if( (r = pthread_create(&tid,&attr,fxn,strdup(dp->d_name))) ){
+			if( (r = pthread_create(&tid,&attr,fxn,strdup(d->d_name))) ){
 				diag("Couldn't create thread (%s)\n",strerror(r));
 				pthread_mutex_lock(&barrier);
 				--thrcount;
@@ -1448,7 +1451,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 			}
 		}
 	}
-	if(r && !dp){
+	if(errno && !d){
 		diag("Error processing %s (%s)\n",dfp,strerror(errno));
 		r = -1;
 	}
