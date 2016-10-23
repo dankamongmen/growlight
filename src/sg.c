@@ -237,7 +237,7 @@ int sg_interrogate(device *d,int fd){
 	assert(d->layout == LAYOUT_NONE);
 	memset(buf,0,sizeof(buf));
 	memset(cdb,0,sizeof(cdb));
-	cdb[0]= SG_ATA_16;
+	cdb[0] = SG_ATA_16;
 	cdb[1] = SG_ATA_PROTO_PIO_IN;
 	cdb[2] = SG_CDB2_TLEN_NSECT | SG_CDB2_TLEN_SECTORS | SG_CDB2_TDIR_FROM_DEV;
 	cdb[6] = IDSECTORS;
@@ -255,7 +255,7 @@ int sg_interrogate(device *d,int fd){
 	io.cmd_len = sizeof(cdb);
 	if(ioctl(fd,SG_IO,&io)){
 		diag("Couldn't perform SG_IO ioctl on %s:%d (%s?)\n",d->name,fd,strerror(errno));
-		return -1;
+		return 0; // FIXME doesn't work for (some?) NVMe
 	}
 	if(io.driver_status && io.driver_status != SG_DRIVER_SENSE){
 		verbf("Bad driver status 0x%x on %s\n",io.driver_status,d->name);
