@@ -398,7 +398,7 @@ transport_str(transport_e t){
 		t == SERIAL_ATAII ? "SAT2" :
 	 	t == SERIAL_ATAI ? "SAT1" : t == SERIAL_ATA8 ? "ATA8" :
 	 	t == SERIAL_UNKNOWN ? "SATA" : t == PARALLEL_ATA ? "PATA" :
-	 	t == AGGREGATE_MIXED ? "Mix" : "Ukn";
+	 	t == AGGREGATE_MIXED ? "Mix" : "?";
 }
 
 static inline uintmax_t
