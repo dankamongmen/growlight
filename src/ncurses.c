@@ -5843,11 +5843,13 @@ static void
 remove_last_bufchar(char *buf){
 	char *killem = buf;
 	mbstate_t mb;
-	int m;
+	size_t m;
 
 	memset(&mb,0,sizeof(mb));
 	while( (m = mbrlen(buf,strlen(buf),&mb)) ){
-		assert(m > 0);
+		if(m == (size_t)-1 || m == (size_t)-2){
+			break;
+		}
 		killem = buf;
 		buf += m;
 	}
