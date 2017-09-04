@@ -191,7 +191,6 @@ unmap_msdos(const device *parent,void *map,size_t mapsize,int fd){
 int add_msdos(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned long long code){
 	static unsigned char zmpe[16] = "";
 	const size_t lbasize = LBA_SIZE;
-	char cname[BUFSIZ];
 	unsigned z,partno;
 	msdos_entry *mpe;
 	unsigned mbrcode;
@@ -278,12 +277,11 @@ int add_msdos(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsign
 		close(fd);
 		return -1;
 	}
-	snprintf(cname,sizeof(cname) - 1,"%ls",name);
 	if(fsync(fd)){
 		diag("Couldn't sync %d for %s\n",fd,d->name);
 	}
 	r = blkpg_add_partition(fd,fsec * LBA_SIZE,
-			(lsec - fsec + 1) * LBA_SIZE,z + 1,cname);
+			(lsec - fsec + 1) * LBA_SIZE,z + 1,"");
 	if(close(fd)){
 		int e = errno;
 
