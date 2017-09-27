@@ -4507,13 +4507,15 @@ env_details(WINDOW *hw,int rows){
 			--z;
 			assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
 		}
-	}case 1:{
+	} /* intentional fallthrough */
+	case 1:{
 		mvwhline(hw,row + z,1,' ',cols - 2);
 		assert(mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
 				COLORS,COLOR_PAIRS,srows,scols,
 				can_change_color() ? "dynamic" : "fixed") != ERR);
 		--z;
-	}case 0:{
+	} /* intentional fallthrough */
+	case 0:{
 		const char *lang = getenv("LANG");
 		const char *term = getenv("TERM");
 
@@ -6063,8 +6065,8 @@ handle_actform_input(int ch){
 				break;
 			}
 			unlock_ncurses();
-			// intentional fallthrough for non-multiform case
-		}default:{
+		} /* intentional fallthrough */
+		default:{
 			diag("please %s, or cancel",actform->boxstr);
 			break;
 		}
