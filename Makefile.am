@@ -1,8 +1,10 @@
 LANG=C
 LC_ALL=c
 
-AM_CFLAGS=-Wall -O2 -W -Wshadow -Werror -Wextra -fvisibility=hidden \
-	$(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES) $(ZFS_CFLAGS)
+# FIXME handle these format-truncation warnings
+AM_CFLAGS=-Wall -O2 -W -Wshadow -Werror -Wextra -Wno-format-truncation \
+	  -fvisibility=hidden \
+	  $(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES) $(ZFS_CFLAGS)
 AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
 AM_CC=$(PTHREAD_CC)
 
