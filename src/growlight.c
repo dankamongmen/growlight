@@ -1451,7 +1451,6 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 			pthread_mutex_lock(&barrier);
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
-			diag("CREATING WATCH FOR %s\n", d->d_name);
 			if( (r = pthread_create(&tid,&attr,fxn,strdup(d->d_name))) ){
 				diag("Couldn't create thread (%s)\n",strerror(r));
 				pthread_mutex_lock(&barrier);
