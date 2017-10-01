@@ -1705,6 +1705,11 @@ tokenize(const char *line,wchar_t ***tokes){
 			fprintf(stderr,"Error converting multibyte: %s\n",line);
 			break;
 		}
+		if(conv == (size_t)-2){
+			// FIXME len ought be expanded? character didn't terminate
+			conv = 0;
+			w = L'\0';
+		}
 		line += conv;
 		len -= conv;
 		if(s == NULL){
