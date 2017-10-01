@@ -82,6 +82,7 @@ typedef enum {
 	SERIAL_USB,
 	SERIAL_USB2,
 	SERIAL_USB3,
+	DIRECT_NVME,
 	AGGREGATE_UNKNOWN,
 	AGGREGATE_MIXED,
 } transport_e;
@@ -248,6 +249,7 @@ typedef struct controller {
 		TRANSPORT_USB,
 		TRANSPORT_USB2,
 		TRANSPORT_USB3,
+		TRANSPORT_NVME,
 	} transport;
 	int numa_node;		// -1: no NUMA in use
 	// Union parameterized on bus type
@@ -398,6 +400,7 @@ transport_str(transport_e t){
 		t == SERIAL_ATAII ? "SAT2" :
 	 	t == SERIAL_ATAI ? "SAT1" : t == SERIAL_ATA8 ? "ATA8" :
 	 	t == SERIAL_UNKNOWN ? "SATA" : t == PARALLEL_ATA ? "PATA" :
+		t == DIRECT_NVME ? "NVMe" :
 	 	t == AGGREGATE_MIXED ? "Mix" : "?";
 }
 

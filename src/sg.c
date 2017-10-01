@@ -255,7 +255,7 @@ int sg_interrogate(device *d,int fd){
 	io.cmd_len = sizeof(cdb);
 	if(ioctl(fd,SG_IO,&io)){
 		diag("Couldn't perform SG_IO ioctl on %s:%d (%s?)\n",d->name,fd,strerror(errno));
-		return 0; // FIXME doesn't work for (some?) NVMe
+		return 0;
 	}
 	if(io.driver_status && io.driver_status != SG_DRIVER_SENSE){
 		verbf("Bad driver status 0x%x on %s\n",io.driver_status,d->name);

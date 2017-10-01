@@ -36,6 +36,7 @@
 #include "zfs.h"
 #include "swap.h"
 #include "udev.h"
+#include "nvme.h"
 #include "crypt.h"
 #include "mdadm.h"
 #include "popen.h"
@@ -199,6 +200,8 @@ usbmodulep(const char *driver){
 		return TRANSPORT_USB;
 	}else if(strcmp(driver,"ohci_hcd") == 0){
 		return TRANSPORT_USB;
+	}else if(strcmp(driver, "nvme") == 0){
+		return TRANSPORT_NVME;
 	}
 	return 0;
 }
@@ -980,6 +983,12 @@ rescan(const char *name,device *d){
 					return NULL;
 				}
 				probe_smart(d);
+			}else if(d->c->transport == TRANSPORT_NVME){
+				if(nvme_interrogate(d, dfd)){
+					close(dfd);
+					clobber_device(d);
+					return NULL;
+				}
 			}else if(d->c->transport == TRANSPORT_USB){
 				d->blkdev.transport = SERIAL_USB;
 			}else if(d->c->transport == TRANSPORT_USB2){
