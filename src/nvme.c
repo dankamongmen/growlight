@@ -95,6 +95,67 @@ struct nvme_id_ctrl {
         __u8                    vs[1024];
 };
 
+struct nvme_smart_log {
+        __u8                    critical_warning;
+        __u8                    temperature[2];
+        __u8                    avail_spare;
+        __u8                    spare_thresh;
+        __u8                    percent_used;
+        __u8                    rsvd6[26];
+        __u8                    data_units_read[16];
+        __u8                    data_units_written[16];
+        __u8                    host_reads[16];
+        __u8                    host_writes[16];
+        __u8                    ctrl_busy_time[16];
+        __u8                    power_cycles[16];
+        __u8                    power_on_hours[16];
+        __u8                    unsafe_shutdowns[16];
+        __u8                    media_errors[16];
+        __u8                    num_err_log_entries[16];
+        __le32                  warning_temp_time;
+        __le32                  critical_comp_time;
+        __le16                  temp_sensor[8];
+        __le32                  thm_temp1_trans_count;
+        __le32                  thm_temp2_trans_count;
+        __le32                  thm_temp1_total_time;
+        __le32                  thm_temp2_total_time;
+        __u8                    rsvd232[280];
+};
+
+#define NVME_LOG_SMART 2
+#define NVME_ADMIN_GET_LOG_PAGE 2
+#define NVME_ADMIN_IDENTIFY 6
+
+static int
+nvme_smart_log(struct device *d, int fd){
+	struct nvme_admin_cmd nvmeio;
+	struct nvme_smart_log smart;
+
+	memset(&smart, 0, sizeof(smart));
+	memset(&nvmeio, 0, sizeof(nvmeio));
+	nvmeio.opcode = NVME_ADMIN_GET_LOG_PAGE;
+	nvmeio.addr = (uintptr_t)&smart;
+	nvmeio.data_len = sizeof(smart);
+	// FIXME black magics stolen from nvme_get_log()
+	nvmeio.nsid = 0xffffffffu;
+	uint32_t numd = (nvmeio.data_len >> 2) - 1;
+	uint16_t numdu = numd >> 16;
+	uint16_t numdl = numd & 0xffff;
+	nvmeio.cdw10 = NVME_LOG_SMART | (numdl << 16);
+	nvmeio.cdw11 = numdu;
+	diag("data_len: %u nvmeio.data_len cdw10: %u cdw11: %u\n",
+			nvmeio.data_len, nvmeio.cdw10, nvmeio.cdw11);
+	if(ioctl(fd, NVME_IOCTL_ADMIN_CMD, &nvmeio)){
+		diag("Couldn't perform nvme_admin_get_log_page on %s:%d (%s?)\n",
+				d->name, fd, strerror(errno));
+		return -1;
+	}
+	// what's the nvme equivalent to SkSmartOverall? FIXME set blkdev.smart
+	// nvme smart reports temp in kelvin integer degrees, huh
+	d->blkdev.celsius = ((smart.temperature[1] << 8) | smart.temperature[0]) - 273;
+	return 0;
+}
+
 int nvme_interrogate(struct device *d, int fd){
 	struct nvme_admin_cmd nvmeio;
 	struct nvme_id_ctrl ctrl;
@@ -102,14 +163,14 @@ int nvme_interrogate(struct device *d, int fd){
 	memset(&ctrl, 0, sizeof(ctrl));
 	memset(&nvmeio, 0, sizeof(nvmeio));
 	// FIXME where can we get this value from besides nvme-cli source?
-	nvmeio.opcode = 6;
+	nvmeio.opcode = NVME_ADMIN_IDENTIFY;
 	nvmeio.addr = (uintptr_t)&ctrl;
 	nvmeio.data_len = sizeof(ctrl);
 	nvmeio.cdw10 = 1; // FIXME what is this?
 	if(ioctl(fd, NVME_IOCTL_ADMIN_CMD, &nvmeio)){
-		diag("Couldn't perform NVME_IOCTL_ADMIN_CMD on %s:%d (%s?)\n",
-				d->name,fd,strerror(errno));
-		return 0;
+		diag("Couldn't perform nvme_admin_identify on %s:%d (%s?)\n",
+				d->name, fd, strerror(errno));
+		return -1;
 	}
 	size_t snlen = strnlen(ctrl.sn, sizeof(ctrl.sn));
 	d->blkdev.serial = malloc(snlen + 1);
@@ -117,7 +178,8 @@ int nvme_interrogate(struct device *d, int fd){
 	d->blkdev.serial[snlen] = '\0';
 	d->blkdev.transport = DIRECT_NVME;
 	d->blkdev.rotation = -1; // non-rotating store
-	// FIXME implement temperature check
+	d->blkdev.smart = -1;
+	nvme_smart_log(d, fd);
 	// FIXME set wwn based off wwid from sysfs?
 	return 0;
 }
