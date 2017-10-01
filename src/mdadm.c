@@ -145,6 +145,8 @@ int explore_md_sysfs(device *d,int dirfd){
 	}
 	d->mddev.degraded = degraded;
 	if(d->mddev.resync && !d->mddev.degraded){
+		// FIXME why do we indicate resync as "1-degraded"?
+		// don't overload this
 		d->mddev.degraded = 1;
 	}
 	d->mddev.swidth = 0;
