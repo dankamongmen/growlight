@@ -191,7 +191,7 @@ free_controller(controller *c){
 }
 
 static inline int
-usbmodulep(const char *driver){
+kernelmodulep(const char *driver){
 	if(strcmp(driver,"xhci_hcd") == 0){
 		return TRANSPORT_USB3;
 	}else if(strcmp(driver,"ehci_hcd") == 0){
@@ -249,7 +249,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 				return NULL;
 			}
 		}
-		c->transport = usbmodulep(module);
+		c->transport = kernelmodulep(module);
 		if( (c->sysfs = sysfs) ){
 			char path[PATH_MAX + 1];
 
@@ -1451,6 +1451,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 			pthread_mutex_lock(&barrier);
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
+			diag("CREATING WATCH FOR %s\n", d->d_name);
 			if( (r = pthread_create(&tid,&attr,fxn,strdup(d->d_name))) ){
 				diag("Couldn't create thread (%s)\n",strerror(r));
 				pthread_mutex_lock(&barrier);

@@ -118,5 +118,6 @@ int nvme_interrogate(struct device *d, int fd){
 	d->blkdev.transport = DIRECT_NVME;
 	d->blkdev.rotation = -1; // non-rotating store
 	// FIXME implement temperature check
+	// FIXME set wwn based off wwid from sysfs?
 	return 0;
 }

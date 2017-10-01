@@ -1212,7 +1212,7 @@ case LAYOUT_NONE:
 		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
-					bo->d->revision ? bo->d->revision : "",
+					bo->d->revision ? bo->d->revision : "n/a",
 					qprefix(bo->d->size,1,buf,sizeof(buf),0),
 					bo->d->physsec,
 					bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
@@ -3440,7 +3440,7 @@ update_details(WINDOW *hw){
 		mvwprintw(hw,3,START_COL,"%s: ",d->name);
 		wattroff(hw,A_BOLD);
 		waddstr(hw,d->model ? d->model : "n/a");
-		waddstr(hw,d->revision ? d->revision : "n/a");
+		waddstr(hw,d->revision ? d->revision : "");
 		wattron(hw,A_BOLD);
 		wprintw(hw," (%sB) S/N: ",bprefix(d->size,1,buf,sizeof(buf),1));
 		wattroff(hw,A_BOLD);
