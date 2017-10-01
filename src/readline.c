@@ -996,19 +996,19 @@ blockdev_details(const device *d){
 				d->blkdev.transport == PARALLEL_ATA ? "Parallel ATA" :
 				d->blkdev.transport == AGGREGATE_MIXED ? "Mixed" :
 				"Unknown");
-		if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s\n",d->name) >= (int)sizeof(buf)){
+		if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
 	}else if(d->layout == LAYOUT_MDADM){
-		if(snprintf(buf,sizeof(buf),"mdadm --detail /dev/%s\n",d->name) >= (int)sizeof(buf)){
+		if(snprintf(buf,sizeof(buf),"mdadm --detail /dev/%s",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
 	}else if(d->layout == LAYOUT_DM){
-		if(snprintf(buf,sizeof(buf),"dmsetup info /dev/%s\n",d->name) >= (int)sizeof(buf)){
+		if(snprintf(buf,sizeof(buf),"dmsetup info /dev/%s",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
 	}else if(d->layout == LAYOUT_ZPOOL){
-		if(snprintf(buf,sizeof(buf),"zpool status %s\n",d->name) >= (int)sizeof(buf)){
+		if(snprintf(buf,sizeof(buf),"zpool status %s",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
 	}else{
