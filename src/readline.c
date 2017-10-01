@@ -984,18 +984,7 @@ blockdev_details(const device *d){
 			}
 		}
 		printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
-		printf("Transport: %s\n",
-				d->blkdev.transport == SERIAL_USB3 ? "USB3" :
-				d->blkdev.transport == SERIAL_USB2 ? "USB2" :
-				d->blkdev.transport == SERIAL_USB ? "USB" :
-				d->blkdev.transport == SERIAL_ATAIII ? "SATA 3.0" :
-				d->blkdev.transport == SERIAL_ATAII ? "SATA 2.0" :
-				d->blkdev.transport == SERIAL_ATAI ? "SATA 1.0" :
-				d->blkdev.transport == SERIAL_ATA8 ? "ATA8-AST" :
-				d->blkdev.transport == SERIAL_UNKNOWN ? "Serial ATA" :
-				d->blkdev.transport == PARALLEL_ATA ? "Parallel ATA" :
-				d->blkdev.transport == AGGREGATE_MIXED ? "Mixed" :
-				"Unknown");
+		printf("Transport: %s\n", transport_str(d->blkdev.transport));
 		if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
