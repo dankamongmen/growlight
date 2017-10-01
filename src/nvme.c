@@ -1,5 +1,7 @@
 #include "nvme.h"
+#include <stdio.h>
 #include <errno.h>
+#include <atasmart.h>
 #include "growlight.h"
 #include <sys/ioctl.h>
 #include <linux/nvme_ioctl.h>
@@ -143,14 +145,16 @@ nvme_smart_log(struct device *d, int fd){
 	uint16_t numdl = numd & 0xffff;
 	nvmeio.cdw10 = NVME_LOG_SMART | (numdl << 16);
 	nvmeio.cdw11 = numdu;
-	diag("data_len: %u nvmeio.data_len cdw10: %u cdw11: %u\n",
-			nvmeio.data_len, nvmeio.cdw10, nvmeio.cdw11);
 	if(ioctl(fd, NVME_IOCTL_ADMIN_CMD, &nvmeio)){
 		diag("Couldn't perform nvme_admin_get_log_page on %s:%d (%s?)\n",
 				d->name, fd, strerror(errno));
 		return -1;
 	}
-	// what's the nvme equivalent to SkSmartOverall? FIXME set blkdev.smart
+	if(smart.critical_warning){
+		d->blkdev.smart = SK_SMART_OVERALL_BAD_STATUS;
+	}else{
+		d->blkdev.smart = SK_SMART_OVERALL_GOOD;
+	}
 	// nvme smart reports temp in kelvin integer degrees, huh
 	d->blkdev.celsius = ((smart.temperature[1] << 8) | smart.temperature[0]) - 273;
 	return 0;
@@ -176,10 +180,10 @@ int nvme_interrogate(struct device *d, int fd){
 	d->blkdev.serial = malloc(snlen + 1);
 	strncpy(d->blkdev.serial, ctrl.sn, snlen);
 	d->blkdev.serial[snlen] = '\0';
+	// NVMe devices don't appear to have WWNs...? NGUIDs are all 0s on mine?
+	d->blkdev.wwn = strdup(d->blkdev.serial);
 	d->blkdev.transport = DIRECT_NVME;
 	d->blkdev.rotation = -1; // non-rotating store
-	d->blkdev.smart = -1;
 	nvme_smart_log(d, fd);
-	// FIXME set wwn based off wwid from sysfs?
 	return 0;
 }
