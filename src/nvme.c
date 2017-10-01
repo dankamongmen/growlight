@@ -103,7 +103,7 @@ int nvme_interrogate(struct device *d, int fd){
 	memset(&nvmeio, 0, sizeof(nvmeio));
 	// FIXME where can we get this value from besides nvme-cli source?
 	nvmeio.opcode = 6;
-	nvmeio.addr = &ctrl;
+	nvmeio.addr = (uintptr_t)&ctrl;
 	nvmeio.data_len = sizeof(ctrl);
 	nvmeio.cdw10 = 1; // FIXME what is this?
 	if(ioctl(fd, NVME_IOCTL_ADMIN_CMD, &nvmeio)){
@@ -111,8 +111,12 @@ int nvme_interrogate(struct device *d, int fd){
 				d->name,fd,strerror(errno));
 		return 0;
 	}
-	// FIXME implement
+	size_t snlen = strnlen(ctrl.sn, sizeof(ctrl.sn));
+	d->blkdev.serial = malloc(snlen + 1);
+	strncpy(d->blkdev.serial, ctrl.sn, snlen);
+	d->blkdev.serial[snlen] = '\0';
 	d->blkdev.transport = DIRECT_NVME;
 	d->blkdev.rotation = -1; // non-rotating store
+	// FIXME implement temperature check
 	return 0;
 }
