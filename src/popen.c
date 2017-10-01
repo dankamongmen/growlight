@@ -26,6 +26,12 @@ sanitize_cmd(const char *cmd){
 		if((conv = mbrtowc(&w,cmd,left,&ps)) == (size_t)-1){
 			diag("Error converting multibyte: %s\n",cmd);
 			free(san);
+			return NULL;
+		}
+		if(conv == (size_t)-2){
+			// FIXME ended unexpectedly...are we feeding bad data?
+			diag("Multibyte ended unexpectedly: %s\n",cmd);
+			break;
 		}
 		left -= conv;
 		if(w == L'(' || w == L')'){
