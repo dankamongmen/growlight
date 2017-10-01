@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -32,7 +33,13 @@ char *get_sysfs_string(int dirfd,const char *node){
 		return NULL;
 	}
 	close(fd);
-	buf[r - 1] = '\0';
+	// Sometimes the sysfs entry has a bunch of spaces at the end, ugh
+	while(isspace(buf[r - 1])){
+		buf[r - 1] = '\0';
+		if(--r == 0){ // huh
+			return NULL;
+		}
+	}
 	return strdup(buf);
 }
 
