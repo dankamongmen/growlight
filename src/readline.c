@@ -1691,6 +1691,7 @@ tokenize(const char *line,wchar_t ***tokes){
 		wchar_t w,*n,**tmp;
 
 		if((conv = mbrtowc(&w,line,len,&ps)) == (size_t)-1){
+			free_tokes(*tokes);
 			fprintf(stderr,"Error converting multibyte: %s\n",line);
 			break;
 		}
@@ -1719,6 +1720,7 @@ tokenize(const char *line,wchar_t ***tokes){
 			if(!conv){
 				if(inquotes){
 					fprintf(stderr,"Unterminated quotes in %s\n",line);
+					free_tokes(*tokes);
 					return -1;
 				}
 			}else{
@@ -1743,6 +1745,7 @@ tokenize(const char *line,wchar_t ***tokes){
 			olds = s;
 			if(mbsrtowcs(n,&s,wchars,&sps) != wchars){
 				fprintf(stderr,"Couldn't convert %s\n",olds);
+				free(n);
 				free_tokes(*tokes);
 				return -1;
 			}
