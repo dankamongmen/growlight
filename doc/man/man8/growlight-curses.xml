@@ -136,7 +136,7 @@ specification.</para>
 	</refsect1>
 	<refsect1 id="bugs">
 		<title>BUGS</title>
-		<para>Search <ulink url="http://www.sprezzatech.com/bugs/buglist.cgi?component=Growlight"/>.
+		<para>Search <ulink url="https://www.sprezzatech.com/bugs/buglist.cgi?component=Growlight"/>.
 		Mail bug reports and/or patches to the authors.</para>
 
 <para>Pedantic collections of ambiguous identifiers (for instance, if a label
@@ -145,8 +145,8 @@ ought be fixed.</para>
 	</refsect1>
 	<refsect1 id="see_also">
 		<title>SEE ALSO</title>
-		<para>GitHub: <ulink url="http://github.com/dankamongmen/growlight"/></para>
-		<para>Project wiki: <ulink url="http://nick-black.com/dankwiki/index.php/growlight"/></para>
+		<para>GitHub: <ulink url="https://github.com/dankamongmen/growlight"/></para>
+		<para>Project wiki: <ulink url="https://nick-black.com/dankwiki/index.php/growlight"/></para>
 		<para>
 		<citerefentry>
 			<refentrytitle>blkid</refentrytitle>

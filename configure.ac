@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([growlight], [1.0.5], [sprezzos-dev@sprezzatech.com], [growlight], [http://http://nick-black.com/dankwiki/index.php/Growlight])
+AC_INIT([growlight], [1.0.5], [sprezzos-dev@sprezzatech.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([-Wall foreign dist-xz std-options subdir-objects nostdinc color-tests])
 AC_CONFIG_HEADER([src/config.h])
@@ -30,39 +30,39 @@ AX_CHECK_DOCBOOK_XSLT
 
 AX_CHECK_OPENSSL([],[AC_MSG_ERROR([Could not find OpenSSL])])
 
-#AC_ARG_WITH([zfs-include],
-#	[AS_HELP_STRING([--with-zfs-include],
-#		[Location of the ZFS headers. Defaults to /usr/local/include.])],
-#	[ZFS_CFLAGS="-I$withval"],
-#	[ZFS_CFLAGS='-I/usr/local/include'])
-#AC_SUBST([ZFS_CFLAGS])
-#
-#AC_ARG_WITH([zfs-lib],
-#	[AS_HELP_STRING([--with-zfs-lib], [Location of the ZFS libraries.])],
-#	[ZFS_LIBS="-L$withval"],
-#	[ZFS_LIBS=''])
-#AC_SUBST([ZFS_LIBS])
-#
-#AC_ARG_ENABLE([zfs],
-# [  --enable-zfs               Build support for ZFS ],
-# [ case "${enableval}" in
-#  yes) zfs=true ;;
-#  no)  zfs=false ;;
-#  *) AC_MSG_ERROR([bad value ${enableval} for --enable-zfs]) ;;
-#   esac ],
-# [zfs=false])
-#
-#if test "x$zfs" = "xtrue" ; then
-#	CFLAGS+=" $ZFS_CFLAGS"
-#	LFLAGS+=" $ZFS_LIBS"
-#	AC_CHECK_LIB(zfs,libzfs_init, [have_libzfs=yes],
-#		[AC_MSG_ERROR([Cannot find libzfs.])])
-#if test "x$have_libzfs" = xyes; then
-#	LIBS+=" -lzfs -lnvpair"
-#	AC_CHECK_HEADER([libzfs.h],[],[AC_MSG_ERROR([Found ZFS library but not headers.])])
-#	AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs])
-#fi
-#fi
+AC_ARG_WITH([zfs-include],
+	[AS_HELP_STRING([--with-zfs-include],
+		[Location of the ZFS headers. Defaults to /usr/local/include/libzfs.])],
+	[ZFS_CFLAGS="-I$withval"],
+	[ZFS_CFLAGS='-I/usr/local/include/libzfs'])
+AC_SUBST([ZFS_CFLAGS])
+
+AC_ARG_WITH([zfs-lib],
+	[AS_HELP_STRING([--with-zfs-lib], [Location of the ZFS libraries.])],
+	[ZFS_LIBS="-L$withval"],
+	[ZFS_LIBS=''])
+AC_SUBST([ZFS_LIBS])
+
+AC_ARG_ENABLE([zfs],
+ [  --enable-zfs               Build support for ZFS ],
+ [ case "${enableval}" in
+  yes) zfs=true ;;
+  no)  zfs=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-zfs]) ;;
+   esac ],
+ [zfs=false])
+
+if test "x$zfs" = "xtrue" ; then
+	CFLAGS+=" $ZFS_CFLAGS"
+	LFLAGS+=" $ZFS_LIBS"
+	AC_CHECK_LIB(zfs,libzfs_init, [have_libzfs=yes],
+		[AC_MSG_ERROR([Cannot find libzfs.])])
+if test "x$have_libzfs" = xyes; then
+	LIBS+=" -lzfs -lnvpair"
+	AC_CHECK_HEADER([libzfs.h],[],[AC_MSG_ERROR([Found ZFS library but not headers.])])
+	AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs])
+fi
+fi
 
 AX_WITH_CURSES
 AX_WITH_CURSES_PANEL

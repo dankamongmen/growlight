@@ -4449,7 +4449,7 @@ display_help(WINDOW *mainw,struct panel_state *ps){
 	helpcols += 2; // spacing + borders
 	memset(ps,0,sizeof(*ps));
 	if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help",
-			L"http://nick-black.com/dankwiki/index.php/Growlight",
+			L"https://nick-black.com/dankwiki/index.php/Growlight",
 			PBORDER_COLOR)){
 		goto err;
 	}
