@@ -570,6 +570,8 @@ pttable_type *get_fs_types(int *count){
 		if(fss[z].mkfs == NULL){
 			continue;
 		}
+		pt[t].name = NULL;
+		pt[t].desc = NULL;
 		if((pt[t].name = strdup(fss[z].name)) == NULL){
 			goto err;
 		}
@@ -587,9 +589,9 @@ pttable_type *get_fs_types(int *count){
 	return pt;
 
 err:
-	while(z--){
-		free(pt[z].name);
-		free(pt[z].desc);
+	while(t--){
+		free(pt[t].name);
+		free(pt[t].desc);
 	}
 	free(pt);
 	*count = 0;
