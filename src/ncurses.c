@@ -5877,7 +5877,8 @@ handle_actform_string_input(int ch){
 		char *str;
 
 		lock_ncurses();
-		assert(str = strdup(actform->inp.buffer));
+		str = strdup(actform->inp.buffer);
+		assert(NULL != str);
 		free_form(actform);
 		actform = NULL;
 		curs_set(0);
@@ -5976,7 +5977,8 @@ handle_actform_input(int ch){
 
 			lock_ncurses();
 				op = fs->idx;
-				assert(optstr = strdup(fs->ops[op].option));
+				optstr = strdup(fs->ops[op].option);
+				assert(NULL != optstr);
 				selarray = fs->selarray;
 				selections = fs->selections;
 				scrolloff = fs->scrolloff;
