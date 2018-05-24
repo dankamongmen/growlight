@@ -250,7 +250,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 			}
 		}
 		c->transport = kernelmodulep(module);
-		if( (c->sysfs = sysfs) ){
+		if( (c->sysfs = strdup(sysfs)) ){
 			char path[PATH_MAX + 1];
 
 			if((unsigned)snprintf(path,sizeof(path),"%s/host0/scsi_host/host0/version_fw",c->sysfs) < sizeof(path)){
@@ -273,7 +273,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 		if(c->biosver == NULL && get_bios_vendor()){
 			c->biosver = strdup(get_bios_vendor());
 		}
-		c->driver = module;
+		c->driver = strdup(module);
 		c->bus = BUS_PCIe;
 		c->pcie.domain = domain;
 		c->pcie.bus = bus;
@@ -347,9 +347,6 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 		c->next = *pre;
 		*pre = c;
 		c->uistate = gui->adapter_event(c,NULL);
-	}else{
-		free(module);
-		free(sysfs);
 	}
 	return c;
 }
@@ -876,6 +873,7 @@ parse_bus_topology(const char *fn){
 		diag("Couldn't canonicalize %s\n",fn);
 		return NULL;
 	}
+	module = NULL;
 	if((sysfs = parse_pci_busid(buf,&domain,&bus,&dev,&func,&module)) == NULL){
 		verbf("Couldn't extract PCI address from %s\n",buf);
 		free(buf);
@@ -887,6 +885,8 @@ parse_bus_topology(const char *fn){
 		free(buf);
 		return NULL;
 	}
+	free(module);
+	free(sysfs);
 	free(buf);
 	return c;
 }
