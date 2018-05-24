@@ -2,6 +2,7 @@
 aclocal.m4
 autom4te.cache/
 autoscan.log
+compile
 config.guess*
 config.log*
 config.status*
