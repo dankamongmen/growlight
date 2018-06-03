@@ -13,6 +13,7 @@ Dependencies:
  - libpciaccess (tested with Debian's 0.13.1-2)
  - libdevmapper (tested with Debian's 1.02.74)
  - libatasmart (tested with Debian's 0.19-1)
+ - libcryptsetup (tested with Debian's 2.0.2-1)
  - OpenSSL (tested with Debian's 1.0.1)
  - mkswap(8) from util-linux
  - badblocks(8), mkfs.ext4(8), mkfs.ext3(8), mkfs.ext2(8) from e2fsprogs
