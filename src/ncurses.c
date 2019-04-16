@@ -86,8 +86,8 @@ static const char PARTTYPE_TEXT[] =     // characters here will be bumped ---v
 static const char FSTYPE_TEXT[] =
 "UEFI through version 1.1 requires FAT16 for the EFI System Partition. As of "
 "version 3.5, ext4 is the default Linux filesystem, but Windows and OS X do "
-"not natively support it. Sprezzatech recommends use of EXT4 or FAT16 for "
-"root and ZFS (in a redundant configuration) for other filesystems.";
+"not natively support it. I recommend use of EXT4 or FAT16 for root and ZFS "
+"(in a redundant configuration) for other filesystems.";
 
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
@@ -3161,7 +3161,7 @@ ncurses_setup(void){
 		errstr = "Couldn't disable cursor\n";
 		goto err;
 	}
-	locked_diag("by nick black <nick.black@sprezzatech.com>");
+	locked_diag("by nick black <nickblack@linux.com>");
 	draw_main_window(w);
 	refresh();
 	return w;

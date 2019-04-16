@@ -66,6 +66,9 @@ fi
 
 AX_WITH_CURSES
 AX_WITH_CURSES_PANEL
+PKG_CHECK_MODULES([libpanel], [panel], [AC_DEFINE([HAVE_PANEL], [1], [Use libpanel from ncursesw])])
+	CFLAGS+=" $libpanel_CFLAGS"
+	LIBS+=" $libpanel_LIBS"
 if test "x$ax_cv_curses" = xyes; then
 	CFLAGS+=" -D_XOPEN_SOURCE_EXTENDED"
 fi

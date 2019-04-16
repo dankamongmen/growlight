@@ -7,7 +7,7 @@ extern "C" {
 
 #include "config.h"
 
-#ifdef HAVE_NCURSESW_H
+#if defined(HAVE_NCURSESW_H) || defined(HAVE_NCURSESW)
 #include <term.h>
 #include <panel.h>
 #include <ncurses.h>
