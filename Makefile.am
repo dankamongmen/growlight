@@ -44,11 +44,14 @@ growlight_curses_SOURCES=$(common_SOURCES)
 growlight_curses_SOURCES+=src/ncurses.c src/ncurses.h src/ui-aggregate.h src/ui-aggregate.c
 growlight_curses_LDADD=$(PANEL_LIBS) $(CURSES_LIBS)
 
+#XSLTARGS=--nonet /usr/share/xml/docbook/stylesheet/docbook-xsl
+XSLTARGS=http://docbook.sourceforge.net/release/xsl/current
+
 %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
-	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl $<
+	$(XSLTPROC) --path $(doc_DIR) -o $@ $(XSLTARGS)/manpages/docbook.xsl $<
 
 %.xhtml: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
-	$(XSLTPROC) --path $(doc_DIR) -o $@ --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/xhtml-1_1/docbook.xsl $<
+	$(XSLTPROC) --path $(doc_DIR) -o $@ $(XSLTARGS)/xhtml-1_1/docbook.xsl $<
 
 $(doc_DIR)/@PACKAGE_NAME@.ent:
 	@mkdir -p $(@D)
