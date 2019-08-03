@@ -1,6 +1,8 @@
 #include "nvme.h"
 #include <stdio.h>
 #include <errno.h>
+#include <ctype.h>
+#include <stdbool.h>
 #include <atasmart.h>
 #include "growlight.h"
 #include <sys/ioctl.h>
@@ -176,9 +178,31 @@ int nvme_interrogate(struct device *d, int fd){
 				d->name, fd, strerror(errno));
 		return -1;
 	}
-	size_t snlen = strnlen(ctrl.sn, sizeof(ctrl.sn));
+	// These serials sometimes have weird whitespace; normalize it
+	size_t snlen = 0; // number of copied characters <= sizeof(ctrl.sn)
+	size_t endtrim = 0; // where did trailing whitespace start?
+	bool inspace = 1; // trim out leading/repeated whitespace
+	size_t iter; // iterator in original string
+	for(iter = 0 ; iter < sizeof(ctrl.sn) ; ++iter){
+		if(!ctrl.sn[iter]){
+			break;
+		}else if(isspace(ctrl.sn[iter]) || !isprint(ctrl.sn[iter])){
+			if(!inspace){ // trims early or repeated whitespace
+				ctrl.sn[snlen++] = ' ';
+				inspace = true;
+				endtrim = snlen - 1;
+			}
+		}else{
+			ctrl.sn[snlen++] = ctrl.sn[iter];
+			endtrim = 0;
+			inspace = 0;
+		}
+	}
+	if(endtrim){ // space included at the end, cannot be 0-length output
+		snlen = endtrim;
+	}
 	d->blkdev.serial = malloc(snlen + 1);
-	strncpy(d->blkdev.serial, ctrl.sn, snlen);
+	memcpy(d->blkdev.serial, ctrl.sn, snlen);
 	d->blkdev.serial[snlen] = '\0';
 	// NVMe devices don't appear to have WWNs...? NGUIDs are all 0s on mine?
 	d->blkdev.wwn = strdup(d->blkdev.serial);
