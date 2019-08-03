@@ -3446,7 +3446,7 @@ update_details(WINDOW *hw){
 		wattroff(hw,A_BOLD);
 		waddstr(hw,sn ? sn : "n/a");
 		wattron(hw,A_BOLD);
-		if(getmaxx(hw) - getcurx(hw) >= 12){
+		if(getmaxx(hw) - getcurx(hw) > 13){
 			wprintw(hw," WC%lc WRV%lc RO%lc",
 					d->blkdev.wcache ? L'+' : L'-',
 					d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
