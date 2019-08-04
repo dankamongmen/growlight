@@ -985,8 +985,14 @@ blockdev_details(const device *d){
 		}
 		printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
 		printf("Transport: %s\n", transport_str(d->blkdev.transport));
-		if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s",d->name) >= (int)sizeof(buf)){
-			return -1;
+		if(d->blkdev.transport == DIRECT_NVME){
+			if(snprintf(buf,sizeof(buf),"nvme id-ctrl /dev/%s",d->name) >= (int)sizeof(buf)){
+				return -1;
+			}
+		}else{ // probably shouldn't for e.g. USB? maybe should? FIXME
+			if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s",d->name) >= (int)sizeof(buf)){
+				return -1;
+			}
 		}
 	}else if(d->layout == LAYOUT_MDADM){
 		if(snprintf(buf,sizeof(buf),"mdadm --detail /dev/%s",d->name) >= (int)sizeof(buf)){
