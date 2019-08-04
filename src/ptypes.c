@@ -242,7 +242,8 @@ const ptype ptypes[] = {
 		.mbr_code = 0xbf,
 	}, {
 		.code = 0xbf01,
-		.name = "Solaris /usr, Mac OS X ZFS",
+		// .name = "Solaris /usr, Mac OS X ZFS",
+		.name = "ZFS",
 		.gpt_guid = "\xC3\x8C\x89\x6A\xD2\x1D\xB2\x11\x99\xA6\x08\x00\x20\x73\x66\x31",
 		.mbr_code = 0xbf,
 		.aggregable = 1,
@@ -265,6 +266,11 @@ const ptype ptypes[] = {
 		.code = 0xbf05,
 		.name = "Solaris /home",
 		.gpt_guid = "\x39\xBA\x90\x6A\xD2\x1D\xB2\x11\x99\xA6\x08\x00\x20\x73\x66\x31",
+		.mbr_code = 0xbf,
+	}, {
+		.code = 0xbf07,
+		.name = "Solaris reserved",
+		.gpt_guid = "\x3b\x5A\x94\x6A\xD2\x1D\xB2\x11\x99\xA6\x08\x00\x20\x73\x66\x31",
 		.mbr_code = 0xbf,
 	}, {
 		.code = 0xc001,
