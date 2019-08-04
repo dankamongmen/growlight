@@ -18,7 +18,7 @@ sanitize_cmd(const char *cmd){
 	size_t conv;
 
 	memset(&ps,0,sizeof(ps));
-	left = strlen(cmd);
+	left = strlen(cmd) + 1;
 	do{
 		unsigned escape;
 		wchar_t w;
@@ -31,6 +31,9 @@ sanitize_cmd(const char *cmd){
 		if(conv == (size_t)-2){
 			// FIXME ended unexpectedly...are we feeding bad data?
 			diag("Multibyte ended unexpectedly: %s\n",cmd);
+			break;
+		}
+		if(conv == 0){ // done!
 			break;
 		}
 		left -= conv;
