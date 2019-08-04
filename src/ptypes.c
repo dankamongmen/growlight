@@ -3,63 +3,10 @@
 #include "ptypes.h"
 #include "growlight.h"
 
+// Ensure the longer matches (GPT) precede the shorter ones (MSDOS), or common
+// prefixes will cause bad matches.
 const ptype ptypes[] = {
 	{
-		.code = 0x0005,
-		.name = "DOS extended",
-		.gpt_guid = {0},
-		.mbr_code = 0x5,
-	}, {
-		.code = 0x0006,
-		.name = "FAT16",
-		.gpt_guid = {0},
-		.mbr_code = 0x06,
-	}, {
-		.code = 0x0008,
-		.name = "AIX",
-		.gpt_guid = {0},
-		.mbr_code = 0x08,
-	}, {
-		.code = 0x0009,
-		.name = "AIX Bootable",
-		.gpt_guid = {0},
-		.mbr_code = 0x09,
-	}, {
-		.code = 0x000b,
-		.name = "FAT32",
-		.gpt_guid = {0},
-		.mbr_code = 0x0b,
-	}, {
-		.code = 0x000c,
-		.name = "FAT32 LBA",
-		.gpt_guid = {0},
-		.mbr_code = 0x0c,
-	}, {
-		.code = 0x000e,
-		.name = "FAT16 LBA",
-		.gpt_guid = {0},
-		.mbr_code = 0x0e,
-	}, {
-		.code = 0x0085,
-		.name = "Linux extended",
-		.gpt_guid = {0},
-		.mbr_code = 0x85,
-	}, {
-		.code = 0x00a6,
-		.name = "OpenBSD",
-		.gpt_guid = {0},
-		.mbr_code = 0xa6,
-	}, {
-		.code = 0x00ee,
-		.name = "MBR Protective",
-		.gpt_guid = {0},
-		.mbr_code = 0xee,
-	}, {
-		.code = 0x00ef,
-		.name = "EFI FAT",
-		.gpt_guid = {0},
-		.mbr_code = 0xef,
-	}, {
 		.code = 0x0700,
 		.name = "Microsoft basic data",
 		.gpt_guid = "\xA2\xA0\xD0\xEB\xE5\xB9\x33\x44\x87\xC0\x68\xB6\xB7\x26\x99\xC7",
@@ -330,6 +277,61 @@ const ptype ptypes[] = {
 		.gpt_guid = "\x28\xE7\xA1\xE2\xE3\x32\xD6\x11\xA6\x82\x7B\x03\xA0\x00\x00\x00",
 		.mbr_code = 0,
 	}, {
+		.code = 0x0005,
+		.name = "DOS extended",
+		.gpt_guid = {0},
+		.mbr_code = 0x5,
+	}, {
+		.code = 0x0006,
+		.name = "FAT16",
+		.gpt_guid = {0},
+		.mbr_code = 0x06,
+	}, {
+		.code = 0x0008,
+		.name = "AIX",
+		.gpt_guid = {0},
+		.mbr_code = 0x08,
+	}, {
+		.code = 0x0009,
+		.name = "AIX Bootable",
+		.gpt_guid = {0},
+		.mbr_code = 0x09,
+	}, {
+		.code = 0x000b,
+		.name = "FAT32",
+		.gpt_guid = {0},
+		.mbr_code = 0x0b,
+	}, {
+		.code = 0x000c,
+		.name = "FAT32 LBA",
+		.gpt_guid = {0},
+		.mbr_code = 0x0c,
+	}, {
+		.code = 0x000e,
+		.name = "FAT16 LBA",
+		.gpt_guid = {0},
+		.mbr_code = 0x0e,
+	}, {
+		.code = 0x0085,
+		.name = "Linux extended",
+		.gpt_guid = {0},
+		.mbr_code = 0x85,
+	}, {
+		.code = 0x00a6,
+		.name = "OpenBSD",
+		.gpt_guid = {0},
+		.mbr_code = 0xa6,
+	}, {
+		.code = 0x00ee,
+		.name = "MBR Protective",
+		.gpt_guid = {0},
+		.mbr_code = 0xee,
+	}, {
+		.code = 0x00ef,
+		.name = "EFI FAT",
+		.gpt_guid = {0},
+		.mbr_code = 0xef,
+	}, {
 		.code = 0,
 		.name = NULL,
 		.gpt_guid = { 0 },
@@ -419,6 +421,7 @@ int ptype_supported(const char *pttype,const ptype *pt){
 	return 0;
 }
 
+// Get the numeric partition type from a libblkid PART_TYPE value.
 unsigned get_str_code(const char *str){
 	unsigned long ul;
 	const ptype *pt;
@@ -426,7 +429,7 @@ unsigned get_str_code(const char *str){
 
 	// libblkid (currently) uses "0x%2x" as a format specifier. by using
 	// strtoul, we ought be fairly future-proof.
-	if((ul = strtoul(str,&e,0)) > 0xff){
+	if((ul = strtoul(str, &e, 16)) > 0xff || e - str > 2){
 		ul = 0;
 	}
 	for(pt = ptypes ; pt->name ; ++pt){

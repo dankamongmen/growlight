@@ -3566,7 +3566,7 @@ update_details(WINDOW *hw){
 			}
 			wattron(hw,A_BOLD);
 			wprintw(hw,"0x%x %sB align",
-					get_code_specific(pttype,b->zone->p->partdev.ptype),
+					get_code_specific(pttype, b->zone->p->partdev.ptype),
 					align);
 			detail_fs(hw,b->zone->p,7);
 		}else{
