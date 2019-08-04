@@ -1002,8 +1002,8 @@ rescan(const char *name,device *d){
 				clobber_device(d);
 				return NULL;
 			}
-			if(mbrsha1(dfd,d->blkdev.biossha1)){
-				verbf("Couldn't read MBR for %s\n",name);
+			if(mbrsha1(d, dfd, d->blkdev.biossha1)){
+				verbf("Couldn't read MBR for %s\n", name);
 				free(d->blkdev.biossha1);
 				d->blkdev.biossha1 = NULL;
 			}

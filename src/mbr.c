@@ -17,7 +17,7 @@
 #define MBR_SIZE 512
 #define MBR_CODE_SIZE 440
 
-int mbrsha1(int fd,void *buf){
+int mbrsha1(device *d, int fd, void *buf){
 	// We only check the first MBR_CODE_SIZE bytes, but must read in
 	// multiples of the sector size. This code might in fact be broken
 	// for 4k sector disks -- I'm unsure whether it's logical or physical.
@@ -25,18 +25,22 @@ int mbrsha1(int fd,void *buf){
 	unsigned char mbr[MBR_SIZE];
 	ssize_t r;
 
-	if(lseek(fd,0,SEEK_SET)){
+	if(lseek(fd, 0, SEEK_SET)){
 		int e = errno;
-		diag("Couldn't seek to first byte of %d (%s?)\n",fd,strerror(errno));
+		diag("Couldn't seek to first byte of %s (%s?)\n", d->name, strerror(errno));
 		errno = e;
 		return -1;
 	}
-	if((r = read(fd,mbr,sizeof(mbr))) < 0 || r < (int)sizeof(mbr)){
-		diag("Read %zd/%zu of %d (%s?)\n",r,sizeof(mbr),fd,strerror(errno));
+	if((r = read(fd, mbr, sizeof(mbr))) < 0){
+		diag("Error reading %zu from %s (%s?)\n", sizeof(mbr), d->name, strerror(errno));
 		return -1;
 	}
-	if(SHA1(mbr,MBR_CODE_SIZE,buf) == NULL){
-		diag("Couldn't perform SHA1 for %d (%s)\n",fd,ERR_lib_error_string(ERR_get_error()));
+	if(r < (int)sizeof(mbr)){
+		diag("Short read %zd/%zu from %s\n", r, sizeof(mbr), d->name);
+		return -1;
+	}
+	if(SHA1(mbr, MBR_CODE_SIZE, buf) == NULL){
+		diag("Couldn't perform SHA1 for %s (%s)\n", d->name, ERR_lib_error_string(ERR_get_error()));
 		return -1;
 	}
 	return 0;
@@ -93,7 +97,7 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 		errno = e;
 		return -1;
 	}
-	if(mbrsha1(fd,d->blkdev.biossha1)){
+	if(mbrsha1(d, fd, d->blkdev.biossha1)){
 		int e = errno;
 		close(fd);
 		errno = e;
