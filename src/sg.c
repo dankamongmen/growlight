@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <scsi/sg.h>
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
@@ -338,24 +339,43 @@ int sg_interrogate(device *d,int fd){
 			d->blkdev.rwverify == RWVERIFY_UNSUPPORTED ? "Not present" :
 			d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? "Disabled" : "Enabled");
 	for(n = START_SERIAL ; n < START_SERIAL + LENGTH_SERIAL ; ++n){
-		unsigned char c1 = (buf[n] & 0xff00) >> 8u;
-		unsigned char c2 = (buf[n] & 0xff);
-
-		if(!isprint(c1) || !isprint(c2)){
-			break;
-		}
 		buf[n] = ntohs(buf[n]);
 	}
-	if(n == START_SERIAL + LENGTH_SERIAL){
-		d->blkdev.serial = malloc(LENGTH_SERIAL * sizeof(*buf) + 1);
-		if(d->blkdev.serial){
-			// FIXME this copies over whitespace
-			memcpy(d->blkdev.serial,buf + START_SERIAL,LENGTH_SERIAL * sizeof(*buf));
-			d->blkdev.serial[LENGTH_SERIAL * sizeof(*buf)] = '\0';
-		}
-	}else{
-		verbf("Got bad data on SG_IO for %s\n",d->name);
-		//return 0;
+	free(d->blkdev.serial);
+	d->blkdev.serial = cleanup_serial(buf + START_SERIAL,
+					  LENGTH_SERIAL * sizeof(*buf));
+	if(d->blkdev.serial == NULL){
+		return -1;
 	}
 	return 0;
+}
+
+// Serial numbers with weird whitespace are surprisingly common. Clean 'em up.
+void *cleanup_serial(const void *vserial, size_t snmax) {
+	char *clean;
+	size_t snlen = 0; // number of copied characters <= snmax
+	size_t iter; // iterator in original string
+	bool inspace = true; // trim out leading/repeated whitespace
+	if((clean = malloc(snmax + 1)) == NULL){
+		return NULL;
+	}
+	const char *serial = vserial;
+	for(iter = 0 ; iter < snmax ; ++iter){
+		if(!serial[iter]){
+			break;
+		}else if(isspace(serial[iter]) || !isprint(serial[iter])){
+			if(!inspace){ // trims early or repeated whitespace
+				clean[snlen++] = ' ';
+				inspace = true;
+			}
+		}else{
+			clean[snlen++] = serial[iter];
+			inspace = false;
+		}
+	}
+	if(inspace && snlen){ // space was at the end, after actual data
+		--snlen;
+	}
+	clean[snlen] = '\0';
+	return clean;
 }
