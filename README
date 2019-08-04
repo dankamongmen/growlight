@@ -44,4 +44,4 @@ Building from a tarball:
 
 ===Using it===
 
-See the man page, or press 'h' in curses mode, or type "help" in readline mode.
+See the man page, or press 'H' in curses mode, or type "help" in readline mode.
