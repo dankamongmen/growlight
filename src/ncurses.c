@@ -3565,9 +3565,12 @@ update_details(WINDOW *hw){
 				wprintw(hw," (%s) ","unnamed");
 			}
 			wattron(hw,A_BOLD);
-			wprintw(hw,"0x%x %sB align",
-					get_code_specific(pttype, b->zone->p->partdev.ptype),
-					align);
+                        if(getcurx(hw) <= cols - 2 - 4){
+				wprintw(hw,"%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
+			}
+			if(getcurx(hw) <= cols - 2 - 11){
+				wprintw(hw, " %sB align", align);
+			}
 			detail_fs(hw,b->zone->p,7);
 		}else{
 			// FIXME print alignment for unpartitioned space as well,
