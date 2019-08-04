@@ -3432,20 +3432,15 @@ update_details(WINDOW *hw){
 	if(d->layout == LAYOUT_NONE){
 		const char *sn = d->blkdev.serial;
 
-		if(sn){
-			while(isspace(*sn)){
-				++sn;
-			}
-		}
-		mvwprintw(hw,3,START_COL,"%s: ",d->name);
-		wattroff(hw,A_BOLD);
-		waddstr(hw,d->model ? d->model : "n/a");
-		waddstr(hw,d->revision ? d->revision : "");
-		wattron(hw,A_BOLD);
-		wprintw(hw," (%sB) S/N: ",bprefix(d->size,1,buf,sizeof(buf),1));
-		wattroff(hw,A_BOLD);
-		waddstr(hw,sn ? sn : "n/a");
-		wattron(hw,A_BOLD);
+		mvwprintw(hw, 3, START_COL, "%s: ", d->name);
+		wattroff(hw, A_BOLD);
+		waddstr(hw, d->model ? d->model : "n/a");
+		waddstr(hw, d->revision ? d->revision : "");
+		wattron(hw, A_BOLD);
+		wprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf, sizeof(buf), 1));
+		wattroff(hw, A_BOLD);
+		waddstr(hw, sn ? sn : "n/a");
+		wattron(hw, A_BOLD);
 		if(getmaxx(hw) - getcurx(hw) > 13){
 			wprintw(hw," WC%lc WRV%lc RO%lc",
 					d->blkdev.wcache ? L'+' : L'-',
