@@ -14,6 +14,7 @@
 #include "mbr.h"
 #include "zfs.h"
 #include "swap.h"
+#include "stats.h"
 #include "sysfs.h"
 #include "popen.h"
 #include "ptypes.h"
@@ -1914,6 +1915,36 @@ diags(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+stats(wchar_t * const *args, const char *arghelp){
+	static diskstats *prev;
+	static int prevcount;
+	diskstats *stat;
+	int count, z;
+
+	ZERO_ARG_CHECK(args, arghelp);
+	stat = NULL;
+	count = read_proc_diskstats(prev, prevcount, &stat);
+	if(count < 0){
+		fprintf(stderr, "Error reading device stats!\n");
+		return -1;
+	}
+	use_terminfo_color(COLOR_WHITE, 1);
+	printf("Device         Sectors read          SRead Δ  Sectors written       SWritten Δ\n");
+	use_terminfo_color(COLOR_BLUE,1);
+	for(z = 0 ; z < count ; ++z){
+		printf("%-10.10s %16ju %16ju %16ju %16ju\n", stat[z].name,
+		       stat[z].raw.sectors_read,
+		       stat[z].delta.sectors_read,
+		       stat[z].raw.sectors_written,
+		       stat[z].delta.sectors_written);
+	}
+	free(prev);
+	prev = stat;
+	prevcount = count;
+	return 0;
+}
+
+static int
 quit(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	lights_off = 1;
@@ -1976,7 +2007,8 @@ static const struct fxn {
 			"                 | no arguments prints target"),
 	FXN(map,"[ mountdev mountpoint options ]\n"
 			"                 | no arguments prints target fstab"),
-	FXN(unmap,"mountpoint\n"),
+	FXN(unmap, "mountpoint"),
+	FXN(stats, ""),
 	FXN(mounts,""),
 	FXN(uefiboot,"root fs map must be defined in GPT partition"),
 	FXN(biosboot,"root fs map must be defined in GPT/MBR partition"),
@@ -2164,6 +2196,10 @@ int main(int argc,char * const *argv){
 		.block_free = block_free,
 	};
 
+	if(setlocale(LC_ALL,"") == NULL){
+		fprintf(stderr,"Warning: couldn't load locale\n");
+		//return EXIT_FAILURE;
+	}
 	if(growlight_init(argc,argv,&ui,NULL)){
 		return EXIT_FAILURE;
 	}
