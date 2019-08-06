@@ -104,11 +104,13 @@ PKG_CHECK_MODULES([libdevmapper], [devmapper], [have_libdevmapper=yes])
 	LIBS+=" $libdevmapper_LIBS"
 
 PKG_CHECK_MODULES([libcryptsetup], [libcryptsetup], [have_libcryptsetup=yes])
-	CFLAGS+=" $CUNIT_CFLAGS"
-	LIBS+=" $CUNIT_LIBS"
+	CFLAGS+=" $libcryptsetup_CFLAGS"
+	LIBS+=" $libcryptsetup_LIBS"
 
 # CUnit (unit testing)
 PKG_CHECK_MODULES([CUNIT], [cunit >= 2.1], [have_cunit=yes])
+	CFLAGS+=" $CUNIT_CFLAGS"
+	LIBS+=" $CUNIT_LIBS"
 
 ## output
 AC_SUBST([CFLAGS])

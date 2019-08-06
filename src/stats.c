@@ -55,7 +55,7 @@ read_procfs_file(const char *path, size_t *buflen) {
 		errno = terrno;
 		return NULL;
 	}
-	diag("Read %zub from %s", *buflen, path);
+	diag("Read %zub from %s\n", *buflen, path);
 	close(fd);
 	return buf;
 }
@@ -70,6 +70,7 @@ find_line_end(const char *buf, size_t offset, size_t buflen) {
 			++offset;
 			break;
 		}
+		++offset;
 	}
 	return offset;
 }
@@ -127,8 +128,8 @@ int read_diskstats(const char *path, diskstats *prev, int prevcount,
 	int devices = 0;
 	*stats = NULL;
 	while((eol = find_line_end(buf, offset, buflen)) > offset){
-	diskstats dstat;
-	memset(&dstat, 0, sizeof(dstat));
+		diskstats dstat;
+		memset(&dstat, 0, sizeof(dstat));
 		if(lex_diskstats(buf + offset, buf + eol, &dstat)){
 			free(*stats);
 			free(buf);
