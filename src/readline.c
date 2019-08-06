@@ -393,9 +393,9 @@ static int
 print_drive_stats(const device *d) {
 	printf("%-10.10s %16ju %16ju %16ju %16ju\n", d->name,
 		d->stats.sectors_read,
-		0ul, // FIXME
+		d->statdelta.sectors_read,
 		d->stats.sectors_written,
-		0ul); // FIXME
+		d->statdelta.sectors_written);
 	return 0;
 }
 

@@ -1520,8 +1520,11 @@ update_stats(const diskstats *stats, int statcount) {
 			diag("Got stats for unknown device [%s]\n", ds->name);
 			continue;
 		}
+		d->statdelta.sectors_read = ds->total.sectors_read - d->stats.sectors_read;
+		d->statdelta.sectors_written = ds->total.sectors_written - d->stats.sectors_written;
 		d->stats.sectors_read = ds->total.sectors_read;
 		d->stats.sectors_written = ds->total.sectors_written;
+		// FIXME set up delta timeq
 	}
 }
 
