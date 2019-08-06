@@ -453,9 +453,17 @@ genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
 	if(dv != mult){
 		dv /= mult;
 		val /= decimal;
-		if((val % dv) / ((dv + 99) / 100) || omitdec == 0){
-			snprintf(buf,bsize,"%ju.%02ju%c%c",val / dv,(val % dv) / ((dv + 99) / 100),
-					prefixes[consumed - 1],uprefix);
+		// Remainder is val % dv; we want a percentage as scaled integer
+		unsigned remain = (val % dv) * 100 / dv;
+		if(remain || omitdec == 0){
+			// FIXME we throw the % 100 on remain to avoid a
+			// format-truncation warning. remain ought always be
+			// less than 100, since integer division goes to 0.
+			snprintf(buf, bsize,"%ju.%02u%c%c",
+					val / dv,
+					remain % 100,
+					prefixes[consumed - 1],
+					uprefix);
 		}else{
 			snprintf(buf,bsize,"%ju%c%c",val / dv,prefixes[consumed - 1],uprefix);
 		}
