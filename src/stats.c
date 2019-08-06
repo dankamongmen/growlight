@@ -9,8 +9,8 @@
 
 const char PROCFS_DISKSTATS[] = "/proc/diskstats";
 
-int read_proc_diskstats(diskstats *prev, int prevcount, diskstats **stats) {
-	return read_diskstats(PROCFS_DISKSTATS, prev, prevcount, stats);
+int read_proc_diskstats(diskstats **stats) {
+	return read_diskstats(PROCFS_DISKSTATS, stats);
 }
 
 // procfs files can't be mmap()ed, and always advertise a length of 0. They are
@@ -76,26 +76,8 @@ find_line_end(const char *buf, size_t offset, size_t buflen) {
 	return offset;
 }
 
-// Pass in the previous raw numbers corresponding to this diskstat. New deltas
-// will be written to dstat->delta using dstat->raw - *spack.
-static void
-diskstat_deltas(const statpack *spack, diskstats *dstat) {
-	// FIXME check for spack > dstat on each entry? protective? wouldn't be
-	// a complete solution for the disappearing/reappearing device case...
-	dstat->delta.sectors_written = dstat->raw.sectors_written - spack->sectors_written;
-	dstat->delta.sectors_read = dstat->raw.sectors_read - spack->sectors_read;
-}
-
 static int
-add_diskstat(const diskstats *prev, int prevcount, diskstats **stats,
-	     int devcount, diskstats *dstat) {
-	int piter;
-	for(piter = 0 ; piter < prevcount ; ++piter){
-		if(strcmp(prev[piter].name, dstat->name) == 0){
-			diskstat_deltas(&prev[piter].raw, dstat);
-			break;
-		}
-	}
+add_diskstat(diskstats **stats, int devcount, diskstats *dstat) {
 	diskstats *tmp = realloc(*stats, sizeof(**stats) * (devcount + 1));
 	if(tmp == NULL){
 		return -1;
@@ -170,34 +152,34 @@ lex_diskstats(const char *sol, const char *eol, diskstats *dstat) {
 	if(consumed != 7){
 		return -1;
 	}
-	dstat->raw.sectors_read = f3;
-	dstat->raw.sectors_written = f7;
+	dstat->total.sectors_read = f3;
+	dstat->total.sectors_written = f7;
 	return 0;
 }
 
-int read_diskstats(const char *path, diskstats *prev, int prevcount,
-		   diskstats **stats) {
+int read_diskstats(const char *path, diskstats **stats) {
+	diskstats *tmpstats;
 	size_t buflen;
 	char *buf;
 
 	if((buf = read_procfs_file(path, &buflen)) == NULL){
 		return -1;
 	}
-	// FIXME sort the input for quicker delta generation?
 	size_t offset = 0; // where our line starts in the file
 	size_t eol; // points one past last byte of line after find_line_end()
 	int devices = 0;
 	*stats = NULL;
+	tmpstats = NULL;
 	while((eol = find_line_end(buf, offset, buflen)) > offset){
 		diskstats dstat;
 		memset(&dstat, 0, sizeof(dstat));
 		if(lex_diskstats(buf + offset, buf + eol, &dstat)){
-			free(*stats);
+			free(tmpstats);
 			free(buf);
 			return -1;
 		}
-		if(add_diskstat(prev, prevcount, stats, devices, &dstat)){
-			free(*stats);
+		if(add_diskstat(&tmpstats, devices, &dstat)){
+			free(tmpstats);
 			free(buf);
 			return -1;
 		}
@@ -205,5 +187,6 @@ int read_diskstats(const char *path, diskstats *prev, int prevcount,
 		offset = eol + 1;
 	}
 	free(buf);
+	*stats = tmpstats;
 	return devices;
 }

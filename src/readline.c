@@ -1916,21 +1916,12 @@ diags(wchar_t * const *args,const char *arghelp){
 
 static int
 stats(wchar_t * const *args, const char *arghelp){
-	static diskstats *prev;
-	static int prevcount;
-	diskstats *stat;
-	int count, z;
-
 	ZERO_ARG_CHECK(args, arghelp);
-	stat = NULL;
-	count = read_proc_diskstats(prev, prevcount, &stat);
-	if(count < 0){
-		fprintf(stderr, "Error reading device stats!\n");
-		return -1;
-	}
+	// FIXME iterate over devices
 	use_terminfo_color(COLOR_WHITE, 1);
 	printf("Device         Sectors read          SRead Δ  Sectors written       SWritten Δ\n");
 	use_terminfo_color(COLOR_BLUE,1);
+	/*
 	for(z = 0 ; z < count ; ++z){
 		printf("%-10.10s %16ju %16ju %16ju %16ju\n", stat[z].name,
 		       stat[z].raw.sectors_read,
@@ -1938,9 +1929,7 @@ stats(wchar_t * const *args, const char *arghelp){
 		       stat[z].raw.sectors_written,
 		       stat[z].delta.sectors_written);
 	}
-	free(prev);
-	prev = stat;
-	prevcount = count;
+	*/
 	return 0;
 }
 

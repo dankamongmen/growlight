@@ -1520,8 +1520,8 @@ update_stats(const diskstats *stats, int statcount) {
 			diag("Got stats for unknown device [%s]\n", ds->name);
 			continue;
 		}
-		d->stats.sectors_read = ds->raw.sectors_read;
-		d->stats.sectors_written = ds->raw.sectors_written;
+		d->stats.sectors_read = ds->total.sectors_read;
+		d->stats.sectors_written = ds->total.sectors_written;
 	}
 }
 
@@ -1558,8 +1558,6 @@ static void *
 event_posix_thread(void *unsafe){
 	const struct event_marshal *em = unsafe;
 	static struct epoll_event events[128]; // static so as not to be on the stack
-	diskstats *prevstats = NULL;
-	int prevstatcount = 0;
 	int e,r;
 
 	do{
@@ -1634,19 +1632,18 @@ event_posix_thread(void *unsafe){
 					unlock_growlight();
 				}else if(events[r].data.fd == em->stats_timerfd){
 					uint64_t dontcare;
-					int statcount;
 					diskstats *dstats;
+					int statcount;
+
 					read(em->stats_timerfd, &dontcare, sizeof(dontcare));
 					lock_growlight();
-					statcount = read_proc_diskstats(prevstats, prevstatcount, &dstats);
+					statcount = read_proc_diskstats(&dstats);
 					if(statcount >= 0){
 						update_stats(dstats, statcount);
 					}
 					unlock_growlight();
 					if(statcount >= 0){
-						free(prevstats);
-						prevstats = dstats;
-						prevstatcount = statcount;
+						free(dstats);
 					}
 				}else{
 					diag("Unknown fd %d saw event\n",events[r].data.fd);
