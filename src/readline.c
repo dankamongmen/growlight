@@ -390,6 +390,16 @@ print_partition(const device *p,int descend){
 // Green - filesystem
 
 static int
+print_drive_stats(const device *d) {
+	printf("%-10.10s %16ju %16ju %16ju %16ju\n", d->name,
+		d->stats.sectors_read,
+		0ul, // FIXME
+		d->stats.sectors_written,
+		0ul); // FIXME
+	return 0;
+}
+
+static int
 print_drive(const device *d,int descend){
 	char buf[PREFIXSTRLEN + 1];
 	uint64_t sector;
@@ -1916,20 +1926,22 @@ diags(wchar_t * const *args,const char *arghelp){
 
 static int
 stats(wchar_t * const *args, const char *arghelp){
+	const controller *c;
+
 	ZERO_ARG_CHECK(args, arghelp);
 	// FIXME iterate over devices
 	use_terminfo_color(COLOR_WHITE, 1);
 	printf("Device         Sectors read          SRead Δ  Sectors written       SWritten Δ\n");
 	use_terminfo_color(COLOR_BLUE,1);
-	/*
-	for(z = 0 ; z < count ; ++z){
-		printf("%-10.10s %16ju %16ju %16ju %16ju\n", stat[z].name,
-		       stat[z].raw.sectors_read,
-		       stat[z].delta.sectors_read,
-		       stat[z].raw.sectors_written,
-		       stat[z].delta.sectors_written);
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(print_drive_stats(d) < 0){
+				return -1;
+			}
+		}
 	}
-	*/
 	return 0;
 }
 
