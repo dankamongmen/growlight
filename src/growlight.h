@@ -231,7 +231,7 @@ typedef struct device {
 				//  in most recent call to read_diskstats()
 	statpack statdelta;	// Delta between the current value of stats and
 				//  its previous value (after two samples)
-	struct timespec statq;  // Timespan of statdelta. statdelta is
+	struct timeval statq;	// Timespan of statdelta. statdelta is
 				//  defined iff statq is not all 0s.
 	void *uistate;		// UI-managed opaque state
 } device;

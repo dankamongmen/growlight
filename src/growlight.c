@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <scsi/sg.h>
+#include <sys/time.h>
 #include <pci/pci.h>
 #include <pthread.h>
 #include <linux/fs.h>
@@ -1510,9 +1511,10 @@ get_dir_fd(const char *root){
 	return fd;
 }
 
-// To be called only while holding the growlight lock.
+// To be called only while holding the growlight lock. ts covers the time since
+// the last stat sampling.
 static void
-update_stats(const diskstats *stats, int statcount) {
+update_stats(const diskstats *stats, const struct timeval *tv, int statcount) {
 	while(statcount--){
 		const diskstats *ds = &stats[statcount];
 		device *d = lookup_device(ds->name);
@@ -1524,8 +1526,27 @@ update_stats(const diskstats *stats, int statcount) {
 		d->statdelta.sectors_written = ds->total.sectors_written - d->stats.sectors_written;
 		d->stats.sectors_read = ds->total.sectors_read;
 		d->stats.sectors_written = ds->total.sectors_written;
-		// FIXME set up delta timeq
+		memcpy(&d->statq, tv, sizeof(*tv));
 	}
+}
+
+void timeval_subtract(struct timeval *elapsed, const struct timeval *minuend,
+			const struct timeval *subtrahend) {
+	*elapsed = *minuend;
+	if(elapsed->tv_usec < subtrahend->tv_usec){
+		int nsec = (subtrahend->tv_usec - elapsed->tv_usec) / 100000 + 1;
+
+		elapsed->tv_usec += 1000000 * nsec;
+		elapsed->tv_sec -= nsec;
+	}
+	if(elapsed->tv_usec - subtrahend->tv_usec > 1000000){
+		int nsec = (elapsed->tv_usec - subtrahend->tv_usec) / 1000000;
+
+		elapsed->tv_usec -= 1000000 * nsec;
+		elapsed->tv_sec += nsec;
+	}
+	elapsed->tv_sec -= subtrahend->tv_sec;
+	elapsed->tv_usec -= subtrahend->tv_usec;
 }
 
 static int
@@ -1559,6 +1580,7 @@ struct event_marshal {
 
 static void *
 event_posix_thread(void *unsafe){
+	struct timeval laststatcheck = { .tv_sec = 0, .tv_usec = 0, };
 	const struct event_marshal *em = unsafe;
 	static struct epoll_event events[128]; // static so as not to be on the stack
 	int e,r;
@@ -1634,15 +1656,19 @@ event_posix_thread(void *unsafe){
 					parse_filesystems(gui,FILESYSTEMS);
 					unlock_growlight();
 				}else if(events[r].data.fd == em->stats_timerfd){
+					struct timeval now;
 					uint64_t dontcare;
 					diskstats *dstats;
 					int statcount;
 
 					read(em->stats_timerfd, &dontcare, sizeof(dontcare));
-					lock_growlight();
+					gettimeofday(&now, NULL);
 					statcount = read_proc_diskstats(&dstats);
+					lock_growlight();
+					struct timeval timeq;
+					timeval_subtract(&timeq, &now, &laststatcheck);
 					if(statcount >= 0){
-						update_stats(dstats, statcount);
+						update_stats(dstats, &timeq, statcount);
 					}
 					unlock_growlight();
 					if(statcount >= 0){
