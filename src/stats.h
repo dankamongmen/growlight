@@ -24,7 +24,7 @@ typedef struct statpack {
 } statpack;
 
 typedef struct diskstats {
-	uint64_t name[NAME_MAX + 1];
+	char name[NAME_MAX + 1];
 	statpack raw;
 	statpack delta;
 } diskstats;

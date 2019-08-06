@@ -74,17 +74,42 @@ find_line_end(const char *buf, size_t offset, size_t buflen) {
 	return offset;
 }
 
+// Pass in the previous raw numbers corresponding to this diskstat. New deltas
+// will be written to dstat->delta using dstat->raw - *spack.
+static void
+diskstat_deltas(const statpack *spack, diskstats *dstat) {
+	// FIXME check for spack > dstat on each entry? protective? wouldn't be
+	// a complete solution for the disappearing/reappearing device case...
+	dstat->delta.sectors_written = dstat->raw.sectors_written - spack->sectors_written;
+	dstat->delta.sectors_read = dstat->raw.sectors_read - spack->sectors_read;
+}
+
 static int
-add_diskstat(diskstats *prev, int prevcount, diskstats **stats, int devcount) {
-	diskstats dstat;
-	memset(&dstat, 0, sizeof(dstat));
-	// FIXME lex line, expand stats
+add_diskstat(const diskstats *prev, int prevcount, diskstats **stats,
+	     int devcount, diskstats *dstat) {
+	int piter;
+	for(piter = 0 ; piter < prevcount ; ++piter){
+		if(strcmp(prev[piter].name, dstat->name) == 0){
+			diskstat_deltas(&prev[piter].raw, dstat);
+			break;
+		}
+	}
 	diskstats *tmp = realloc(*stats, sizeof(**stats) * (devcount + 1));
 	if(tmp == NULL){
 		return -1;
 	}
-	memcpy(&tmp[devcount], &dstat, sizeof(dstat));
+	memcpy(&tmp[devcount], dstat, sizeof(*dstat));
 	*stats = tmp;
+	return 0;
+}
+
+static int
+lex_diskstats(const char *sol, const char *eol, diskstats *dstat) {
+	memset(dstat, 0, sizeof(*dstat));
+	while(sol != eol){
+		// FIXME lex it
+		++sol;
+	}
 	return 0;
 }
 
@@ -102,8 +127,14 @@ int read_diskstats(const char *path, diskstats *prev, int prevcount,
 	int devices = 0;
 	*stats = NULL;
 	while((eol = find_line_end(buf, offset, buflen)) > offset){
-		// FIXME do someting with prev/prevcount
-		if(add_diskstat(prev, prevcount, stats, devices)){
+	diskstats dstat;
+	memset(&dstat, 0, sizeof(dstat));
+		if(lex_diskstats(buf + offset, buf + eol, &dstat)){
+			free(*stats);
+			free(buf);
+			return -1;
+		}
+		if(add_diskstat(prev, prevcount, stats, devices, &dstat)){
 			free(*stats);
 			free(buf);
 			return -1;
