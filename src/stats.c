@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <errno.h>
+#include <ctype.h>
 #include <stdio.h>
 #include "stats.h"
 #include <unistd.h>
@@ -104,13 +105,73 @@ add_diskstat(const diskstats *prev, int prevcount, diskstats **stats,
 	return 0;
 }
 
+// Lex the major/minor number and device name. Copy the device name into dstat.
+// Returns the number of characters consumed, or -1 on a lexing failure.
 static int
-lex_diskstats(const char *sol, const char *eol, diskstats *dstat) {
-	memset(dstat, 0, sizeof(*dstat));
-	while(sol != eol){
-		// FIXME lex it
+lex_diskstats_prefix(const char *sol, const char *eol, diskstats *dstat) {
+	const char *start = sol;
+	// Pass any initial whitespace
+	while(sol < eol && isspace(*sol)){
 		++sol;
 	}
+	// Pass major number
+	while(sol < eol && isdigit(*sol)){
+		++sol;
+	}
+	// Should have whitespace now
+	if(sol == eol || !isspace(*sol)){
+		return -1;
+	}
+	// Pass said whitespace
+	do{
+		++sol;
+	}while(sol < eol && isspace(*sol));
+	// Pass minor number
+	while(sol < eol && isdigit(*sol)){
+		++sol;
+	}
+	// Should have whitespace now
+	if(sol == eol || !isspace(*sol)){
+		return -1;
+	}
+	// Pass said whitespace
+	do{
+		++sol;
+	}while(sol < eol && isspace(*sol));
+	unsigned namelen = 0;
+	while(sol < eol && isgraph(*sol)){
+		dstat->name[namelen++] = *sol;
+		++sol;
+		if(namelen >= sizeof(dstat->name)){ // name was too long, aieee
+			return -1;
+		}
+	}
+	if(namelen == 0){
+		return -1;
+	}
+	dstat->name[namelen] = '\0';
+	return sol - start;
+}
+
+// Lex up a single line from the diskstats file.
+static int
+lex_diskstats(const char *sol, const char *eol, diskstats *dstat) {
+	int consumed;
+
+	consumed = lex_diskstats_prefix(sol, eol, dstat);
+	if(consumed < 0){
+		return -1;
+	}
+	sol += consumed;
+	// sectorsRead is f3, sectorsWritten is f7
+	uintmax_t f1, f2, f3, f4, f5, f6, f7;
+	consumed = sscanf(sol, "%ju %ju %ju %ju %ju %ju %ju",
+			  &f1, &f2, &f3, &f4, &f5, &f6, &f7);
+	if(consumed != 7){
+		return -1;
+	}
+	dstat->raw.sectors_read = f3;
+	dstat->raw.sectors_written = f7;
 	return 0;
 }
 
