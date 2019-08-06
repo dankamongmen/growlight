@@ -60,13 +60,57 @@ read_procfs_file(const char *path, size_t *buflen) {
 	return buf;
 }
 
-int read_diskstats(const char *path, diskstats *prev, int prevcount, diskstats **stats) {
+// Find the offset one past the end of the current line (presumed to start at
+// offset). Offset must be less than or equal to buflen. The returned value
+// will never be greater than buflen.
+static size_t
+find_line_end(const char *buf, size_t offset, size_t buflen) {
+	while(offset < buflen){
+		if(buf[offset] == '\n'){
+			++offset;
+			break;
+		}
+	}
+	return offset;
+}
+
+static int
+add_diskstat(diskstats *prev, int prevcount, diskstats **stats, int devcount) {
+	diskstats dstat;
+	memset(&dstat, 0, sizeof(dstat));
+	// FIXME lex line, expand stats
+	diskstats *tmp = realloc(*stats, sizeof(**stats) * (devcount + 1));
+	if(tmp == NULL){
+		return -1;
+	}
+	memcpy(&tmp[devcount], &dstat, sizeof(dstat));
+	*stats = tmp;
+	return 0;
+}
+
+int read_diskstats(const char *path, diskstats *prev, int prevcount,
+		   diskstats **stats) {
 	size_t buflen;
 	char *buf;
 
 	if((buf = read_procfs_file(path, &buflen)) == NULL){
 		return -1;
 	}
+	// FIXME sort the input for quicker delta generation?
+	size_t offset = 0; // where our line starts in the file
+	size_t eol; // points one past last byte of line after find_line_end()
+	int devices = 0;
+	*stats = NULL;
+	while((eol = find_line_end(buf, offset, buflen)) > offset){
+		// FIXME do someting with prev/prevcount
+		if(add_diskstat(prev, prevcount, stats, devices)){
+			free(*stats);
+			free(buf);
+			return -1;
+		}
+		++devices;
+		offset = eol + 1;
+	}
 	free(buf);
-	return 0;
+	return devices;
 }
