@@ -23,6 +23,7 @@
 #include <sys/epoll.h>
 #include <pciaccess.h>
 #include <pci/header.h>
+#include <sys/timerfd.h>
 #include <sys/inotify.h>
 #include <openssl/ssl.h>
 #include <libdevmapper.h>
@@ -1548,7 +1549,7 @@ event_posix_thread(void *unsafe){
 
 	do{
 		do{
-			e = epoll_wait(em->efd,events,sizeof(events) / sizeof(*events),-1);
+			e = epoll_wait(em->efd, events, sizeof(events) / sizeof(*events), 1000/*-1*/);
 			for(r = 0 ; r < e ; ++r){
 				if(events[r].data.fd == em->ifd){
 					char buf[BUFSIZ];
@@ -1617,8 +1618,10 @@ event_posix_thread(void *unsafe){
 					parse_filesystems(gui,FILESYSTEMS);
 					unlock_growlight();
 				}else if(events[r].data.fd == em->stats_timerfd){
+					uint64_t dontcare;
 					int statcount;
 					diskstats *dstats;
+					read(em->stats_timerfd, &dontcare, sizeof(dontcare));
 					lock_growlight();
 					statcount = read_proc_diskstats(prevstats, prevstatcount, &dstats);
 					if(statcount >= 0){
@@ -1642,11 +1645,14 @@ event_posix_thread(void *unsafe){
 
 static int
 event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
+	struct itimerspec stattimer = {
+		.it_interval = { .tv_sec = 1, .tv_nsec = 0, },
+	};
 	struct event_marshal *em;
 	struct epoll_event ev;
 	int r;
 
-	memset(&ev,0,sizeof(ev));
+	memset(&ev, 0, sizeof(ev));
 	ev.events = EPOLLIN | EPOLLRDHUP;
 	if((em = malloc(sizeof(*em))) == NULL){
 		diag("Couldn't create event marshal (%s)\n",strerror(errno));
@@ -1681,18 +1687,46 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 	em->syswd = syswd;
 	em->bypathwd = bypathwd;
 	em->byidwd = byidwd;
+	if((em->stats_timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC|TFD_NONBLOCK)) < 0){
+		close(em->efd);
+		free(em);
+		return -1;
+	}
+	// One or both of tv_sec and tv_nsec must be non-zero to prime the timer
+	stattimer.it_value.tv_sec = 0;
+	stattimer.it_value.tv_nsec = 1;
+	if(timerfd_settime(em->stats_timerfd, 0, &stattimer, NULL)){
+		close(em->stats_timerfd);
+		close(em->efd);
+		free(em);
+		return -1;
+	}
 	if((em->mfd = open(MOUNTS,O_RDONLY|O_CLOEXEC)) < 0){
+		close(em->stats_timerfd);
 		close(em->efd);
 		free(em);
 		return -1;
 	}
 	if((em->sfd = open(SWAPS,O_RDONLY|O_CLOEXEC)) < 0){
+		close(em->stats_timerfd);
 		close(em->mfd);
 		close(em->efd);
 		free(em);
 		return -1;
 	}
 	if((em->ffd = open(FILESYSTEMS,O_RDONLY|O_CLOEXEC)) < 0){
+		close(em->stats_timerfd);
+		close(em->sfd);
+		close(em->mfd);
+		close(em->efd);
+		free(em);
+		return -1;
+	}
+	ev.data.fd = em->stats_timerfd;
+	if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->stats_timerfd, &ev)){
+		diag("Couldn't add %d to epoll (%s)\n", em->stats_timerfd, strerror(errno));
+		close(em->stats_timerfd);
+		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
 		close(em->efd);
@@ -1702,8 +1736,9 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 	// /proc/* always returns readable. On change they return EPOLLERR.
 	ev.events = EPOLLRDHUP;
 	ev.data.fd = em->ffd;
-	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->ffd,&ev)){
+	if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->ffd, &ev)){
 		diag("Couldn't add %d to epoll (%s)\n",em->ffd,strerror(errno));
+		close(em->stats_timerfd);
 		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
@@ -1714,6 +1749,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 	ev.data.fd = em->sfd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->sfd,&ev)){
 		diag("Couldn't add %d to epoll (%s)\n",em->sfd,strerror(errno));
+		close(em->stats_timerfd);
 		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
@@ -1724,6 +1760,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 	ev.data.fd = em->mfd;
 	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->mfd,&ev)){
 		diag("Couldn't add %d to epoll (%s)\n",em->mfd,strerror(errno));
+		close(em->stats_timerfd);
 		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
@@ -1731,8 +1768,9 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 		free(em);
 		return -1;
 	}
-	if( (r = pthread_create(&eventtid,NULL,event_posix_thread,em)) ){
-		diag("Couldn't create event thread (%s)\n",strerror(r));
+	if( (r = pthread_create(&eventtid, NULL, event_posix_thread, em)) ){
+		diag("Couldn't create event thread (%s)\n", strerror(r));
+		close(em->stats_timerfd);
 		close(em->ffd);
 		close(em->sfd);
 		close(em->mfd);
