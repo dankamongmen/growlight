@@ -17,6 +17,7 @@ extern "C" {
 #include <sys/types.h>
 
 #include "gpt.h"
+#include "stats.h"
 #include "mounts.h"
 #include "ptypes.h"
 #include "target.h"
@@ -132,8 +133,8 @@ typedef struct device {
 		SWAP_MAXPRIO = 0,
 		SWAP_MINPRIO = 65535,
 	} swapprio;		// Priority as a swap device
-	unsigned logsec;		// Logical sector size in bytes
-	unsigned physsec;		// Physical sector size in bytes
+	unsigned logsec;	// Logical sector size in bytes
+	unsigned physsec;	// Physical sector size in bytes
 	struct controller *c;
 	char *sched;		// I/O scheduler (can be NULL)
 	unsigned roflag;	// Read-only flag (hdparm -r, blockdev --getro)
@@ -226,6 +227,8 @@ typedef struct device {
 	} layout;
 	struct device *parts;	// Partitions (can be NULL)
 	dev_t devno;		// Don't expose this non-persistent datum
+	statpack stats;		// Stats since device came online, as returned
+				//  in most recent call to read_diskstats()
 	void *uistate;		// UI-managed opaque state
 } device;
 

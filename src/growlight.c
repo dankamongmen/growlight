@@ -1510,6 +1510,21 @@ get_dir_fd(const char *root){
 	return fd;
 }
 
+// To be called only while holding the growlight lock.
+static void
+update_stats(const diskstats *stats, int statcount) {
+	while(statcount--){
+		const diskstats *ds = &stats[statcount];
+		device *d = lookup_device(ds->name);
+		if(d == NULL){
+			diag("Got stats for unknown device [%s]\n", ds->name);
+			continue;
+		}
+		d->stats.sectors_read = ds->raw.sectors_read;
+		d->stats.sectors_written = ds->raw.sectors_written;
+	}
+}
+
 static int
 glight_pci_init(void){
 	if(pci_system_init()){
@@ -1625,7 +1640,7 @@ event_posix_thread(void *unsafe){
 					lock_growlight();
 					statcount = read_proc_diskstats(prevstats, prevstatcount, &dstats);
 					if(statcount >= 0){
-						// FIXME update device stats
+						update_stats(dstats, statcount);
 					}
 					unlock_growlight();
 					if(statcount >= 0){
