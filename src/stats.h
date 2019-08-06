@@ -40,7 +40,10 @@ typedef struct diskstats {
 // If a device is removed between two calls to read_stats(), its entry in the
 // prev array ought be 0d out, or spliced out, to guarantee correct deltas on
 // the subsequent call (in case another device is added and gets its name).
-int read_stats(diskstats *prev, int prevcount, diskstats **stats);
+int read_proc_diskstats(diskstats *prev, int prevcount, diskstats **stats);
+
+// Allows the path to be specified.
+int read_diskstats(const char *path, diskstats *prev, int prevcount, diskstats **stats);
 
 #ifdef __cplusplus
 }
