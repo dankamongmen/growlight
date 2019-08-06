@@ -42,6 +42,7 @@
 #include "popen.h"
 #include "smart.h"
 #include "sysfs.h"
+#include "stats.h"
 #include "ptable.h"
 #include "config.h"
 #include "mounts.h"
@@ -1534,12 +1535,15 @@ struct event_marshal {
 	int syswd;		// /sys/block watch descriptor
 	int bypathwd;		// /dev/disk/by-path watch descriptor
 	int byidwd;		// /dev/disk/by-id watch descriptor
+	int stats_timerfd;	// interval timer, 1Hz, for reading disk stats
 };
 
 static void *
 event_posix_thread(void *unsafe){
 	const struct event_marshal *em = unsafe;
-	struct epoll_event events[128];
+	static struct epoll_event events[128]; // static so as not to be on the stack
+	diskstats *prevstats = NULL;
+	int prevstatcount = 0;
 	int e,r;
 
 	do{
@@ -1612,6 +1616,20 @@ event_posix_thread(void *unsafe){
 					lock_growlight();
 					parse_filesystems(gui,FILESYSTEMS);
 					unlock_growlight();
+				}else if(events[r].data.fd == em->stats_timerfd){
+					int statcount;
+					diskstats *dstats;
+					lock_growlight();
+					statcount = read_proc_diskstats(prevstats, prevstatcount, &dstats);
+					if(statcount >= 0){
+						// FIXME update device stats
+					}
+					unlock_growlight();
+					if(statcount >= 0){
+						free(prevstats);
+						prevstats = dstats;
+						prevstatcount = statcount;
+					}
 				}else{
 					diag("Unknown fd %d saw event\n",events[r].data.fd);
 				}
