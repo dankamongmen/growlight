@@ -11,7 +11,7 @@ extern "C" {
 // See Linux's documentation/iostats.txt for description of the procfs disk
 // statistics. On Linux 4.18+, we have 17 fields:
 //
-// major minor
+// major minor devname
 // readsComp readsMerged sectorsRead msRead
 // writesComp writesMerged sectorsWritten msWritten
 // iosInProgress msIOs weightedmsIOs
