@@ -382,13 +382,6 @@ print_partition(const device *p,int descend){
 	return r;
 }
 
-// Yellow - hard disk
-// Cyan -- SSD
-// Magena -- virtual
-// White -- removable
-// Blue - Partition
-// Green - filesystem
-
 static int
 print_drive_stats(const device *d) {
 	printf("%-10.10s %16ju %16ju %16ju %16ju\n", d->name,
@@ -398,6 +391,24 @@ print_drive_stats(const device *d) {
 		d->statdelta.sectors_written);
 	return 0;
 }
+
+static int
+print_drive_stats_identified(const device *d) {
+	printf("SecRead    %16ju SecReadΔ    %16ju\n"
+	       "SecWritten %16ju SecWrittenΔ %16ju\n",
+		d->stats.sectors_read,
+		d->statdelta.sectors_read,
+		d->stats.sectors_written,
+		d->statdelta.sectors_written);
+	return 0;
+}
+
+// Yellow - hard disk
+// Cyan -- SSD
+// Magena -- virtual
+// White -- removable
+// Blue - Partition
+// Green - filesystem
 
 static int
 print_drive(const device *d,int descend){
@@ -977,6 +988,8 @@ blockdev_details(const device *d){
 		return -1;
 	}
 	printf("\n");
+	use_terminfo_color(COLOR_YELLOW,1);
+	print_drive_stats_identified(d);
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("Logical sector size: %u Physical: %u\n",d->logsec,d->physsec);
 	printf("I/O scheduler: %s\n",d->sched ? d->sched : "N/A");
@@ -1929,7 +1942,6 @@ stats(wchar_t * const *args, const char *arghelp){
 	const controller *c;
 
 	ZERO_ARG_CHECK(args, arghelp);
-	// FIXME iterate over devices
 	use_terminfo_color(COLOR_WHITE, 1);
 	printf("Device         Sectors read          SRead Δ  Sectors written       SWritten Δ\n");
 	use_terminfo_color(COLOR_BLUE,1);
