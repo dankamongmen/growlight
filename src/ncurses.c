@@ -1188,9 +1188,14 @@ case LAYOUT_NONE:
 				assert(wattrset(rb->win,COLOR_PAIR(OPTICAL_COLOR)) == OK);
 				strncpy(rolestr,"removable",sizeof(rolestr));
 			}else if(bo->d->blkdev.rotation >= 0){
+				int32_t speed = bo->d->blkdev.rotation;
 				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
-				if(bo->d->blkdev.rotation > 0){
-					snprintf(rolestr,sizeof(rolestr),"%d rpm",bo->d->blkdev.rotation);
+				if(speed > 0){
+					if(speed > 99999){
+						speed = 99999;
+					}
+					snprintf(rolestr, sizeof(rolestr),
+						 "%d rpm", speed);
 				}else{
 					strncpy(rolestr,"ferromag",sizeof(rolestr));
 				}
@@ -1227,7 +1232,8 @@ case LAYOUT_NONE:
 		break;
 case LAYOUT_MDADM:
 		if(bo->d->mddev.level){
-			strncpy(rolestr,bo->d->mddev.level,sizeof(rolestr));
+			strncpy(rolestr, bo->d->mddev.level, sizeof(rolestr) - 1);
+			rolestr[sizeof(rolestr) - 1] = '\0';
 		}
 		if(bo->d->mddev.degraded){
 			co = COLOR_PAIR(FUCKED_COLOR);
