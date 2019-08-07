@@ -14,6 +14,7 @@
 #include "mbr.h"
 #include "zfs.h"
 #include "swap.h"
+#include "stats.h"
 #include "sysfs.h"
 #include "popen.h"
 #include "ptypes.h"
@@ -379,6 +380,27 @@ print_partition(const device *p,int descend){
 		return -1;
 	}
 	return r;
+}
+
+static int
+print_drive_stats(const device *d) {
+	printf("%-10.10s %16ju %16ju %16ju %16ju\n", d->name,
+		d->stats.sectors_read,
+		d->statdelta.sectors_read,
+		d->stats.sectors_written,
+		d->statdelta.sectors_written);
+	return 0;
+}
+
+static int
+print_drive_stats_identified(const device *d) {
+	printf("SecRead    %16ju SecReadΔ    %16ju\n"
+	       "SecWritten %16ju SecWrittenΔ %16ju\n",
+		d->stats.sectors_read,
+		d->statdelta.sectors_read,
+		d->stats.sectors_written,
+		d->statdelta.sectors_written);
+	return 0;
 }
 
 // Yellow - hard disk
@@ -966,6 +988,8 @@ blockdev_details(const device *d){
 		return -1;
 	}
 	printf("\n");
+	use_terminfo_color(COLOR_YELLOW,1);
+	print_drive_stats_identified(d);
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("Logical sector size: %u Physical: %u\n",d->logsec,d->physsec);
 	printf("I/O scheduler: %s\n",d->sched ? d->sched : "N/A");
@@ -1914,6 +1938,26 @@ diags(wchar_t * const *args,const char *arghelp){
 }
 
 static int
+stats(wchar_t * const *args, const char *arghelp){
+	const controller *c;
+
+	ZERO_ARG_CHECK(args, arghelp);
+	use_terminfo_color(COLOR_WHITE, 1);
+	printf("Device         Sectors read          SRead Δ  Sectors written       SWritten Δ\n");
+	use_terminfo_color(COLOR_BLUE,1);
+	for(c = get_controllers() ; c ; c = c->next){
+		const device *d;
+
+		for(d = c->blockdevs ; d ; d = d->next){
+			if(print_drive_stats(d) < 0){
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+
+static int
 quit(wchar_t * const *args,const char *arghelp){
 	ZERO_ARG_CHECK(args,arghelp);
 	lights_off = 1;
@@ -1976,7 +2020,8 @@ static const struct fxn {
 			"                 | no arguments prints target"),
 	FXN(map,"[ mountdev mountpoint options ]\n"
 			"                 | no arguments prints target fstab"),
-	FXN(unmap,"mountpoint\n"),
+	FXN(unmap, "mountpoint"),
+	FXN(stats, ""),
 	FXN(mounts,""),
 	FXN(uefiboot,"root fs map must be defined in GPT partition"),
 	FXN(biosboot,"root fs map must be defined in GPT/MBR partition"),
@@ -2164,6 +2209,10 @@ int main(int argc,char * const *argv){
 		.block_free = block_free,
 	};
 
+	if(setlocale(LC_ALL,"") == NULL){
+		fprintf(stderr,"Warning: couldn't load locale\n");
+		//return EXIT_FAILURE;
+	}
 	if(growlight_init(argc,argv,&ui,NULL)){
 		return EXIT_FAILURE;
 	}
