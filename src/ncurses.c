@@ -3470,9 +3470,11 @@ update_details(WINDOW *hw){
 		wprintw(hw,"physical) %s connect",
 				transport_str(d->blkdev.transport));
 		if(transport_bw(d->blkdev.transport)){
+			uintmax_t transbw = transport_bw(d->blkdev.transport);
 			wprintw(hw," (");
 			wattroff(hw,A_BOLD);
-			wprintw(hw,"%sbps",qprefix(transport_bw(d->blkdev.transport),1,buf,sizeof(buf),1));
+			// FIXME throws -Wformat-truncation on gcc9
+			wprintw(hw, "%sbps", qprefix(transbw, 1, buf, sizeof(buf), 1));
 			wattron(hw,A_BOLD);
 			wprintw(hw,")");
 		}
