@@ -1527,6 +1527,7 @@ update_stats(const diskstats *stats, const struct timeval *tv, int statcount) {
 		d->stats.sectors_read = ds->total.sectors_read;
 		d->stats.sectors_written = ds->total.sectors_written;
 		memcpy(&d->statq, tv, sizeof(*tv));
+		d->uistate = gui->block_event(d, d->uistate);
 	}
 }
 

@@ -56,7 +56,7 @@ read_procfs_file(const char *path, size_t *buflen) {
 		errno = terrno;
 		return NULL;
 	}
-// diag("Read %zub from %s\n", *buflen, path);
+	verbf("Read %zub from %s\n", *buflen, path);
 	close(fd);
 	return buf;
 }
