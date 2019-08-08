@@ -418,7 +418,7 @@ setup_colors(void){
 	if(init_pair(SPLASHTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == ERR){
 		assert(init_pair(SPLASHTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != ERR);
 	}
-	assert(init_pair(ORANGE_COLOR,COLOR_RED,-1) == OK);
+	assert(init_pair(ORANGE_COLOR,COLOR_YELLOW,-1) == OK);
 	assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
 	assert(init_pair(BLACK_COLOR,COLOR_BLACK,COLOR_BLACK) == OK);
 	for(z = FIRST_FREE_COLOR ; z < COLORS ; ++z){
@@ -1359,15 +1359,14 @@ case LAYOUT_ZPOOL:
 	if((line + 2 < rows - !endp) && (line + !!topp + 2 >= 1)){
 		int sumline = line + 2;
 		if(bo->d->layout == LAYOUT_NONE){
-			wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-			if(bo->d->blkdev.celsius >= 60u){
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-			}else if(bo->d->blkdev.celsius >= 40u){
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(ORANGE_COLOR));
-			}else{
-				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-			}
 			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
+				if(bo->d->blkdev.celsius >= 60u){
+					wattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+				}else if(bo->d->blkdev.celsius >= 40u){
+					wattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
+				}else{
+					wattrset(rb->win, COLOR_PAIR(GREEN_COLOR));
+				}
 				// FIXME would be nice to use ℃ , but it looks weird
 				mvwprintw(rb->win, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
 			}else{
@@ -1400,9 +1399,13 @@ case LAYOUT_ZPOOL:
 		io += bo->d->statdelta.sectors_written;
 		io *= bo->d->logsec;
 		// FIXME normalize according to timeq
-		qprefix(io, 1, buf, sizeof(buf), 0);
 		wattrset(rb->win, COLOR_PAIR(SELECTED_COLOR));
-		wprintw(rb->win, "%7.7s", buf);
+		if(io){
+			bprefix(io, 1, buf, sizeof(buf), 0);
+			wprintw(rb->win, "%7.7s", buf);
+		}else{
+			wprintw(rb->win, " no i/o");
+		}
 	}
 
 	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
