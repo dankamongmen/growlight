@@ -1324,10 +1324,16 @@ case LAYOUT_ZPOOL:
 		return;
 	}
 	wattroff(rb->win, A_REVERSE);
-	wattron(rb->win, A_BOLD);
+	wattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
 
 	// Box-diagram (3-line) mode. Print the name on the first line.
 	if(line + !!topp >= 1){
+		mvwprintw(rb->win, line, START_COL, "%11.11s", bo->d->name);
+	}
+
+	// Print summary below device name, in the same color, but prefix it
+	// with the single-character SMART status when applicable.
+	if(line + 1 < rows - !endp && line + !!topp + 1 >= 1){
 		wchar_t rep = L' ';
 		if(bo->d->blkdev.smart >= 0){
 			if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
@@ -1342,17 +1348,12 @@ case LAYOUT_ZPOOL:
 				rep = L'✗';
 			}
 		}
-		mvwprintw(rb->win, line, 1, "%lc", rep);
-		wattrset(rb->win, COLOR_PAIR(SUBDISPLAY_COLOR));
-		wprintw(rb->win, "%10.10s", bo->d->name);
-	}else{
+		mvwprintw(rb->win, line + 1, START_COL, "%lc", rep);
 		wattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
-	}
-	
-	// Print summary below device name, in the same color
-	if(line + 1 < rows - !endp && line + !!topp + 1 >= 1){
 		if(strlen(rolestr)){
-			mvwprintw(rb->win,line + 1,START_COL,"%11.11s",rolestr);
+			wprintw(rb->win, "%10.10s", rolestr);
+		}else{
+			wprintw(rb->win, "          ");
 		}
 	}
 	// ...and now the temperature...
@@ -1367,11 +1368,12 @@ case LAYOUT_ZPOOL:
 				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			}
 			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 120u){
-				mvwprintw(rb->win,line + 2,1,"%2.ju°C ",bo->d->blkdev.celsius);
+				// FIXME would be nice to use ℃ , but it looks weird
+				mvwprintw(rb->win,line + 2,1,"%2.ju° ",bo->d->blkdev.celsius);
 			}else{
-				mvwprintw(rb->win,line + 2,1,"     ");
+				mvwprintw(rb->win,line + 2,1,"    ");
 			}
-			wprintw(rb->win, "      ");
+			wprintw(rb->win, "       ");
 		}else if(bo->d->layout == LAYOUT_MDADM){
 			if(bo->d->mddev.degraded){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
