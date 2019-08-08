@@ -449,6 +449,8 @@ genprefix(uintmax_t val,unsigned decimal,char *buf,size_t bsize,
 	unsigned consumed = 0;
 	uintmax_t dv;
 
+	assert(0 != decimal);
+	assert(0 != mult);
 	dv = mult;
 	while((val / decimal) >= dv && consumed < strlen(prefixes)){
 		dv *= mult;
