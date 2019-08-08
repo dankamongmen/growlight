@@ -1,7 +1,7 @@
 LANG=C
 LC_ALL=c
 
-AM_CFLAGS=-Wall -O2 -W -Wshadow -Wextra -fvisibility=hidden \
+AM_CFLAGS=-std=gnu11 -Wall -O2 -W -Wshadow -Wextra -fvisibility=hidden \
 	  $(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES) $(ZFS_CFLAGS)
 AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
 AM_CC=$(PTHREAD_CC)
