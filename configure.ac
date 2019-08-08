@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([growlight], [1.1.0], [dankamongmen@gmail.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
+AC_INIT([growlight], [1.1.0.1], [dankamongmen@gmail.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([-Wall foreign dist-xz no-dist-gzip std-options subdir-objects nostdinc])
 AC_CONFIG_HEADER([src/config.h])
@@ -69,9 +69,12 @@ PKG_PROG_PKG_CONFIG
 # their binaries in Makefile.am.
 AX_WITH_CURSES
 AX_WITH_CURSES_PANEL
-PKG_CHECK_MODULES([libpanel], [panel], [AC_DEFINE([HAVE_PANEL], [1], [Use libpanel from ncursesw])])
-if test "x$ax_cv_curses" = xyes; then
+PKG_CHECK_MODULES([libpanel], [panel], [AC_DEFINE([HAVE_PANEL], [1], [Use libpanel from ncurses])])
+if test "x$ax_cv_panel" = xyes; then
 	CFLAGS+=" -D_XOPEN_SOURCE_EXTENDED"
+else
+	AC_MSG_WARN([Cannot find Ncurses/panel, trying anyway...])
+	PANEL_LIBS+="-lpanelw"
 fi
 
 AX_LIB_READLINE
