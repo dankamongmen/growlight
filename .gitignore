@@ -15,6 +15,7 @@ depcomp
 doc/growlight.ent
 growlight-curses
 growlight-readline
+growlight-test
 growlight-curses.8
 growlight-curses.xhtml
 growlight-readline.8
@@ -29,7 +30,8 @@ missing
 src/config.h
 src/config.h.in
 src/config.h.in~
-src/.dirstamp
 src/stamp-h1
 tags
 .tags
+test-driver
+*/.dirstamp
