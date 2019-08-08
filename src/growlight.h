@@ -437,7 +437,8 @@ transport_bw(transport_e t){
 // bsize: size of buffer. ought be at least PREFIXSTRLEN
 // omitdec: inhibit printing of all-0 decimal portions
 // mult: base of suffix system (1000 or 1024)
-// uprefix: character to print following suffix ('i' for kibibytes basically)
+// uprefix: character to print following suffix ('i' for kibibytes basically).
+//   only printed if suffix is actually printed (input >= mult).
 //
 // For full safety, pass in a buffer that can hold the decimal representation
 // of the largest uintmax_t plus three (one for the unit, one for the decimal
