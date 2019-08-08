@@ -34,4 +34,7 @@ src/stamp-h1
 tags
 .tags
 test-driver
+growlight-test.log
+growlight-test.trs
+test-suite.log
 */.dirstamp
