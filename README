@@ -42,7 +42,7 @@ Building from a git checkout:
 
 Building from a tarball:
 
- - ./configure && make && sudo make install
+ - ./configure && make check && sudo make install
 
 ===Using it===
 
