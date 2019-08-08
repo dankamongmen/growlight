@@ -1400,6 +1400,8 @@ case LAYOUT_ZPOOL:
 		io *= bo->d->logsec;
 		// FIXME normalize according to timeq
 		wattrset(rb->win, COLOR_PAIR(SELECTED_COLOR));
+		// FIXME 'i' shows up only when there are fewer than 3 sigfigs
+		// to the left of the decimal point...very annoying
 		if(io){
 			bprefix(io, 1, buf, sizeof(buf), 0);
 			wprintw(rb->win, "%7.7s", buf);
