@@ -955,6 +955,10 @@ rescan(const char *name,device *d){
 		d->blkdev.realdev = 0;
 		d->blkdev.smart = -1;
 	}
+	// FIXME instead, we should read stats now, so we can have a valid
+	// delta on the next regularly scheduled read...
+	d->stats.sectors_read = ~0;
+	d->stats.sectors_written = ~0;
 	// Allow d->model to run the checks on validly-filebacked loop devices
 	if((d->layout == LAYOUT_NONE && (d->blkdev.realdev || d->model))
 			|| (d->layout == LAYOUT_MDADM) || (d->layout == LAYOUT_DM)){
@@ -1522,8 +1526,13 @@ update_stats(const diskstats *stats, const struct timeval *tv, int statcount) {
 			diag("Got stats for unknown device [%s]\n", ds->name);
 			continue;
 		}
-		d->statdelta.sectors_read = ds->total.sectors_read - d->stats.sectors_read;
-		d->statdelta.sectors_written = ds->total.sectors_written - d->stats.sectors_written;
+		if(d->stats.sectors_read == UINTMAX_MAX){
+			d->statdelta.sectors_read = 0;
+			d->statdelta.sectors_written = 0;
+		}else{
+			d->statdelta.sectors_read = ds->total.sectors_read - d->stats.sectors_read;
+			d->statdelta.sectors_written = ds->total.sectors_written - d->stats.sectors_written;
+		}
 		d->stats.sectors_read = ds->total.sectors_read;
 		d->stats.sectors_written = ds->total.sectors_written;
 		memcpy(&d->statq, tv, sizeof(*tv));
