@@ -64,6 +64,8 @@ if test "x$have_libzfs" = xyes; then
 fi
 fi
 
+# Dependencies of some (but not all) targets must be explicitly claimed by
+# their binaries in Makefile.am.
 AX_WITH_CURSES
 AX_WITH_CURSES_PANEL
 PKG_CHECK_MODULES([libpanel], [panel], [AC_DEFINE([HAVE_PANEL], [1], [Use libpanel from ncursesw])])
@@ -71,6 +73,14 @@ if test "x$ax_cv_curses" = xyes; then
 	CFLAGS+=" -D_XOPEN_SOURCE_EXTENDED"
 fi
 
+AX_LIB_READLINE
+AC_CHECK_LIB([readline], [main], [have_readline=yes],
+	[AC_MSG_ERROR([Cannot find libreadline.])])
+
+# CUnit (unit testing)
+PKG_CHECK_MODULES([CUNIT], [cunit >= 2.1], [have_cunit=yes])
+
+# Remaining dependencies are needed by all binaries.
 AC_CHECK_LIB(pciaccess,pci_system_init, [have_pciaccess=yes],
              [AC_MSG_ERROR([Cannot find libpciaccess.])])
         LIBS+=" -lpciaccess"
@@ -79,6 +89,7 @@ AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
+# Use pkg-config where we can, to pick up CFLAGS requirements.
 PKG_PROG_PKG_CONFIG
 
 PKG_CHECK_MODULES([libatasmart], [libatasmart], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
@@ -88,10 +99,6 @@ PKG_CHECK_MODULES([libatasmart], [libatasmart], [AC_DEFINE([HAVE_ATASMART], [1],
 PKG_CHECK_MODULES([libudev], [libudev], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])])
 	CFLAGS+=" $libudev_CFLAGS"
 	LIBS+=" $libudev_LIBS"
-
-AX_LIB_READLINE
-AC_CHECK_LIB([readline], [main], [have_readline=yes],
-	[AC_MSG_ERROR([Cannot find libreadline.])])
 
 PKG_CHECK_MODULES([libblkid], [blkid], [have_libblkid=yes])
 	CFLAGS+=" $libblkid_CFLAGS"
@@ -104,11 +111,6 @@ PKG_CHECK_MODULES([libdevmapper], [devmapper], [have_libdevmapper=yes])
 PKG_CHECK_MODULES([libcryptsetup], [libcryptsetup], [have_libcryptsetup=yes])
 	CFLAGS+=" $libcryptsetup_CFLAGS"
 	LIBS+=" $libcryptsetup_LIBS"
-
-# CUnit (unit testing)
-PKG_CHECK_MODULES([CUNIT], [cunit >= 2.1], [have_cunit=yes])
-	CFLAGS+=" $CUNIT_CFLAGS"
-	LIBS+=" $CUNIT_LIBS"
 
 ## output
 AC_SUBST([CFLAGS])
