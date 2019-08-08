@@ -322,7 +322,6 @@ static int
 setup_colors(void){
 	int z;
 
-	printf("PAIRS: %d\n",COLOR_PAIRS);
 	if(init_pair(HEADER_COLOR,COLOR_LIGHTPURPLE,-1) == ERR){
 		assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
 	}
@@ -1364,7 +1363,7 @@ case LAYOUT_ZPOOL:
 			if(bo->d->blkdev.celsius >= 60u){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
 			}else if(bo->d->blkdev.celsius >= 40u){
-				wattrset(rb->win,COLOR_PAIR(ORANGE_COLOR));
+				wattrset(rb->win,A_BOLD|COLOR_PAIR(ORANGE_COLOR));
 			}else{
 				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			}
@@ -1380,19 +1379,19 @@ case LAYOUT_ZPOOL:
 				mvwprintw(rb->win, sumline, START_COL,
 					  "%1lux☠ ", bo->d->mddev.degraded);
 			}else{
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
+				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 				mvwprintw(rb->win, sumline, START_COL, "up  ");
 			}
 		}else if(bo->d->layout == LAYOUT_DM){
 			// FIXME add more detail...type of dm etc
-			wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
+			wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			mvwprintw(rb->win,sumline,START_COL,"up  ");
 		}else if(bo->d->layout == LAYOUT_ZPOOL){
 			if(bo->d->zpool.state != POOL_STATE_ACTIVE){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
 				mvwprintw(rb->win,sumline,START_COL,"☠☠☠ ");
 			}else{
-				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
+				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 				mvwprintw(rb->win,sumline,START_COL,"up  ");
 			}
 		}
@@ -1402,6 +1401,7 @@ case LAYOUT_ZPOOL:
 		io *= bo->d->logsec;
 		// FIXME normalize according to timeq
 		qprefix(io, 1, buf, sizeof(buf), 0);
+		wattrset(rb->win, COLOR_PAIR(SELECTED_COLOR));
 		wprintw(rb->win, "%7.7s", buf);
 	}
 
