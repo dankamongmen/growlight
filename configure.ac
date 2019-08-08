@@ -64,6 +64,9 @@ if test "x$have_libzfs" = xyes; then
 fi
 fi
 
+# Use pkg-config where we can, to pick up CFLAGS requirements.
+PKG_PROG_PKG_CONFIG
+
 # Dependencies of some (but not all) targets must be explicitly claimed by
 # their binaries in Makefile.am.
 AX_WITH_CURSES
@@ -88,9 +91,6 @@ AC_CHECK_LIB(pciaccess,pci_system_init, [have_pciaccess=yes],
 AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
-
-# Use pkg-config where we can, to pick up CFLAGS requirements.
-PKG_PROG_PKG_CONFIG
 
 PKG_CHECK_MODULES([libatasmart], [libatasmart], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"
