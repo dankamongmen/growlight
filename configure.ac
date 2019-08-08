@@ -1,7 +1,7 @@
 AC_PREREQ([2.61])
 AC_INIT([growlight], [1.0.6.2], [dankamongmen@gmail.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
-AM_INIT_AUTOMAKE([-Wall foreign dist-xz std-options subdir-objects nostdinc color-tests])
+AM_INIT_AUTOMAKE([-Wall foreign dist-xz no-dependencies std-options subdir-objects nostdinc])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/])
 
@@ -67,8 +67,6 @@ fi
 AX_WITH_CURSES
 AX_WITH_CURSES_PANEL
 PKG_CHECK_MODULES([libpanel], [panel], [AC_DEFINE([HAVE_PANEL], [1], [Use libpanel from ncursesw])])
-	CFLAGS+=" $libpanel_CFLAGS"
-	LIBS+=" $libpanel_LIBS"
 if test "x$ax_cv_curses" = xyes; then
 	CFLAGS+=" -D_XOPEN_SOURCE_EXTENDED"
 fi
