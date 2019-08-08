@@ -1356,7 +1356,7 @@ case LAYOUT_ZPOOL:
 			wprintw(rb->win, "          ");
 		}
 	}
-	// ...and finally the temperature and utilization...
+	// ...and finally the temperature/vfailure status, and utilization...
 	if((line + 2 < rows - !endp) && (line + !!topp + 2 >= 1)){
 		int sumline = line + 2;
 		if(bo->d->layout == LAYOUT_NONE){
@@ -1368,35 +1368,35 @@ case LAYOUT_ZPOOL:
 			}else{
 				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			}
-			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 10u){
+			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
 				// FIXME would be nice to use ℃ , but it looks weird
 				mvwprintw(rb->win, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
 			}else{
 				mvwprintw(rb->win, sumline, START_COL, "    ");
 			}
-			wprintw(rb->win, "       ");
 		}else if(bo->d->layout == LAYOUT_MDADM){
 			if(bo->d->mddev.degraded){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-				mvwprintw(rb->win,sumline,START_COL,"%2lu-degraded",bo->d->mddev.degraded);
+				mvwprintw(rb->win, sumline, START_COL,
+					  "%1lux☠ ", bo->d->mddev.degraded);
 			}else{
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-				mvwprintw(rb->win,sumline,START_COL,"     active");
+				mvwprintw(rb->win, sumline, START_COL, "up  ");
 			}
 		}else if(bo->d->layout == LAYOUT_DM){
 			// FIXME add more detail...type of dm etc
 			wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-			mvwprintw(rb->win,sumline,START_COL,"     active");
+			mvwprintw(rb->win,sumline,START_COL,"up  ");
 		}else if(bo->d->layout == LAYOUT_ZPOOL){
 			if(bo->d->zpool.state != POOL_STATE_ACTIVE){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-				mvwprintw(rb->win,sumline,START_COL,"unavailable");
+				mvwprintw(rb->win,sumline,START_COL,"☠☠☠ ");
 			}else{
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-				mvwprintw(rb->win,sumline,START_COL,"  available");
+				mvwprintw(rb->win,sumline,START_COL,"up  ");
 			}
 		}
-		// FIXME and now the utilization!
+		wprintw(rb->win, "       "); // FIXME and now the utilization!
 	}
 
 	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
