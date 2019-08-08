@@ -1356,8 +1356,9 @@ case LAYOUT_ZPOOL:
 			wprintw(rb->win, "          ");
 		}
 	}
-	// ...and now the temperature...
+	// ...and finally the temperature and utilization...
 	if((line + 2 < rows - !endp) && (line + !!topp + 2 >= 1)){
+		int sumline = line + 2;
 		if(bo->d->layout == LAYOUT_NONE){
 			wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			if(bo->d->blkdev.celsius >= 60u){
@@ -1367,34 +1368,35 @@ case LAYOUT_ZPOOL:
 			}else{
 				wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
 			}
-			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 120u){
+			if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 10u){
 				// FIXME would be nice to use ℃ , but it looks weird
-				mvwprintw(rb->win,line + 2,1,"%2.ju° ",bo->d->blkdev.celsius);
+				mvwprintw(rb->win, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
 			}else{
-				mvwprintw(rb->win,line + 2,1,"    ");
+				mvwprintw(rb->win, sumline, START_COL, "    ");
 			}
 			wprintw(rb->win, "       ");
 		}else if(bo->d->layout == LAYOUT_MDADM){
 			if(bo->d->mddev.degraded){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-				mvwprintw(rb->win,line + 2,START_COL,"%2lu-degraded",bo->d->mddev.degraded);
+				mvwprintw(rb->win,sumline,START_COL,"%2lu-degraded",bo->d->mddev.degraded);
 			}else{
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-				mvwprintw(rb->win,line + 2,START_COL,"     active");
+				mvwprintw(rb->win,sumline,START_COL,"     active");
 			}
 		}else if(bo->d->layout == LAYOUT_DM){
 			// FIXME add more detail...type of dm etc
 			wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-			mvwprintw(rb->win,line + 2,START_COL,"     active");
+			mvwprintw(rb->win,sumline,START_COL,"     active");
 		}else if(bo->d->layout == LAYOUT_ZPOOL){
 			if(bo->d->zpool.state != POOL_STATE_ACTIVE){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-				mvwprintw(rb->win,line + 2,START_COL,"unavailable");
+				mvwprintw(rb->win,sumline,START_COL,"unavailable");
 			}else{
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-				mvwprintw(rb->win,line + 2,START_COL,"  available");
+				mvwprintw(rb->win,sumline,START_COL,"  available");
 			}
 		}
+		// FIXME and now the utilization!
 	}
 
 	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
