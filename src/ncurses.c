@@ -1396,7 +1396,13 @@ case LAYOUT_ZPOOL:
 				mvwprintw(rb->win,sumline,START_COL,"up  ");
 			}
 		}
-		wprintw(rb->win, "       "); // FIXME and now the utilization!
+		uintmax_t io;
+		io = bo->d->statdelta.sectors_read;
+		io += bo->d->statdelta.sectors_written;
+		io *= bo->d->logsec;
+		// FIXME normalize according to timeq
+		qprefix(io, 1, buf, sizeof(buf), 0);
+		wprintw(rb->win, "%7.7s", buf);
 	}
 
 	assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
