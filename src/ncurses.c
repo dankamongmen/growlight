@@ -1323,12 +1323,30 @@ case LAYOUT_ZPOOL:
 	if(bo->d->size == 0){
 		return;
 	}
-	wattron(rb->win,A_BOLD);
-	wattroff(rb->win,A_REVERSE);
+	wattroff(rb->win, A_REVERSE);
+	wattron(rb->win, A_BOLD);
 
 	// Box-diagram (3-line) mode. Print the name on the first line.
 	if(line + !!topp >= 1){
-		mvwprintw(rb->win,line,1,"%11.11s",bo->d->name);
+		wchar_t rep = L' ';
+		if(bo->d->blkdev.smart >= 0){
+			if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
+				wattrset(rb->win, A_BOLD|COLOR_PAIR(GREEN_COLOR));
+				rep = L'✔';
+			}else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
+					&& bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
+				wattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
+				rep = L'⚡';
+			}else{
+				wattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+				rep = L'✗';
+			}
+		}
+		mvwprintw(rb->win, line, 1, "%lc", rep);
+		wattrset(rb->win, COLOR_PAIR(SUBDISPLAY_COLOR));
+		wprintw(rb->win, "%10.10s", bo->d->name);
+	}else{
+		wattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
 	}
 	
 	// Print summary below device name, in the same color
@@ -1353,24 +1371,7 @@ case LAYOUT_ZPOOL:
 			}else{
 				mvwprintw(rb->win,line + 2,1,"     ");
 			}
-			if(bo->d->blkdev.smart >= 0){
-				wchar_t rep;
-
-				if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
-					wattrset(rb->win,A_BOLD|COLOR_PAIR(GREEN_COLOR));
-					rep = L'+';
-				}else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
-						&& bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
-					wattrset(rb->win,A_BOLD|COLOR_PAIR(ORANGE_COLOR));
-					rep = L'⚡';
-				}else{
-					wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-					rep = L'✗';
-				}
-				wprintw(rb->win,"smart%lc",rep);
-			}else{
-				wprintw(rb->win,"      ");
-			}
+			wprintw(rb->win, "      ");
 		}else if(bo->d->layout == LAYOUT_MDADM){
 			if(bo->d->mddev.degraded){
 				wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
