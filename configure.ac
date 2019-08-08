@@ -1,7 +1,7 @@
 AC_PREREQ([2.61])
 AC_INIT([growlight], [1.0.6.2], [dankamongmen@gmail.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
-AM_INIT_AUTOMAKE([-Wall foreign dist-xz no-dist-gzip no-dependencies std-options subdir-objects nostdinc])
+AM_INIT_AUTOMAKE([-Wall foreign dist-xz no-dist-gzip std-options subdir-objects nostdinc])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/])
 
