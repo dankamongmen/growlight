@@ -8,7 +8,9 @@ AM_CC=$(PTHREAD_CC)
 
 LIBS+=$(PTHREAD_LIBS) $(OPENSSL_LIBS) $(ZFS_LIBS)
 
+# FIXME can we not define these with addsuffix or something
 dist_man_MANS = growlight-readline.8 growlight-curses.8
+dist_xhtml_XHTML = growlight-readline.xhtml growlight-curses.xhtml
 
 doc_DIR=doc
 doc_DATA=
@@ -23,6 +25,9 @@ AM_CPPFLAGS=-D_GNU_SOURCE
 
 bin_PROGRAMS=growlight-readline
 bin_PROGRAMS+=growlight-curses
+bin_PROGRAMS+=growlight-test
+
+TESTS=growlight-test
 
 common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 	src/libblkid.c src/libblkid.h src/apm.c src/apm.h src/ssd.h src/ssd.c \
@@ -45,13 +50,17 @@ growlight_curses_SOURCES=$(common_SOURCES)
 growlight_curses_SOURCES+=src/ncurses.c src/ncurses.h src/ui-aggregate.h src/ui-aggregate.c
 growlight_curses_LDADD=$(PANEL_LIBS) $(CURSES_LIBS)
 
+growlight_test_SOURCES=$(common_SOURCES)
+growlight_test_SOURCES+=test/growlight.c
+growlight_test_LDADD=$(CUNIT_LIBS)
+
 #XSLTARGS=--nonet /usr/share/xml/docbook/stylesheet/docbook-xsl
 XSLTARGS=http://docbook.sourceforge.net/release/xsl/current
 
-%.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
+$(dist_man_MANS): %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ $(XSLTARGS)/manpages/docbook.xsl $<
 
-%.xhtml: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
+$(dist_xhtml_XHTML): %.xhtml: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ $(XSLTARGS)/xhtml-1_1/docbook.xsl $<
 
 $(doc_DIR)/@PACKAGE_NAME@.ent:
