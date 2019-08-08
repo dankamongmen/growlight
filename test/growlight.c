@@ -20,6 +20,12 @@ testGENPREFIX(void) {
 	CU_ASSERT_STRING_EQUAL(buf, "0");
 	genprefix(0, 0, buf, sizeof(buf), 1, 1000, 'i');
 	CU_ASSERT_STRING_EQUAL(buf, "0i");
+	genprefix(1, 1, buf, sizeof(buf), 1, 1000, '\0');
+	CU_ASSERT_STRING_EQUAL(buf, "1");
+	genprefix(INTMAX_MAX, 1, buf, sizeof(buf), 1, 1000, '\0');
+	// FIXME
+	genprefix(UINTMAX_MAX, 1, buf, sizeof(buf), 1, 1000, '\0');
+	// FIXME
 	// FIXME
 }
 
