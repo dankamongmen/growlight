@@ -5,7 +5,8 @@ pipeline:
       - apt-get update
       - apt-get -y dist-upgrade
       - apt-get -y install devscripts pciutils
-      - mk-build-deps
+      - apt-get -y install libatasmart-dev libblkid-dev libcryptsetup-dev libpci-dev libpciaccess-dev libdevmapper-dev libudev-dev
+      - mk-build-deps --install
       - dpkg-checkbuilddeps
       - autoreconf -fis
       - ./configure
