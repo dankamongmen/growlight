@@ -1,0 +1,5 @@
+growlight (1.1.0.1-1) unstable; urgency=medium
+
+  * Initial debianization
+
+ -- nick black <dankamongmen@gmail.com>  Fri, 09 Aug 2019 01:03:03 -0400

@@ -9,7 +9,6 @@ config.status*
 config.sub*
 configure
 configure.scan
-debian/
 depcomp
 .deps/
 doc/growlight.ent
