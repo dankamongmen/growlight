@@ -1,0 +1,13 @@
+pipeline:
+  build:
+    image: library/debian:unstable
+    commands: 
+      - apt-get install libatasmart-dev
+      - autoreconf -fis
+      - ./configure
+      - make -j8
+
+  unittests:
+    image: library/debian:unstable
+    commands:
+      - make check
