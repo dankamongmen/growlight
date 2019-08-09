@@ -1,0 +1,20 @@
+Source: growlight
+Section: utils
+Priority: optional
+Maintainer: nick black <dankamongmen@gmail.com>
+Build-Depends: debhelper (>= 11), autotools-dev, libatasmart-dev, libblkid-dev,
+ libcryptsetup-dev, libpci-dev, libpciaccess-dev, libdevmapper-dev, libudev-dev,
+ autoconf-archive, libncurses-dev, libreadline-dev, libcunit1-ncurses-dev,
+ pkg-config, xsltproc, docbook-xsl, libssl-dev
+Standards-Version: 4.1.3
+Homepage: https://nick-black.com/dankwiki/index.php/Growlight
+Vcs-Browser: https://github.com/dankamongmen/growlight
+Vcs-Git: https://github.com/dankamongmen/growlight.git
+
+Package: growlight
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Disk manipulation and system preparation tool
+ Growlight can manipulate both real and virtual (mdadm, device-mapper, and ZFS)
+ disks, find bottlenecks in a storage setup, create partitions and filesystems,
+ and prepare fstab files for new installations.
