@@ -3,7 +3,7 @@ pipeline:
     image: library/debian:unstable
     commands: 
       - apt-get update
-      - apt-get -y upgrade
+      - apt-get -y dist-upgrade
       - apt-get -y install devscripts
       - dpkg-checkbuilddeps
       - mk-build-deps --install debian/control
