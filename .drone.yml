@@ -5,8 +5,8 @@ pipeline:
       - apt-get update
       - apt-get -y dist-upgrade
       - apt-get -y install devscripts
-      - dpkg-checkbuilddeps
       - mk-build-deps --install debian/control
+      - dpkg-checkbuilddeps
       - autoreconf -fis
       - ./configure
       - make -j8
