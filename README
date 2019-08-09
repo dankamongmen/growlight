@@ -1,7 +1,7 @@
 growlight
 =========
 
-![Build Status](https://drone.dsscaw.com:4443/api/badges/dankamongmen/growlight/status.svg)
+[![Build Status](https://drone.dsscaw.com:4443/api/badges/dankamongmen/growlight/status.svg)](https://drone.dsscaw.com:4443/dankamongmen/growlight)
 
 Block device manager and system installation tool.
 
