@@ -3,7 +3,7 @@ pipeline:
     image: library/debian:unstable
     commands: 
       - apt-get update
-      - apt-get install libatasmart-dev
+      - apt-get -y install libatasmart-dev
       - autoreconf -fis
       - ./configure
       - make -j8
