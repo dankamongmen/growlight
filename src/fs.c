@@ -19,7 +19,7 @@ create_btrfs(const char *dev,const struct mkfsmarshal *mkm){
 	if(name == NULL){
 		name = "SprezzaBTRFS";
 	}
-	if(vspopen_drain("mkfs.btrfs -h -L \"%s\" %s",mkm->name,dev)){
+	if(vspopen_drain("mkfs.btrfs -L \"%s\" %s", mkm->name, dev)){
 		return -1;
 	}
 	return 0;
@@ -32,7 +32,7 @@ hfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	if(name == NULL){
 		name = "SprezzaHFS";
 	}
-	if(vspopen_drain("mkfs.hfs -h -v \"%s\" %s",mkm->name,dev)){
+	if(vspopen_drain("mkfs.hfs -h -v \"%s\" %s", mkm->name, dev)){
 		return -1;
 	}
 	return 0;
