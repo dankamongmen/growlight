@@ -4,7 +4,7 @@ pipeline:
     commands: 
       - apt-get update
       - apt-get -y dist-upgrade
-      - apt-get -y install devscripts
+      - apt-get -y install devscripts pciutils
       - mk-build-deps --install debian/control
       - dpkg-checkbuilddeps
       - autoreconf -fis
