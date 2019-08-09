@@ -5,7 +5,7 @@ pipeline:
       - apt-get update
       - apt-get -y dist-upgrade
       - apt-get -y install devscripts pciutils
-      - mk-build-deps --install debian/control
+      - mk-build-deps
       - dpkg-checkbuilddeps
       - autoreconf -fis
       - ./configure
