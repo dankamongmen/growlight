@@ -1403,7 +1403,7 @@ case LAYOUT_ZPOOL:
 		// FIXME 'i' shows up only when there are fewer than 3 sigfigs
 		// to the left of the decimal point...very annoying
 		if(io){
-			bprefix(io, 1, buf, sizeof(buf), 0);
+			bprefix(io, 1, buf, sizeof(buf), 1);
 			wprintw(rb->win, "%7.7s", buf);
 		}else{
 			wprintw(rb->win, " no i/o");
