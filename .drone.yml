@@ -6,7 +6,6 @@ pipeline:
       - apt-get -y dist-upgrade
       - apt-get -y install devscripts git-buildpackage
       - mk-build-deps --install -t'apt-get -y'
-      - dpkg-checkbuilddeps
       - autoreconf -fis
       - ./configure
       - make -j8
