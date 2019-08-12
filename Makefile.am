@@ -14,7 +14,7 @@ dist_xhtml_XHTML = growlight-readline.xhtml growlight-curses.xhtml
 
 doc_DIR=doc
 doc_DATA=
-doc_DATA+=README
+doc_DATA+=README.md
 
 EXTRA_DIST=zfs
 
