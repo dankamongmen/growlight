@@ -3483,7 +3483,7 @@ update_details(WINDOW *hw){
 		wattroff(hw,A_BOLD);
 		wprintw(hw,"%uB ",d->physsec);
 		wattron(hw,A_BOLD);
-		wprintw(hw,"physical) %s connect",
+		wprintw(hw,"physical) %s",
 				transport_str(d->blkdev.transport));
 		if(transport_bw(d->blkdev.transport)){
 			uintmax_t transbw = transport_bw(d->blkdev.transport);
