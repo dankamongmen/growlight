@@ -413,7 +413,9 @@ transport_str(transport_e t){
 
 static inline uintmax_t
 transport_bw(transport_e t){
-	return t == SERIAL_USB3 ? 5000000000 :
+  // FIXME NVMe is dependent on PCIe version and number of links
+	return t == DIRECT_NVME ? 32000000000 :
+    t == SERIAL_USB3 ? 5000000000 :
 		t == SERIAL_USB2 ? 480000000 :
 		t == SERIAL_USB ? 12000000 :
 		t == SERIAL_ATAIII ? 6000000000 :
