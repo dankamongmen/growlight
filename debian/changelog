@@ -1,3 +1,9 @@
+growlight (1.1.0.1-2) unstable; urgency=medium
+
+  * Debian standards -> 4.4.0.1
+
+ -- nick black <dankamongmen@gmail.com>  Sun, 25 Aug 2019 18:47:15 -0400
+
 growlight (1.1.0.1-1) unstable; urgency=medium
 
   * Initial debianization
