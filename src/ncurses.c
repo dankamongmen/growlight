@@ -1346,7 +1346,7 @@ case LAYOUT_ZPOOL:
 			}else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
 					&& bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
 				wattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
-				rep = L'⚡';
+				rep = L'☠';
 			}else{
 				wattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
 				rep = L'✗';

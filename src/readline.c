@@ -441,7 +441,7 @@ print_drive(const device *d,int descend){
 			 d->blkdev.smart == SK_SMART_OVERALL_GOOD ? L'✔' :
 			 (d->blkdev.smart == SK_SMART_OVERALL_BAD_STATUS ||
 			   d->blkdev.smart == SK_SMART_OVERALL_BAD_SECTOR_MANY) ? L'✗' :
-			 d->blkdev.smart > 0 ? L'⚡' :
+			 d->blkdev.smart > 0 ? L'☠' :
 			 d->blkdev.realdev ? L'.' : L'V',
 			d->blkdev.rotation >= 0 ? L'O' : L'.',
 			d->roflag ? L'r' :
@@ -975,7 +975,7 @@ blockdev_dump(int descend){
 	use_terminfo_color(COLOR_WHITE,1);
 	printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual, (M)dadm, (Z)pool,\n"
 		"\t\t(D)M, r(O)tational, (r)ead-only, (W)ritecache enabled,\n"
-		"\t\t(B)IOS bootable, v/⚠: Read-Write-Verify, ✓/⚡/✗: SMART status\n");
+		"\t\t(B)IOS bootable, v/⚠: Read-Write-Verify, ✓/✗/☠: SMART status\n");
 	return 0;
 }
 
