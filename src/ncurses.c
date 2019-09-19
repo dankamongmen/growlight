@@ -4952,14 +4952,14 @@ select_adapter(void){
 		return -1;
 	}
 	if(rb->selected){
-		locked_diag("Already browsing [%s]",rb->as->c->ident);
+		// locked_diag("Already browsing [%s]", rb->as->c->ident);
 		return 0;
 	}
 	if(rb->as->bobjs == NULL){
 		return -1;
 	}
 	assert(rb->selline == -1);
-	return select_adapter_dev(rb,rb->as->bobjs,2);
+	return select_adapter_dev(rb, rb->as->bobjs, 2);
 }
 
 static void
