@@ -1,3 +1,9 @@
+growlight (1.1.1-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- nick black <dankamongmen@gmail.com>  Thu, 19 Sep 2019 09:07:34 -0400
+
 growlight (1.1.0.1-2) unstable; urgency=medium
 
   * Debian standards -> 4.4.0.1
