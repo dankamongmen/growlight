@@ -140,7 +140,7 @@ typedef struct device {
 	char *sched;		// I/O scheduler (can be NULL)
 	unsigned roflag;	// Read-only flag (hdparm -r, blockdev --getro)
 	int slave;		// Number of owning devices
-	union {
+	union { // keyed off value of "layout" enum below
 		struct {
 			transport_e transport;
 			unsigned realdev: 1;	// Is itself a real block device
