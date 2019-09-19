@@ -968,7 +968,11 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 
 	zs = d->mntsize ? d->mntsize :
 		(last_usable_sector(d) - first_usable_sector(d) + 1) * bo->d->logsec;
-	if(d->mnttype){
+	// Sometimes, a partitioned block device will be given a mnttype by
+	// libblkid (usually due to a filesystem signature in unpartitioned
+	// space at the beginning). In that case, don't try to print based off
+	// the bogon block device mnttype.
+	if(d->mnttype && (d->layout != LAYOUT_NONE || !d->blkdev.pttable)){
 		int co = mnttype_aggregablep(d->mnttype) ?
 			COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
