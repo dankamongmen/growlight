@@ -531,15 +531,21 @@ add_partition_inner(device *d,const char *name,dev_t devno,unsigned pnum,
 	return p;
 }
 
+// subfd must not be used following the call, since it has been moved to
+// fdopendir() (or close()d on the fdopendir() error path). to emphasize
+// this unexpected behavior, *subfd is replaced with -1.
 static int
-check_slavery(device *d,int subfd){
+check_slavery(device *d, int *subfd){
 	struct dirent *eptr;
 	DIR *hdir;
+	int fd;
 
-	if((hdir = fdopendir(subfd)) == NULL){
+	fd = *subfd;
+	*subfd = -1;
+	if((hdir = fdopendir(fd)) == NULL){
 		diag("Couldn't get DIR * from fd %d for %s (%s)\n",
-				subfd,d->name,strerror(errno));
-		close(subfd);
+				fd, d->name, strerror(errno));
+		close(fd);
 		return -1;
 	}
 	// readdir_r() has been deprecated in glibc. readdir() is now
@@ -552,7 +558,7 @@ check_slavery(device *d,int subfd){
 	}
 	if(errno){
 		diag("Error reading directory on %d for %s (%s)\n",
-				subfd,d->name,strerror(errno));
+			fd, d->name, strerror(errno));
 		closedir(hdir);
 		return -1;
 	}
@@ -685,11 +691,13 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 						close(subfd);
 						return -1;
 					}
-				}else if(strcmp(dire->d_name,"holders") == 0){
-					if(check_slavery(d,subfd)){
-						close(subfd);
+				}else if(strcmp(dire->d_name, "holders") == 0){
+					// check_slavery() takes ownership of subfd, so continue (or error)
+					// out rather than allowing it to be double-close()d.
+					if(check_slavery(d, &subfd)){
 						return -1;
 					}
+					continue;
 				}else if(sysfs_exist_p(subfd,"partition")){
 					unsigned long sz,pnum,fsect;
 					device *p;
@@ -719,10 +727,9 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 						close(subfd);
 						return -1;
 					}
-					if((hfd = openat(subfd,"holders",O_RDONLY|O_CLOEXEC|O_DIRECTORY)) >= 0){
-						// check_slavery() closes hfd on success
-						if(check_slavery(p,hfd)){
-							close(hfd);
+					if((hfd = openat(subfd, "holders", O_RDONLY|O_CLOEXEC|O_DIRECTORY)) >= 0){
+						// check_slavery() closes hfd on all paths
+						if(check_slavery(p, &hfd)){
 							close(subfd);
 							return -1;
 						}
