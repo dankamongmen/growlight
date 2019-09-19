@@ -476,8 +476,9 @@ struct adapterstate;
 
 struct partobj;
 
+// See below (blockobj) for description of zones.
 typedef struct zobj {
-	unsigned zoneno;		// in-order, but not monotonic growth (skip empties)
+	int zoneno;			// in-order, starting at 0
 	uintmax_t fsector,lsector;	// first and last logical sector, inclusive
 	device *p;			// partition/block device, NULL for empty space
 	wchar_t rep;			// character used for representation
@@ -6716,8 +6717,9 @@ free_zchain(zobj **z){
 static void
 update_blockobj(blockobj *b,device *d){
 	zobj *z,*lastz,*firstchoice;
-	unsigned zones,zonesel;
 	uintmax_t sector;
+	int zonesel = -1; // -1 for no choice (b->zone == NULL on entry)
+	int zones;
 	device *p;
 
 	if(blockobj_unloadedp(b)){
@@ -6725,12 +6727,10 @@ update_blockobj(blockobj *b,device *d){
 		b->zone = NULL;
 		return;
 	}
-	// Remember the zone we had selected. It might disappear, or change
-	// index due to zones added prior to it.
+	// Remember the zone we had selected, though it might disappear, or
+	// change index due to zones appearing prior to it.
 	if(b->zone){
 		zonesel = b->zone->zoneno;
-	}else{
-		zonesel = 0;
 	}
 	z = NULL;
 	zones = 0;
@@ -6740,7 +6740,7 @@ update_blockobj(blockobj *b,device *d){
 		sector = d->size / d->logsec + 1;
 	}else{
 		if( (sector = first_usable_sector(d)) ){
-			if((z = create_zobj(z,zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
+			if((z = create_zobj(z, zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
 				goto err;
 			}
 			++zones;
@@ -6753,7 +6753,7 @@ update_blockobj(blockobj *b,device *d){
 			}
 			++zones;
 		}
-		if((z = create_zobj(z,zones, p->partdev.fsector, p->partdev.lsector, p, L'\0')) == NULL){
+		if((z = create_zobj(z, zones, p->partdev.fsector, p->partdev.lsector, p, L'\0')) == NULL){
 			goto err;
 		}
 		++zones;
@@ -6788,8 +6788,8 @@ update_blockobj(blockobj *b,device *d){
 		// If we hadn't selected one before, select the first
 		// empty space (where we can make a partition)
 		while(z->prev){
-			if((zonesel == z->zoneno) && (zonesel ||
-					(!zonesel && !z->p && z->rep == REP_EMPTY))){
+			if((zonesel == z->zoneno) ||
+					(zonesel == -1 && !z->p && z->rep == REP_EMPTY)){
 				b->zone = z;
 			}else if(z->zoneno){
 				firstchoice = z;
@@ -6797,7 +6797,7 @@ update_blockobj(blockobj *b,device *d){
 			z->prev->following = z->following + 1;
 			z = z->prev;
 		}
-		if((zonesel == z->zoneno) && (zonesel || (!zonesel && !z->p && z->rep == REP_EMPTY))){
+		if((zonesel == z->zoneno) || (zonesel == -1 && !z->p && z->rep == REP_EMPTY)){
 			b->zone = z;
 		}
 		z->prev = lastz;
