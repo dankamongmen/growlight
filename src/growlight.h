@@ -376,6 +376,7 @@ pcie_gen(unsigned gen){
 		case 1: return "1.0";
 		case 2: return "2.0";
 		case 3: return "3.0";
+    case 4: return "4.0";
 		default: return "unknown";
 	}
 }
