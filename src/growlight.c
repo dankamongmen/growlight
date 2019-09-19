@@ -1671,7 +1671,10 @@ event_posix_thread(void *unsafe){
 					diskstats *dstats;
 					int statcount;
 
-					read(em->stats_timerfd, &dontcare, sizeof(dontcare));
+					if(read(em->stats_timerfd, &dontcare, sizeof(dontcare)) < 0){
+            					diag("Error reading from timerfd %d (%s)\n",
+                 				     em->stats_timerfd, strerror(errno));
+          				}
 					gettimeofday(&now, NULL);
 					statcount = read_proc_diskstats(&dstats);
 					lock_growlight();
