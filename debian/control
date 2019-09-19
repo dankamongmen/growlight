@@ -1,8 +1,8 @@
 Source: growlight
 Section: utils
 Priority: optional
-Maintainer: nick black <dankamongmen@gmail.com>
-Build-Depends: debhelper (>= 11), autotools-dev, libatasmart-dev, libblkid-dev,
+Maintainer: Nick Black <dankamongmen@gmail.com>
+Build-Depends: debhelper (>= 12), libatasmart-dev, libblkid-dev,
  libcryptsetup-dev, libpci-dev, libpciaccess-dev, libdevmapper-dev, libudev-dev,
  autoconf-archive, libncurses-dev, libreadline-dev, libcunit1-ncurses-dev,
  pkg-config, xsltproc, docbook-xsl, libssl-dev
