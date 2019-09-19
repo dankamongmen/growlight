@@ -824,6 +824,7 @@ create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,
 			device *p,wchar_t rep){
 	zobj *z;
 
+	assert(lsector >= fsector);
 	if( (z = malloc(sizeof(*z))) ){
 		z->zoneno = zno;
 		z->fsector = fsector;
@@ -6731,9 +6732,7 @@ update_blockobj(blockobj *b,device *d){
 	}
 	z = NULL;
 	zones = 0;
-	if(d->mnttype){
-		sector = d->size / d->logsec + 1;
-	}else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
+	if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
 			(d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
 			(d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
 		sector = d->size / d->logsec + 1;
@@ -6747,6 +6746,7 @@ update_blockobj(blockobj *b,device *d){
 	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
+			// FIXME ought we be passing 0 for zoneno every time?
 			if((z = create_zobj(z,0,sector,p->partdev.fsector - 1,NULL,REP_EMPTY)) == NULL){
 				goto err;
 			}
@@ -6761,6 +6761,7 @@ update_blockobj(blockobj *b,device *d){
 	if(d->logsec && d->size){
 		if(sector < d->size / d->logsec){
 			if(sector < last_usable_sector(d) + 1){
+				// FIXME ought we be passing 0 for zoneno?
 				if((z = create_zobj(z,0,sector,last_usable_sector(d),NULL,REP_EMPTY)) == NULL){
 					goto err;
 				}
@@ -6768,6 +6769,7 @@ update_blockobj(blockobj *b,device *d){
 				sector = last_usable_sector(d) + 1;
 			}
 			if(sector < d->size / d->logsec){
+				// FIXME ought we be passing 0 for zoneno?
 				if((z = create_zobj(z,0,sector,d->size / d->logsec - 1,NULL,REP_METADATA)) == NULL){
 					goto err;
 				}
