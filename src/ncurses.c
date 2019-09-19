@@ -825,6 +825,8 @@ create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,
 	zobj *z;
 
 	assert(lsector >= fsector);
+	assert(fsector > 0 || zno == 0);
+	assert(fsector == 0 || zno > 0);
 	if( (z = malloc(sizeof(*z))) ){
 		z->zoneno = zno;
 		z->fsector = fsector;
@@ -6738,7 +6740,7 @@ update_blockobj(blockobj *b,device *d){
 		sector = d->size / d->logsec + 1;
 	}else{
 		if( (sector = first_usable_sector(d)) ){
-			if((z = create_zobj(z,zones,0,sector - 1,NULL,REP_METADATA)) == NULL){
+			if((z = create_zobj(z,zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
 				goto err;
 			}
 			++zones;
@@ -6746,13 +6748,12 @@ update_blockobj(blockobj *b,device *d){
 	}
 	for(p = d->parts ; p ; p = p->next){
 		if(sector != p->partdev.fsector){
-			// FIXME ought we be passing 0 for zoneno every time?
-			if((z = create_zobj(z,0,sector,p->partdev.fsector - 1,NULL,REP_EMPTY)) == NULL){
+			if((z = create_zobj(z, zones, sector, p->partdev.fsector - 1, NULL, REP_EMPTY)) == NULL){
 				goto err;
 			}
 			++zones;
 		}
-		if((z = create_zobj(z,zones,p->partdev.fsector,p->partdev.lsector,p,L'\0')) == NULL){
+		if((z = create_zobj(z,zones, p->partdev.fsector, p->partdev.lsector, p, L'\0')) == NULL){
 			goto err;
 		}
 		++zones;
@@ -6761,16 +6762,14 @@ update_blockobj(blockobj *b,device *d){
 	if(d->logsec && d->size){
 		if(sector < d->size / d->logsec){
 			if(sector < last_usable_sector(d) + 1){
-				// FIXME ought we be passing 0 for zoneno?
-				if((z = create_zobj(z,0,sector,last_usable_sector(d),NULL,REP_EMPTY)) == NULL){
+				if((z = create_zobj(z, zones, sector, last_usable_sector(d), NULL, REP_EMPTY)) == NULL){
 					goto err;
 				}
 				++zones;
 				sector = last_usable_sector(d) + 1;
 			}
 			if(sector < d->size / d->logsec){
-				// FIXME ought we be passing 0 for zoneno?
-				if((z = create_zobj(z,0,sector,d->size / d->logsec - 1,NULL,REP_METADATA)) == NULL){
+				if((z = create_zobj(z, zones, sector, d->size / d->logsec - 1, NULL, REP_METADATA)) == NULL){
 					goto err;
 				}
 				++zones;
@@ -6778,8 +6777,8 @@ update_blockobj(blockobj *b,device *d){
 			}
 		}
 	}
-	free_zchain(&b->zchain);
 	b->zone = NULL;
+	free_zchain(&b->zchain);
 	firstchoice = NULL;
 	if(zonesel >= zones){
 		zonesel = zones ? zones - 1 : 0;
