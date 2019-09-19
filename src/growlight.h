@@ -99,14 +99,15 @@ typedef struct {
 	char **list;
 } stringlist;
 
-// An (non-link) entry in the device hierarchy, representing a block device.
-// A partition corresponds to one and only one block device (which of course
-// might represent multiple devices, or maybe just a file mounted loopback). A
-// partition or an unpartitioned block device can have a filesystem signature
-// "mnttype". This filesystem's size might be different from the partition size
-// (it is not safe to mount if the size is larger than the partition). The
-// filesystem may be mounted at zero or more places, with different options
-// each time.
+// An (non-link) entry in the device hierarchy, representing a block-type
+// device (this includes hardware block devices, virtual block devices, and
+// partitions). A partition corresponds to one and only one block device (which
+// of course might represent multiple devices, or maybe just a file mounted via
+// loopback). A partition or an unpartitioned block device can have a
+// filesystem signature "mnttype". This filesystem's size might be different
+// from the partition size (it is not safe to mount if the size is larger than
+// the partition). The filesystem may be mounted at zero or more places, with
+// different options each time.
 typedef struct device {
 	char name[NAME_MAX + 1];	// Entry in /dev or /sys/block
 	struct device *next;		// next block device on this controller

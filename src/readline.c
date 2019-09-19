@@ -438,7 +438,7 @@ print_drive(const device *d,int descend){
 			d->physsec,
 			d->blkdev.unloaded ? L'U' :
 			 d->blkdev.removable ? L'R' :
-			 d->blkdev.smart == SK_SMART_OVERALL_GOOD ? L'✓' :
+			 d->blkdev.smart == SK_SMART_OVERALL_GOOD ? L'✔' :
 			 (d->blkdev.smart == SK_SMART_OVERALL_BAD_STATUS ||
 			   d->blkdev.smart == SK_SMART_OVERALL_BAD_SECTOR_MANY) ? L'✗' :
 			 d->blkdev.smart > 0 ? L'⚡' :
