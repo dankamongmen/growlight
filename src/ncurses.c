@@ -2349,28 +2349,6 @@ err:
 	return NULL;
 }
 
-/*static char *
-join_selarray(char * const *selarray,int selections,int sep){
-	char *news = NULL,*tmp;
-	size_t s = 0;
-	int z;
-
-	for(z = 0 ; z < selections ; ++z){
-		if((tmp = realloc(news,s + strlen(selarray[z]) + !!s + 1)) == NULL){
-			free(news);
-			return NULL;
-		}
-		if(s){
-			tmp[s] = sep;
-			++s;
-		}
-		strcpy(tmp + s,selarray[z]);
-		s += strlen(selarray[z]);
-		news = tmp;
-	}
-	return news;
-}*/
-
 static char forming_targ[PATH_MAX + 1];
 
 static void
