@@ -14,7 +14,7 @@ clean_suite(void) {
 
 static void
 testGENPREFIX(void) {
-	char buf[PREFIXSTRLEN];
+	char buf[PREFIXSTRLEN + 1];
 
 	genprefix(0, 1, buf, sizeof(buf), 1, 1000, '\0');
 	CU_ASSERT_STRING_EQUAL(buf, "0");
