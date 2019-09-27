@@ -85,15 +85,17 @@ AC_CHECK_LIB([readline], [main], [have_readline=yes],
 PKG_CHECK_MODULES([CUNIT], [cunit >= 2.1], [have_cunit=yes])
 
 # Remaining dependencies are needed by all binaries.
-AC_CHECK_LIB(pciaccess,pci_system_init, [have_pciaccess=yes],
+AC_CHECK_LIB(pciaccess, pci_system_init, [have_pciaccess=yes],
              [AC_MSG_ERROR([Cannot find libpciaccess.])])
         LIBS+=" -lpciaccess"
 
-AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
+AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
-AC_CHECK_HEADERS([outcurses.h])
+# we don't use the outcurses library, just its headers
+PKG_CHECK_MODULES([outcurses], [outcurses], [have_outcurses=yes])
+	CFLAGS+=" $outcurses_CFLAGS"
 
 PKG_CHECK_MODULES([libatasmart], [libatasmart], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"
