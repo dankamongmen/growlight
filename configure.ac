@@ -93,6 +93,8 @@ AC_CHECK_LIB(pci,pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
+AC_CHECK_HEADERS([outcurses.h])
+
 PKG_CHECK_MODULES([libatasmart], [libatasmart], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"
 	LIBS+=" $libatasmart_LIBS"
