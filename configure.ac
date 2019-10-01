@@ -94,22 +94,22 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	LIBS+=" -lpci"
 
 # we don't use the outcurses library, just its headers
-PKG_CHECK_MODULES([outcurses], [outcurses], [have_outcurses=yes])
+PKG_CHECK_MODULES([outcurses], [outcurses >= 0.0.3], [have_outcurses=yes])
 	CFLAGS+=" $outcurses_CFLAGS"
 
-PKG_CHECK_MODULES([libatasmart], [libatasmart], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
+PKG_CHECK_MODULES([libatasmart], [libatasmart >= 0.19], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"
 	LIBS+=" $libatasmart_LIBS"
 
-PKG_CHECK_MODULES([libudev], [libudev], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])])
+PKG_CHECK_MODULES([libudev], [libudev >= 175], [AC_DEFINE([HAVE_UDEV], [1], [Use UDEV])])
 	CFLAGS+=" $libudev_CFLAGS"
 	LIBS+=" $libudev_LIBS"
 
-PKG_CHECK_MODULES([libblkid], [blkid], [have_libblkid=yes])
+PKG_CHECK_MODULES([libblkid], [blkid >= 2.20.1], [have_libblkid=yes])
 	CFLAGS+=" $libblkid_CFLAGS"
 	LIBS+=" $libblkid_LIBS"
 
-PKG_CHECK_MODULES([libdevmapper], [devmapper], [have_libdevmapper=yes])
+PKG_CHECK_MODULES([libdevmapper], [devmapper >= 1.02.74], [have_libdevmapper=yes])
 	CFLAGS+=" $libdevmapper_CFLAGS"
 	LIBS+=" $libdevmapper_LIBS"
 
