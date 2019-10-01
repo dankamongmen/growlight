@@ -117,7 +117,7 @@ prefix_desc_with_size(const device *d,char *desc){
 	char s[BPREFIXSTRLEN],*uni;
 	size_t sz;
 
-	bprefix(d->size,1,s,sizeof(s),1);
+	bprefix(d->size, 1, s, 1);
 	// Might be a bit overspacious due to full BPREFIXSTRLEN, but who cares
 	sz = (sizeof(s) / sizeof(*s)) + strlen(desc) + 5; // '(' 'B' ')' ' ' '\0'
 	if((uni = malloc(sz)) == NULL){

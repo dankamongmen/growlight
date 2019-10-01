@@ -109,7 +109,7 @@ wstrtoxu(const wchar_t *wstr,unsigned *ux){
 	unsigned long long ull;
 	char buf[BUFSIZ],*e;
 
-	if(snprintf(buf,sizeof(buf),"%ls",wstr) >= (int)sizeof(buf)){
+	if(snprintf(buf, sizeof(buf), "%ls", wstr) >= (int)sizeof(buf)){
 		fprintf(stderr,"Bad numeric value: %ls\n",wstr);
 		return -1;
 	}
@@ -139,7 +139,7 @@ static int
 wstrtoull(const wchar_t *wstr,uintmax_t *ull){
 	char buf[BUFSIZ],*e;
 
-	if(snprintf(buf,sizeof(buf),"%ls",wstr) >= (int)sizeof(buf)){
+	if(snprintf(buf, sizeof(buf), "%ls", wstr) >= (int)sizeof(buf)){
 		fprintf(stderr,"Bad numeric value: %ls\n",wstr);
 		return -1;
 	}
@@ -280,7 +280,7 @@ print_mounts(const device *d){
 				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a", d->name,
-				d->mntsize ? qprefix(d->mntsize,1,buf,sizeof(buf),0) : "",
+				d->mntsize ? qprefix(d->mntsize,1,buf,0) : "",
 				d->mnt.list[z],d->mntops.list[z]);
 		if(rr < 0){
 			return -1;
@@ -299,7 +299,7 @@ print_swap(const device *p){
 			FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
 			p->mnttype,
 			p->uuid ? p->uuid : "n/a",
-			qprefix(p->mntsize,1,buf,sizeof(buf),0),
+			qprefix(p->mntsize,1,buf,0),
 			p->name);
 	if(rr < 0){
 		return -1;
@@ -350,7 +350,7 @@ print_empty(uint64_t fsect,uint64_t lsect,size_t sectsize){
 	}
 	use_terminfo_color(COLOR_GREEN,0);
 	r += rr = printf("Unused sectors %ju:%ju (%s)\n",(uintmax_t)fsect,(uintmax_t)lsect,
-			bprefix((lsect - fsect) * sectsize,1,buf,sizeof(buf),1));
+			bprefix((lsect - fsect) * sectsize,1,buf,1));
 	if(rr < 0){
 		return -1;
 	}
@@ -366,7 +366,7 @@ print_partition(const device *p,int descend){
 	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %-4.4s %ls\n",
 			p->name,
 			p->partdev.uuid ? p->partdev.uuid : "n/a",
-			qprefix(p->size,1,buf,sizeof(buf),0),
+			qprefix(p->size,1,buf,0),
 				partrole_str(p->partdev.ptype,p->partdev.flags),
 				p->partdev.pname ? p->partdev.pname : L"n/a");
 	if(rr < 0){
@@ -434,7 +434,7 @@ print_drive(const device *d,int descend){
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
-			qprefix(d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,0),
 			d->physsec,
 			d->blkdev.unloaded ? L'U' :
 			 d->blkdev.removable ? L'R' :
@@ -460,7 +460,7 @@ print_drive(const device *d,int descend){
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
-			qprefix(d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,0),
 			d->physsec, L'V', L'M', L'.',
 			d->roflag ? L'r' : L'.', L'.',
 			d->mddev.pttable ? d->mddev.pttable : "none",
@@ -474,7 +474,7 @@ print_drive(const device *d,int descend){
 			d->name,
 			d->model ? d->model : "n/a",
 			d->revision ? d->revision : "n/a",
-			qprefix(d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,0),
 			d->physsec, L'V', L'D', L'.',
 			d->roflag ? L'r' : L'.', L'.',
 			"n/a",
@@ -488,7 +488,7 @@ print_drive(const device *d,int descend){
 			d->name,
 			d->model ? d->model : "n/a",
 			(uintmax_t)d->zpool.zpoolver,
-			qprefix(d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,0),
 			d->physsec, L'V', L'Z', L'.',
 			d->roflag ? L'r' : L'.', L'.',
 			"spa",
@@ -550,7 +550,7 @@ print_zpool(const device *d,int descend){
 	r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %4uB ZFS%2ju %5lu %-6.6s\n",
 			d->name,
 			d->uuid ? d->uuid : "n/a",
-			qprefix(d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,0),
 			d->physsec, d->zpool.zpoolver,
 			d->zpool.disks,d->zpool.level ? d->zpool.level : "n/a"
 			);
@@ -577,7 +577,7 @@ print_dm(const device *d,int prefix,int descend){
 			prefix,prefix,"",
 			d->name,
 			d->uuid ? d->uuid : "n/a",
-			qprefix(d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,0),
 			d->physsec, "n/a",
 			d->dmdev.disks,d->dmdev.level ? d->dmdev.level : "n/a"
 			);
@@ -628,7 +628,7 @@ print_mdadm(const device *d,int prefix,int descend){
 			prefix,prefix,"",
 			d->name,
 			d->uuid ? d->uuid : "n/a",
-			qprefix(d->size,1,buf,sizeof(buf),0),
+			qprefix(d->size,1,buf,0),
 			d->physsec, "n/a",
 			d->mddev.disks,d->mddev.level ? d->mddev.level : "n/a");
 	if(rr < 0){
@@ -701,7 +701,7 @@ print_controller(const controller *c,int descend){
 					c->ident,c->pcie.domain,c->pcie.bus,
 					c->pcie.dev,c->pcie.func,
 					pcie_gen(c->pcie.gen),c->pcie.lanes_neg,
-					qprefix(c->bandwidth,1,buf,sizeof(buf),1));
+					qprefix(c->bandwidth,1,buf,1));
 			}
 			break;
 		case BUS_VIRTUAL:
@@ -1010,24 +1010,24 @@ blockdev_details(const device *d){
 		printf("Serial number: %s\n",d->blkdev.serial ? d->blkdev.serial : "n/a");
 		printf("Transport: %s\n", transport_str(d->blkdev.transport));
 		if(d->blkdev.transport == DIRECT_NVME){
-			if(snprintf(buf,sizeof(buf),"nvme id-ctrl /dev/%s",d->name) >= (int)sizeof(buf)){
+			if(snprintf(buf, sizeof(buf), "nvme id-ctrl /dev/%s", d->name) >= (int)sizeof(buf)){
 				return -1;
 			}
 		}else{ // probably shouldn't for e.g. USB? maybe should? FIXME
-			if(snprintf(buf,sizeof(buf),"hdparm -I /dev/%s",d->name) >= (int)sizeof(buf)){
+			if(snprintf(buf, sizeof(buf), "hdparm -I /dev/%s",d->name) >= (int)sizeof(buf)){
 				return -1;
 			}
 		}
 	}else if(d->layout == LAYOUT_MDADM){
-		if(snprintf(buf,sizeof(buf),"mdadm --detail /dev/%s",d->name) >= (int)sizeof(buf)){
+		if(snprintf(buf, sizeof(buf), "mdadm --detail /dev/%s",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
 	}else if(d->layout == LAYOUT_DM){
-		if(snprintf(buf,sizeof(buf),"dmsetup info /dev/%s",d->name) >= (int)sizeof(buf)){
+		if(snprintf(buf, sizeof(buf), "dmsetup info /dev/%s",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
 	}else if(d->layout == LAYOUT_ZPOOL){
-		if(snprintf(buf,sizeof(buf),"zpool status %s",d->name) >= (int)sizeof(buf)){
+		if(snprintf(buf, sizeof(buf), "zpool status %s",d->name) >= (int)sizeof(buf)){
 			return -1;
 		}
 	}else{
@@ -1461,7 +1461,7 @@ print_swaps(const device *d,int descend){
 			FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 			d->swapprio,d->uuid ? d->uuid : "n/a",
 			d->name,
-			qprefix(d->mntsize,1,buf,sizeof(buf),0));
+			qprefix(d->mntsize,1,buf,0));
 	if(rr < 0){
 		return -1;
 	}

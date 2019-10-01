@@ -735,7 +735,7 @@ draw_main_window(WINDOW *w){
 	int rows,cols,scol,x,y;
 	char buf[BUFSIZ];
 
-	scol = snprintf(buf,sizeof(buf),"%s %s (%d)",PACKAGE,VERSION,count_adapters - 1);
+	scol = snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE,VERSION, count_adapters - 1);
 	assert(scol > 0 && (unsigned)scol < sizeof(buf));
 	getmaxyx(w,rows,cols);
 	assert(wattrset(w,COLOR_PAIR(HEADER_COLOR)) != ERR);
@@ -964,7 +964,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
 		assert(wattrset(w,A_BOLD|co) == OK);
-		qprefix(zs,1,pre,sizeof(pre),1);
+		qprefix(zs,1,pre,1);
 		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%ls%s%ls%s%s%sat %s ",
 			d->label ? "" : "nameless ",
 			d->mnttype,
@@ -1005,7 +1005,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
 				"unpartitionable space";
 		assert(snprintf(buf,sizeof(buf)," %s %s ",
-				qprefix(d->size,1,pre,sizeof(pre),1),
+				qprefix(d->size,1,pre,1),
 				selstr) < (int)sizeof(buf));
 		mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
 		mvwadd_wch(w,y,sx,&bchr[1]);
@@ -1029,7 +1029,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 
 		wbuf[0] = L'\0';
 		zs = (z->lsector - z->fsector + 1) * bo->d->logsec;
-		qprefix(zs,1,pre,sizeof(pre),1);
+		qprefix(zs,1,pre,1);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = (z->rep == REP_METADATA ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR));
@@ -1208,7 +1208,7 @@ case LAYOUT_NONE:
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision ? bo->d->revision : "n/a",
-					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					qprefix(bo->d->size,1,buf,0),
 					bo->d->physsec,
 					bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
 					bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
@@ -1242,7 +1242,7 @@ case LAYOUT_MDADM:
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision ? bo->d->revision : "n/a",
-					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					qprefix(bo->d->size,1,buf,0),
 					bo->d->physsec,
 					bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
 					bo->d->mddev.mdname ? bo->d->mddev.mdname : "n/a",
@@ -1269,7 +1269,7 @@ case LAYOUT_DM:
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					bo->d->revision ? bo->d->revision : "n/a",
-					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					qprefix(bo->d->size,1,buf,0),
 					bo->d->physsec,
 					bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
 					bo->d->dmdev.dmname ? bo->d->dmdev.dmname : "n/a",
@@ -1297,7 +1297,7 @@ case LAYOUT_ZPOOL:
 					bo->d->name,
 					bo->d->model ? bo->d->model : "n/a",
 					(uintmax_t)bo->d->zpool.zpoolver,
-					qprefix(bo->d->size,1,buf,sizeof(buf),0),
+					qprefix(bo->d->size,1,buf,0),
 					bo->d->physsec,
 					"spa",
 					"n/a", // FIXME
@@ -1394,7 +1394,7 @@ case LAYOUT_ZPOOL:
 		// FIXME 'i' shows up only when there are fewer than 3 sigfigs
 		// to the left of the decimal point...very annoying
 		if(io){
-			bprefix(io, 1, buf, sizeof(buf), 1);
+			bprefix(io, 1, buf,  1);
 			wprintw(rb->win, "%7.7s", buf);
 		}else{
 			wprintw(rb->win, " no i/o");
@@ -1531,17 +1531,17 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 
 			if(as->c->demand){
 				wprintw(w," (%sbps to Southbridge, %sbps (%ju%%) demanded)",
-					qprefix(as->c->bandwidth,1,buf,sizeof(buf),1),
-					qprefix(as->c->demand,1,dbuf,sizeof(dbuf),1),
+					qprefix(as->c->bandwidth,1,buf,1),
+					qprefix(as->c->demand,1,dbuf,1),
 					as->c->demand * 100 / as->c->bandwidth);
 			}else{
 				wprintw(w," (%sbps to Southbridge)",
-					qprefix(as->c->bandwidth,1,buf,sizeof(buf),1));
+					qprefix(as->c->bandwidth,1,buf,1));
 			}
 		}else if(as->c->bus != BUS_VIRTUAL && as->c->demand){
 			char dbuf[PREFIXSTRLEN + 1];
 
-			wprintw(w," (%sbps demanded)",qprefix(as->c->demand,1,dbuf,sizeof(dbuf),1));
+			wprintw(w," (%sbps demanded)",qprefix(as->c->demand,1,dbuf,1));
 		}
 		assert(wcolor_set(w,bcolor,NULL) != ERR);
 		assert(wprintw(w,"]") != ERR);
@@ -3353,7 +3353,7 @@ detail_fs(WINDOW *hw,const device *d,int row){
 
 		wattroff(hw,A_BOLD);
 		mvwprintw(hw,row,START_COL,BPREFIXFMT "%c ",
-				d->mntsize ? bprefix(d->mntsize,1,buf,sizeof(buf),1) : "",
+				d->mntsize ? bprefix(d->mntsize,1,buf,1) : "",
 				d->mntsize ? 'B' : ' ');
 		wattron(hw,A_BOLD);
 		wprintw(hw,"%s%s",d->label ? "" : "unlabeled ",d->mnttype);
@@ -3410,7 +3410,7 @@ update_details(WINDOW *hw){
 		waddstr(hw,c->biosver ? c->biosver : "Unknown");
 		wattron(hw,A_BOLD);
 		waddstr(hw," Load: ");
-		qprefix(c->demand,1,buf,sizeof(buf),1);
+		qprefix(c->demand,1,buf,1);
 		wattroff(hw,A_BOLD);
 		waddstr(hw,buf);
 		waddstr(hw,"bps");
@@ -3428,7 +3428,7 @@ update_details(WINDOW *hw){
 		waddstr(hw, d->model ? d->model : "n/a");
 		waddstr(hw, d->revision ? d->revision : "");
 		wattron(hw, A_BOLD);
-		wprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf, sizeof(buf), 1));
+		wprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf,  1));
 		wattroff(hw, A_BOLD);
 		waddstr(hw, sn ? sn : "n/a");
 		wattron(hw, A_BOLD);
@@ -3459,7 +3459,7 @@ update_details(WINDOW *hw){
 			wprintw(hw," (");
 			wattroff(hw,A_BOLD);
 			// FIXME throws -Wformat-truncation on gcc9
-			wprintw(hw, "%sbps", qprefix(transbw, 1, buf, sizeof(buf), 1));
+			wprintw(hw, "%sbps", qprefix(transbw, 1, buf,  1));
 			wattron(hw,A_BOLD);
 			wprintw(hw,")");
 		}
@@ -3467,7 +3467,7 @@ update_details(WINDOW *hw){
 		mvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
 					d->model ? d->model : "n/a",
 					d->revision ? d->revision : "n/a",
-					bprefix(d->size,1,buf,sizeof(buf),1),
+					bprefix(d->size,1,buf,1),
 					d->roflag ? L'+' : L'-');
 		if(d->layout == LAYOUT_MDADM){
 			wprintw(hw," Stride: ");
@@ -3475,7 +3475,7 @@ update_details(WINDOW *hw){
 			if(d->mddev.stride == 0){
 				waddstr(hw,"n/a");
 			}else{
-				wprintw(hw,"%sB",bprefix(d->mddev.stride,1,buf,sizeof(buf),1));
+				wprintw(hw,"%sB",bprefix(d->mddev.stride,1,buf,1));
 			}
 			wattron(hw,A_BOLD);
 			wprintw(hw," SWidth: ");
@@ -3523,7 +3523,7 @@ update_details(WINDOW *hw){
 
 		wattroff(hw,A_BOLD);
 		mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-				bprefix(d->size,1,ubuf,sizeof(ubuf),1));
+				bprefix(d->size,1,ubuf,1));
 		wattron(hw,A_BOLD);
 		wprintw(hw,"%s","unpartitioned media");
 		detail_fs(hw,b->d,7);
@@ -3535,11 +3535,11 @@ update_details(WINDOW *hw){
 
 		if(b->zone->p){
 			assert(b->zone->p->layout == LAYOUT_PARTITION);
-			bprefix(b->zone->p->partdev.alignment,1,align,sizeof(align),1);
+			bprefix(b->zone->p->partdev.alignment, 1, align, 1);
 			// FIXME limit length!
 			wattroff(hw,A_BOLD);
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,sizeof(zbuf),1));
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,1));
 			wattron(hw,A_BOLD);
 			wprintw(hw,"P%lc%lc ",subscript((b->zone->p->partdev.pnumber % 100 / 10)),
 					subscript((b->zone->p->partdev.pnumber % 10)));
@@ -3571,7 +3571,7 @@ update_details(WINDOW *hw){
 			// or we'll need recreate alignment() etc here
 			wattroff(hw,A_BOLD);
 			mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,sizeof(zbuf),1));
+					bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,1));
 			wattron(hw,A_BOLD);
 			wattroff(hw,A_BOLD);
 			wprintw(hw,"%ju",b->zone->fsector);
@@ -4541,7 +4541,7 @@ detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
 				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a",
-				qprefix(d->mntsize,1,buf,sizeof(buf),0),
+				qprefix(d->mntsize,1,buf,0),
 				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 				d->name);
@@ -4577,7 +4577,7 @@ detail_targets(WINDOW *w,int *row,int both,const device *d){
 				FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
 				d->mnttype,
 				d->uuid ? d->uuid : "n/a",
-				qprefix(d->mntsize,1,buf,sizeof(buf),0),
+				qprefix(d->mntsize,1,buf,0),
 				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 				cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
 				d->name);
