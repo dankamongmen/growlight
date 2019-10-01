@@ -4,7 +4,8 @@ pipeline:
     commands: 
       - apt-get update
       - apt-get -y dist-upgrade
-      - apt-get -y install devscripts git-buildpackage
+      - apt-get -y install devscripts git-buildpackage software-properties-common
+      - apt-add-repository 'deb https://www.dsscaw.com/repos/apt/debian unstable main'
       - mk-build-deps --install -t'apt-get -y'
       - autoreconf -fis
       - ./configure
