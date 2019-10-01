@@ -3,9 +3,12 @@ pipeline:
     image: library/debian:unstable
     commands: 
       - apt-get update
+      - apt-get -y remove man-db # ees so slow, updating zee manpage database :/
       - apt-get -y dist-upgrade
       - apt-get -y install devscripts git-buildpackage software-properties-common
       - apt-add-repository 'deb https://www.dsscaw.com/repos/apt/debian unstable main'
+      - wget -qO- https://www.dsscaw.com/repos/9EA957D484A4266A.asc | apt-key add -
+      - apt-get update
       - mk-build-deps --install -t'apt-get -y'
       - autoreconf -fis
       - ./configure
