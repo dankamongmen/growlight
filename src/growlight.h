@@ -100,6 +100,8 @@ typedef struct {
 	char **list;
 } stringlist;
 
+#define SSD_ROTATION -1
+
 // An (non-link) entry in the device hierarchy, representing a block-type
 // device (this includes hardware block devices, virtual block devices, and
 // partitions). A partition corresponds to one and only one block device (which
@@ -159,7 +161,7 @@ typedef struct device {
 			char *serial;		// Serial number (can be NULL)
 			char *wwn;		// World Wide Name
 			int32_t rotation;	// Rotation rate:
-						// 0 == unknown, -1 == SSD
+						// 0 == unknown, -1 (SSD_ROTATION) == SSD
 
 			// The following two are relative to the static
 			// partition table metainfo, not created partitions.

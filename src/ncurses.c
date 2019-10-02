@@ -1168,18 +1168,18 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 	if(line >= rows - !endp){
 		return;
 	}
-	strcpy(rolestr,"");
+	strcpy(rolestr, "");
 	selected = line >= 1 && line == rb->selline;
 	rx = cols - 79;
 	switch(bo->d->layout){
 case LAYOUT_NONE:
 		if(bo->d->blkdev.realdev){
-			if(bo->d->blkdev.removable){
-				assert(wattrset(rb->win,COLOR_PAIR(OPTICAL_COLOR)) == OK);
-				strncpy(rolestr,"removable",sizeof(rolestr));
+			if(bo->d->blkdev.rotation == SSD_ROTATION){
+				wattrset(rb->win, COLOR_PAIR(SSD_COLOR));
+				strncpy(rolestr,"solidstate",sizeof(rolestr));
 			}else if(bo->d->blkdev.rotation >= 0){
 				int32_t speed = bo->d->blkdev.rotation;
-				assert(wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR)) == OK);
+				wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR));
 				if(speed > 0){
 					if(speed > 99999){
 						speed = 99999;
@@ -1187,22 +1187,23 @@ case LAYOUT_NONE:
 					snprintf(rolestr, sizeof(rolestr),
 						 "%d rpm", speed);
 				}else{
-					strncpy(rolestr,"ferromag",sizeof(rolestr));
+					strncpy(rolestr, "ferromag", sizeof(rolestr));
 				}
-			}else{
-				assert(wattrset(rb->win,COLOR_PAIR(SSD_COLOR)) == OK);
-				strncpy(rolestr,"solidstate",sizeof(rolestr));
+			}else if(bo->d->blkdev.removable){
+				wattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
+				strncpy(rolestr, "removable", sizeof(rolestr));
 			}
+			// FIXME do we want a default here?
 		}else{
-			assert(wattrset(rb->win,COLOR_PAIR(VIRTUAL_COLOR)) == OK);
-			strncpy(rolestr,"virtual",sizeof(rolestr));
+			wattrset(rb->win, COLOR_PAIR(VIRTUAL_COLOR));
+			strncpy(rolestr, "virtual", sizeof(rolestr));
 		}
 		if(line + !!topp >= 1){
 			if(!bo->d->size || line + 2 < rows - !endp){
 				if(bo->d->size){
 					line += 2;
 				}else if(selected){
-					wattron(rb->win,A_REVERSE);
+					wattron(rb->win, A_REVERSE);
 				}
 		mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
 					bo->d->name,

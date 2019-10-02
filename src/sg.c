@@ -311,7 +311,7 @@ int sg_interrogate(device *d,int fd){
 			break;
 	}
 	if((d->blkdev.rotation = buf[NMRR]) == 1){
-		d->blkdev.rotation = -1; // non-rotating store
+		d->blkdev.rotation = SSD_ROTATION; // special value for solidstate
 	}else if(d->blkdev.rotation <= 0x401){
 		d->blkdev.rotation = 0; // unknown rate
 	}
