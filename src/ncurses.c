@@ -1193,6 +1193,9 @@ case LAYOUT_NONE:
 			}else if(bo->d->kerneltype == TYPE_ROM){
 				wattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
 				strncpy(rolestr, "optical", sizeof(rolestr));
+			}else if(bo->d->kerneltype == TYPE_TAPE){
+				wattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
+				strncpy(rolestr, "tape", sizeof(rolestr));
 			}
 			// FIXME do we want a default here?
 		}else{
