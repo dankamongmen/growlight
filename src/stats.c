@@ -29,7 +29,7 @@ read_procfs_file(const char *path, size_t *buflen) {
 	int fd, terrno;
 	ssize_t r;
 
-	if((fd = open(path, O_CLOEXEC|O_RDONLY)) < 0){
+	if((fd = open(path, O_CLOEXEC | O_RDONLY)) < 0){
 		return NULL;
 	}
 	*buflen = 0;

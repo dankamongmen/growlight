@@ -577,6 +577,7 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 	unsigned b;
 	int sdevfd;
 
+  d->kerneltype = TYPE_DISK;
 	if(sysfs_exist_p(fd,"partition")){
 		char buf[PATH_MAX],*dev;
 		int r;
@@ -637,10 +638,12 @@ explore_sysfs_node_inner(DIR *dir,int fd,const char *name,device *d,int recurse)
 		if((d->revision = get_sysfs_string(sdevfd,"rev")) == NULL){
 			verbf("Couldn't get a revision for %s (%s)\n",name,strerror(errno));
 		}
-		verbf("\tModel: %s revision %s S/N %s\n",
+    get_sysfs_uint(sdevfd, "type", &d->kerneltype);
+		verbf("\tModel: %s revision %s S/N %s type %lu\n",
 				d->model ? d->model : "n/a",
 				d->revision ? d->revision : "n/a",
-				d->blkdev.serial ? d->blkdev.serial : "n/a");
+				d->blkdev.serial ? d->blkdev.serial : "n/a",
+        d->kerneltype);
 		close(sdevfd);
 		// sysfs returns 1 for loop, mdadm, some other things...annoying :/ this
 		// does not apply to the physical/logical sector sizes (see below)

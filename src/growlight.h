@@ -126,6 +126,8 @@ typedef struct device {
 	char *uuid;			// *Filesystem* UUID
 	char *label;			// *Filesystem* label
 	char *mnttype;			// Type of mount (can be "swap")
+  unsigned long kerneltype; // scsi type, from block/DEV/device/type / SG_GET_SCSI_ID
+                            // from scsi.h: TYPE_DISK, TYPE_TAPE, TYPE_ROM, etc.
 	uintmax_t mntsize;		// Filesystem size in bytes
 	stringlist mnt;			// Active mount points
 	stringlist mntops;		// Corresponding mount options
