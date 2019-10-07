@@ -7,6 +7,7 @@
 #include <locale.h>
 #include <pthread.h>
 #include <atasmart.h>
+#include <scsi/scsi.h>
 
 #include "fs.h"
 #include "mbr.h"
@@ -1177,7 +1178,7 @@ case LAYOUT_NONE:
 			if(bo->d->blkdev.rotation == SSD_ROTATION){
 				wattrset(rb->win, COLOR_PAIR(SSD_COLOR));
 				strncpy(rolestr,"solidstate",sizeof(rolestr));
-			}else if(bo->d->blkdev.rotation >= 0){
+			}else if(bo->d->blkdev.rotation > 0){
 				int32_t speed = bo->d->blkdev.rotation;
 				wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR));
 				if(speed > 0){
@@ -1189,9 +1190,9 @@ case LAYOUT_NONE:
 				}else{
 					strncpy(rolestr, "ferromag", sizeof(rolestr));
 				}
-			}else if(bo->d->blkdev.removable){
+			}else if(bo->d->kerneltype == TYPE_ROM){
 				wattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
-				strncpy(rolestr, "removable", sizeof(rolestr));
+				strncpy(rolestr, "optical", sizeof(rolestr));
 			}
 			// FIXME do we want a default here?
 		}else{
