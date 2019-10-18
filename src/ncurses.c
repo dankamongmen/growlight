@@ -1592,7 +1592,7 @@ redraw_adapter(const reelbox *rb){
 	}
 	getmaxyx(stdscr,scrrows,scrcols);
 	assert(scrcols); // FIXME
-	if(adapter_wholly_visible_p(scrrows,rb) || active){ // completely vasible
+	if(adapter_wholly_visible_p(scrrows,rb) || active){ // completely visible
 		topp = endp = 0;
 	}else if(getbegy(rb->win) == 0){ // no top
 		topp = adapter_lines_unbounded(as) - getmaxy(rb->win);
