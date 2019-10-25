@@ -713,7 +713,7 @@ bevel(WINDOW *w){
 	// called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bchr[3]);'
 	// we get ERR returned. this is known behavior: fuck ncurses. instead,
 	// we use mvwins_wch, which doesn't update the cursor position.
-	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.ht
+	// see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.html
 	assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
 	for(z = 1 ; z < cols - 1 ; ++z){
 		assert(mvwadd_wch(w,0,z,&bchr[5]) != ERR);
