@@ -1,3 +1,11 @@
+growlight (1.1.1.1-1) unstable; urgency=medium
+
+  * New upstream release
+  * Debian policy 4.4.1.1, no changes necessary
+  * Use liboutcurses-dev for enmetric()
+
+ -- Nick Black <dankamongmen@gmail.com>  Sat, 26 Oct 2019 14:12:15 -0400
+
 growlight (1.1.1-1) unstable; urgency=medium
 
   * New upstream release
