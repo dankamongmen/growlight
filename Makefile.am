@@ -1,9 +1,9 @@
 LANG=C
 LC_ALL=c
 
-AM_CFLAGS=-std=gnu11 -Wall -O2 -W -Wshadow -Wextra -fvisibility=hidden \
-	  $(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES) $(ZFS_CFLAGS)
-AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
+AM_CFLAGS=-std=gnu11 -Wall -g3 -fno-omit-frame-pointer -ggdb -W -Wshadow -Wextra -fvisibility=hidden \
+	  $(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES) $(ZFS_CFLAGS) -rdynamic
+AM_LDFLAGS=-export-dynamic -Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
 AM_CC=$(PTHREAD_CC)
 
 LIBS+=$(PTHREAD_LIBS) $(OPENSSL_LIBS) $(ZFS_LIBS)

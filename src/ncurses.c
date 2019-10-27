@@ -844,9 +844,10 @@ adapter_lines_unbounded(const adapterstate *is){
 // Is the adapter window entirely visible? We can't draw it otherwise, as it
 // will obliterate the global bounding box.
 static int
-adapter_wholly_visible_p(int rows,const reelbox *rb){
+adapter_wholly_visible_p(int rows, const reelbox *rb){
 	const adapterstate *as = rb->as;
 
+// fprintf(stderr, "   %s at %d wants %d\n", rb->as->c->name, rb->scrline, adapter_lines_bounded(as, rows));
 	if(rb->scrline + adapter_lines_bounded(as,rows) >= rows){
 		return 0;
 	}else if(rb->scrline < 0){
@@ -1588,7 +1589,9 @@ redraw_adapter(const reelbox *rb){
 	int scrrows,scrcols,rows,cols;
 	unsigned topp,endp;
 
+// fprintf(stderr, "  ASKED TO DRAW %s\n", rb->as->c->name);
 	if(panel_hidden(rb->panel)){
+// fprintf(stderr, "  I'M HIDDEN, BITCH!\n");
 		return OK;
 	}
 	getmaxyx(stdscr,scrrows,scrcols);
@@ -3249,8 +3252,8 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 	int nlines,rr;
 
 	as = rb->as;
-	//fprintf(stderr,"  moving %s (%d) from %d to %d (%d)\n",is->adapter->name,
-	//	      adapter_lines_bounded(is,rows),getbegy(rb->win),targ,delta);
+// fprintf(stderr,"  moving %s (%d) from %d to %d (%d)\n", rb->as->c->name,
+//  adapter_lines_bounded(rb->as, rows), getbegy(rb->win), targ, delta);
 	assert(rb->as);
 	assert(rb->as->rb == rb);
 	werase(rb->win);
@@ -3275,6 +3278,7 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 		nlines = rows - targ - 1; // sans-bottom partial
 	}else{
 		if((rr + getbegy(rb->win)) <= -delta){
+// fprintf(stderr, "THE BIG HIDE #1 (%d / %d / %d)\n", rr, getbegy(rb->win), -delta);
 			hide_panel(rb->panel);
 			return;
 		}
@@ -3286,6 +3290,7 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 		}
 	}
 	if(nlines < 1){
+// fprintf(stderr, "THE BIG HIDE #2 (%d)\n", nlines);
 		hide_panel(rb->panel);
 		return;
 	}else if(nlines > rr){
@@ -3303,9 +3308,13 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 }
 
 static inline void
-move_adapter_generic(reelbox *rb,int rows,int cols,int delta){
+move_adapter_generic(reelbox *rb, int rows, int cols, int delta){
+//   fprintf(stderr, "  moved %s by %d to %d\n",
+//          rb->as->c->name, delta, rb->scrline);
 	move_adapter(rb,rb->scrline,rows,cols,delta);
-	rb->scrline = getbegy(rb->win);
+  /*fprintf(stderr, "-------------> CORRECTING SCRLINE: %d becomes %d (%d / %d?)\n",
+          rb->scrline, getbegy(rb->win), getmaxy(rb->win), getpary(rb->win));
+	rb->scrline = getbegy(rb->win);*/
 }
 
 static void
@@ -3923,13 +3932,15 @@ resize_adapter(reelbox *rb){
 					delta = nlines - subrows;
 				}
 				delta -= gap_above(rb);
-				if(delta){
+				if(delta > 0){
 					push_adapters_above(rb,rows,cols,-delta);
 					rb->scrline -= delta;
 					move_adapter_generic(rb,rows,cols,-delta);
 				}
 			}
-			subrows += delta;
+      if(delta > 0){
+			  subrows += delta;
+      }
 			if(nlines > subrows){
 				if( (delta = gap_below(rb)) ){
 					subrows += delta > (nlines - subrows) ?
@@ -3948,6 +3959,7 @@ resize_adapter(reelbox *rb){
 				wresize(rb->win,subrows,PAD_COLS(cols));
 				replace_panel(rb->panel,rb->win);
 			}else{
+// fprintf(stderr, "THE BIGGEST HIDE (%d, %d)\n", subrows, getmaxy(rb->win));
 				werase(rb->win);
 				hide_panel(rb->panel);
 				if(rb->next){
@@ -4057,8 +4069,8 @@ use_next_controller(WINDOW *w){
 	if(!current_adapter || current_adapter->as->next == current_adapter->as){
 		return;
 	}
-	// fprintf(stderr,"Want next adapter (%s->%s)\n",current_adapter->as->if
-	//	      current_adapter->as->next->adapter->name);
+// fprintf(stderr,"\nWant next adapter (%s->%s)\n",current_adapter->as->c->name,
+//         current_adapter->as->next->c->name);
 	getmaxyx(w,rows,cols);
 	oldrb = current_adapter;
 	deselect_adapter_locked();
@@ -4097,7 +4109,8 @@ use_next_controller(WINDOW *w){
 	// change visibility of any adapters. If it's above us, we'll need
 	// rotate the adapters 1 unit, moving all. Otherwise, none change
 	// position. Redraw all affected adapters.
-	if(adapter_wholly_visible_p(rows,rb)){
+	if(adapter_wholly_visible_p(rows, rb)){
+// fprintf(stderr, "[%s] is VISIBLE\n", rb->as->c->name); // current_adapter
 		if(rb->scrline > oldrb->scrline){ // new is below old
 			redraw_adapter(oldrb);
 			redraw_adapter(rb);
@@ -4122,6 +4135,8 @@ use_next_controller(WINDOW *w){
 		}
 	}else{ // new is partially visible...
 		if(rb->scrline > oldrb->scrline){ // ...at the bottom
+// fprintf(stderr, "rb->as->c->name [%s] is PART-VISIBLE-BOTTOM\n",
+//         rb->as->c->name); // current_adapter
 			adapterstate *is = current_adapter->as;
 			delta = getmaxy(rb->win) - adapter_lines_bounded(is,rows);
 			rb->scrline = rows - (adapter_lines_bounded(is,rows) + 1);
@@ -4131,6 +4146,8 @@ use_next_controller(WINDOW *w){
 			replace_panel(rb->panel,rb->win);
 			redraw_adapter(rb);
 		}else{ // ...at the top (rotate)
+// fprintf(stderr, "rb->as->c->name [%s] is PART-VISIBLE-TOP\n",
+//         rb->as->c->name); // current_adapter
 			assert(top_reelbox == rb);
 			rb->scrline = rows - 1 - adapter_lines_bounded(rb->as,rows);
 			top_reelbox->next->prev = NULL;
@@ -4316,10 +4333,10 @@ static const int DIAGROWS = 14;
 static int
 dump_diags(void){
 	logent l[10];
-	int y,r;
+	int y, r;
 
 	y = sizeof(l) / sizeof(*l);
-	if((y = get_logs(y,l)) < 0){
+	if((y = get_logs(y, l)) < 0){
 		return -1;
 	}
 	for(r = 0 ; r < y ; ++r){
@@ -4328,8 +4345,8 @@ dump_diags(void){
 		if(l[r].msg == NULL){
 			break;
 		}
-		ctime_r(&l[r].when,tbuf);
-		fprintf(stderr,"%s %s",tbuf,l[r].msg);
+		ctime_r(&l[r].when, tbuf);
+		fprintf(stderr, "%s %s", tbuf, l[r].msg);
 		free(l[r].msg);
 	}
 	return 0;
@@ -6359,12 +6376,14 @@ handle_ncurses_input(WINDOW *w){
 			case KEY_NPAGE:{
 				int sel;
 				lock_ncurses();
+// fprintf(stderr, "-------------- BEGIN PgDown ---------------\n");
 				sel = selection_active();
 				deselect_adapter_locked();
 				use_next_controller(w);
 				if(sel){
 					select_adapter();
 				}
+// fprintf(stderr, "--------------- END PgDown ----------------\n");
 				unlock_ncurses();
 				break;
 			}
@@ -6812,11 +6831,14 @@ block_callback(device *d,void *v){
 		return NULL; // FIXME ought be an assert; this shouldn't happen
 	}
 	lock_ncurses_growlight();
+// fprintf(stderr, "---------begin block event on %s\n", d->name);
 	if((as = d->c->uistate) == NULL){
+// fprintf(stderr, "MAKE THAT INVISIBLE block event on %s\n!", d->name);
 		if((as = d->c->uistate = adapter_callback(d->c,NULL)) == NULL){
 			return NULL;
 		}
 	}
+// if(as->rb){ fprintf(stderr, "we're on line %d\n", as->rb->scrline); }
 	if((b = v) == NULL){
 		if( (b = create_blockobj(d)) ){
 			if(as->devs == 0){
@@ -6838,15 +6860,19 @@ block_callback(device *d,void *v){
 
 		old = as->rb->selline;
 		oldrows = getmaxy(as->rb->win);
+// fprintf(stderr, "into resize_adapter line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
 		resize_adapter(as->rb);
+// fprintf(stderr, "into recompute_selection line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
 		recompute_selection(as,old,oldrows,getmaxy(as->rb->win));
 		if(current_adapter == as->rb){
 			if(b->prev == NULL && b->next == NULL){
 				select_adapter();
 			}
 		}
+// fprintf(stderr, "into redraw_adapter line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
 		redraw_adapter(as->rb);
 	}
+// fprintf(stderr, "---------end block event on %s\n", d->name);
 	unlock_ncurses_growlight();
 	return b;
 }
@@ -6904,7 +6930,7 @@ adapter_free(void *cv){
 	if( (rb = as->rb) ){
 		int delta = getmaxy(rb->win) + 1,scrrows,scrcols;
 
-		//fprintf(stderr,"Removing iface at %d\n",rb->scrline);
+// fprintf(stderr,"Removing iface at %d\n",rb->scrline);
 		assert(werase(rb->win) == OK);
 		assert(hide_panel(rb->panel) == OK);
 		getmaxyx(stdscr,scrrows,scrcols);
