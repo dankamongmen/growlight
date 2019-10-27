@@ -945,7 +945,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 		{ .attr = 0, .chars = L" ", },
 		{ .attr = 0, .chars = L" ", },
 	};
-	char pre[PREFIXSTRLEN + 1];
+	char pre[BPREFIXSTRLEN + 1];
 	const char *selstr = NULL;
 	wchar_t wbuf[ex - sx + 2];
 	int targco,mountco,partco;
@@ -1163,7 +1163,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 static void
 print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 			unsigned cols,int topp,unsigned endp){
-	char buf[PREFIXSTRLEN + 1];
+	char buf[BPREFIXSTRLEN + 1];
 	int selected,co,rx,attr;
 	char rolestr[12]; // taken from %-11.11s below
 
