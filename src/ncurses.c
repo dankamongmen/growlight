@@ -1030,7 +1030,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 
 		wbuf[0] = L'\0';
 		zs = (z->lsector - z->fsector + 1) * bo->d->logsec;
-		qprefix(zs,1,pre,1);
+		qprefix(zs, 1, pre, 1);
 		if(z->p == NULL){ // unused space among partitions, or metadata
 			int co = (z->rep == REP_METADATA ? COLOR_PAIR(METADATA_COLOR) :
 					COLOR_PAIR(EMPTY_COLOR));
@@ -1399,8 +1399,9 @@ case LAYOUT_ZPOOL:
 		// FIXME 'i' shows up only when there are fewer than 3 sigfigs
 		// to the left of the decimal point...very annoying
 		if(io){
-			bprefix(io, 1, buf,  1);
-			wprintw(rb->win, "%7.7s", buf);
+      char qbuf[BPREFIXSTRLEN + 1];
+			bprefix(io, 1, qbuf,  1);
+			wprintw(rb->win, "%7.7s", qbuf); // might chop off 'i'
 		}else{
 			wprintw(rb->win, " no i/o");
 		}
@@ -1603,7 +1604,7 @@ redraw_adapter(const reelbox *rb){
 	}
 	getmaxyx(rb->win,rows,cols);
 	assert(cols); // FIXME
-	assert(werase(rb->win) != ERR);
+	werase(rb->win);
 	adapter_box(as,rb->win,topp,endp);
 	print_adapter_devs(as,rows,cols,topp,endp);
 	return OK;
@@ -1679,9 +1680,9 @@ destroy_form_locked(struct form_state *fs){
 		assert(fs == actform);
 		fsw = panel_window(fs->p);
 		hide_panel(fs->p);
-		assert(del_panel(fs->p) == OK);
+		del_panel(fs->p);
 		fs->p = NULL;
-		assert(delwin(fsw) == OK);
+		delwin(fsw);
 		hide_panel_locked(fs->extext);
 		free(fs->extext);
 		fs->extext = NULL;
@@ -1908,17 +1909,20 @@ raise_form_explication(const WINDOW *w,const char *text,int linesz){
 	// If we've not chewed through all the text, we're not going to fit it
 	// into the provided space. We don't yet deal with this situation FIXME
 	assert(!text[tot]);
-	assert( (ps = malloc(sizeof(*ps))) );
-	assert( (win = newwin(y + 3,cols,linesz - (y + 2),getmaxx(w) - cols)) );
-	assert( (ps->p = new_panel(win)) );
+	ps = malloc(sizeof(*ps));
+  assert(ps);
+	win = newwin(y + 3,cols,linesz - (y + 2),getmaxx(w) - cols);
+  assert(win);
+	ps->p = new_panel(win);
+  assert(ps->p);
 	wbkgd(win,COLOR_PAIR(BLACK_COLOR));
 	wattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
 	bevel(win);
 	wattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
 	do{
-		assert(mvwaddnstr(win,y + 1,1,text + linepre[y],linelen[y]) != ERR);
+		mvwaddnstr(win,y + 1,1,text + linepre[y],linelen[y]);
 	}while(y--);
-	assert(top_panel(ps->p) != ERR);
+	top_panel(ps->p);
 	screen_update();
 	return ps;
 }
@@ -2004,7 +2008,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
 	fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
 	actform = fs;
 	form_colors();
-	assert(top_panel(fs->p) != ERR);
+	top_panel(fs->p);
 	screen_update();
 }
 
@@ -2090,7 +2094,7 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
 	fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
 	actform = fs;
 	form_colors();
-	assert(top_panel(fs->p) != ERR);
+	top_panel(fs->p);
 	screen_update();
 }
 
@@ -2169,7 +2173,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 	actform = fs;
 	fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
 	form_colors();
-	assert(top_panel(fs->p) != ERR);
+	top_panel(fs->p);
 	screen_update();
 }
 
@@ -2226,7 +2230,7 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
 		free_form(fs);
 		return;
 	}
-	assert(top_panel(fs->p) != ERR);
+	top_panel(fs->p);
 	wattroff(fsw,A_BOLD);
 	wcolor_set(fsw,FORMBORDER_COLOR,NULL);
 	bevel(fsw);
@@ -3179,8 +3183,10 @@ create_reelbox(adapterstate *as,int rows,int scrline,int cols){
 		l = rows - scrline - 1;
 	}
 	if( (ret = malloc(sizeof(*ret))) ){
-		assert( (ret->win = newwin(l,PAD_COLS(cols),scrline,0)) );
-		assert( (ret->panel = new_panel(ret->win)) );
+		ret->win = newwin(l,PAD_COLS(cols),scrline,0);
+    assert(ret->win);
+		ret->panel = new_panel(ret->win);
+    assert(ret->panel);
 		ret->scrline = scrline;
 		ret->selected = NULL;
 		ret->selline = -1;
@@ -3247,29 +3253,29 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 	//	      adapter_lines_bounded(is,rows),getbegy(rb->win),targ,delta);
 	assert(rb->as);
 	assert(rb->as->rb == rb);
-	assert(werase(rb->win) != ERR);
+	werase(rb->win);
 	screen_update();
 	if(adapter_wholly_visible_p(rows,rb)){
-		assert(move_panel(rb->panel,targ,0) != ERR);
+		move_panel(rb->panel,targ,0);
 		if(getmaxy(rb->win) != adapter_lines_bounded(as,rows)){
-			assert(wresize(rb->win,adapter_lines_bounded(as,rows),PAD_COLS(cols)) == OK);
+			wresize(rb->win,adapter_lines_bounded(as,rows),PAD_COLS(cols));
 			if(panel_hidden(rb->panel)){
-				assert(show_panel(rb->panel) == OK);
+				show_panel(rb->panel);
 			}
 		}
-		assert(redraw_adapter(rb) == OK);
+		redraw_adapter(rb);
 		return;
 	}
 	rr = getmaxy(rb->win);
 	if(delta > 0){ // moving down
 		if(targ >= rows - 1){
-			assert(hide_panel(rb->panel) != ERR);
+			hide_panel(rb->panel);
 			return;
 		}
 		nlines = rows - targ - 1; // sans-bottom partial
 	}else{
 		if((rr + getbegy(rb->win)) <= -delta){
-			assert(hide_panel(rb->panel) != ERR);
+			hide_panel(rb->panel);
 			return;
 		}
 		if(targ < 0){
@@ -3280,19 +3286,19 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
 		}
 	}
 	if(nlines < 1){
-		assert(hide_panel(rb->panel) != ERR);
+		hide_panel(rb->panel);
 		return;
 	}else if(nlines > rr){
-		assert(move_panel(rb->panel,targ,0) == OK);
-		assert(wresize(rb->win,nlines,PAD_COLS(cols)) == OK);
+		move_panel(rb->panel,targ,0);
+		wresize(rb->win,nlines,PAD_COLS(cols));
 	}else if(nlines < rr){
-		assert(wresize(rb->win,nlines,PAD_COLS(cols)) == OK);
-		assert(move_panel(rb->panel,targ,0) == OK);
+		wresize(rb->win,nlines,PAD_COLS(cols));
+		move_panel(rb->panel,targ,0);
 	}else{
-		assert(move_panel(rb->panel,targ,0) == OK);
+		move_panel(rb->panel,targ,0);
 	}
-	assert(redraw_adapter(rb) == OK);
-	assert(show_panel(rb->panel) == OK);
+	redraw_adapter(rb);
+	show_panel(rb->panel);
 	return;
 }
 
@@ -3309,8 +3315,8 @@ free_reelbox(reelbox *rb){
 		assert(rb->as->rb == rb);
 
 		rb->as->rb = NULL;
-		assert(delwin(rb->win) == OK);
-		assert(del_panel(rb->panel) == OK);
+		delwin(rb->win);
+		del_panel(rb->panel);
 		free(rb);
 	}
 }
@@ -3398,15 +3404,15 @@ update_details(WINDOW *hw){
 	for(n = 1 ; n < rows - 1 ; ++n){
 		mvwhline(hw,n,START_COL,' ',cols - 2);
 	}
-	assert(wattrset(hw,SUBDISPLAY_ATTR) != ERR);
-	assert(mvwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name) != ERR);
+	wattrset(hw,SUBDISPLAY_ATTR);
+	mvwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name);
 	if(rows == 1){
 		return 0;
 	}
 	if(c->bus == BUS_VIRTUAL){
-		assert(mvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available") != ERR);
+		mvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available");
 	}else{
-		assert(mvwprintw(hw,2,START_COL,"Firmware: ") != ERR);
+		mvwprintw(hw,2,START_COL,"Firmware: ");
 		wattroff(hw,A_BOLD);
 		waddstr(hw,c->fwver ? c->fwver : "Unknown");
 		wattron(hw,A_BOLD);
@@ -3652,30 +3658,30 @@ helpstrs(WINDOW *hw){
 
 	rows = getmaxy(hw);
 	cols = getmaxx(hw);
-	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	wattrset(hw,SUBDISPLAY_ATTR);
 	for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
 		mvwhline(hw,row + z,START_COL,' ',cols - 2);
-		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
+		mvwaddwstr(hw,row + z,START_COL,hs);
 	}
 	row += z;
 	if(!current_adapter || !current_adapter->selected){
-		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
+		wattrset(hw,SUBDISPLAY_INVAL_ATTR);
 	}else{
-		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+		wattrset(hw,SUBDISPLAY_ATTR);
 	}
 	for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
 		mvwhline(hw,row + z,START_COL,' ',cols - 2);
-		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
+		mvwaddwstr(hw,row + z,START_COL,hs);
 	}
 	row += z;
 	if(!target_mode_p()){
-		assert(wattrset(hw,SUBDISPLAY_INVAL_ATTR) == OK);
+		wattrset(hw,SUBDISPLAY_INVAL_ATTR);
 	}else{
-		assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+		wattrset(hw,SUBDISPLAY_ATTR);
 	}
 	for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
 		mvwhline(hw,row + z,START_COL,' ',cols - 2);
-		assert(mvwaddwstr(hw,row + z,START_COL,hs) != ERR);
+		mvwaddwstr(hw,row + z,START_COL,hs);
 	}
 	return OK;
 }
@@ -3683,7 +3689,7 @@ helpstrs(WINDOW *hw){
 static inline void
 lock_ncurses(void){
 	lock_growlight();
-	assert(pthread_mutex_lock(&bfl) == 0);
+	pthread_mutex_lock(&bfl);
 }
 
 static inline void
@@ -3692,7 +3698,7 @@ unlock_ncurses(void){
 	update_help_cond(help.p);
 	update_map_cond(maps.p);
 	screen_update();
-	assert(pthread_mutex_unlock(&bfl) == 0);
+	pthread_mutex_unlock(&bfl);
 	unlock_growlight();
 }	
 
@@ -3700,7 +3706,7 @@ unlock_ncurses(void){
 // in any such case.
 static inline void
 lock_ncurses_growlight(void){
-	assert(pthread_mutex_lock(&bfl) == 0);
+	pthread_mutex_lock(&bfl);
 }
 
 static inline void
@@ -3709,7 +3715,7 @@ unlock_ncurses_growlight(void){
 	update_help_cond(help.p);
 	update_map_cond(maps.p);
 	screen_update();
-	assert(pthread_mutex_unlock(&bfl) == 0);
+	pthread_mutex_unlock(&bfl);
 }
 
 static void pull_adapters_down(reelbox *,int,int,int);
@@ -3939,11 +3945,11 @@ resize_adapter(reelbox *rb){
 		}
 		if(subrows != getmaxy(rb->win)){
 			if(subrows > 0){
-				assert(wresize(rb->win,subrows,PAD_COLS(cols)) != ERR);
-				assert(replace_panel(rb->panel,rb->win) != ERR);
+				wresize(rb->win,subrows,PAD_COLS(cols));
+				replace_panel(rb->panel,rb->win);
 			}else{
-				assert(werase(rb->win) == OK);
-				assert(hide_panel(rb->panel) == OK);
+				werase(rb->win);
+				hide_panel(rb->panel);
 				if(rb->next){
 					rb->next->prev = rb->prev;
 				}else{
@@ -4093,8 +4099,8 @@ use_next_controller(WINDOW *w){
 	// position. Redraw all affected adapters.
 	if(adapter_wholly_visible_p(rows,rb)){
 		if(rb->scrline > oldrb->scrline){ // new is below old
-			assert(redraw_adapter(oldrb) == OK);
-			assert(redraw_adapter(rb) == OK);
+			redraw_adapter(oldrb);
+			redraw_adapter(rb);
 		}else{ // we were at the bottom (rotate)
 			if(top_reelbox->next){
 				top_reelbox->next->prev = NULL;
@@ -4121,9 +4127,9 @@ use_next_controller(WINDOW *w){
 			rb->scrline = rows - (adapter_lines_bounded(is,rows) + 1);
 			push_adapters_above(rb,rows,cols,delta);
 			move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
-			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
-			assert(replace_panel(rb->panel,rb->win) != ERR);
-			assert(redraw_adapter(rb) == OK);
+			wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
+			replace_panel(rb->panel,rb->win);
+			redraw_adapter(rb);
 		}else{ // ...at the top (rotate)
 			assert(top_reelbox == rb);
 			rb->scrline = rows - 1 - adapter_lines_bounded(rb->as,rows);
@@ -4142,9 +4148,9 @@ use_next_controller(WINDOW *w){
 			}
 			last_reelbox = rb;
 			move_adapter_generic(rb,rows,cols,rb->scrline);
-			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
-			assert(replace_panel(rb->panel,rb->win) != ERR);
-			assert(redraw_adapter(rb) == OK);
+			wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
+			replace_panel(rb->panel,rb->win);
+			redraw_adapter(rb);
 		}
 	}
 	if( (delta = top_space_p(rows)) ){
@@ -4208,8 +4214,8 @@ use_prev_controller(WINDOW *w){
 	// position. Redraw all affected adapters.
 	if(adapter_wholly_visible_p(rows,rb)){
 		if(rb->scrline < oldrb->scrline){ // new is above old
-			assert(redraw_adapter(oldrb) == OK);
-			assert(redraw_adapter(rb) == OK);
+			redraw_adapter(oldrb);
+			redraw_adapter(rb);
 		}else{ // we were at the top
 			// Selecting the previous adapter is simpler -- we
 			// take one from the bottom, and stick it in row 1.
@@ -4233,9 +4239,9 @@ use_prev_controller(WINDOW *w){
 		if(rb->scrline < oldrb->scrline){ // ... at the top
 			rb->scrline = 0;
 			push_adapters_below(rb,rows,cols,-(getmaxy(rb->win) - adapter_lines_bounded(is,rows)));
-			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
-			assert(replace_panel(rb->panel,rb->win) != ERR);
-			assert(redraw_adapter(rb) == OK);
+			wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
+			replace_panel(rb->panel,rb->win);
+			redraw_adapter(rb);
 		}else{ // at the bottom
 			if(last_reelbox->prev){
 				last_reelbox->prev->next = NULL;
@@ -4253,9 +4259,9 @@ use_prev_controller(WINDOW *w){
 			rb->prev = NULL;
 			top_reelbox = rb;
 			move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
-			assert(wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols)) == OK);
-			assert(replace_panel(rb->panel,rb->win) != ERR);
-			assert(redraw_adapter(rb) == OK);
+			wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
+			replace_panel(rb->panel,rb->win);
+			redraw_adapter(rb);
 		}
 	}
 }
@@ -4322,7 +4328,7 @@ dump_diags(void){
 		if(l[r].msg == NULL){
 			break;
 		}
-		assert(ctime_r(&l[r].when,tbuf));
+		ctime_r(&l[r].when,tbuf);
 		fprintf(stderr,"%s %s",tbuf,l[r].msg);
 		free(l[r].msg);
 	}
@@ -4341,7 +4347,7 @@ update_diags(struct panel_state *ps){
 	if((y = get_logs(y,l)) < 0){
 		return -1;
 	}
-	assert(wattrset(w,SUBDISPLAY_ATTR) == OK);
+	wattrset(w,SUBDISPLAY_ATTR);
 	for(r = 0 ; r < y ; ++r){
 		char *c,tbuf[x];
 		struct tm tm;
@@ -4370,7 +4376,7 @@ update_diags(struct panel_state *ps){
 		while((c = strchr(tbuf,'\b')) || (c = strchr(tbuf,'\t'))){
 			*c = ' ';
 		}
-		assert(mvwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf) != ERR);
+		mvwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf);
 		free(l[r].msg);
 	}
 	return 0;
@@ -4475,7 +4481,7 @@ env_details(WINDOW *hw,int rows){
 	const int row = 1;
 	int z,srows,scols,cols;
 
-	assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+	wattrset(hw,SUBDISPLAY_ATTR);
 	getmaxyx(stdscr,srows,scols);
 	if((z = rows) >= ENVROWS){
 		z = ENVROWS - 1;
@@ -4489,26 +4495,26 @@ env_details(WINDOW *hw,int rows){
 			mvwhline(hw,row + z,1,' ',cols - 2);
 			c0 = (z - 2) * COLORSPERROW;
 			c1 = c0 + (COLORSPERROW - 1);
-			assert(mvwprintw(hw,row + z,col,"0x%02x%lc0x%02x: ",c0,L'–',c1) == OK);
+			mvwprintw(hw,row + z,col,"0x%02x%lc0x%02x: ",c0,L'–',c1);
 			while(c0 <= c1){
 				if(c0 < COLORS){
-					assert(wattrset(hw,COLOR_PAIR(c0)) == OK);
-					assert(wprintw(hw,"X") == OK);
+					wattrset(hw,COLOR_PAIR(c0));
+					wprintw(hw,"X");
 				}else{
-					assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
-					assert(wprintw(hw," ") == OK);
+					wattrset(hw,SUBDISPLAY_ATTR);
+					wprintw(hw," ");
 				}
 				++c0;
 			}
 			--z;
-			assert(wattrset(hw,SUBDISPLAY_ATTR) == OK);
+			wattrset(hw,SUBDISPLAY_ATTR);
 		}
 	} /* intentional fallthrough */
 	case 1:{
 		mvwhline(hw,row + z,1,' ',cols - 2);
-		assert(mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
+		mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
 				COLORS,COLOR_PAIRS,srows,scols,
-				can_change_color() ? "dynamic" : "fixed") != ERR);
+				can_change_color() ? "dynamic" : "fixed");
 		--z;
 	} /* intentional fallthrough */
 	case 0:{
@@ -4517,7 +4523,7 @@ env_details(WINDOW *hw,int rows){
 
 		mvwhline(hw,row + z,1,' ',cols - 2);
 		lang = lang ? lang : "Undefined";
-		assert(mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s ESCDELAY: %d",lang,term,ESCDELAY) != ERR);
+		mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s ESCDELAY: %d",lang,term,ESCDELAY);
 		--z;
 		break;
 	}default:{
@@ -4883,7 +4889,7 @@ expand_adapter_locked(void){
 	++is->expansion;
 	old = current_adapter->selline;
 	oldrows = getmaxy(current_adapter->win);
-	assert(resize_adapter(current_adapter) == OK);
+  resize_adapter(current_adapter);
 	recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
 	redraw_adapter(current_adapter);
 	return 0;
@@ -4904,7 +4910,7 @@ collapse_adapter_locked(void){
 	--is->expansion;
 	old = current_adapter->selline;
 	oldrows = getmaxy(current_adapter->win);
-	assert(resize_adapter(current_adapter) == OK);
+	resize_adapter(current_adapter);
 	recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
 	redraw_adapter(current_adapter);
 	return 0;
