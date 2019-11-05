@@ -2,6 +2,7 @@ pipeline:
   build:
     image: library/debian:unstable
     commands: 
+      - sed -i -e 's/$/ contrib non-free/' /etc/apt/sources.list
       - apt-get update
       - apt-get -y dist-upgrade
       - apt-get -y install devscripts git-buildpackage software-properties-common
