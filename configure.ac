@@ -67,14 +67,16 @@ PKG_PROG_PKG_CONFIG
 
 # Dependencies of some (but not all) targets must be explicitly claimed by
 # their binaries in Makefile.am.
+
+# FIXME what about the --without-ncurses/--without-ncursesw cases?
+# latter shouldn't be supported. former should preempt this, disable build...
 AX_WITH_CURSES
-AX_WITH_CURSES_PANEL
-PKG_CHECK_MODULES([libpanel], [panel], [AC_DEFINE([HAVE_PANEL], [1], [Use libpanel from ncurses])])
-if test "x$ax_cv_panel" = xyes; then
-	CFLAGS+=" -D_XOPEN_SOURCE_EXTENDED"
+if test "x$ax_cv_ncursesw" != xyes; then
+  AC_MSG_ERROR([Requires NcursesW (ncurses with wide-character support)])
 else
-	AC_MSG_WARN([Cannot find Ncurses/panel, trying anyway...])
-	PANEL_LIBS+="-lpanelw"
+	CFLAGS+=" $CURSES_CFLAGS"
+  PKG_CHECK_MODULES([PANEL], [panelw], [AC_DEFINE([HAVE_PANEL], [1], [Use panelw from ncursesw])])
+  CFLAGS+=" $PANEL_CFLAGS"
 fi
 
 AX_LIB_READLINE
@@ -93,7 +95,7 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
-# we don't use the outcurses library, just its headers
+# we don't use the outcurses library (yet), just its headers
 PKG_CHECK_MODULES([outcurses], [outcurses >= 0.0.3], [have_outcurses=yes])
 	CFLAGS+=" $outcurses_CFLAGS"
 
