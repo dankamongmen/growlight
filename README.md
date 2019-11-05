@@ -35,7 +35,7 @@ Build-only dependencies:
  - pkg-config (tested with 0.29)
  - cunit (tested with 2.1)
  - autoconf-archive (tested with 2018+)
- - liboutcurses 0.0.3+
+ - liboutcurses 0.0.5+
 
 Building from a git checkout:
 
