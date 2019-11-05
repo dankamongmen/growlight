@@ -17,7 +17,6 @@
 #include <sys/time.h>
 #include <pci/pci.h>
 #include <pthread.h>
-#include <linux/fs.h>
 #include <sys/stat.h>
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>

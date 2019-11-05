@@ -8,12 +8,10 @@ extern "C" {
 #include "config.h"
 
 #if defined(HAVE_NCURSESW_H) || defined(HAVE_NCURSESW)
-#include <term.h>
 #include <panel.h>
 #include <ncurses.h>
 #else
 #ifdef HAVE_NCURSESW_CURSES_H
-#include <ncursesw/term.h>
 #include <ncursesw/panel.h>
 #include <ncursesw/curses.h>
 #else
