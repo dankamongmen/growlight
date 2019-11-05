@@ -9,7 +9,7 @@
 #include "config.h"
 #include "growlight.h"
 
-#ifdef HAVE_LIBZFS
+#ifdef HAVE_ZFS
 
 // FIXME hacks around the libspl/libzfs autotools-dominated jank
 #define ulong_t unsigned long
@@ -18,7 +18,6 @@
 //#include <libzfs.h>
 
 static libzfs_handle_t *zht;
-static char history[HIS_MAX_RECORD_LEN];
 // FIXME taken from zpool.c source
 static char props[] = "name,size,allocated,free,capacity,dedupratio,health,altroot";
 
@@ -39,11 +38,11 @@ dehumanize(const char *num){
 		dec = 0;
 	}
 	switch(*e){
-		case 'E': case 'e': ull = ull * 1000 + dec * 10; dec = 0;
-		case 'P': case 'p': ull = ull * 1000 + dec * 10; dec = 0;
-		case 'T': case 't': ull = ull * 1000 + dec * 10; dec = 0;
-		case 'G': case 'g': ull = ull * 1000 + dec * 10; dec = 0;
-		case 'M': case 'm': ull = ull * 1000 + dec * 10; dec = 0;
+		case 'E': case 'e': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
+		case 'P': case 'p': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
+		case 'T': case 't': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
+		case 'G': case 'g': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
+		case 'M': case 'm': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
 		case 'K': case 'k': ull = ull * 1000 + dec * 10; dec = 0;
 			break;
 		case '\0':
@@ -96,63 +95,63 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		return -1;
 	}
 	state = zpool_get_state(zhp);
-	if(zpool_get_prop(zhp,ZPOOL_PROP_HEALTH,health,sizeof(health),NULL)){
-		diag("Couldn't get health for %s\n",name);
+	if(zpool_get_prop(zhp, ZPOOL_PROP_HEALTH, health, sizeof(health), NULL, true)){
+		diag("Couldn't get health for %s\n", name);
 		zpool_close(zhp);
 		return -1;
 	}
 	if(strcmp(health,"FAULTED")){ // FIXME really?!?!
-		if(zpool_get_prop(zhp,ZPOOL_PROP_SIZE,size,sizeof(size),NULL)){
-			diag("Couldn't get size for zpool '%s'\n",name);
+		if(zpool_get_prop(zhp, ZPOOL_PROP_SIZE, size, sizeof(size), NULL, true)){
+			diag("Couldn't get size for zpool '%s'\n", name);
 			zpool_close(zhp);
 			return -1;
 		}
-		if(zpool_get_prop(zhp,ZPOOL_PROP_ASHIFT,ashift,sizeof(ashift),NULL)){
-			diag("Couldn't get ashift for zpool '%s'\n",name);
+		if(zpool_get_prop(zhp, ZPOOL_PROP_ASHIFT, ashift, sizeof(ashift), NULL, true)){
+			diag("Couldn't get ashift for zpool '%s'\n", name);
 			zpool_close(zhp);
 			return -1;
 		}
 	}else{
-		verbf("Assuming zero size for faulted zpool '%s'\n",name);
-		strcpy(ashift,"0");
-		strcpy(size,"0");
+		verbf("Assuming zero size for faulted zpool '%s'\n", name);
+		strcpy(ashift, "0");
+		strcpy(size, "0");
 	}
-	if(zpool_get_prop(zhp,ZPOOL_PROP_GUID,guid,sizeof(guid),NULL)){
-		diag("Couldn't get GUID for zpool '%s'\n",name);
+	if(zpool_get_prop(zhp, ZPOOL_PROP_GUID, guid, sizeof(guid), NULL, true)){
+		diag("Couldn't get GUID for zpool '%s'\n", name);
 		zpool_close(zhp);
 		return -1;
 	}
 	lock_growlight();
 	if( (d = lookup_device(name)) ){
 		if(d->layout != LAYOUT_ZPOOL){
-			diag("Zpool %s collided with %s\n",name,d->name);
+			diag("Zpool %s collided with %s\n", name, d->name);
 			zpool_close(zhp);
 			return -1;
 		}
 		if(strcmp(d->uuid,guid)){
-			diag("UUID changed on %s\n",name);
+			diag("UUID changed on %s\n", name);
 			free(d->uuid);
 		}
 		d->uuid = strdup(guid);
 		if(d->size != dehumanize(size)){
-			diag("Size changed on %s (%ju->%s)\n",name,d->size,size);
+			diag("Size changed on %s (%ju->%s)\n", name, d->size, size);
 		}
 		d->size = dehumanize(size);
 		d->zpool.state = state;
 		d->zpool.zpoolver = version;
 		zpool_close(zhp);
-		d->uistate = gui->block_event(d,d->uistate);
+		d->uistate = gui->block_event(d, d->uistate);
 		unlock_growlight();
 		return 0;
 	}
 	unlock_growlight();
 	if((d = malloc(sizeof(*d))) == NULL){
-		diag("Couldn't allocate device (%s?)\n",strerror(errno));
+		diag("Couldn't allocate device (%s?)\n", strerror(errno));
 		zpool_close(zhp);
 		return -1;
 	}
-	memset(d,0,sizeof(*d));
-	strcpy(d->name,name);
+	memset(d, 0, sizeof(*d));
+	strcpy(d->name, name);
 	d->model = strdup("LLNL ZoL");
 	d->uuid = strdup(guid);
 	d->layout = LAYOUT_ZPOOL;
@@ -264,11 +263,6 @@ int init_zfs_support(const glightui *gui){
 		return 0;
 	}
 	libzfs_print_on_error(zht,verbose ? true : false);
-	zpool_set_history_str(PACKAGE, 0, NULL, history);
-	if(zpool_stage_history(zht,history)){
-		diag("ZFS history didn't match!\n");
-		return -1;
-	}
 	if(scan_zpools(gui)){
 		stop_zfs_support();
 		return -1;
@@ -311,7 +305,7 @@ int destroy_zpool(device *d){
 		zpool_close(zhp);
 		return -1;
 	}
-	if(zpool_destroy(zhp)){
+	if(zpool_destroy(zhp, "destroyed by growlight")){
 		diag("Couldn't destroy %s\n",d->name);
 		zpool_close(zhp);
 	}
