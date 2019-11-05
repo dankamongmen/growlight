@@ -557,7 +557,7 @@ free_stringlist(stringlist *sl){
 	sl->count = 0;
 }
 
-#ifdef HAVE_LIBZFS
+#ifdef HAVE_ZFS
 #include <libzfs.h>
 #else
 #define POOL_STATE_ACTIVE 0

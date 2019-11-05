@@ -28,45 +28,26 @@ AX_CHECK_DOCBOOK_XSLT
 
 AX_CHECK_OPENSSL([],[AC_MSG_ERROR([Could not find OpenSSL])])
 
-AC_ARG_WITH([zfs-include],
-	[AS_HELP_STRING([--with-zfs-include],
-		[Location of the ZFS headers. Defaults to /usr/local/include/libzfs.])],
-	[ZFS_CFLAGS="-I$withval"],
-	[ZFS_CFLAGS='-I/usr/local/include/libzfs'])
-AC_SUBST([ZFS_CFLAGS])
-
-AC_ARG_WITH([zfs-lib],
-	[AS_HELP_STRING([--with-zfs-lib], [Location of the ZFS libraries.])],
-	[ZFS_LIBS="-L$withval"],
-	[ZFS_LIBS=''])
-AC_SUBST([ZFS_LIBS])
-
 AC_ARG_ENABLE([zfs],
- [  --enable-zfs               Build support for ZFS ],
+ [  --enable-zfs            Build support for ZFS ],
  [ case "${enableval}" in
   yes) zfs=true ;;
   no)  zfs=false ;;
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-zfs]) ;;
    esac ],
- [zfs=false])
-
-if test "x$zfs" = "xtrue" ; then
-	CFLAGS+=" $ZFS_CFLAGS"
-	LFLAGS+=" $ZFS_LIBS"
-	AC_CHECK_LIB(zfs,libzfs_init, [have_libzfs=yes],
-		[AC_MSG_ERROR([Cannot find libzfs.])])
-if test "x$have_libzfs" = xyes; then
-	LIBS+=" -lzfs -lnvpair"
-	AC_CHECK_HEADER([libzfs.h],[],[AC_MSG_ERROR([Found ZFS library but not headers.])])
-	AC_DEFINE([HAVE_LIBZFS], [1], [Use libzfs])
-fi
-fi
+ [zfs=true])
 
 # Use pkg-config where we can, to pick up CFLAGS requirements.
 PKG_PROG_PKG_CONFIG
 
 # Dependencies of some (but not all) targets must be explicitly claimed by
 # their binaries in Makefile.am.
+
+if test "x$zfs" = "xtrue" ; then
+  PKG_CHECK_MODULES([ZFS], [libzfs], [AC_DEFINE([HAVE_ZFS], [1], [Use libzfs from ZoL])])
+	#CFLAGS+=" $ZFS_CFLAGS"
+	LFLAGS+=" $ZFS_LIBS"
+fi
 
 # FIXME what about the --without-ncurses/--without-ncursesw cases?
 # latter shouldn't be supported. former should preempt this, disable build...
