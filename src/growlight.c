@@ -21,6 +21,7 @@
 #include <scsi/scsi.h>
 #include <sys/ioctl.h>
 #include <sys/epoll.h>
+#include <sys/mount.h>
 #include <pciaccess.h>
 #include <pci/header.h>
 #include <sys/timerfd.h>
