@@ -962,32 +962,33 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	// space at the beginning). In that case, don't try to print based off
 	// the bogon block device mnttype.
 	if(d->mnttype && (d->layout != LAYOUT_NONE || !d->blkdev.pttable)){
+    const size_t wchars = sizeof(wbuf) / sizeof(*wbuf);
 		int co = mnttype_aggregablep(d->mnttype) ?
 			COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
 		assert(wattrset(w,A_BOLD|co) == OK);
 		qprefix(zs,1,pre,1);
-		if(!d->mnt.count || swprintf(wbuf,sizeof(wbuf),L" %s%s%ls%s%ls%s%s%sat %s ",
+		if(!d->mnt.count || swprintf(wbuf, wchars , L" %s%s%ls%s%ls%s%s%sat %s ",
 			d->label ? "" : "nameless ",
 			d->mnttype,
 			d->label ? L" “" : L"",
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ",
 			zs ? "(" : "", zs ? pre : "", zs ? ") " : "",
-			d->mnt.list[0]) >= (int)(sizeof(wbuf))){
-			if(swprintf(wbuf,sizeof(wbuf),L" %s%s%ls%s%ls%s%s%s ",
+			d->mnt.list[0]) >= (int)wchars){
+			if(swprintf(wbuf, wchars, L" %s%s%ls%s%ls%s%s%s ",
 				d->label ? "" : "nameless ",
 				d->mnttype,
 				d->label ? L" “" : L"",
 				d->label ? d->label : "",
 				d->label ? L"” " : L" ",
 				zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
-				) >= (int)(sizeof(wbuf))){
-				if((unsigned)swprintf(wbuf,sizeof(wbuf),L" %s%s%s%s ",
+				) >= (int)wchars){
+				if((unsigned)swprintf(wbuf, wchars, L" %s%s%s%s ",
 					d->mnttype,
 					zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
-					) >= sizeof(wbuf)){
-					assert((unsigned)swprintf(wbuf,sizeof(wbuf),L"%s",d->mnttype) < sizeof(wbuf));
+					) >= wchars){
+					assert((unsigned)swprintf(wbuf, wchars, L"%s",d->mnttype) < sizeof(wbuf));
 				}
 			}
 		}
