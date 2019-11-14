@@ -948,6 +948,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	char pre[BPREFIXSTRLEN + 1];
 	const char *selstr = NULL;
 	wchar_t wbuf[ex - sx + 2];
+  const int wchars = sizeof(wbuf) / sizeof(*wbuf);
 	int targco,mountco,partco;
 	const device *d = bo->d;
 	char buf[ex - sx + 2];
@@ -962,7 +963,6 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 	// space at the beginning). In that case, don't try to print based off
 	// the bogon block device mnttype.
 	if(d->mnttype && (d->layout != LAYOUT_NONE || !d->blkdev.pttable)){
-    const size_t wchars = sizeof(wbuf) / sizeof(*wbuf);
 		int co = mnttype_aggregablep(d->mnttype) ?
 			COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
@@ -975,7 +975,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			d->label ? d->label : "",
 			d->label ? L"” " : L" ",
 			zs ? "(" : "", zs ? pre : "", zs ? ") " : "",
-			d->mnt.list[0]) >= (int)wchars){
+			d->mnt.list[0]) >= wchars){
 			if(swprintf(wbuf, wchars, L" %s%s%ls%s%ls%s%s%s ",
 				d->label ? "" : "nameless ",
 				d->mnttype,
@@ -983,12 +983,12 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				d->label ? d->label : "",
 				d->label ? L"” " : L" ",
 				zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
-				) >= (int)wchars){
-				if((unsigned)swprintf(wbuf, wchars, L" %s%s%s%s ",
+				) >= wchars){
+				if(swprintf(wbuf, wchars, L" %s%s%s%s ",
 					d->mnttype,
 					zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
 					) >= wchars){
-					assert((unsigned)swprintf(wbuf, wchars, L"%s",d->mnttype) < sizeof(wbuf));
+					assert(swprintf(wbuf, wchars, L"%s",d->mnttype) < wchars);
 				}
 			}
 		}
@@ -1045,9 +1045,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 			}else{
 				assert(wattrset(w,co) == OK);
 			}
-			if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s %s",
-					pre,repstr) >= sizeof(wbuf) - 2){
-				if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",repstr) >= sizeof(wbuf) - 2){
+			if(swprintf(wbuf, wchars - 2, L"%s %s", pre, repstr) >= wchars - 2){
+				if(swprintf(wbuf, wchars - 2,L"%s",repstr) >= wchars - 2){
 					wbuf[0] = L'\0';
 				}
 			}
@@ -1070,9 +1069,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				// selstr = z->p->partdev.pname;
 				// selstr = selstr ? selstr : z->p->name;
 				if( (selstr = z->p->name) ){
-					if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s %s",
-							pre,selstr) >= sizeof(wbuf) - 2){
-						if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",selstr) >= sizeof(wbuf) - 2){
+					if(swprintf(wbuf, wchars - 2, L"%s %s", pre,selstr) >= wchars - 2){
+						if(swprintf(wbuf, wchars - 2, L"%s", selstr) >= wchars - 2){
 							wbuf[0] = L'\0';
 						}
 					}
@@ -1090,9 +1088,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 					assert(wattrset(w,COLOR_PAIR(partco)) == OK);
 					partco = next_partco(partco);
 				}
-				if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s %s",
-							pre,z->p->name) >= sizeof(wbuf) - 2){
-					if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s",z->p->name) >= sizeof(wbuf) - 2){
+				if(swprintf(wbuf, wchars - 2,L"%s %s", pre,z->p->name) >= wchars - 2){
+					if(swprintf(wbuf, wchars - 2,L"%s",z->p->name) >= wchars - 2){
 						wbuf[0] = L'\0';
 					}
 				}
@@ -1101,10 +1098,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 				assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
 			}
 			if(z->p->mnttype){
-				if((!z->p->mnt.count || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s at %s (%s)",z->p->mnttype,z->p->mnt.list[0],pre) >= sizeof(wbuf) - 2)){
-					if(!z->p->label || (unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s “%s” (%s)",
-						z->p->mnttype,z->p->label,pre) >= sizeof(wbuf) - 2){
-						if((unsigned)swprintf(wbuf,sizeof(wbuf) - 2,L"%s (%s)",z->p->mnttype,pre) >= sizeof(wbuf) - 2){
+				if((!z->p->mnt.count || swprintf(wbuf, wchars - 2, L"%s at %s (%s)",z->p->mnttype,z->p->mnt.list[0],pre) >= wchars - 2)){
+					if(!z->p->label || swprintf(wbuf, wchars - 2, L"%s “%s” (%s)", z->p->mnttype,z->p->label,pre) >= wchars - 2){
+						if(swprintf(wbuf, wchars - 2,L"%s (%s)", z->p->mnttype, pre) >= wchars - 2){
 							wbuf[0] = L'\0';
 						}
 					}
