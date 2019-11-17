@@ -1,9 +1,9 @@
-growlight (1.1.3-2) UNRELEASED; urgency=medium
+growlight (1.1.3.1-1) unstable; urgency=medium
 
   * Reenable ZFS support; build-dep on libzfslinux-dev
-  * Require outcurses 0.0.5+
+  * Require outcurses 0.0.7+
 
- -- Nick Black <dankamongmen@gmail.com>  Tue, 05 Nov 2019 02:02:30 -0500
+ -- Nick Black <dankamongmen@gmail.com>  Sun, 17 Nov 2019 06:38:28 -0500
 
 growlight (1.1.3-1) unstable; urgency=medium
 
