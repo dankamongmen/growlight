@@ -8,6 +8,7 @@ https://nick-black.com/dankwiki/index.php/Growlight
 
 Dependencies:
 
+ - outcurses 0.0.7+
  - libudev 175+
  - libblkid 2.20.1+
  - libpci 3.1.9+

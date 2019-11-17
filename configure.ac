@@ -76,9 +76,9 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
-# we don't use the outcurses library (yet), just its headers
-PKG_CHECK_MODULES([outcurses], [outcurses >= 0.0.5], [have_outcurses=yes])
+PKG_CHECK_MODULES([outcurses], [outcurses >= 0.0.7], [have_outcurses=yes])
 	CFLAGS+=" $outcurses_CFLAGS"
+  LIBS+= " -loutcurses"
 
 PKG_CHECK_MODULES([libatasmart], [libatasmart >= 0.19], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"
