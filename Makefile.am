@@ -45,11 +45,11 @@ common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 
 growlight_readline_SOURCES=$(common_SOURCES)
 growlight_readline_SOURCES+=src/readline.c
-growlight_readline_LDADD=$(CURSES_LIBS)
+growlight_readline_LDADD=@outcurses_LIBS@ @PANEL_LIBS@ @CURSES_LIBS@
 
 growlight_curses_SOURCES=$(common_SOURCES)
 growlight_curses_SOURCES+=src/ncurses.c src/ncurses.h src/ui-aggregate.h src/ui-aggregate.c
-growlight_curses_LDADD=@PANEL_LIBS@ @CURSES_LIBS@
+growlight_curses_LDADD=@outcurses_LIBS@ @PANEL_LIBS@ @CURSES_LIBS@
 
 growlight_test_SOURCES=$(common_SOURCES)
 growlight_test_SOURCES+=test/growlight.c
