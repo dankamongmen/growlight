@@ -3131,6 +3131,7 @@ ncurses_setup(void){
     errstr = "Couldn't set flush-on-interrupt\n";
     goto err;
   }
+  leaveok(stdscr, TRUE); // just an optimization
   if(scrollok(stdscr,FALSE) != OK){
     errstr = "Couldn't disable scrolling\n";
     goto err;
