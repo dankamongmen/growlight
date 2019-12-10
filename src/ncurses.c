@@ -25,6 +25,7 @@
 
 #define KEY_ESC 27
 
+/*
 static void shutdown_cycle(void) __attribute__ ((noreturn));
 
 void locked_diag(const char *fmt,...) __attribute__ ((format (printf,1,2)));
@@ -89,11 +90,12 @@ static const char FSTYPE_TEXT[] =
 "version 3.5, ext4 is the default Linux filesystem, but Windows and OS X do "
 "not natively support it. I recommend use of EXT4 or FAT16 for root and ZFS "
 "(in a redundant configuration) for other filesystems.";
+*/
 
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 struct panel_state {
-  PANEL *p;
+  struct ncplane *p;
 };
 
 #define PANEL_STATE_INITIALIZER { .p = NULL, }
@@ -108,28 +110,28 @@ static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
 static struct panel_state environment = PANEL_STATE_INITIALIZER;
 
-static int helpstrs(WINDOW *);
-static int map_details(WINDOW *);
-static int update_details(WINDOW *);
+static int helpstrs(struct ncplane* n);
+static int map_details(struct ncplane* n);
+static int update_details(struct ncplane* n);
 
 static inline void
-update_details_cond(PANEL *p){
-  if(p){
-    update_details(panel_window(p));
+update_details_cond(struct ncplane *n){
+  if(n){
+    update_details(n);
   }
 }
 
 static inline void
-update_help_cond(PANEL *p){
+update_help_cond(struct ncplane* p){
   if(p){
-    helpstrs(panel_window(p));
+    helpstrs(p);
   }
 }
 
 static inline void
-update_map_cond(PANEL *p){
+update_map_cond(struct ncplane* p){
   if(p){
-    map_details(panel_window(p));
+    map_details(p);
   }
 }
 
@@ -159,11 +161,11 @@ typedef enum {
 // opcount - 1. All option selection windows scroll, even if they fit all their
 // options, to maintain continuity of UI.
 struct form_state {
-  PANEL *p;
-  void (*fxn)(const char *);  // callback once form is done
-  void (*mcb)(const char *,char **,int,int); // multiform callback
+  struct ncplane* p;
+  void (*fxn)(const char*);  // callback once form is done
+  void (*mcb)(const char* ,char** ,int,int); // multiform callback
   int longop;      // length of prompt or longest op
-  char *boxstr;      // string for box label
+  char* boxstr;      // string for box label
   form_enum formtype;    // type of form
   struct panel_state *extext;  // explication text, above the form
   union {
@@ -186,7 +188,7 @@ struct form_state {
       int opcount;    // total number of ops
       int selectno;    // number of selections, total
       int selections;    // number of active selections
-      char **selarray;  // array of selections by name
+      char** selarray;  // array of selections by name
     };
     struct form_input inp;  // form_input state for this instance
   };
@@ -241,6 +243,7 @@ enum {
 
   FIRST_FREE_COLOR
 };
+/*
 
 static inline int
 next_targco(int targco){
@@ -300,27 +303,19 @@ subscript(int in){
   assert(in >= 0 && in < 10);
   return L'\u2080' + in;
 }
+*/
+
+static struct notcurses* NC;
 
 static inline void
 screen_update(void){
-  if(active){
-    assert(top_panel(active->p) != ERR);
-  }
-  if(actform){
-    if(actform->extext){
-      assert(top_panel(actform->extext->p) != ERR);
-    }
-    assert(top_panel(actform->p) != ERR);
-  }
-  if(splash){
-    assert(top_panel(splash->p) != ERR);
-  }
-  update_panels();
-  assert(doupdate() == OK);
+  int r = notcurses_render(NC);
+  assert(0 == r);
 }
 
 static int
 setup_colors(void){
+/*
   int z;
 
   if(init_pair(HEADER_COLOR,COLOR_LIGHTPURPLE,-1) == ERR){
@@ -425,11 +420,11 @@ setup_colors(void){
   for(z = FIRST_FREE_COLOR ; z < COLORS ; ++z){
     init_pair(z,z,-1);
   }
-  wrefresh(curscr);
-  screen_update();
-  return 0;
+  */
+  return notcurses_render(NC);
 }
 
+/*
 static void
 form_colors(void){
   // Don't reset the status color or header color, nor (obviously) the
@@ -471,7 +466,9 @@ form_colors(void){
   screen_update();
 }
 
+*/
 static int update_diags(struct panel_state *);
+/*
 
 struct adapterstate;
 
@@ -527,15 +524,18 @@ typedef struct adapterstate {
 
 #define EXPANSION_MAX EXPANSION_FULL
 
+*/
 static char statusmsg[BUFSIZ];
-
 static unsigned count_adapters;
+/*
 // dequeue + single selection
 static reelbox *current_adapter,*top_reelbox,*last_reelbox;
+*/
 
 #define START_COL 1    // Room to leave for borders
 #define PAD_COLS(cols) ((cols))
 
+/*
 static blockobj *
 get_selected_blockobj(void){
   reelbox *rb;
@@ -695,64 +695,83 @@ bevel_top(WINDOW *w){
   }
   return OK;
 }
+*/
 
 static int
-bevel(WINDOW *w){
-  static const cchar_t bchr[] = {
-    { .attr = 0, .chars = L"╭", },
-    { .attr = 0, .chars = L"╮", },
-    { .attr = 0, .chars = L"╰", },
-    { .attr = 0, .chars = L"╯", },
-    { .attr = 0, .chars = L"│", },
-    { .attr = 0, .chars = L"─", },
-  };
-  int rows,cols,z;
-
-  getmaxyx(w,rows,cols);
+bevel(struct ncplane *nc){
+  int rows,cols;
+  ncplane_dim_yx(nc, &rows, &cols);
   assert(rows && cols);
-  // called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bchr[3]);'
-  // we get ERR returned. this is known behavior: fuck ncurses. instead,
-  // we use mvwins_wch, which doesn't update the cursor position.
-  // see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.html
-  assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
-  for(z = 1 ; z < cols - 1 ; ++z){
-    assert(mvwadd_wch(w,0,z,&bchr[5]) != ERR);
+  ncplane_cursor_move_yx(nc, 0, 0);
+  return ncplane_rounded_box_sized(nc, 0, 0, rows, cols, 0);
+}
+
+static int
+cwcolor_set(struct ncplane* n, int color, void* vnull __attribute__ ((unused))){
+  ncplane_set_fg_rgb(n, color, color, color); // FIXME
+  return 0;
+}
+
+static int
+cwattrset(struct ncplane* n, int style){
+  // FIXME handle the color part also
+  ncplane_styles_set(n, style >> 16);
+  return 0;
+}
+
+static int
+cwattroff(struct ncplane* n, int style){
+  // FIXME handle the color part also
+  ncplane_styles_off(n, style >> 16);
+  return 0;
+}
+
+static int
+cwattron(struct ncplane* n, int style){
+  // FIXME handle the color part also
+  ncplane_styles_on(n, style >> 16);
+  return 0;
+}
+
+static int
+cmvwaddstr(struct ncplane* n, int y, int x, const char* s){
+  if(ncplane_cursor_move_yx(n, y, x)){
+    return -1;
   }
-  for(z = rows - 2 ; z > 0 ; --z){
-    assert(mvwadd_wch(w,z,0,&bchr[4]) != ERR);
-    assert(mvwins_wch(w,z,cols - 1,&bchr[4]) != ERR);
-  }
-  assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
-  assert(mvwadd_wch(w,rows - 1,0,&bchr[2]) != ERR);
-  for(z = 1 ; z < cols - 1 ; ++z){
-    assert(mvwadd_wch(w,rows - 1,z,&bchr[5]) != ERR);
-  }
-  assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[3]) != ERR);
-  return OK;
+  return ncplane_putstr(n, s);
+}
+
+static int
+cwprintw(struct ncplane* n, const char* fmt, ...){
+  va_list va;
+  va_start(va, fmt);
+  int ret = ncplane_vprintf(n, fmt, va);
+  va_end(va);
+  return ret;
 }
 
 static void
-draw_main_window(WINDOW *w){
-  int rows,cols,scol,x,y;
+draw_main_window(struct ncplane* n){
+  int rows, cols, scol, x, y;
   char buf[BUFSIZ];
 
-  scol = snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE,VERSION, count_adapters - 1);
+  scol = snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE, VERSION, count_adapters - 1);
   assert(scol > 0 && (unsigned)scol < sizeof(buf));
-  getmaxyx(w,rows,cols);
-  assert(wattrset(w,COLOR_PAIR(HEADER_COLOR)) != ERR);
-  mvwaddstr(w,rows - 1,0,buf);
-  getyx(w,y,x);
+  ncplane_dim_yx(n, &rows, &cols);
+  assert(cwattrset(n, COLOR_PAIR(HEADER_COLOR)) != ERR);
+  cmvwaddstr(n, rows - 1, 0, buf);
+  ncplane_yx(n, &y, &x);
   assert(y >= 0);
   cols -= x + 2;
-  assert(wattron(w,A_BOLD | COLOR_PAIR(STATUS_COLOR)) != ERR);
-  assert(wprintw(w," %-*.*s",cols,cols,statusmsg) != ERR);
+  assert(cwattron(n, A_BOLD | COLOR_PAIR(STATUS_COLOR)) != ERR);
+  assert(cwprintw(n, " %-*.*s", cols, cols, statusmsg) != ERR);
 }
 
 static void
-locked_vdiag(const char *fmt,va_list v){
+locked_vdiag(const char *fmt, va_list v){
   size_t off;
 
-  vsnprintf(statusmsg,sizeof(statusmsg) / sizeof(*statusmsg) - 1,fmt,v);
+  vsnprintf(statusmsg, sizeof(statusmsg) / sizeof(*statusmsg) - 1, fmt, v);
   statusmsg[sizeof(statusmsg) / sizeof(*statusmsg) - 1] = '\0';
   for(off = 0 ; off < sizeof(statusmsg) / sizeof(*statusmsg) - 1 ; ++off){
     if(!isgraph(statusmsg[off])){
@@ -762,21 +781,22 @@ locked_vdiag(const char *fmt,va_list v){
       statusmsg[off] = ' ';
     }
   }
-  draw_main_window(stdscr);
+  draw_main_window(notcurses_stdplane(NC));
   if(diags.p){
     update_diags(&diags);
   }
   screen_update();
 }
 
-void locked_diag(const char *fmt,...){
+void locked_diag(const char *fmt, ...){
   va_list v;
 
-  va_start(v,fmt);
-  locked_vdiag(fmt,v);
+  va_start(v, fmt);
+  locked_vdiag(fmt, v);
   va_end(v);
 }
 
+/*
 static inline int
 device_lines(int expa,const blockobj *bo){
   int l = 0;
@@ -910,11 +930,11 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
   }
   assert(top_panel(ps->p) != ERR);
   // memory leaks follow if we're compiled with NDEBUG! FIXME
-  assert(wattron(psw,A_BOLD) != ERR);
-  assert(wcolor_set(psw,borderpair,NULL) == OK);
+  assert(cwattron(psw,A_BOLD) != ERR);
+  assert(cwcolor_set(psw,borderpair,NULL) == OK);
   assert(bevel(psw) == OK);
-  assert(wattroff(psw,A_BOLD) != ERR);
-  assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
+  assert(cwattroff(psw,A_BOLD) != ERR);
+  assert(cwcolor_set(psw,PHEADING_COLOR,NULL) == OK);
   if(hstr){
     assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
   }
@@ -923,20 +943,16 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
   }
   return OK;
 }
+*/
 
 static void
 hide_panel_locked(struct panel_state *ps){
   if(ps){
-    WINDOW *psw;
-
-    psw = panel_window(ps->p);
-    hide_panel(ps->p);
-    assert(del_panel(ps->p) == OK);
-    ps->p = NULL;
-    assert(delwin(psw) == OK);
+    ncplane_destroy(ps->p);
   }
 }
 
+/*
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
@@ -966,7 +982,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     int co = mnttype_aggregablep(d->mnttype) ?
       COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
 
-    assert(wattrset(w,A_BOLD|co) == OK);
+    assert(cwattrset(w,A_BOLD|co) == OK);
     qprefix(zs,1,pre,1);
     if(!d->mnt.count || swprintf(wbuf, wchars , L" %s%s%ls%s%ls%s%s%sat %s ",
       d->label ? "" : "nameless ",
@@ -998,13 +1014,13 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     mvwadd_wch(w,y,ex - 1,&bchr[2]);
     selstr = d->name;
   }else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
-    assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+    assert(cwattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
     selstr = "No media detected in drive";
-    mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,selstr);
+    mvcwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,selstr);
   }else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
     (d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
     (d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
-    assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
+    assert(cwattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
     selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
         "unpartitionable space";
     assert(snprintf(buf,sizeof(buf)," %s %s ",
@@ -1012,14 +1028,14 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
         selstr) < (int)sizeof(buf));
     mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
     mvwadd_wch(w,y,sx,&bchr[1]);
-    mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
+    cmvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
     mvwadd_wch(w,y,ex - 1,&bchr[2]);
   }
   if((z = bo->zchain) == NULL){
     if(selected){
-      wattron(w,A_REVERSE);
-      mvwprintw(w,y - 1,sx + 1,"⇗⇨⇨⇨%.*s",(int)(ex - (sx + 5)),selstr);
-      wattroff(w,A_REVERSE);
+      cwattron(w,A_REVERSE);
+      mvcwprintw(w,y - 1,sx + 1,"⇗⇨⇨⇨%.*s",(int)(ex - (sx + 5)),selstr);
+      cwattroff(w,A_REVERSE);
     }
     return;
   }
@@ -1041,9 +1057,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
 
       if(selected && z == bo->zone){
         selstr = repstr;
-        assert(wattrset(w,A_BOLD|A_UNDERLINE|co) == OK);
+        assert(cwattrset(w,A_BOLD|A_UNDERLINE|co) == OK);
       }else{
-        assert(wattrset(w,co) == OK);
+        assert(cwattrset(w,co) == OK);
       }
       if(swprintf(wbuf, wchars - 2, L"%s %s", pre, repstr) >= wchars - 2){
         if(swprintf(wbuf, wchars - 2,L"%s",repstr) >= wchars - 2){
@@ -1054,15 +1070,15 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     }else{ // dedicated partition
       if(selected && z == bo->zone){ // partition and device are selected
         if(targeted_p(z->p)){
-          assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(targco)) == OK);
+          assert(cwattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(targco)) == OK);
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(mountco)) == OK);
+          assert(cwattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(mountco)) == OK);
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(FS_COLOR)) == OK);
+          assert(cwattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(FS_COLOR)) == OK);
         }else{
-          assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(partco)) == OK);
+          assert(cwattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(partco)) == OK);
           partco = next_partco(partco);
         }
         // FIXME need to store pname as multibyte char *
@@ -1077,15 +1093,15 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
         }
       }else{ // partition is not selected
         if(targeted_p(z->p)){
-          assert(wattrset(w,COLOR_PAIR(targco)) == OK);
+          assert(cwattrset(w,COLOR_PAIR(targco)) == OK);
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          assert(wattrset(w,COLOR_PAIR(mountco)) == OK);
+          assert(cwattrset(w,COLOR_PAIR(mountco)) == OK);
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          assert(wattrset(w,COLOR_PAIR(FS_COLOR)) == OK);
+          assert(cwattrset(w,COLOR_PAIR(FS_COLOR)) == OK);
         }else{
-          assert(wattrset(w,COLOR_PAIR(partco)) == OK);
+          assert(cwattrset(w,COLOR_PAIR(partco)) == OK);
           partco = next_partco(partco);
         }
         if(swprintf(wbuf, wchars - 2,L"%s %s", pre,z->p->name) >= wchars - 2){
@@ -1095,7 +1111,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
         }
       }
       if(z->p->partdev.alignment < d->physsec){ // misaligned!
-        assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
+        assert(cwattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
       }
       if(z->p->mnttype){
         if((!z->p->mnt.count || swprintf(wbuf, wchars - 2, L"%s at %s (%s)",z->p->mnttype,z->p->mnt.list[0],pre) >= wchars - 2)){
@@ -1126,15 +1142,15 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
         break;
       }
     }
-    wattron(w,A_REVERSE);
+    cwattron(w,A_REVERSE);
     if(selstr){
       if(och < ex / 2u){
-        mvwprintw(w,y - 1,och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
+        mvcwprintw(w,y - 1,och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
       }else{
-        mvwprintw(w,y - 1,off - 4 - strlen(selstr),"%s⇦⇦⇦⇖",selstr);
+        mvcwprintw(w,y - 1,off - 4 - strlen(selstr),"%s⇦⇦⇦⇖",selstr);
       }
     }
-    wattroff(w,A_REVERSE);
+    cwattroff(w,A_REVERSE);
     // Truncate it at whitespace until it's small enough to fit
     while(wcslen(wbuf) && wcslen(wbuf) + 2 > (off - och + 1)){
       wchar_t *wtrunc = wcsrchr(wbuf,L' ');
@@ -1148,7 +1164,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     if(wcslen(wbuf)){
       size_t start = och + ((off - och + 1) - wcslen(wbuf)) / 2;
 
-      wattron(w,A_BOLD);
+      cwattron(w,A_BOLD);
       mvwaddwstr(w,y,start,wbuf);
       mvwaddch(w,y,start - 1,' ');
       mvwaddch(w,y,start + wcslen(wbuf),' ');
@@ -1174,11 +1190,11 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 case LAYOUT_NONE:
     if(bo->d->blkdev.realdev){
       if(bo->d->blkdev.rotation == SSD_ROTATION){
-        wattrset(rb->win, COLOR_PAIR(SSD_COLOR));
+        cwattrset(rb->win, COLOR_PAIR(SSD_COLOR));
         strncpy(rolestr,"solidstate",sizeof(rolestr));
       }else if(bo->d->blkdev.rotation > 0){
         int32_t speed = bo->d->blkdev.rotation;
-        wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR));
+        cwattrset(rb->win,COLOR_PAIR(ROTATE_COLOR));
         if(speed > 0){
           if(speed > 99999){
             speed = 99999;
@@ -1189,15 +1205,15 @@ case LAYOUT_NONE:
           strncpy(rolestr, "ferromag", sizeof(rolestr));
         }
       }else if(bo->d->kerneltype == TYPE_ROM){
-        wattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
+        cwattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
         strncpy(rolestr, "optical", sizeof(rolestr));
       }else if(bo->d->kerneltype == TYPE_TAPE){
-        wattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
+        cwattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
         strncpy(rolestr, "tape", sizeof(rolestr));
       }
       // FIXME do we want a default here?
     }else{
-      wattrset(rb->win, COLOR_PAIR(VIRTUAL_COLOR));
+      cwattrset(rb->win, COLOR_PAIR(VIRTUAL_COLOR));
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
     if(line + !!topp >= 1){
@@ -1205,9 +1221,9 @@ case LAYOUT_NONE:
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          wattron(rb->win, A_REVERSE);
+          cwattron(rb->win, A_REVERSE);
         }
-    mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    mvcwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
@@ -1233,15 +1249,15 @@ case LAYOUT_MDADM:
     }else{
       co = COLOR_PAIR(MDADM_COLOR);
     }
-    assert(wattrset(rb->win,co) == OK);
+    assert(cwattrset(rb->win,co) == OK);
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          wattron(rb->win,A_REVERSE);
+          cwattron(rb->win,A_REVERSE);
         }
-    mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    mvcwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
@@ -1256,19 +1272,19 @@ case LAYOUT_MDADM:
         }
       }
     }
-    assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
+    assert(cwattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
     break;
 case LAYOUT_DM:
     strncpy(rolestr,"dm",sizeof(rolestr));
-    assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
+    assert(cwattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          wattron(rb->win,A_REVERSE);
+          cwattron(rb->win,A_REVERSE);
         }
-    mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    mvcwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
@@ -1288,15 +1304,15 @@ case LAYOUT_PARTITION:
     break;
 case LAYOUT_ZPOOL:
     strncpy(rolestr,"zpool",sizeof(rolestr));
-    assert(wattrset(rb->win,COLOR_PAIR(ZPOOL_COLOR)) == OK);
+    assert(cwattrset(rb->win,COLOR_PAIR(ZPOOL_COLOR)) == OK);
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          wattron(rb->win,A_REVERSE);
+          cwattron(rb->win,A_REVERSE);
         }
-    mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    mvcwprintw(rb->win,line,1,"%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           (uintmax_t)bo->d->zpool.zpoolver,
@@ -1316,12 +1332,12 @@ case LAYOUT_ZPOOL:
   if(bo->d->size == 0){
     return;
   }
-  wattroff(rb->win, A_REVERSE);
-  wattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+  cwattroff(rb->win, A_REVERSE);
+  cwattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
 
   // Box-diagram (3-line) mode. Print the name on the first line.
   if(line + !!topp >= 1){
-    mvwprintw(rb->win, line, START_COL, "%11.11s", bo->d->name);
+    mvcwprintw(rb->win, line, START_COL, "%11.11s", bo->d->name);
   }
 
   // Print summary below device name, in the same color, but prefix it
@@ -1330,23 +1346,23 @@ case LAYOUT_ZPOOL:
     wchar_t rep = L' ';
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
-        wattrset(rb->win, A_BOLD|COLOR_PAIR(GREEN_COLOR));
+        cwattrset(rb->win, A_BOLD|COLOR_PAIR(GREEN_COLOR));
         rep = L'✔';
       }else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
           && bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
-        wattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
+        cwattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
         rep = L'☠';
       }else{
-        wattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+        cwattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
         rep = L'✗';
       }
     }
-    mvwprintw(rb->win, line + 1, START_COL, "%lc", rep);
-    wattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+    mvcwprintw(rb->win, line + 1, START_COL, "%lc", rep);
+    cwattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
     if(strlen(rolestr)){
-      wprintw(rb->win, "%10.10s", rolestr);
+      cwprintw(rb->win, "%10.10s", rolestr);
     }else{
-      wprintw(rb->win, "          ");
+      cwprintw(rb->win, "          ");
     }
   }
   // ...and finally the temperature/vfailure status, and utilization...
@@ -1355,37 +1371,37 @@ case LAYOUT_ZPOOL:
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
         if(bo->d->blkdev.celsius >= 60u){
-          wattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+          cwattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
         }else if(bo->d->blkdev.celsius >= 40u){
-          wattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
+          cwattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
         }else{
-          wattrset(rb->win, COLOR_PAIR(GREEN_COLOR));
+          cwattrset(rb->win, COLOR_PAIR(GREEN_COLOR));
         }
         // FIXME would be nice to use ℃ , but it looks weird
-        mvwprintw(rb->win, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
+        mvcwprintw(rb->win, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
       }else{
-        mvwprintw(rb->win, sumline, START_COL, "    ");
+        mvcwprintw(rb->win, sumline, START_COL, "    ");
       }
     }else if(bo->d->layout == LAYOUT_MDADM){
       if(bo->d->mddev.degraded){
-        wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-        mvwprintw(rb->win, sumline, START_COL,
+        cwattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+        mvcwprintw(rb->win, sumline, START_COL,
             "%1lux☠ ", bo->d->mddev.degraded);
       }else{
-        wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-        mvwprintw(rb->win, sumline, START_COL, "up  ");
+        cwattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
+        mvcwprintw(rb->win, sumline, START_COL, "up  ");
       }
     }else if(bo->d->layout == LAYOUT_DM){
       // FIXME add more detail...type of dm etc
-      wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-      mvwprintw(rb->win,sumline,START_COL,"up  ");
+      cwattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
+      mvcwprintw(rb->win,sumline,START_COL,"up  ");
     }else if(bo->d->layout == LAYOUT_ZPOOL){
       if(bo->d->zpool.state != POOL_STATE_ACTIVE){
-        wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-        mvwprintw(rb->win,sumline,START_COL,"☠☠☠ ");
+        cwattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+        mvcwprintw(rb->win,sumline,START_COL,"☠☠☠ ");
       }else{
-        wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-        mvwprintw(rb->win,sumline,START_COL,"up  ");
+        cwattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
+        mvcwprintw(rb->win,sumline,START_COL,"up  ");
       }
     }
     uintmax_t io;
@@ -1393,21 +1409,21 @@ case LAYOUT_ZPOOL:
     io += bo->d->statdelta.sectors_written;
     io *= bo->d->logsec;
     // FIXME normalize according to timeq
-    wattrset(rb->win, COLOR_PAIR(SELECTED_COLOR));
+    cwattrset(rb->win, COLOR_PAIR(SELECTED_COLOR));
     // FIXME 'i' shows up only when there are fewer than 3 sigfigs
     // to the left of the decimal point...very annoying
     if(io){
       char qbuf[BPREFIXSTRLEN + 1];
       bprefix(io, 1, qbuf,  1);
-      wprintw(rb->win, "%7.7s", qbuf); // might chop off 'i'
+      cwprintw(rb->win, "%7.7s", qbuf); // might chop off 'i'
     }else{
-      wprintw(rb->win, " no i/o");
+      cwprintw(rb->win, " no i/o");
     }
   }
 
-  assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
+  assert(cwattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
   if(selected){
-    wattron(rb->win,A_REVERSE);
+    cwattron(rb->win,A_REVERSE);
   }
   if(line + !!topp >= 1){
     mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
@@ -1424,9 +1440,9 @@ case LAYOUT_ZPOOL:
           cols - START_COL - 1,selected);
   }
   attr = A_BOLD | COLOR_PAIR(DBORDER_COLOR);
-  wattrset(rb->win,attr);
+  cwattrset(rb->win,attr);
   if(selected){
-    wattron(rb->win,A_REVERSE);
+    cwattron(rb->win,A_REVERSE);
   }
   if(line + !!topp >= 1){
     mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
@@ -1506,7 +1522,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
     bcolor = UBORDER_COLOR;
     attrs = A_NORMAL;
   }
-  assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
+  assert(cwattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
   if(abovetop == 0){
     if(belowend == 0){
       assert(bevel(w) == OK);
@@ -1520,62 +1536,62 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
   }
   if(abovetop == 0){
     if(current){
-      assert(wattron(w,A_BOLD) == OK);
+      assert(cwattron(w,A_BOLD) == OK);
     }else{
-      assert(wattroff(w,A_BOLD) == OK);
+      assert(cwattroff(w,A_BOLD) == OK);
     }
-    assert(mvwprintw(w,0,7,"%ls",L"[") != ERR);
-    assert(wcolor_set(w,hcolor,NULL) == OK);
+    assert(mvcwprintw(w,0,7,"%ls",L"[") != ERR);
+    assert(cwcolor_set(w,hcolor,NULL) == OK);
     assert(waddstr(w,as->c->ident) != ERR);
     if(as->c->numa_node >= 0){
-      assert(wprintw(w," [%d]",as->c->numa_node) != ERR);
+      assert(cwprintw(w," [%d]",as->c->numa_node) != ERR);
     }
     if(as->c->bandwidth){
       char buf[PREFIXSTRLEN + 1],dbuf[PREFIXSTRLEN + 1];
 
       if(as->c->demand){
-        wprintw(w," (%sbps to Southbridge, %sbps (%ju%%) demanded)",
+        cwprintw(w," (%sbps to Southbridge, %sbps (%ju%%) demanded)",
           qprefix(as->c->bandwidth,1,buf,1),
           qprefix(as->c->demand,1,dbuf,1),
           as->c->demand * 100 / as->c->bandwidth);
       }else{
-        wprintw(w," (%sbps to Southbridge)",
+        cwprintw(w," (%sbps to Southbridge)",
           qprefix(as->c->bandwidth,1,buf,1));
       }
     }else if(as->c->bus != BUS_VIRTUAL && as->c->demand){
       char dbuf[PREFIXSTRLEN + 1];
 
-      wprintw(w," (%sbps demanded)",qprefix(as->c->demand,1,dbuf,1));
+      cwprintw(w," (%sbps demanded)",qprefix(as->c->demand,1,dbuf,1));
     }
-    assert(wcolor_set(w,bcolor,NULL) != ERR);
-    assert(wprintw(w,"]") != ERR);
-    assert(wattron(w,A_BOLD) == OK);
+    assert(cwcolor_set(w,bcolor,NULL) != ERR);
+    assert(cwprintw(w,"]") != ERR);
+    assert(cwattron(w,A_BOLD) == OK);
     assert(wmove(w,0,cols - 5) != ERR);
     waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
-    assert(wattron(w,attrs) != ERR);
+    assert(cwattron(w,attrs) != ERR);
   }
   if(belowend == 0){
     if(as->c->bus == BUS_PCIe){
-      assert(wcolor_set(w,bcolor,NULL) != ERR);
+      assert(cwcolor_set(w,bcolor,NULL) != ERR);
       if(current){
-        assert(wattron(w,A_BOLD) == OK);
+        assert(cwattron(w,A_BOLD) == OK);
       }else{
-        assert(wattroff(w,A_BOLD) == OK);
+        assert(cwattroff(w,A_BOLD) == OK);
       }
-      assert(mvwprintw(w,rows - 1,6,"[") != ERR);
-      assert(wcolor_set(w,hcolor,NULL) != ERR);
+      assert(mvcwprintw(w,rows - 1,6,"[") != ERR);
+      assert(cwcolor_set(w,hcolor,NULL) != ERR);
       if(as->c->pcie.lanes_neg == 0){
-        wprintw(w,"Southbridge device %04x:%02x.%02x.%x",
+        cwprintw(w,"Southbridge device %04x:%02x.%02x.%x",
           as->c->pcie.domain,as->c->pcie.bus,
           as->c->pcie.dev,as->c->pcie.func);
       }else{
-        wprintw(w,"PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)",
+        cwprintw(w,"PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)",
             as->c->pcie.domain,as->c->pcie.bus,
             as->c->pcie.dev,as->c->pcie.func,
             as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
       }
-      assert(wcolor_set(w,bcolor,NULL) != ERR);
-      assert(wprintw(w,"]") != ERR);
+      assert(cwcolor_set(w,bcolor,NULL) != ERR);
+      assert(cwprintw(w,"]") != ERR);
     }
   }
 }
@@ -1627,7 +1643,7 @@ struct panel_state *show_splash(const wchar_t *msg){
     free(ps);
     return NULL;
   }
-  wattrset(panel_window(ps->p),A_BOLD|COLOR_PAIR(SPLASHTEXT_COLOR));
+  cwattrset(panel_window(ps->p),A_BOLD|COLOR_PAIR(SPLASHTEXT_COLOR));
   mvwhline(panel_window(ps->p),1,1,' ',getmaxx(panel_window(ps->p)) - 2);
   mvwhline(panel_window(ps->p),2,1,' ',getmaxx(panel_window(ps->p)) - 2);
   mvwaddwstr(panel_window(ps->p),2,2,msg);
@@ -1639,6 +1655,7 @@ struct panel_state *show_splash(const wchar_t *msg){
 // -------------------------------------------------------------------------
 // -- end splash API
 // -------------------------------------------------------------------------
+*/
 
 // -------------------------------------------------------------------------
 // -- begin form API
@@ -1651,13 +1668,13 @@ struct panel_state *show_splash(const wchar_t *msg){
 // -- form creation
 // -------------------------------------------------------------------------
 static struct form_state *
-create_form(const char *str,void (*fxn)(const char *),form_enum ftype,int scrolloff){
+create_form(const char *str, void (*fxn)(const char *), form_enum ftype, int scrolloff){
   struct form_state *fs;
 
   if( (fs = malloc(sizeof(*fs))) ){
-    memset(fs,0,sizeof(*fs));
+    memset(fs, 0, sizeof(*fs));
     if((fs->boxstr = strdup(str)) == NULL){
-      locked_diag("Couldn't create input dialog (%s?)",strerror(errno));
+      locked_diag("Couldn't create input dialog (%s?)", strerror(errno));
       free(fs);
       return NULL;
     }
@@ -1666,7 +1683,7 @@ create_form(const char *str,void (*fxn)(const char *),form_enum ftype,int scroll
     fs->formtype = ftype;
     fs->fxn = fxn;
   }else{
-    locked_diag("Couldn't create input dialog (%s?)",strerror(errno));
+    locked_diag("Couldn't create input dialog (%s?)", strerror(errno));
   }
   return fs;
 }
@@ -1674,15 +1691,11 @@ create_form(const char *str,void (*fxn)(const char *),form_enum ftype,int scroll
 static void
 destroy_form_locked(struct form_state *fs){
   if(fs){
-    WINDOW *fsw;
     int z;
 
     assert(fs == actform);
-    fsw = panel_window(fs->p);
-    hide_panel(fs->p);
-    del_panel(fs->p);
+    ncplane_destroy(fs->p);
     fs->p = NULL;
-    delwin(fsw);
     hide_panel_locked(fs->extext);
     free(fs->extext);
     fs->extext = NULL;
@@ -1729,6 +1742,7 @@ free_form(struct form_state *fs){
   }
 }
 
+/*
 static void
 multiform_options(struct form_state *fs){
   static const cchar_t bchr[] = {
@@ -1744,8 +1758,8 @@ multiform_options(struct form_state *fs){
 
   assert(fs->formtype == FORM_MULTISELECT);
   cols = getmaxx(fsw);
-  wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-  wattron(fsw,A_BOLD);
+  cwattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+  cwattron(fsw,A_BOLD);
   mvwadd_wch(fsw,1,1,&bchr[2]);
   mvwadd_wch(fsw,1,fs->longop + 4,&bchr[0]);
   maxz = getmaxy(fsw) - 3;
@@ -1754,37 +1768,37 @@ multiform_options(struct form_state *fs){
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    wattroff(fsw,A_BOLD);
-    wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+    cwattroff(fsw,A_BOLD);
+    cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
     if(fs->selectno >= z){
-      mvwprintw(fsw,z + 1,START_COL * 2,"%d",z);
+      mvcwprintw(fsw,z + 1,START_COL * 2,"%d",z);
     }else if(fs->selections >= z){
-      mvwprintw(fsw,z + 2,START_COL * 2,"%d",z);
+      mvcwprintw(fsw,z + 2,START_COL * 2,"%d",z);
     }
     if(z < fs->opcount + 1){
-      wattron(fsw,A_BOLD);
-      wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-      mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
+      cwattron(fsw,A_BOLD);
+      cwcolor_set(fsw,FORMTEXT_COLOR,NULL);
+      mvcwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
         fs->longop,fs->longop,opstrs[op].option);
       if(op == fs->idx){
-        wattron(fsw,A_REVERSE);
+        cwattron(fsw,A_REVERSE);
       }
-      wcolor_set(fsw,INPUT_COLOR,NULL);
+      cwcolor_set(fsw,INPUT_COLOR,NULL);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
         if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
-          wcolor_set(fsw,SELECTED_COLOR,NULL);
+          cwcolor_set(fsw,SELECTED_COLOR,NULL);
           break;
         }
       }
-      wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 9,
+      cwprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 9,
         cols - fs->longop * 2 - 9,opstrs[op].desc);
-      wattroff(fsw,A_REVERSE);
+      cwattroff(fsw,A_REVERSE);
     }
   }
-  wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-  wattron(fsw,A_BOLD);
+  cwattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+  cwattron(fsw,A_BOLD);
   for(z = 0 ; z < fs->selections ; ++z){
-    mvwaddstr(fsw,z >= fs->selectno ? 3 + z : 2 + z,4,fs->selarray[z]);
+    cmvwaddstr(fsw,z >= fs->selectno ? 3 + z : 2 + z,4,fs->selarray[z]);
   }
   mvwadd_wch(fsw,fs->selectno + 2,1,&bchr[3]);
   mvwadd_wch(fsw,fs->selectno + 2,fs->longop + 4,&bchr[1]);
@@ -1798,21 +1812,21 @@ check_options(struct form_state *fs){
 
   assert(fs->formtype == FORM_CHECKBOXEN);
   cols = getmaxx(fsw);
-  wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-  wattron(fsw,A_BOLD);
+  cwattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+  cwattron(fsw,A_BOLD);
   maxz = getmaxy(fsw) - 3;
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    wattroff(fsw,A_BOLD);
-    wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+    cwattroff(fsw,A_BOLD);
+    cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
     if(z < fs->opcount + 1){
       wchar_t ballot = L'☐';
 
-      wattron(fsw,A_BOLD);
-      wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+      cwattron(fsw,A_BOLD);
+      cwcolor_set(fsw,FORMTEXT_COLOR,NULL);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
         if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
           ballot = L'☒';
@@ -1820,18 +1834,18 @@ check_options(struct form_state *fs){
         }
       }
       if(op == fs->idx){
-        wattron(fsw,A_REVERSE);
+        cwattron(fsw,A_REVERSE);
       }else{
-        wcolor_set(fsw,INPUT_COLOR,NULL);
+        cwcolor_set(fsw,INPUT_COLOR,NULL);
       }
-      mvwprintw(fsw,z + 1,START_COL * 2,"%lc %-*.*s ",
+      mvcwprintw(fsw,z + 1,START_COL * 2,"%lc %-*.*s ",
         ballot,fs->longop,fs->longop,opstrs[op].option);
-      wprintw(fsw,"%-*.*s",cols - fs->longop - 7,
+      cwprintw(fsw,"%-*.*s",cols - fs->longop - 7,
         cols - fs->longop - 7,opstrs[op].desc);
-      wattroff(fsw,A_REVERSE);
+      cwattroff(fsw,A_REVERSE);
     }
   }
-  wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+  cwattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
 }
 
 static void
@@ -1844,26 +1858,28 @@ form_options(struct form_state *fs){
     return;
   }
   cols = getmaxx(fsw);
-  wattron(fsw,A_BOLD);
+  cwattron(fsw,A_BOLD);
   for(z = 1 ; z < getmaxy(fsw) - 3 ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-    mvwprintw(fsw,z + 1,START_COL * 2,"%-*.*s ",
+    cwcolor_set(fsw,FORMTEXT_COLOR,NULL);
+    mvcwprintw(fsw,z + 1,START_COL * 2,"%-*.*s ",
       fs->longop,fs->longop,opstrs[op].option);
     if(op == fs->idx){
-      wattron(fsw,A_REVERSE);
+      cwattron(fsw,A_REVERSE);
     }
-    wcolor_set(fsw,INPUT_COLOR,NULL);
-    wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 4,
+    cwcolor_set(fsw,INPUT_COLOR,NULL);
+    cwprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 4,
       cols - fs->longop - 1 - START_COL * 4,opstrs[op].desc);
-    wattroff(fsw,A_REVERSE);
+    cwattroff(fsw,A_REVERSE);
   }
 }
+*/
 
 #define FORM_Y_OFFSET 5
+/*
 static struct panel_state *
 raise_form_explication(const WINDOW *w,const char *text,int linesz){
   int linepre[linesz - 1];
@@ -1916,9 +1932,9 @@ raise_form_explication(const WINDOW *w,const char *text,int linesz){
   ps->p = new_panel(win);
   assert(ps->p);
   wbkgd(win,COLOR_PAIR(BLACK_COLOR));
-  wattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
+  cwattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
   bevel(win);
-  wattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
+  cwattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
   do{
     mvwaddnstr(win,y + 1,1,text + linepre[y],linelen[y]);
   }while(y--);
@@ -1993,14 +2009,14 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw,A_BOLD);
+  cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
   bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,"%s",fs->boxstr);
+  cwattron(fsw,A_BOLD);
+  mvcwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,"%s",fs->boxstr);
   mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
 #undef ESCSTR
-  wattroff(fsw,A_BOLD);
+  cwattroff(fsw,A_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   fs->selectno = selectno;
@@ -2080,14 +2096,14 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw,A_BOLD);
+  cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
   bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 2,"%s",fs->boxstr);
+  cwattron(fsw,A_BOLD);
+  mvcwprintw(fsw,0,cols - strlen(fs->boxstr) - 2,"%s",fs->boxstr);
   mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
 #undef ESCSTR
-  wattroff(fsw,A_BOLD);
+  cwattroff(fsw,A_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   check_options(fs);
@@ -2160,13 +2176,13 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
     fs->idx = defidx = 0;
   }
   fs->opcount = ops;
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw,A_BOLD);
+  cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
   bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
+  cwattron(fsw,A_BOLD);
+  mvcwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
   mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
-  wattroff(fsw,A_BOLD);
+  cwattroff(fsw,A_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   form_options(fs);
@@ -2189,14 +2205,14 @@ form_string_options(struct form_state *fs){
     return;
   }
   cols = getmaxx(fsw);
-  wattrset(fsw,A_BOLD);
-  wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+  cwattrset(fsw,A_BOLD);
+  cwcolor_set(fsw,FORMTEXT_COLOR,NULL);
   mvwhline(fsw,1,1,' ',cols - 2);
-  mvwprintw(fsw,1,START_COL,"%-*.*s: ",
+  mvcwprintw(fsw,1,START_COL,"%-*.*s: ",
     fs->longop,fs->longop,fs->inp.prompt);
-  wcolor_set(fsw,INPUT_COLOR,NULL);
-  wprintw(fsw,"%.*s",cols - fs->longop - 2 - 2,fs->inp.buffer);
-  wattroff(fsw,A_BOLD);
+  cwcolor_set(fsw,INPUT_COLOR,NULL);
+  cwprintw(fsw,"%.*s",cols - fs->longop - 2 - 2,fs->inp.buffer);
+  cwattroff(fsw,A_BOLD);
 }
 
 void raise_str_form(const char *str,void (*fxn)(const char *),
@@ -2231,11 +2247,11 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
     return;
   }
   top_panel(fs->p);
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw,A_BOLD);
+  cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
   bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
+  cwattron(fsw,A_BOLD);
+  mvcwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
   mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
   fs->inp.prompt = fs->boxstr;
   def = def ? def : "";
@@ -2533,10 +2549,10 @@ void kill_splash(struct panel_state *ps){
   if(actform == NULL){
     setup_colors();
   }else{
-    /*assert(top_panel(actform->p) != ERR);
-    if(actform->extext){
-      assert(top_panel(actform->extext->p) != ERR);
-    }*/
+    //assert(top_panel(actform->p) != ERR);
+    //if(actform->extext){
+    //  assert(top_panel(actform->extext->p) != ERR);
+    //}
   }
 }
 
@@ -3310,9 +3326,9 @@ move_adapter_generic(reelbox *rb, int rows, int cols, int delta){
 //   fprintf(stderr, "  moved %s by %d to %d\n",
 //          rb->as->c->name, delta, rb->scrline);
   move_adapter(rb,rb->scrline,rows,cols,delta);
-  /*fprintf(stderr, "-------------> CORRECTING SCRLINE: %d becomes %d (%d / %d?)\n",
+  fprintf(stderr, "-------------> CORRECTING SCRLINE: %d becomes %d (%d / %d?)\n",
           rb->scrline, getbegy(rb->win), getmaxy(rb->win), getpary(rb->win));
-  rb->scrline = getbegy(rb->win);*/
+  rb->scrline = getbegy(rb->win);
 }
 
 static void
@@ -3369,21 +3385,21 @@ detail_fs(WINDOW *hw,const device *d,int row){
   if(d->mnttype){
     char buf[BPREFIXSTRLEN + 1];
 
-    wattroff(hw,A_BOLD);
-    mvwprintw(hw,row,START_COL,BPREFIXFMT "%c ",
+    cwattroff(hw,A_BOLD);
+    mvcwprintw(hw,row,START_COL,BPREFIXFMT "%c ",
         d->mntsize ? bprefix(d->mntsize,1,buf,1) : "",
         d->mntsize ? 'B' : ' ');
-    wattron(hw,A_BOLD);
-    wprintw(hw,"%s%s",d->label ? "" : "unlabeled ",d->mnttype);
+    cwattron(hw,A_BOLD);
+    cwprintw(hw,"%s%s",d->label ? "" : "unlabeled ",d->mnttype);
     if(d->label){
-      wattroff(hw,A_BOLD);
-      wprintw(hw," %lc%s%lc",L'“',d->label,L'”');
-      wattron(hw,A_BOLD);
+      cwattroff(hw,A_BOLD);
+      cwprintw(hw," %lc%s%lc",L'“',d->label,L'”');
+      cwattron(hw,A_BOLD);
     }
-    wprintw(hw,"%s",d->mnt.count ? " at " : "");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%s",d->mnt.count ? d->mnt.list[0] : "");
-    wattron(hw,A_BOLD);
+    cwprintw(hw,"%s",d->mnt.count ? " at " : "");
+    cwattroff(hw,A_BOLD);
+    cwprintw(hw,"%s",d->mnt.count ? d->mnt.list[0] : "");
+    cwattron(hw,A_BOLD);
   }
 }
 
@@ -3411,28 +3427,28 @@ update_details(WINDOW *hw){
   for(n = 1 ; n < rows - 1 ; ++n){
     mvwhline(hw,n,START_COL,' ',cols - 2);
   }
-  wattrset(hw,SUBDISPLAY_ATTR);
-  mvwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name);
+  cwattrset(hw,SUBDISPLAY_ATTR);
+  mvcwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name);
   if(rows == 1){
     return 0;
   }
   if(c->bus == BUS_VIRTUAL){
-    mvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available");
+    mvcwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available");
   }else{
-    mvwprintw(hw,2,START_COL,"Firmware: ");
-    wattroff(hw,A_BOLD);
+    mvcwprintw(hw,2,START_COL,"Firmware: ");
+    cwattroff(hw,A_BOLD);
     waddstr(hw,c->fwver ? c->fwver : "Unknown");
-    wattron(hw,A_BOLD);
+    cwattron(hw,A_BOLD);
     waddstr(hw," BIOS: ");
-    wattroff(hw,A_BOLD);
+    cwattroff(hw,A_BOLD);
     waddstr(hw,c->biosver ? c->biosver : "Unknown");
-    wattron(hw,A_BOLD);
+    cwattron(hw,A_BOLD);
     waddstr(hw," Load: ");
     qprefix(c->demand,1,buf,1);
-    wattroff(hw,A_BOLD);
+    cwattroff(hw,A_BOLD);
     waddstr(hw,buf);
     waddstr(hw,"bps");
-    wattron(hw,A_BOLD);
+    cwattron(hw,A_BOLD);
   }
   if((b = current_adapter->selected) == NULL){
     return 0;
@@ -3441,109 +3457,109 @@ update_details(WINDOW *hw){
   if(d->layout == LAYOUT_NONE){
     const char *sn = d->blkdev.serial;
 
-    mvwprintw(hw, 3, START_COL, "%s: ", d->name);
-    wattroff(hw, A_BOLD);
+    mvcwprintw(hw, 3, START_COL, "%s: ", d->name);
+    cwattroff(hw, A_BOLD);
     waddstr(hw, d->model ? d->model : "n/a");
     waddstr(hw, d->revision ? d->revision : "");
-    wattron(hw, A_BOLD);
-    wprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf,  1));
-    wattroff(hw, A_BOLD);
+    cwattron(hw, A_BOLD);
+    cwprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf,  1));
+    cwattroff(hw, A_BOLD);
     waddstr(hw, sn ? sn : "n/a");
-    wattron(hw, A_BOLD);
+    cwattron(hw, A_BOLD);
     if(getmaxx(hw) - getcurx(hw) > 13){
-      wprintw(hw," WC%lc WRV%lc RO%lc",
+      cwprintw(hw," WC%lc WRV%lc RO%lc",
           d->blkdev.wcache ? L'+' : L'-',
           d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
           d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
           d->roflag ? L'+' : L'-');
     }
     assert(d->physsec <= 4096);
-    mvwprintw(hw,4,START_COL,"Sectors: ");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
-    wattron(hw,A_BOLD);
-    wprintw(hw,"(");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%uB ",d->logsec);
-    wattron(hw,A_BOLD);
-    wprintw(hw,"logical / ");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%uB ",d->physsec);
-    wattron(hw,A_BOLD);
-    wprintw(hw,"physical) %s",
+    mvcwprintw(hw,4,START_COL,"Sectors: ");
+    cwattroff(hw,A_BOLD);
+    cwprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
+    cwattron(hw,A_BOLD);
+    cwprintw(hw,"(");
+    cwattroff(hw,A_BOLD);
+    cwprintw(hw,"%uB ",d->logsec);
+    cwattron(hw,A_BOLD);
+    cwprintw(hw,"logical / ");
+    cwattroff(hw,A_BOLD);
+    cwprintw(hw,"%uB ",d->physsec);
+    cwattron(hw,A_BOLD);
+    cwprintw(hw,"physical) %s",
     transport_str(d->blkdev.transport));
     if(transport_bw(d->blkdev.transport)){
       uintmax_t transbw = transport_bw(d->blkdev.transport);
-      wprintw(hw," (");
-      wattroff(hw,A_BOLD);
+      cwprintw(hw," (");
+      cwattroff(hw,A_BOLD);
       // FIXME throws -Wformat-truncation on gcc9
-      wprintw(hw, "%sbps", qprefix(transbw, 1, buf,  1));
-      wattron(hw,A_BOLD);
-      wprintw(hw,")");
+      cwprintw(hw, "%sbps", qprefix(transbw, 1, buf,  1));
+      cwattron(hw,A_BOLD);
+      cwprintw(hw,")");
     }
   }else{
-    mvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
+    mvcwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
           d->model ? d->model : "n/a",
           d->revision ? d->revision : "n/a",
           bprefix(d->size,1,buf,1),
           d->roflag ? L'+' : L'-');
     if(d->layout == LAYOUT_MDADM){
-      wprintw(hw," Stride: ");
-      wattroff(hw,A_BOLD);
+      cwprintw(hw," Stride: ");
+      cwattroff(hw,A_BOLD);
       if(d->mddev.stride == 0){
         waddstr(hw,"n/a");
       }else{
-        wprintw(hw,"%sB",bprefix(d->mddev.stride,1,buf,1));
+        cwprintw(hw,"%sB",bprefix(d->mddev.stride,1,buf,1));
       }
-      wattron(hw,A_BOLD);
-      wprintw(hw," SWidth: ");
-      wattroff(hw,A_BOLD);
+      cwattron(hw,A_BOLD);
+      cwprintw(hw," SWidth: ");
+      cwattroff(hw,A_BOLD);
       if(d->mddev.swidth == 0){
         waddstr(hw,"n/a");
       }else{
-        wprintw(hw,"%u",d->mddev.swidth);
+        cwprintw(hw,"%u",d->mddev.swidth);
       }
-      wattron(hw,A_BOLD);
+      cwattron(hw,A_BOLD);
     }
     assert(d->physsec <= 4096);
-    mvwprintw(hw,4,START_COL,"Sectors: ");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
-    wattron(hw,A_BOLD);
-    wprintw(hw,"(");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%uB ",d->logsec);
-    wattron(hw,A_BOLD);
-    wprintw(hw,"logical / ");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%uB ",d->physsec);
-    wattron(hw,A_BOLD);
-    wprintw(hw,"physical)");
+    mvcwprintw(hw,4,START_COL,"Sectors: ");
+    cwattroff(hw,A_BOLD);
+    cwprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
+    cwattron(hw,A_BOLD);
+    cwprintw(hw,"(");
+    cwattroff(hw,A_BOLD);
+    cwprintw(hw,"%uB ",d->logsec);
+    cwattron(hw,A_BOLD);
+    cwprintw(hw,"logical / ");
+    cwattroff(hw,A_BOLD);
+    cwprintw(hw,"%uB ",d->physsec);
+    cwattron(hw,A_BOLD);
+    cwprintw(hw,"physical)");
   }
-  mvwprintw(hw,5,START_COL,"Partitioning: ");
-  wattroff(hw,A_BOLD);
+  mvcwprintw(hw,5,START_COL,"Partitioning: ");
+  cwattroff(hw,A_BOLD);
   pttype = (d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
       d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
       d->layout == LAYOUT_DM ? d->dmdev.pttable ? d->dmdev.pttable : "none" :
       "n/a");
-  wprintw(hw,"%s",pttype);
-  wattron(hw,A_BOLD);
+  cwprintw(hw,"%s",pttype);
+  cwattron(hw,A_BOLD);
   waddstr(hw," I/O scheduler: ");
-  wattroff(hw,A_BOLD);
+  cwattroff(hw,A_BOLD);
   waddstr(hw,d->sched ? d->sched : "custom");
-  wattron(hw,A_BOLD);
+  cwattron(hw,A_BOLD);
   if(blockobj_unloadedp(b)){
-    mvwprintw(hw,6,START_COL,"Media is not loaded");
+    mvcwprintw(hw,6,START_COL,"Media is not loaded");
     return 0;
   }
   if(blockobj_unpartitionedp(b)){
     char ubuf[BPREFIXSTRLEN + 1];
 
-    wattroff(hw,A_BOLD);
-    mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
+    cwattroff(hw,A_BOLD);
+    mvcwprintw(hw,6,START_COL,BPREFIXFMT "B ",
         bprefix(d->size,1,ubuf,1));
-    wattron(hw,A_BOLD);
-    wprintw(hw,"%s","unpartitioned media");
+    cwattron(hw,A_BOLD);
+    cwprintw(hw,"%s","unpartitioned media");
     detail_fs(hw,b->d,7);
     return 0;
   }
@@ -3555,50 +3571,50 @@ update_details(WINDOW *hw){
       assert(b->zone->p->layout == LAYOUT_PARTITION);
       bprefix(b->zone->p->partdev.alignment, 1, align, 1);
       // FIXME limit length!
-      wattroff(hw,A_BOLD);
-      mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
+      cwattroff(hw,A_BOLD);
+      mvcwprintw(hw,6,START_COL,BPREFIXFMT "B ",
           bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,1));
-      wattron(hw,A_BOLD);
-      wprintw(hw,"P%lc%lc ",subscript((b->zone->p->partdev.pnumber % 100 / 10)),
+      cwattron(hw,A_BOLD);
+      cwprintw(hw,"P%lc%lc ",subscript((b->zone->p->partdev.pnumber % 100 / 10)),
           subscript((b->zone->p->partdev.pnumber % 10)));
-      wattroff(hw,A_BOLD);
-      wprintw(hw,"%ju",b->zone->fsector);
-      wattron(hw,A_BOLD);
-      wprintw(hw,"→");
-      wattroff(hw,A_BOLD);
-      wprintw(hw,"%ju ",b->zone->lsector);
-      wattron(hw,A_BOLD);
+      cwattroff(hw,A_BOLD);
+      cwprintw(hw,"%ju",b->zone->fsector);
+      cwattron(hw,A_BOLD);
+      cwprintw(hw,"→");
+      cwattroff(hw,A_BOLD);
+      cwprintw(hw,"%ju ",b->zone->lsector);
+      cwattron(hw,A_BOLD);
       waddstr(hw,b->zone->p->name);
-      wattroff(hw,A_BOLD);
+      cwattroff(hw,A_BOLD);
       if(b->zone->p->partdev.pname){
-        wprintw(hw," “%ls” ",b->zone->p->partdev.pname);
+        cwprintw(hw," “%ls” ",b->zone->p->partdev.pname);
       }else{
-        wprintw(hw," (%s) ","unnamed");
+        cwprintw(hw," (%s) ","unnamed");
       }
-      wattron(hw,A_BOLD);
+      cwattron(hw,A_BOLD);
                         if(getcurx(hw) <= cols - 2 - 4){
-        wprintw(hw,"%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
+        cwprintw(hw,"%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
       }
       if(getcurx(hw) <= cols - 2 - 11){
-        wprintw(hw, " %sB align", align);
+        cwprintw(hw, " %sB align", align);
       }
       detail_fs(hw,b->zone->p,7);
     }else{
       // FIXME print alignment for unpartitioned space as well,
       // but not until we implement zones in core (bug 252)
       // or we'll need recreate alignment() etc here
-      wattroff(hw,A_BOLD);
-      mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
+      cwattroff(hw,A_BOLD);
+      mvcwprintw(hw,6,START_COL,BPREFIXFMT "B ",
           bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,1));
-      wattron(hw,A_BOLD);
-      wattroff(hw,A_BOLD);
-      wprintw(hw,"%ju",b->zone->fsector);
-      wattron(hw,A_BOLD);
-      wprintw(hw,"→");
-      wattroff(hw,A_BOLD);
-      wprintw(hw,"%ju ",b->zone->lsector);
-      wattron(hw,A_BOLD);
-      wprintw(hw,"%s ",b->zone->rep == REP_METADATA ?
+      cwattron(hw,A_BOLD);
+      cwattroff(hw,A_BOLD);
+      cwprintw(hw,"%ju",b->zone->fsector);
+      cwattron(hw,A_BOLD);
+      cwprintw(hw,"→");
+      cwattroff(hw,A_BOLD);
+      cwprintw(hw,"%ju ",b->zone->lsector);
+      cwattron(hw,A_BOLD);
+      cwprintw(hw,"%s ",b->zone->rep == REP_METADATA ?
           "partition table metadata" : "unpartitioned space");
     }
   }
@@ -3665,16 +3681,16 @@ helpstrs(WINDOW *hw){
 
   rows = getmaxy(hw);
   cols = getmaxx(hw);
-  wattrset(hw,SUBDISPLAY_ATTR);
+  cwattrset(hw,SUBDISPLAY_ATTR);
   for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
     mvwhline(hw,row + z,START_COL,' ',cols - 2);
     mvwaddwstr(hw,row + z,START_COL,hs);
   }
   row += z;
   if(!current_adapter || !current_adapter->selected){
-    wattrset(hw,SUBDISPLAY_INVAL_ATTR);
+    cwattrset(hw,SUBDISPLAY_INVAL_ATTR);
   }else{
-    wattrset(hw,SUBDISPLAY_ATTR);
+    cwattrset(hw,SUBDISPLAY_ATTR);
   }
   for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
     mvwhline(hw,row + z,START_COL,' ',cols - 2);
@@ -3682,9 +3698,9 @@ helpstrs(WINDOW *hw){
   }
   row += z;
   if(!target_mode_p()){
-    wattrset(hw,SUBDISPLAY_INVAL_ATTR);
+    cwattrset(hw,SUBDISPLAY_INVAL_ATTR);
   }else{
-    wattrset(hw,SUBDISPLAY_ATTR);
+    cwattrset(hw,SUBDISPLAY_ATTR);
   }
   for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
     mvwhline(hw,row + z,START_COL,' ',cols - 2);
@@ -3708,6 +3724,7 @@ unlock_ncurses(void){
   pthread_mutex_unlock(&bfl);
   unlock_growlight();
 }  
+*/
 
 // Used in growlight callbacks, since the growlight lock will already be held
 // in any such case.
@@ -3725,6 +3742,7 @@ unlock_ncurses_growlight(void){
   pthread_mutex_unlock(&bfl);
 }
 
+/*
 static void pull_adapters_down(reelbox *,int,int,int);
 
 // Pass a NULL puller to move all adapters up
@@ -4362,7 +4380,7 @@ update_diags(struct panel_state *ps){
   if((y = get_logs(y,l)) < 0){
     return -1;
   }
-  wattrset(w,SUBDISPLAY_ATTR);
+  cwattrset(w,SUBDISPLAY_ATTR);
   for(r = 0 ; r < y ; ++r){
     char *c,tbuf[x];
     struct tm tm;
@@ -4391,7 +4409,7 @@ update_diags(struct panel_state *ps){
     while((c = strchr(tbuf,'\b')) || (c = strchr(tbuf,'\t'))){
       *c = ' ';
     }
-    mvwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf);
+    mvcwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf);
     free(l[r].msg);
   }
   return 0;
@@ -4496,7 +4514,7 @@ env_details(WINDOW *hw,int rows){
   const int row = 1;
   int z,srows,scols,cols;
 
-  wattrset(hw,SUBDISPLAY_ATTR);
+  cwattrset(hw,SUBDISPLAY_ATTR);
   getmaxyx(stdscr,srows,scols);
   if((z = rows) >= ENVROWS){
     z = ENVROWS - 1;
@@ -4510,35 +4528,35 @@ env_details(WINDOW *hw,int rows){
       mvwhline(hw,row + z,1,' ',cols - 2);
       c0 = (z - 2) * COLORSPERROW;
       c1 = c0 + (COLORSPERROW - 1);
-      mvwprintw(hw,row + z,col,"0x%02x%lc0x%02x: ",c0,L'–',c1);
+      mvcwprintw(hw,row + z,col,"0x%02x%lc0x%02x: ",c0,L'–',c1);
       while(c0 <= c1){
         if(c0 < COLORS){
-          wattrset(hw,COLOR_PAIR(c0));
-          wprintw(hw,"X");
+          cwattrset(hw,COLOR_PAIR(c0));
+          cwprintw(hw,"X");
         }else{
-          wattrset(hw,SUBDISPLAY_ATTR);
-          wprintw(hw," ");
+          cwattrset(hw,SUBDISPLAY_ATTR);
+          cwprintw(hw," ");
         }
         ++c0;
       }
       --z;
-      wattrset(hw,SUBDISPLAY_ATTR);
+      cwattrset(hw,SUBDISPLAY_ATTR);
     }
-  } /* intentional fallthrough */
+  } // intentional fallthrough
   case 1:{
     mvwhline(hw,row + z,1,' ',cols - 2);
-    mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
+    mvcwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
         COLORS,COLOR_PAIRS,srows,scols,
         can_change_color() ? "dynamic" : "fixed");
     --z;
-  } /* intentional fallthrough */
+  } // intentional fallthrough
   case 0:{
     const char *lang = getenv("LANG");
     const char *term = getenv("TERM");
 
     mvwhline(hw,row + z,1,' ',cols - 2);
     lang = lang ? lang : "Undefined";
-    mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s ESCDELAY: %d",lang,term,ESCDELAY);
+    mvcwprintw(hw,row + z,col,"LANG: %-21s TERM: %s ESCDELAY: %d",lang,term,ESCDELAY);
     --z;
     break;
   }default:{
@@ -4563,7 +4581,7 @@ detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
       continue;
     }
     mvwhline(w,*row,START_COL,' ',cols - 2);
-    mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+    mvcwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
         FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
@@ -4574,13 +4592,13 @@ detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
     if(++*row == maxy){
       return;
     }
-    wattroff(w,A_BOLD);
+    cwattroff(w,A_BOLD);
     if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
       b[sizeof(b) - 1] = '\0';
     }
     mvwhline(w,*row,START_COL,' ',cols - 2);
-    mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
-    wattron(w,A_BOLD);
+    mvcwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
+    cwattron(w,A_BOLD);
     ++*row;
   }
 }
@@ -4599,7 +4617,7 @@ detail_targets(WINDOW *w,int *row,int both,const device *d){
       continue;
     }
     mvwhline(w,*row,START_COL,' ',cols - 2);
-    mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+    mvcwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
         FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
@@ -4611,13 +4629,13 @@ detail_targets(WINDOW *w,int *row,int both,const device *d){
     if(!both){
       return;
     }
-    wattroff(w,A_BOLD);
+    cwattroff(w,A_BOLD);
     if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
       b[sizeof(b) - 1] = '\0';
     }
     mvwhline(w,*row,START_COL,' ',cols - 2);
-    mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
-    wattron(w,A_BOLD);
+    mvcwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
+    cwattron(w,A_BOLD);
     ++*row;
     break; // FIXME no space currently
   }
@@ -4635,14 +4653,14 @@ map_details(WINDOW *hw){
   if(growlight_target){
     int blockout;
 
-    wattrset(hw,A_BOLD|COLOR_PAIR(PHEADING_COLOR));
-    mvwprintw(hw,y,1,"Operating in target mode (%s)",growlight_target);
+    cwattrset(hw,A_BOLD|COLOR_PAIR(PHEADING_COLOR));
+    mvcwprintw(hw,y,1,"Operating in target mode (%s)",growlight_target);
     if( (blockout = cols - getcurx(hw) - 1) ){
-      wprintw(hw,"%*.*s",blockout,blockout,"");
+      cwprintw(hw,"%*.*s",blockout,blockout,"");
     }
     ++y;
   }
-  wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
+  cwattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
   // First we list the target fstab, and then the targets
   // FIXME this is probably multibyte input and needs be handled as such
   if( (fstab = dump_targets()) ){
@@ -4654,7 +4672,7 @@ map_details(WINDOW *hw){
       if(fstab[pos] == '\n'){
         fstab[pos] = '\0';
         if(pos != linestart){
-          mvwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
+          mvcwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
           if(++y >= rows){
             return 0;
           }
@@ -4666,22 +4684,22 @@ map_details(WINDOW *hw){
       ++pos;
     }
     if(pos != linestart){
-      mvwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
+      mvcwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
       if(++y >= rows){
         return 0;
       }
     }
     free(fstab);
   }
-  wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+  cwattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
   mvwhline(hw,y,1,' ',cols - 2);
-  mvwprintw(hw,y,1,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
+  mvcwprintw(hw,y,1,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
       FSLABELSIZ,FSLABELSIZ,"Label",
       "Type","UUID","Bytes","Device");
   if(++y >= rows){
     return 0;
   }
-  wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
+  cwattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -4701,7 +4719,7 @@ map_details(WINDOW *hw){
     }
   }
   // Now list the existing maps, a superset of the targets
-  wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+  cwattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -4870,20 +4888,12 @@ recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
   if(newsel > bef){
     newsel = bef;
   }
-  /*wstatus_locked(stdscr,"newsel: %d bef: %d aft: %d oldsel: %d maxy: %d",
-      newsel,bef,aft,oldsel,getmaxy(is->rb->win));
-  update_panels();
-  doupdate();*/
   if(newsel + aft <= getmaxy(is->rb->win) - 3){
     newsel = getmaxy(is->rb->win) - aft - 3;
   }
   if(newsel + (int)node_lines(is->expansion,is->rb->selected) >= getmaxy(is->rb->win) - 2){
     newsel = getmaxy(is->rb->win) - 1 - node_lines(is->expansion,is->rb->selected);
   }
-  /*wstatus_locked(stdscr,"newsel: %d bef: %d aft: %d oldsel: %d maxy: %d",
-      newsel,bef,aft,oldsel,getmaxy(is->rb->win));
-  update_panels();
-  doupdate();*/
   if(newsel){
     is->rb->selline = newsel;
   }
@@ -5943,10 +5953,10 @@ handle_actform_string_input(int ch){
 // indicate intercept.
 static int
 handle_subwindow_input(int ch){
-  /*switch(ch){
+  switch(ch){
     default:
       locked_diag("FIXME handle subwindow input");
-  }*/
+  }
   return ch;
 }
 
@@ -6084,7 +6094,7 @@ handle_actform_input(int ch){
         break;
       }
       unlock_ncurses();
-    } /* intentional fallthrough */
+    } // intentional fallthrough
     default:{
       diag("please %s, or cancel",actform->boxstr);
       break;
@@ -6978,13 +6988,15 @@ adapter_free(void *cv){
   unlock_ncurses_growlight();
 }
 
+*/
 static void
-vdiag(const char *fmt,va_list v){
+vdiag(const char *fmt, va_list v){
   lock_ncurses_growlight();
-  locked_vdiag(fmt,v);
+  locked_vdiag(fmt, v);
   unlock_ncurses_growlight();
 }
 
+/*
 static void
 shutdown_cycle(void){
   struct panel_state *ps;
@@ -7005,57 +7017,52 @@ shutdown_cycle(void){
   }
   exit(EXIT_SUCCESS);
 };
+*/
 
-static void raise_info_form(const char *str,const char *text){
+static void raise_info_form(const char *str, const char *text){
   struct form_state *fs;
   int lineguess;
-  WINDOW *fsw;
   int cols;
-  int x,y;
+  int x, y;
 
   assert(str && text);
   if(actform){
     locked_diag("An input dialog is already active");
     return;
   }
-  if((fs = create_form(str,NULL,FORM_SPLASH_PROMPT,0)) == NULL){
+  if((fs = create_form(str, NULL, FORM_SPLASH_PROMPT, 0)) == NULL){
     return;
   }
   fs->longop = strlen(str);
   cols = fs->longop; // FIXME? 40 for input currently
-  getmaxyx(stdscr,y,x);
+  struct ncplane* stdn = notcurses_stdplane(NC);
+  ncplane_dim_yx(stdn, &y, &x);
   assert(x >= cols + 3);
   assert(y >= 3);
   // It could be more than this due to line breaking, so add a fudge
   // factor of 2...FIXME
   lineguess = 2; // yuck
   lineguess += strlen(text) / (x - 2) + 1;
-  if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET + lineguess,x - cols - 3)) == NULL){
-    locked_diag("Couldn't create form window, uh-oh");
+  fs->p = notcurses_newplane(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET + lineguess, x - cols - 3, NULL);
+  if(fs->p == NULL){
+    locked_diag("Couldn't create plane, uh-oh");
     free_form(fs);
     return;
   }
-  if((fs->p = new_panel(fsw)) == NULL){
-    locked_diag("Couldn't create form panel, uh-oh");
-    delwin(fsw);
-    free_form(fs);
-    return;
-  }
-  assert(top_panel(fs->p) != ERR);
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
-  bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,1,START_COL,"%-*.*s",cols,cols,str);
+  cwattroff(fs->p, A_BOLD);
+  cwcolor_set(fs->p, FORMBORDER_COLOR, NULL);
+  bevel(fs->p);
+  cwattron(fs->p, A_BOLD);
+  mvcwprintw(fs->p, 1, START_COL, "%-*.*s", cols, cols, str);
   form_string_options(fs);
   actform = fs;
-  fs->extext = raise_form_explication(stdscr,text,20);
+  fs->extext = raise_form_explication(stdscr, text, 20);
   form_colors();
   screen_update();
 }
 
 static void
-boxinfo(const char *text,...){
+boxinfo(const char *text, ...){
   va_list v;
   char *buf;
   int max;
@@ -7067,17 +7074,17 @@ boxinfo(const char *text,...){
     unlock_ncurses_growlight();
     return;
   }
-  va_start(v,text);
-  if(vsnprintf(buf,max,text,v) >= max){
+  va_start(v, text);
+  if(vsnprintf(buf, max, text, v) >= max){
     buf[max - 1] = '\0';
   }
   lock_ncurses_growlight();
-  raise_info_form("Press any key to continue...",buf);
+  raise_info_form("Press any key to continue...", buf);
   unlock_ncurses_growlight();
   va_end(v);
 }
 
-int main(int argc,char * const *argv){
+int main(int argc, char * const *argv){
   const glightui ui = {
     .vdiag = vdiag,
     .boxinfo = boxinfo,
@@ -7086,19 +7093,22 @@ int main(int argc,char * const *argv){
     .adapter_free = adapter_free,
     .block_free = block_free,
   };
-  WINDOW *w;
   struct panel_state *ps;
+  struct notcurses* nc;
   int showhelp = 1;
 
-  if(setlocale(LC_ALL,"") == NULL){
+  if(setlocale(LC_ALL, "") == NULL){
     fprintf(stderr,"Warning: couldn't load locale\n");
-    //return EXIT_FAILURE;
+    return EXIT_FAILURE;
   }
-  if((w = ncurses_setup()) == NULL){
+  notcurses_options opts;
+  memset(&opts, 0, sizeof(opts));
+  opts.ttyfp = stdout;
+  if((nc = notcurses_init(&opts)) == NULL){
     return EXIT_FAILURE;
   }
   ps = show_splash(L"Initializing...");
-  if(growlight_init(argc,argv,&ui,&showhelp)){
+  if(growlight_init(argc, argv, &ui, &showhelp)){
     kill_splash(ps);
     ncurses_cleanup(&w);
     dump_diags();
@@ -7107,7 +7117,7 @@ int main(int argc,char * const *argv){
   lock_growlight();
   kill_splash(ps);
   if(showhelp){
-    toggle_panel(w,&help,display_help);
+    toggle_panel(w, &help, display_help);
     screen_update();
   }
   unlock_growlight();
