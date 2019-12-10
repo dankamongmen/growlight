@@ -424,9 +424,9 @@ setup_colors(void){
   return notcurses_render(NC);
 }
 
-/*
-static void
+static int
 form_colors(void){
+/* FIXME
   // Don't reset the status color or header color, nor (obviously) the
   // form nor splash colors.
   locked_diag("%s",""); // Don't leave a highlit status up from long ago
@@ -462,11 +462,10 @@ form_colors(void){
   init_pair(FUCKED_COLOR,-1,-1);
   init_pair(ORANGE_COLOR,-1,-1);
   init_pair(GREEN_COLOR,-1,-1);
-  wrefresh(curscr);
-  screen_update();
+  */
+  return notcurses_render(NC);
 }
 
-*/
 static int update_diags(struct panel_state *);
 /*
 
@@ -3620,6 +3619,7 @@ update_details(WINDOW *hw){
   }
   return 0;
 }
+*/
 
 // When this text is being displayed, the help window is the active window.
 // Thus we refer to other window commands as "viewing", while 'H' here is
@@ -3673,6 +3673,7 @@ max_helpstr_len(const wchar_t **h){
   return max;
 }
 
+/*
 static int
 helpstrs(WINDOW *hw){
   const wchar_t *hs;
@@ -4341,6 +4342,7 @@ use_next_device(void){
   }
   select_adapter_dev(rb,rb->selected->next,delta);
 }
+*/
 
 static const int DIAGROWS = 14;
 
@@ -4368,6 +4370,7 @@ dump_diags(void){
   return 0;
 }
 
+/*
 static int
 update_diags(struct panel_state *ps){
   WINDOW *w = panel_window(ps->p);
@@ -4466,9 +4469,10 @@ err:
   memset(ps,0,sizeof(*ps));
   return ERR;
 }
+*/
 
 static int
-display_help(WINDOW *mainw,struct panel_state *ps){
+display_help(struct ncplane* mainw, struct panel_state* ps){
   static const int helprows = sizeof(helps) / sizeof(*helps) - 1 +
     sizeof(helps_block) / sizeof(*helps_block) - 1 +
     sizeof(helps_target) / sizeof(*helps_target) - 1; // NULL != row
@@ -4482,29 +4486,26 @@ display_help(WINDOW *mainw,struct panel_state *ps){
     helpcols = max_helpstr_len(helps_block);
   }
   helpcols += 2; // spacing + borders
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help",
-      L"https://nick-black.com/dankwiki/index.php/Growlight",
-      PBORDER_COLOR)){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, helprows, helpcols, L"press 'H' to dismiss help",
+                       L"https://nick-black.com/dankwiki/index.php/Growlight",
+                       PBORDER_COLOR)){
     goto err;
   }
-  if(helpstrs(panel_window(ps->p))){
+  if(helpstrs(ps->p)){
     goto err;
   }
   return OK;
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
+  memset(ps, 0, sizeof(*ps));
   return ERR;
 }
 
+/*
 #define ENVROWS 10
 #define COLORSPERROW 32
 
@@ -6272,7 +6273,8 @@ unset_target(void){
 
 static void
 handle_ncurses_input(WINDOW *w){
-  int ch,r;
+  wchar_t ch
+  int r;
 
   while((ch = getch()) != ERR){
     if(ch == 12){ // CTRL+L FIXME
@@ -7103,7 +7105,7 @@ int main(int argc, char * const *argv){
   }
   notcurses_options opts;
   memset(&opts, 0, sizeof(opts));
-  opts.ttyfp = stdout;
+  opts.outfp = stdout;
   if((nc = notcurses_init(&opts)) == NULL){
     return EXIT_FAILURE;
   }
@@ -7121,6 +7123,6 @@ int main(int argc, char * const *argv){
     screen_update();
   }
   unlock_growlight();
-  handle_ncurses_input(w);
+  // handle_ncurses_input(w);
   shutdown_cycle(); // calls exit() on all paths
 }
