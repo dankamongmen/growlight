@@ -1025,6 +1025,7 @@ static void
 hide_panel_locked(struct panel_state *ps){
   if(ps){
     ncplane_destroy(ps->p);
+    ps->p = NULL;
   }
 }
 
@@ -6694,11 +6695,12 @@ free_adapter_state(adapterstate *as){
 
 static void *
 adapter_callback(controller *a, void *state){
+  return NULL;
+  /*
   adapterstate *as;
   reelbox *rb;
 
   lock_ncurses_growlight();
-  /*
   if((as = state) == NULL){
     if(a->blockdevs){
       if( (state = as = create_adapter_state(a)) ){
@@ -6754,9 +6756,9 @@ adapter_callback(controller *a, void *state){
     //resize_adapter(rb);
     redraw_adapter(rb);
   }
-  */
   unlock_ncurses_growlight();
   return as;
+  */
 }
 
 static void
@@ -6901,7 +6903,9 @@ create_blockobj(device *d){
 */
 
 static void *
-block_callback(device *d,void *v){
+block_callback(device *d, void *v){
+  return NULL;
+  /*
   adapterstate *as;
   blockobj *b;
 
@@ -6912,12 +6916,11 @@ block_callback(device *d,void *v){
 // fprintf(stderr, "---------begin block event on %s\n", d->name);
   if((as = d->c->uistate) == NULL){
 // fprintf(stderr, "MAKE THAT INVISIBLE block event on %s\n!", d->name);
-    if((as = d->c->uistate = adapter_callback(d->c,NULL)) == NULL){
+    if((as = d->c->uistate = adapter_callback(d->c, NULL)) == NULL){
       return NULL;
     }
   }
 // if(as->rb){ fprintf(stderr, "we're on line %d\n", as->rb->scrline); }
-  /*
   if((b = v) == NULL){
     if( (b = create_blockobj(d)) ){
       if(as->devs == 0){
@@ -6932,17 +6935,17 @@ block_callback(device *d,void *v){
       ++as->devs;
     }
   }else{
-    update_blockobj(b,d);
+    update_blockobj(b, d);
   }
   if(as->rb){
-    int old,oldrows;
+    int old, oldrows;
 
     old = as->rb->selline;
     oldrows = getmaxy(as->rb->win);
 // fprintf(stderr, "into resize_adapter line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
     resize_adapter(as->rb);
 // fprintf(stderr, "into recompute_selection line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
-    recompute_selection(as,old,oldrows,getmaxy(as->rb->win));
+    recompute_selection(as, old, oldrows, getmaxy(as->rb->win));
     if(current_adapter == as->rb){
       if(b->prev == NULL && b->next == NULL){
         select_adapter();
@@ -6952,27 +6955,28 @@ block_callback(device *d,void *v){
     redraw_adapter(as->rb);
   }
 // fprintf(stderr, "---------end block event on %s\n", d->name);
-  */
   unlock_ncurses_growlight();
   return b;
+  */
 }
 
 static void
-block_free(void *cv,void *bv){
+block_free(void *cv, void *bv){
+  return NULL;
+  /*
   adapterstate *as = cv;
   blockobj *bo = bv;
   reelbox *rb;
 
   lock_ncurses_growlight();
-  /*
   if( (rb = as->rb) ){
     if(bo == rb->selected){
       if(bo->prev){
-        select_adapter_dev(rb,bo->prev,-1);
+        select_adapter_dev(rb, bo->prev, -1);
       }else if(bo->next){
-        select_adapter_dev(rb,bo->next,1);
+        select_adapter_dev(rb, bo->next, 1);
       }else{
-        select_adapter_dev(rb,NULL,0);
+        select_adapter_dev(rb, NULL, 0);
       }
     }
   }
@@ -6989,34 +6993,34 @@ block_free(void *cv,void *bv){
   --as->devs;
   free(bo);
   if(as->rb){
-    int old,oldrows;
+    int old, oldrows;
 
     old = as->rb->selline;
     oldrows = getmaxy(rb->win);
     resize_adapter(as->rb);
-    recompute_selection(as,old,oldrows,getmaxy(rb->win));
+    recompute_selection(as, old, oldrows, getmaxy(rb->win));
     redraw_adapter(as->rb);
   }
-  */
   unlock_ncurses_growlight();
+  */
 }
 
 static void
 adapter_free(void *cv){
+  /*
   adapterstate *as = cv;
   reelbox *rb = rb;
 
   lock_ncurses_growlight();
   as->prev->next = as->next;
   as->next->prev = as->prev;
-  /*
   if( (rb = as->rb) ){
-    int delta = getmaxy(rb->win) + 1,scrrows,scrcols;
+    int delta = getmaxy(rb->win) + 1, scrrows, scrcols;
 
-// fprintf(stderr,"Removing iface at %d\n",rb->scrline);
+// fprintf(stderr, "Removing iface at %d\n", rb->scrline);
     assert(werase(rb->win) == OK);
     assert(hide_panel(rb->panel) == OK);
-    getmaxyx(stdscr,scrrows,scrcols);
+    getmaxyx(stdscr, scrrows, scrcols);
     if(rb->next){
       rb->next->prev = rb->prev;
     }else{
@@ -7034,7 +7038,7 @@ adapter_free(void *cv){
       if((current_adapter = rb->next) == NULL){
         current_adapter = rb->prev;
       }
-      pull_adapters_up(rb,scrrows,scrcols,delta);
+      pull_adapters_up(rb, scrrows, scrcols, delta);
       // give the details window to new current_iface
       if(details.p){
         if(current_adapter == NULL){
@@ -7043,13 +7047,13 @@ adapter_free(void *cv){
         }
       }
     }else if(rb->scrline > current_adapter->scrline){
-      pull_adapters_up(rb,scrrows,scrcols,delta);
+      pull_adapters_up(rb, scrrows, scrcols, delta);
     }else{ // pull them down; removed is above current_adapter
       int ts;
 
-      pull_adapters_down(rb,scrrows,scrcols,delta);
+      pull_adapters_down(rb, scrrows, scrcols, delta);
       if( (ts = top_space_p(scrrows)) ){
-        pull_adapters_up(NULL,scrrows,scrcols,ts);
+        pull_adapters_up(NULL, scrrows, scrcols, ts);
       }
     }
     free_reelbox(rb);
@@ -7057,11 +7061,11 @@ adapter_free(void *cv){
     as->next->prev = as->prev;
     as->prev->next = as->next;
   }
-  */
   free_adapter_state(as); // clears subentries
   --count_adapters;
   draw_main_window(notcurses_stdplane(NC)); // Update the device count
   unlock_ncurses_growlight();
+  */
 }
 
 static void
