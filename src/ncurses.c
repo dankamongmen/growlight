@@ -99,8 +99,6 @@ struct panel_state {
 };
 
 #define PANEL_STATE_INITIALIZER { .p = NULL, }
-#define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
-#define SUBDISPLAY_INVAL_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR))
 
 static struct panel_state *splash;
 static struct panel_state *active;
@@ -248,7 +246,31 @@ static void
 compat_set_fg(struct ncplane* nc, int pair){
   switch(pair){
     case FORMTEXT_COLOR:
-      ncplane_set_fg_rgb(nc, 97, 214, 214); // FIXME
+      ncplane_set_fg_rgb(nc, 97, 214, 214);
+      break;
+    case SUBDISPLAY_COLOR:
+      ncplane_set_fg_rgb(nc, 204, 204, 204);
+      break;
+    default:
+      assert(false);
+  }
+}
+
+enum {
+  SUBDISPLAY_ATTR,
+  SUBDISPLAY_INVAL_ATTR,
+};
+
+static void
+compat_set_fg_all(struct ncplane* nc, int attr){
+  switch(attr){
+    case SUBDISPLAY_ATTR:
+      ncplane_styles_set(nc, CELL_STYLE_BOLD);
+      compat_set_fg(nc, SUBDISPLAY_COLOR);
+      break;
+    case SUBDISPLAY_INVAL_ATTR:
+      ncplane_styles_set(nc, 0);
+      compat_set_fg(nc, SUBDISPLAY_COLOR);
       break;
     default:
       assert(false);
@@ -351,7 +373,6 @@ setup_colors(void){
     assert(init_pair(DBORDER_COLOR,COLOR_RED,-1) != ERR);
   }
   assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
-  assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
   assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
   if(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
     assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) != ERR);
@@ -1680,6 +1701,7 @@ redraw_adapter(const reelbox *rb){
   print_adapter_devs(as,rows,cols,topp,endp);
   return OK;
 }
+*/
 
 // -------------------------------------------------------------------------
 // -- splash API. splashes are displayed during long operations, especially
@@ -1692,25 +1714,26 @@ struct panel_state *show_splash(const wchar_t *msg){
   if((ps = malloc(sizeof(*ps))) == NULL){
     return NULL;
   }
-  memset(ps,0,sizeof(*ps));
+  memset(ps, 0, sizeof(*ps));
   // FIXME gross, clean all of this up
-  if(new_display_panel(stdscr,ps,3,wcslen(msg) + 4,NULL,NULL,SPLASHBORDER_COLOR)){
+  if(new_display_panel(NC, ps, 3, wcslen(msg) + 4, NULL, NULL, SPLASHBORDER_COLOR)){
     free(ps);
     return NULL;
   }
-  cwattrset(panel_window(ps->p),A_BOLD|COLOR_PAIR(SPLASHTEXT_COLOR));
-  cmvwhline(panel_window(ps->p),1,1,' ',getmaxx(panel_window(ps->p)) - 2);
-  cmvwhline(panel_window(ps->p),2,1,' ',getmaxx(panel_window(ps->p)) - 2);
-  cmvwaddwstr(panel_window(ps->p),2,2,msg);
-  cmvwhline(panel_window(ps->p),3,1,' ',getmaxx(panel_window(ps->p)) - 2);
+  int cols;
+  ncplane_dim_yx(ps->p, NULL, &cols);
+  cwattrset(ps->p, A_BOLD|COLOR_PAIR(SPLASHTEXT_COLOR));
+  cmvwhline(ps->p, 1, 1, " ", cols - 2);
+  cmvwhline(ps->p, 2, 1, " ", cols - 2);
+  cmvwaddwstr(ps->p, 2, 2, msg);
+  cmvwhline(ps->p, 3, 1, " ", cols - 2);
   form_colors();
-  move_panel(ps->p,3,3);
+  ncplane_move_yx(ps->p, 3, 3);
   return splash = ps;
 }
 // -------------------------------------------------------------------------
 // -- end splash API
 // -------------------------------------------------------------------------
-*/
 
 // -------------------------------------------------------------------------
 // -- begin form API
@@ -1997,16 +2020,16 @@ raise_form_explication(const struct ncplane* n, const char* text, int linesz){
   return ps;
 }
 
-/*
-void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
-    struct form_option *opstrs,int ops,int defidx,
-    int selectno,char **selarray,int selections,const char *text,
+void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, int),
+    struct form_option *opstrs, int ops, int defidx,
+    int selectno, char **selarray, int selections, const char *text,
     int scrollidx){
-  size_t longop,longdesc;
+  /*
+  size_t longop, longdesc;
   struct form_state *fs;
-  int cols,rows;
+  int cols, rows;
   WINDOW *fsw;
-  int x,y;
+  int x, y;
 
   assert(ops);
   assert(opstrs);
@@ -2029,7 +2052,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
     cols = wcslen(ESCSTR) + 2;
   }
   rows = (ops > selectno ? ops : selectno) + 4;
-  getmaxyx(stdscr,y,x);
+  getmaxyx(stdscr, y, x);
   if(x < cols){
     locked_diag("Window too thin for form, uh-oh");
     return;
@@ -2041,11 +2064,11 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
       return;
     }
   }
-  if((fs = create_form(str,NULL,FORM_MULTISELECT,scrollidx)) == NULL){
+  if((fs = create_form(str, NULL, FORM_MULTISELECT, scrollidx)) == NULL){
     return;
   }
   fs->mcb = fxn;
-  if((fsw = newwin(rows,cols,FORM_Y_OFFSET,x - cols)) == NULL){
+  if((fsw = newwin(rows, cols, FORM_Y_OFFSET, x - cols)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -2056,7 +2079,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
     free_form(fs);
     return;
   }
-  cwbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
+  cwbkgd(fsw, COLOR_PAIR(BLACK_COLOR));
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
@@ -2064,25 +2087,27 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
-  cwattroff(fsw,A_BOLD);
-  cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw, A_BOLD);
+  cwcolor_set(fsw, FORMBORDER_COLOR, NULL);
   bevel(fsw);
-  cwattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,"%s",fs->boxstr);
-  cmvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
+  cwattron(fsw, A_BOLD);
+  mvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 4, "%s", fs->boxstr);
+  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
-  cwattroff(fsw,A_BOLD);
+  cwattroff(fsw, A_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   fs->selectno = selectno;
   multiform_options(fs);
-  fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
   actform = fs;
   form_colors();
   top_panel(fs->p);
   screen_update();
+  */
 }
 
+/*
 // A collection of checkboxes
 static void
 raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
@@ -2168,20 +2193,22 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
   top_panel(fs->p);
   screen_update();
 }
+*/
 
 // -------------------------------------------------------------------------
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
-void raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
-      int ops,int defidx,const char *text){
-  size_t longop,longdesc;
+void raise_form(const char *str, void (*fxn)(const char *), struct form_option *opstrs,
+      int ops, int defidx, const char *text){
+  /*
+  size_t longop, longdesc;
   struct form_state *fs;
-  int cols,rows;
+  int cols, rows;
   WINDOW *fsw;
-  int x,y;
+  int x, y;
 
   if(opstrs == NULL || !ops){
-    locked_diag("Passed empty %u-option string table",ops);
+    locked_diag("Passed empty %u-option string table", ops);
     return;
   }
   if(actform){
@@ -2199,7 +2226,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
   }
   cols = longdesc + longop + 1;
   rows = ops + 4;
-  getmaxyx(stdscr,y,x);
+  getmaxyx(stdscr, y, x);
   if(x < cols + 4){
     locked_diag("Window too thin for form, uh-oh");
     return;
@@ -2211,10 +2238,10 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
       return;
     }
   }
-  if((fs = create_form(str,fxn,FORM_SELECT,0)) == NULL){
+  if((fs = create_form(str, fxn, FORM_SELECT, 0)) == NULL){
     return;
   }
-  if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,x - cols - 4)) == NULL){
+  if((fsw = newwin(rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -2225,29 +2252,29 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
     free_form(fs);
     return;
   }
-  cwbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
+  cwbkgd(fsw, COLOR_PAIR(BLACK_COLOR));
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
   }
   fs->opcount = ops;
-  cwattroff(fsw,A_BOLD);
-  cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw, A_BOLD);
+  cwcolor_set(fsw, FORMBORDER_COLOR, NULL);
   bevel(fsw);
-  cwattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
-  cmvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
-  cwattroff(fsw,A_BOLD);
+  cwattron(fsw, A_BOLD);
+  mvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
+  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
+  cwattroff(fsw, A_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   form_options(fs);
   actform = fs;
-  fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
   form_colors();
   top_panel(fs->p);
   screen_update();
+  */
 }
-*/
 
 // -------------------------------------------------------------------------
 // - string type form, for generic input
@@ -2270,28 +2297,28 @@ form_string_options(struct form_state *fs){
   ncplane_styles_off(n, CELL_STYLE_BOLD);
 }
 
-/*
-void raise_str_form(const char *str,void (*fxn)(const char *),
-      const char *def,const char *text){
+void raise_str_form(const char *str, void (*fxn)(const char *),
+      const char *def, const char *text){
+  /*
   struct form_state *fs;
   WINDOW *fsw;
   int cols;
-  int x,y;
+  int x, y;
 
   assert(str && fxn);
   if(actform){
     locked_diag("An input dialog is already active");
     return;
   }
-  if((fs = create_form(str,fxn,FORM_STRING_INPUT,0)) == NULL){
+  if((fs = create_form(str, fxn, FORM_STRING_INPUT, 0)) == NULL){
     return;
   }
   fs->longop = strlen(str);
   cols = fs->longop + 40 + 1; // FIXME? 40 for input currently
-  getmaxyx(stdscr,y,x);
+  getmaxyx(stdscr, y, x);
   assert(x >= cols + 3);
   assert(y >= 3);
-  if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET,x - cols - 3)) == NULL){
+  if((fsw = newwin(3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -2303,23 +2330,25 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
     return;
   }
   top_panel(fs->p);
-  cwattroff(fsw,A_BOLD);
-  cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw, A_BOLD);
+  cwcolor_set(fsw, FORMBORDER_COLOR, NULL);
   bevel(fsw);
-  cwattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
-  cmvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
+  cwattron(fsw, A_BOLD);
+  mvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
+  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
   fs->inp.prompt = fs->boxstr;
   def = def ? def : "";
   fs->inp.buffer = strdup(def);
   form_string_options(fs);
   actform = fs;
-  fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
   curs_set(1);
   form_colors();
   screen_update();
+  */
 }
 
+/*
 static const struct form_option common_fsops[] = {
   {
     .option = "ro",
@@ -2595,6 +2624,7 @@ destroy_fs_forms(void){
   free(pending_fstype);
   pending_fstype = NULL;
 }
+*/
 
 void kill_splash(struct panel_state *ps){
   if(splash == ps){
@@ -2612,6 +2642,7 @@ void kill_splash(struct panel_state *ps){
   }
 }
 
+/*
 static int
 fs_do_internal(device *d,const char *fst,const char *name){
   struct panel_state *ps;
@@ -3701,39 +3732,37 @@ max_helpstr_len(const wchar_t **h){
   return max;
 }
 
-/*
 static int
-helpstrs(WINDOW *hw){
+helpstrs(struct ncplane* n){
   const wchar_t *hs;
-  int z,rows,cols;
+  int z, rows, cols;
   int row = 1;
 
-  rows = getmaxy(hw);
-  cols = getmaxx(hw);
-  cwattrset(hw,SUBDISPLAY_ATTR);
+  ncplane_dim_yx(n, &rows, &cols);
+  compat_set_fg_all(n, SUBDISPLAY_ATTR);
   for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
-    cmvwhline(hw,row + z,START_COL,' ',cols - 2);
-    cmvwaddwstr(hw,row + z,START_COL,hs);
+    cmvwhline(n, row + z, START_COL, " ", cols - 2);
+    cmvwaddwstr(n, row + z, START_COL, hs);
   }
   row += z;
   if(!current_adapter || !current_adapter->selected){
-    cwattrset(hw,SUBDISPLAY_INVAL_ATTR);
+    cwattrset(n, SUBDISPLAY_INVAL_ATTR);
   }else{
-    cwattrset(hw,SUBDISPLAY_ATTR);
+    cwattrset(n, SUBDISPLAY_ATTR);
   }
   for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
-    cmvwhline(hw,row + z,START_COL,' ',cols - 2);
-    cmvwaddwstr(hw,row + z,START_COL,hs);
+    cmvwhline(n, row + z, START_COL, " ", cols - 2);
+    cmvwaddwstr(n, row + z, START_COL, hs);
   }
   row += z;
   if(!target_mode_p()){
-    cwattrset(hw,SUBDISPLAY_INVAL_ATTR);
+    compat_set_fg_all(n, SUBDISPLAY_INVAL_ATTR);
   }else{
-    cwattrset(hw,SUBDISPLAY_ATTR);
+    compat_set_fg_all(n, SUBDISPLAY_ATTR);
   }
   for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
-    cmvwhline(hw,row + z,START_COL,' ',cols - 2);
-    cmvwaddwstr(hw,row + z,START_COL,hs);
+    cmvwhline(n, row + z, START_COL, " ", cols - 2);
+    cmvwaddwstr(n, row + z, START_COL, hs);
   }
   return OK;
 }
@@ -3753,7 +3782,6 @@ unlock_ncurses(void){
   pthread_mutex_unlock(&bfl);
   unlock_growlight();
 }  
-*/
 
 // Used in growlight callbacks, since the growlight lock will already be held
 // in any such case.
@@ -4398,22 +4426,20 @@ dump_diags(void){
   return 0;
 }
 
-/*
 static int
 update_diags(struct panel_state *ps){
-  WINDOW *w = panel_window(ps->p);
   logent l[DIAGROWS];
-  int y,x,r;
+  int y, x, r;
 
-  getmaxyx(w,y,x);
-  y = getmaxy(w) - 2;
+  ncplane_dim_yx(ps->p, &y, &x);
+  y -= 2;
   assert(x > 26 + START_COL * 2); // see ctime_r(3)
-  if((y = get_logs(y,l)) < 0){
+  if((y = get_logs(y, l)) < 0){
     return -1;
   }
-  cwattrset(w,SUBDISPLAY_ATTR);
+  compat_set_fg_all(ps->p, SUBDISPLAY_ATTR);
   for(r = 0 ; r < y ; ++r){
-    char *c,tbuf[x];
+    char *c, tbuf[x];
     struct tm tm;
     size_t tb;
     int p;
@@ -4421,26 +4447,26 @@ update_diags(struct panel_state *ps){
     if(l[r].msg == NULL){
       break;
     }
-    if(localtime_r(&l[r].when,&tm) == NULL){
+    if(localtime_r(&l[r].when, &tm) == NULL){
       break;
     }
-    if(strftime(tbuf,sizeof(tbuf),"%F %T",&tm) == 0){
+    if(strftime(tbuf, sizeof(tbuf), "%F %T", &tm) == 0){
       break;;
     }
     tb = sizeof(tbuf) / sizeof(*tbuf) - strlen(tbuf);
-    p = snprintf(tbuf + strlen(tbuf),tb," %-*.*s",
-        (int)tb - 2,(int)tb - 2,l[r].msg);
+    p = snprintf(tbuf + strlen(tbuf), tb, " %-*.*s",
+        (int)tb - 2, (int)tb - 2, l[r].msg);
     if(p < 0 || (unsigned)p >= tb){
       tbuf[sizeof(tbuf) / sizeof(*tbuf) - 1] = '\0';
     }
-    if( (c = strchr(tbuf,'\n')) ){
+    if( (c = strchr(tbuf, '\n')) ){
       *c = '\0';
     }
     c = tbuf;
-    while((c = strchr(tbuf,'\b')) || (c = strchr(tbuf,'\t'))){
+    while((c = strchr(tbuf, '\b')) || (c = strchr(tbuf, '\t'))){
       *c = ' ';
     }
-    mvwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf);
+    cmvwprintw(ps->p, y - r, START_COL, "%-*.*s", x - 2, x - 2, tbuf);
     free(l[r].msg);
   }
   return 0;
@@ -4473,10 +4499,10 @@ err:
 static const int DETAILROWS = 7; // FIXME make it dynamic based on selections
 
 static int
-display_details(WINDOW *mainw,struct panel_state *ps){
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details"
-        ,NULL,PBORDER_COLOR)){
+display_details(WINDOW *mainw, struct panel_state *ps){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, DETAILROWS, 78, L"press 'v' to dismiss details"
+        , NULL, PBORDER_COLOR)){
     goto err;
   }
   if(current_adapter){
@@ -4488,16 +4514,11 @@ display_details(WINDOW *mainw,struct panel_state *ps){
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
+  memset(ps, 0, sizeof(*ps));
   return ERR;
 }
-*/
 
 static int
 display_help(struct notcurses* nc, struct panel_state* ps){
@@ -6645,6 +6666,7 @@ create_adapter_state(controller *a){
   }
   return as;
 }
+*/
 
 static void
 free_adapter_state(adapterstate *as){
@@ -6658,7 +6680,6 @@ free_adapter_state(adapterstate *as){
     free(as);
   }
 }
-*/
 
 static void *
 adapter_callback(controller *a, void *state){
