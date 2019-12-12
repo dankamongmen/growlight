@@ -203,6 +203,8 @@ enum {
   DBORDER_COLOR,      // Block bar borders
   PBORDER_COLOR,
   PHEADING_COLOR,
+
+  //10
   SUBDISPLAY_COLOR,
   OPTICAL_COLOR,
   ROTATE_COLOR,
@@ -213,6 +215,8 @@ enum {
   METADATA_COLOR,      // Partition table metadata
   MDADM_COLOR,
   ZPOOL_COLOR,
+
+  // 20
   PART_COLOR0,      // A defined but unused partition
   PART_COLOR1,
   PART_COLOR2,
@@ -223,6 +227,8 @@ enum {
   SELECTED_COLOR,      // Selected options in multiform
   MOUNT_COLOR0,      // Mounted, untargeted filesystems
   MOUNT_COLOR1,
+
+  //30
   MOUNT_COLOR2,
   MOUNT_COLOR3,
   TARGET_COLOR0,      // Targeted filesystems
@@ -248,6 +254,15 @@ compat_set_fg(struct ncplane* nc, int pair){
       break;
     case SUBDISPLAY_COLOR:
       ncplane_set_fg_rgb(nc, 204, 204, 204);
+      break;
+    case PHEADING_COLOR:
+      ncplane_set_fg_rgb(nc, 197, 15, 31);
+      break;
+    case SPLASHBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 95, 95, 215);
+      break;
+    case PBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 215, 255, 0);
       break;
     default:
       assert(false);
@@ -735,12 +750,6 @@ bevel(struct ncplane *nc){
 }
 
 static int
-cwcolor_set(struct ncplane* n, int color, void* vnull __attribute__ ((unused))){
-  ncplane_set_fg_rgb(n, color, color, color); // FIXME
-  return 0;
-}
-
-static int
 cwattrset(struct ncplane* n, int style){
   // FIXME handle the color part also
   ncplane_styles_set(n, style >> 16);
@@ -794,6 +803,7 @@ cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   if(cell_load(nc, &c, ch) < 0){
     return -1;
   }
+  c.channels = ncplane_get_channels(nc);
   if(ncplane_hline(nc, &c, n) != n){
     cell_release(nc, &c);
     return -1;
@@ -824,10 +834,10 @@ cwprintw(struct ncplane* n, const char* fmt, ...){
 }
 
 static int
-cwbkgd(struct ncplane* nc, int c){
+cwbkgd(struct ncplane* nc){
   cell cl = CELL_TRIVIAL_INITIALIZER;
   cell_load(nc, &cl, " ");
-  cell_set_fg(&cl, c, c, c); // FIXME map color
+  cell_set_fg(&cl, 0, 0, 0);
   ncplane_set_background(nc, &cl);
   cell_release(nc, &cl);
   return 0;
@@ -1008,10 +1018,10 @@ new_display_panel(struct ncplane* nc, struct panel_state *ps,
     return ERR;
   }
   cwattron(ps->p, A_BOLD);
-  cwcolor_set(ps->p, borderpair, NULL);
+  compat_set_fg(ps->p, borderpair);
   bevel(ps->p);
   cwattroff(ps->p, A_BOLD);
-  cwcolor_set(ps->p, PHEADING_COLOR, NULL);
+  compat_set_fg(ps->p, PHEADING_COLOR);
   if(hstr){
     cmvwaddwstr(ps->p, 0, START_COL * 2, hstr);
   }
@@ -1618,7 +1628,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
       assert(cwattroff(w,A_BOLD) == OK);
     }
     assert(mvwprintw(w,0,7,"%ls",L"[") != ERR);
-    assert(cwcolor_set(w,hcolor,NULL) == OK);
+    assert(compat_set_fg(w,hcolor) == OK);
     assert(waddstr(w,as->c->ident) != ERR);
     if(as->c->numa_node >= 0){
       assert(cwprintw(w," [%d]",as->c->numa_node) != ERR);
@@ -1640,7 +1650,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 
       cwprintw(w," (%sbps demanded)",qprefix(as->c->demand,1,dbuf,1));
     }
-    assert(cwcolor_set(w,bcolor,NULL) != ERR);
+    assert(compat_set_fg(w,bcolor) != ERR);
     assert(cwprintw(w,"]") != ERR);
     assert(cwattron(w,A_BOLD) == OK);
     assert(wmove(w,0,cols - 5) != ERR);
@@ -1649,14 +1659,14 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
   }
   if(belowend == 0){
     if(as->c->bus == BUS_PCIe){
-      assert(cwcolor_set(w,bcolor,NULL) != ERR);
+      assert(compat_set_fg(w,bcolor) != ERR);
       if(current){
         assert(cwattron(w,A_BOLD) == OK);
       }else{
         assert(cwattroff(w,A_BOLD) == OK);
       }
       assert(mvwprintw(w,rows - 1,6,"[") != ERR);
-      assert(cwcolor_set(w,hcolor,NULL) != ERR);
+      assert(compat_set_fg(w,hcolor) != ERR);
       if(as->c->pcie.lanes_neg == 0){
         cwprintw(w,"Southbridge device %04x:%02x.%02x.%x",
           as->c->pcie.domain,as->c->pcie.bus,
@@ -1667,7 +1677,7 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
             as->c->pcie.dev,as->c->pcie.func,
             as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
       }
-      assert(cwcolor_set(w,bcolor,NULL) != ERR);
+      assert(compat_set_fg(w,bcolor) != ERR);
       assert(cwprintw(w,"]") != ERR);
     }
   }
@@ -1848,7 +1858,7 @@ multiform_options(struct form_state *fs){
     assert(op >= 0);
     assert(op < fs->opcount);
     cwattroff(fsw, A_BOLD);
-    cwcolor_set(fsw, FORMBORDER_COLOR, NULL);
+    compat_set_fg(fsw, FORMBORDER_COLOR);
     if(fs->selectno >= z){
       mvwprintw(fsw, z + 1, START_COL * 2, "%d", z);
     }else if(fs->selections >= z){
@@ -1856,16 +1866,16 @@ multiform_options(struct form_state *fs){
     }
     if(z < fs->opcount + 1){
       cwattron(fsw, A_BOLD);
-      cwcolor_set(fsw, FORMTEXT_COLOR, NULL);
+      compat_set_fg(fsw, FORMTEXT_COLOR);
       mvwprintw(fsw, z + 1, START_COL * 2 + fs->longop + 4, "%-*.*s ",
         fs->longop, fs->longop, opstrs[op].option);
       if(op == fs->idx){
         cwattron(fsw, A_REVERSE);
       }
-      cwcolor_set(fsw, INPUT_COLOR, NULL);
+      compat_set_fg(fsw, INPUT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
         if(strcmp(opstrs[op].option, fs->selarray[selidx]) == 0){
-          cwcolor_set(fsw, SELECTED_COLOR, NULL);
+          compat_set_fg(fsw, SELECTED_COLOR);
           break;
         }
       }
@@ -1901,12 +1911,12 @@ check_options(struct form_state *fs){
     assert(op >= 0);
     assert(op < fs->opcount);
     cwattroff(fsw,A_BOLD);
-    cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
+    compat_set_fg(fsw,FORMBORDER_COLOR);
     if(z < fs->opcount + 1){
       wchar_t ballot = L'☐';
 
       cwattron(fsw,A_BOLD);
-      cwcolor_set(fsw,FORMTEXT_COLOR,NULL);
+      compat_set_fg(fsw,FORMTEXT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
         if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
           ballot = L'☒';
@@ -1916,7 +1926,7 @@ check_options(struct form_state *fs){
       if(op == fs->idx){
         cwattron(fsw,A_REVERSE);
       }else{
-        cwcolor_set(fsw,INPUT_COLOR,NULL);
+        compat_set_fg(fsw,INPUT_COLOR);
       }
       mvwprintw(fsw,z + 1,START_COL * 2,"%lc %-*.*s ",
         ballot,fs->longop,fs->longop,opstrs[op].option);
@@ -1945,13 +1955,13 @@ form_options(struct form_state *fs){
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    cwcolor_set(fsw,FORMTEXT_COLOR,NULL);
+    compat_set_fg(fsw,FORMTEXT_COLOR);
     mvwprintw(fsw,z + 1,START_COL * 2,"%-*.*s ",
       fs->longop,fs->longop,opstrs[op].option);
     if(op == fs->idx){
       cwattron(fsw,A_REVERSE);
     }
-    cwcolor_set(fsw,INPUT_COLOR,NULL);
+    compat_set_fg(fsw,INPUT_COLOR);
     cwprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 4,
       cols - fs->longop - 1 - START_COL * 4,opstrs[op].desc);
     cwattroff(fsw,A_REVERSE);
@@ -2011,7 +2021,7 @@ raise_form_explication(const struct ncplane* n, const char* text, int linesz){
   ncplane_dim_yx(n, NULL, &ncols);
   ps->p = notcurses_newplane(NC, y + 3, cols, linesz - (y + 2), ncols - cols, NULL);
   assert(ps->p);
-  cwbkgd(ps->p, COLOR_PAIR(BLACK_COLOR));
+  cwbkgd(ps->p);
   cwattrset(ps->p, COLOR_PAIR(FORMBORDER_COLOR));
   bevel(ps->p);
   compat_set_fg(ps->p, FORMTEXT_COLOR);
@@ -2081,7 +2091,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
     free_form(fs);
     return;
   }
-  cwbkgd(fsw, COLOR_PAIR(BLACK_COLOR));
+  cwbkgd(fsw);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
@@ -2090,7 +2100,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   fs->selarray = selarray;
   fs->selections = selections;
   cwattroff(fsw, A_BOLD);
-  cwcolor_set(fsw, FORMBORDER_COLOR, NULL);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   bevel(fsw);
   cwattron(fsw, A_BOLD);
   mvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 4, "%s", fs->boxstr);
@@ -2170,7 +2180,7 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
     free_form(fs);
     return;
   }
-  cwbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
+  cwbkgd(fsw);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
@@ -2179,7 +2189,7 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
   fs->selarray = selarray;
   fs->selections = selections;
   cwattroff(fsw,A_BOLD);
-  cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  compat_set_fg(fsw,FORMBORDER_COLOR);
   bevel(fsw);
   cwattron(fsw,A_BOLD);
   mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 2,"%s",fs->boxstr);
@@ -2254,14 +2264,14 @@ void raise_form(const char *str, void (*fxn)(const char *), struct form_option *
     free_form(fs);
     return;
   }
-  cwbkgd(fsw, COLOR_PAIR(BLACK_COLOR));
+  cwbkgd(fsw);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
   }
   fs->opcount = ops;
   cwattroff(fsw, A_BOLD);
-  cwcolor_set(fsw, FORMBORDER_COLOR, NULL);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   bevel(fsw);
   cwattron(fsw, A_BOLD);
   mvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
@@ -2294,7 +2304,7 @@ form_string_options(struct form_state *fs){
   compat_set_fg(n, FORMTEXT_COLOR);
   cmvwhline(n, 1, 1, " ", cols - 2);
   cmvwprintw(n, 1, START_COL, "%-*.*s: ", fs->longop, fs->longop, fs->inp.prompt);
-  cwcolor_set(n, INPUT_COLOR, NULL);
+  compat_set_fg(n, INPUT_COLOR);
   cwprintw(n, "%.*s", cols - fs->longop - 2 - 2, fs->inp.buffer);
   ncplane_styles_off(n, CELL_STYLE_BOLD);
 }
@@ -2333,7 +2343,7 @@ void raise_str_form(const char *str, void (*fxn)(const char *),
   }
   top_panel(fs->p);
   cwattroff(fsw, A_BOLD);
-  cwcolor_set(fsw, FORMBORDER_COLOR, NULL);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   bevel(fsw);
   cwattron(fsw, A_BOLD);
   mvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
@@ -7126,7 +7136,7 @@ static void raise_info_form(const char *str, const char *text){
     return;
   }
   cwattroff(fs->p, A_BOLD);
-  cwcolor_set(fs->p, FORMBORDER_COLOR, NULL);
+  compat_set_fg(fs->p, FORMBORDER_COLOR);
   bevel(fs->p);
   cwattron(fs->p, A_BOLD);
   cmvwprintw(fs->p, 1, START_COL, "%-*.*s", cols, cols, str);
@@ -7178,8 +7188,7 @@ int main(int argc, char * const *argv){
   }
   notcurses_options opts;
   memset(&opts, 0, sizeof(opts));
-  opts.outfp = stdout;
-  if((NC = notcurses_init(&opts)) == NULL){
+  if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
   ps = show_splash(L"Initializing...");
