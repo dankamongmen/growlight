@@ -7155,7 +7155,6 @@ int main(int argc, char * const *argv){
     .block_free = block_free,
   };
   struct panel_state *ps;
-  struct notcurses* nc;
   int showhelp = 1;
 
   if(setlocale(LC_ALL, "") == NULL){
@@ -7165,20 +7164,20 @@ int main(int argc, char * const *argv){
   notcurses_options opts;
   memset(&opts, 0, sizeof(opts));
   opts.outfp = stdout;
-  if((nc = notcurses_init(&opts)) == NULL){
+  if((NC = notcurses_init(&opts)) == NULL){
     return EXIT_FAILURE;
   }
   ps = show_splash(L"Initializing...");
   if(growlight_init(argc, argv, &ui, &showhelp)){
     kill_splash(ps);
-    notcurses_stop(nc);
+    notcurses_stop(NC);
     dump_diags();
     return EXIT_FAILURE;
   }
   lock_growlight();
   kill_splash(ps);
   if(showhelp){
-    toggle_panel(nc, &help, display_help);
+    toggle_panel(NC, &help, display_help);
     screen_update();
   }
   unlock_growlight();
