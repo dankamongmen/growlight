@@ -25,7 +25,6 @@
 
 #define KEY_ESC 27
 
-/*
 static void shutdown_cycle(void) __attribute__ ((noreturn));
 
 void locked_diag(const char *fmt,...) __attribute__ ((format (printf,1,2)));
@@ -90,7 +89,6 @@ static const char FSTYPE_TEXT[] =
 "version 3.5, ext4 is the default Linux filesystem, but Windows and OS X do "
 "not natively support it. I recommend use of EXT4 or FAT16 for root and ZFS "
 "(in a redundant configuration) for other filesystems.";
-*/
 
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
@@ -563,7 +561,6 @@ static reelbox *current_adapter/*,*top_reelbox,*last_reelbox*/;
 #define START_COL 1    // Room to leave for borders
 #define PAD_COLS(cols) ((cols))
 
-/*
 static blockobj *
 get_selected_blockobj(void){
   reelbox *rb;
@@ -574,6 +571,7 @@ get_selected_blockobj(void){
   return rb->selected;
 }
 
+/*
 static inline int
 blockobj_unloadedp(const blockobj *bo){
   return bo && ((bo->d->layout == LAYOUT_NONE && bo->d->blkdev.unloaded)
@@ -614,12 +612,14 @@ static inline int
 blockobj_partitionp(const blockobj *bo){
   return bo && bo->zone && bo->zone->p;
 }
+*/
 
 static inline int
 selected_partitionp(void){
   return blockobj_partitionp(get_selected_blockobj());
 }
 
+/*
 static inline device *
 selected_filesystem(void){
   blockobj *bo;
@@ -978,7 +978,7 @@ bottom_space_p(int rows){
 // Only one can currently be active at a time. Window decoration and placement
 // is managed here; only the rows needed for display ought be provided.
 static int
-new_display_panel(struct notcurses* nc, struct panel_state *ps,
+new_display_panel(struct ncplane* nc, struct panel_state *ps,
                   int rows, int cols, const wchar_t *hstr,
                   const wchar_t *bstr, int borderpair){
   const int crightlen = bstr ? wcslen(bstr) : 0;
@@ -988,7 +988,7 @@ new_display_panel(struct notcurses* nc, struct panel_state *ps,
   // Desired space above and below, which will be impugned upon as needed
   ybelow = 3;
   yabove = 5;
-  notcurses_term_dim_yx(nc, &y, &x);
+  ncplane_dim_yx(nc, &y, &x);
   if(cols == 0){
     cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
   }else{
@@ -1003,7 +1003,7 @@ new_display_panel(struct notcurses* nc, struct panel_state *ps,
   }else{
     yabove += y - (rows + ybelow + yabove);
   }
-  if((ps->p = notcurses_newplane(nc, rows + 2, cols, yabove, 0, NULL)) == NULL){
+  if((ps->p = notcurses_newplane(NC, rows + 2, cols, yabove, 0, NULL)) == NULL){
     locked_diag("Couldn't create subpanel, uh-oh");
     return ERR;
   }
@@ -1716,7 +1716,8 @@ struct panel_state *show_splash(const wchar_t *msg){
   }
   memset(ps, 0, sizeof(*ps));
   // FIXME gross, clean all of this up
-  if(new_display_panel(NC, ps, 3, wcslen(msg) + 4, NULL, NULL, SPLASHBORDER_COLOR)){
+  if(new_display_panel(notcurses_stdplane(NC), ps, 3, wcslen(msg) + 4, NULL,
+                       NULL, SPLASHBORDER_COLOR)){
     free(ps);
     return NULL;
   }
@@ -1820,7 +1821,6 @@ free_form(struct form_state *fs){
   }
 }
 
-/*
 static void
 multiform_options(struct form_state *fs){
   static const cchar_t bchr[] = {
@@ -1831,59 +1831,60 @@ multiform_options(struct form_state *fs){
     { .attr = 0, .chars = L"│", },
   };
   const struct form_option *opstrs = fs->ops;
-  WINDOW *fsw = panel_window(fs->p);
-  int z,cols,selidx,maxz;
+  struct ncplane* fsw = fs->p;
+  int z, cols, selidx, maxz;
 
   assert(fs->formtype == FORM_MULTISELECT);
-  cols = getmaxx(fsw);
-  cwattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-  cwattron(fsw,A_BOLD);
-  mvwadd_wch(fsw,1,1,&bchr[2]);
-  mvwadd_wch(fsw,1,fs->longop + 4,&bchr[0]);
-  maxz = getmaxy(fsw) - 3;
+  ncplane_dim_yx(fsw, &maxz, &cols);
+  cwattrset(fsw, COLOR_PAIR(FORMBORDER_COLOR));
+  cwattron(fsw, A_BOLD);
+  mvwadd_wch(fsw, 1, 1, &bchr[2]);
+  mvwadd_wch(fsw, 1, fs->longop + 4, &bchr[0]);
+  maxz -= 3;
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    cwattroff(fsw,A_BOLD);
-    cwcolor_set(fsw,FORMBORDER_COLOR,NULL);
+    cwattroff(fsw, A_BOLD);
+    cwcolor_set(fsw, FORMBORDER_COLOR, NULL);
     if(fs->selectno >= z){
-      mvwprintw(fsw,z + 1,START_COL * 2,"%d",z);
+      mvwprintw(fsw, z + 1, START_COL * 2, "%d", z);
     }else if(fs->selections >= z){
-      mvwprintw(fsw,z + 2,START_COL * 2,"%d",z);
+      mvwprintw(fsw, z + 2, START_COL * 2, "%d", z);
     }
     if(z < fs->opcount + 1){
-      cwattron(fsw,A_BOLD);
-      cwcolor_set(fsw,FORMTEXT_COLOR,NULL);
-      mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
-        fs->longop,fs->longop,opstrs[op].option);
+      cwattron(fsw, A_BOLD);
+      cwcolor_set(fsw, FORMTEXT_COLOR, NULL);
+      mvwprintw(fsw, z + 1, START_COL * 2 + fs->longop + 4, "%-*.*s ",
+        fs->longop, fs->longop, opstrs[op].option);
       if(op == fs->idx){
-        cwattron(fsw,A_REVERSE);
+        cwattron(fsw, A_REVERSE);
       }
-      cwcolor_set(fsw,INPUT_COLOR,NULL);
+      cwcolor_set(fsw, INPUT_COLOR, NULL);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
-        if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
-          cwcolor_set(fsw,SELECTED_COLOR,NULL);
+        if(strcmp(opstrs[op].option, fs->selarray[selidx]) == 0){
+          cwcolor_set(fsw, SELECTED_COLOR, NULL);
           break;
         }
       }
-      cwprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 9,
-        cols - fs->longop * 2 - 9,opstrs[op].desc);
-      cwattroff(fsw,A_REVERSE);
+      cwprintw(fsw, "%-*.*s", cols - fs->longop * 2 - 9,
+        cols - fs->longop * 2 - 9, opstrs[op].desc);
+      cwattroff(fsw, A_REVERSE);
     }
   }
-  cwattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-  cwattron(fsw,A_BOLD);
+  cwattrset(fsw, COLOR_PAIR(FORMBORDER_COLOR));
+  cwattron(fsw, A_BOLD);
   for(z = 0 ; z < fs->selections ; ++z){
-    cmvwaddstr(fsw,z >= fs->selectno ? 3 + z : 2 + z,4,fs->selarray[z]);
+    cmvwaddstr(fsw, z >= fs->selectno ? 3 + z : 2 + z, 4, fs->selarray[z]);
   }
-  mvwadd_wch(fsw,fs->selectno + 2,1,&bchr[3]);
-  mvwadd_wch(fsw,fs->selectno + 2,fs->longop + 4,&bchr[1]);
+  mvwadd_wch(fsw, fs->selectno + 2, 1, &bchr[3]);
+  mvwadd_wch(fsw, fs->selectno + 2, fs->longop + 4, &bchr[1]);
 }
 
 static void
 check_options(struct form_state *fs){
+  /*
   const struct form_option *opstrs = fs->ops;
   WINDOW *fsw = panel_window(fs->p);
   int z,cols,selidx,maxz;
@@ -1924,6 +1925,7 @@ check_options(struct form_state *fs){
     }
   }
   cwattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+  */
 }
 
 static void
@@ -1954,7 +1956,6 @@ form_options(struct form_state *fs){
     cwattroff(fsw,A_REVERSE);
   }
 }
-*/
 
 #define FORM_Y_OFFSET 5
 
@@ -2348,7 +2349,6 @@ void raise_str_form(const char *str, void (*fxn)(const char *),
   */
 }
 
-/*
 static const struct form_option common_fsops[] = {
   {
     .option = "ro",
@@ -2393,8 +2393,8 @@ static const struct form_option common_fsops[] = {
 };
 
 static struct form_option *
-ops_table(int *count,const char *match,int *defidx,char ***selarray,int *selections,
-    const struct form_option *flags,unsigned fcount){
+ops_table(int *count, const char *match, int *defidx, char ***selarray, int *selections,
+    const struct form_option *flags, unsigned fcount){
   struct form_option *fo = NULL;
   int z = 0;
 
@@ -2416,16 +2416,16 @@ ops_table(int *count,const char *match,int *defidx,char ***selarray,int *selecti
       free(fo[z].desc);
       goto err;
     }
-    if(match && strcmp(match,fo[z].option) == 0){
+    if(match && strcmp(match, fo[z].option) == 0){
       int zz;
 
       *defidx = z;
       for(zz = 0 ; selections && zz < *selections ; ++zz){
-        if(strcmp(key,(*selarray)[zz]) == 0){
+        if(strcmp(key, (*selarray)[zz]) == 0){
           free((*selarray)[zz]);
           (*selarray)[zz] = NULL;
           if(zz < *selections - 1){
-            memmove(&(*selarray)[zz],&(*selarray)[zz + 1],sizeof(**selarray) * (*selections - 1 - zz));
+            memmove(&(*selarray)[zz], &(*selarray)[zz + 1], sizeof(**selarray) * (*selections - 1 - zz));
           }
           --*selections;
           zz = -1;
@@ -2435,7 +2435,7 @@ ops_table(int *count,const char *match,int *defidx,char ***selarray,int *selecti
       if(zz >= *selections){
         typeof(*selarray) tmp;
 
-        if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+        if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
           free(fo[zz].option);
           free(fo[zz].desc);
           goto err;
@@ -2462,9 +2462,9 @@ err:
 static char forming_targ[PATH_MAX + 1];
 
 static void
-mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
+mountop_callback(const char *op, char **selarray, int selections, int scrollidx){
   struct form_option *ops_agg;
-  int opcount,defidx;
+  int opcount, defidx;
   blockobj *b;
 
   if(op == NULL){
@@ -2480,22 +2480,22 @@ mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
-  if(strcmp(op,"") == 0){
+  if(strcmp(op, "") == 0){
     unsigned mntos = 0;
 
     while(selections--){
       mntos |= flag_for_mountop(selarray[selections]);
     }
     if(blockobj_unpartitionedp(b)){
-      mmount(b->d,forming_targ,mntos,NULL);
+      mmount(b->d, forming_targ, mntos, NULL);
       redraw_adapter(current_adapter);
     }else if(blockobj_emptyp(b)){
-      locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+      locked_diag("%s is not a partition, aborting.\n", b->zone->p->name);
     }else{
-      mmount(b->zone->p,forming_targ,mntos,NULL);
+      mmount(b->zone->p, forming_targ, mntos, NULL);
       redraw_adapter(current_adapter);
     }
     return;
@@ -2503,13 +2503,13 @@ mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
   ops_agg = NULL;
   opcount = 0;
   defidx = 1;
-  if((ops_agg = ops_table(&opcount,op,&defidx,&selarray,&selections,
-      common_fsops,sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
+  if((ops_agg = ops_table(&opcount, op, &defidx, &selarray, &selections,
+      common_fsops, sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
     // FIXME free
     return;
   }
-  raise_checkform("set mount options",mountop_callback,ops_agg,
-    opcount,defidx,selarray,selections,MOUNTOPS_TEXT,scrollidx);
+  raise_checkform("set mount options", mountop_callback, ops_agg,
+    opcount, defidx, selarray, selections, MOUNTOPS_TEXT, scrollidx);
 }
 
 // -------------------------------------------------------------------------
@@ -2529,8 +2529,8 @@ targpoint_callback(const char *path){
     locked_diag("No target is set");
     return;
   }
-  if((unsigned)snprintf(forming_targ,sizeof(forming_targ),"%s%s",growlight_target,path) >= sizeof(forming_targ)){
-    locked_diag("Bad mountpoint: %s",path);
+  if((unsigned)snprintf(forming_targ, sizeof(forming_targ), "%s%s", growlight_target, path) >= sizeof(forming_targ)){
+    locked_diag("Bad mountpoint: %s", path);
     return;
   }
   if((b = get_selected_blockobj()) == NULL){
@@ -2538,30 +2538,31 @@ targpoint_callback(const char *path){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(blockobj_emptyp(b)){
-    locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+    locked_diag("%s is not a partition, aborting.\n", b->zone->p->name);
     return;
   }else{
-    int opcount = 0,defidx = 0;
+    int opcount = 0, defidx = 0;
     ops_agg = NULL;
     char **selarray = NULL;
     int selections = 0;
 
-    if((ops_agg = ops_table(&opcount,NULL,&defidx,&selarray,&selections,
-        common_fsops,sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
+    if((ops_agg = ops_table(&opcount, NULL, &defidx, &selarray, &selections,
+        common_fsops, sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
       // FIXME free
       return;
     }
-    raise_checkform("set mount options",mountop_callback,ops_agg,
-      opcount,defidx,selarray,selections,MOUNTOPS_TEXT,scrollidx);
+    raise_checkform("set mount options", mountop_callback, ops_agg,
+      opcount, defidx, selarray, selections, MOUNTOPS_TEXT, scrollidx);
     return;
   }
   locked_diag("I'm confused. Aborting.\n");
 }
 
+/*
 // -------------------------------------------------------------------------
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
@@ -2614,6 +2615,7 @@ err:
   *count = 0;
   return NULL;
 }
+*/
 
 static char *pending_fstype;
 
@@ -2624,7 +2626,6 @@ destroy_fs_forms(void){
   free(pending_fstype);
   pending_fstype = NULL;
 }
-*/
 
 void kill_splash(struct panel_state *ps){
   if(splash == ps){
@@ -2688,19 +2689,20 @@ fs_do(const char *name){
   redraw_adapter(current_adapter);
   destroy_fs_forms();
 }
+*/
 
 static void
 fs_named_callback(const char *name){
   if(name == NULL){
     struct form_option *ops_fs;
-    int opcount,defidx;
+    int opcount, defidx;
 
-    if((ops_fs = fs_table(&opcount,pending_fstype,&defidx)) == NULL){
+    if((ops_fs = fs_table(&opcount, pending_fstype, &defidx)) == NULL){
       destroy_fs_forms();
       return;
     }
-    raise_form("select a filesystem type",fs_callback,ops_fs,
-        opcount,defidx,FSTYPE_TEXT);
+    raise_form("select a filesystem type", fs_callback, ops_fs,
+        opcount, defidx, FSTYPE_TEXT);
     return;
   }
   fs_do(name);
@@ -2723,9 +2725,10 @@ fs_callback(const char *fs){
     return;
   }
   // FIXME come up with a good default
-  raise_str_form("enter filesystem name",fs_named_callback,NULL,FSNAME_TEXT);
+  raise_str_form("enter filesystem name", fs_named_callback, NULL, FSNAME_TEXT);
 }
 
+/*
 // -------------------------------------------------------------------------
 // -- end filesystem type form
 // -------------------------------------------------------------------------
@@ -3138,6 +3141,7 @@ partition_table_makeablep(const blockobj *b){
   }
   return 1;
 }
+*/
 
 static void
 pttype_callback(const char *pttype){
@@ -3183,6 +3187,7 @@ confirm_operation(const char *op,void (*confirmcb)(const char *)){
 // -- end form API
 // -------------------------------------------------------------------------
 
+/*
 static WINDOW *
 ncurses_setup(void){
   const char *errstr = NULL;
@@ -3460,11 +3465,13 @@ detail_fs(WINDOW *hw,const device *d,int row){
     cwattron(hw,A_BOLD);
   }
 }
+*/
 
 // One must not call diag() from any function called by update_details(), or
 // else you will get one of a deadlock or a stack overflow due to corecursion.
 static int
-update_details(WINDOW *hw){
+update_details(struct ncplane* hw){
+  /*
   const controller *c = get_current_adapter();
   char buf[BPREFIXSTRLEN + 1];
   const char *pttype;
@@ -3676,9 +3683,9 @@ update_details(WINDOW *hw){
           "partition table metadata" : "unpartitioned space");
     }
   }
+*/
   return 0;
 }
-*/
 
 // When this text is being displayed, the help window is the active window.
 // Thus we refer to other window commands as "viewing", while 'H' here is
@@ -4473,10 +4480,11 @@ update_diags(struct panel_state *ps){
 }
 
 static int
-display_diags(WINDOW *mainw,struct panel_state *ps){
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics"
-        ,NULL,PBORDER_COLOR)){
+display_diags(struct ncplane* mainw, struct panel_state* ps){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, DIAGROWS, 0,
+                       L"press 'D' to dismiss diagnostics", NULL,
+                       PBORDER_COLOR)){
     goto err;
   }
   if(update_diags(ps)){
@@ -4486,23 +4494,20 @@ display_diags(WINDOW *mainw,struct panel_state *ps){
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
+  memset(ps, 0, sizeof(*ps));
   return ERR;
 }
 
 static const int DETAILROWS = 7; // FIXME make it dynamic based on selections
 
 static int
-display_details(WINDOW *mainw, struct panel_state *ps){
+display_details(struct ncplane* mainw, struct panel_state* ps){
   memset(ps, 0, sizeof(*ps));
-  if(new_display_panel(mainw, ps, DETAILROWS, 78, L"press 'v' to dismiss details"
-        , NULL, PBORDER_COLOR)){
+  if(new_display_panel(mainw, ps, DETAILROWS, 78,
+                       L"press 'v' to dismiss details",
+                       NULL, PBORDER_COLOR)){
     goto err;
   }
   if(current_adapter){
@@ -4521,7 +4526,7 @@ err:
 }
 
 static int
-display_help(struct notcurses* nc, struct panel_state* ps){
+display_help(struct ncplane* nc, struct panel_state* ps){
   static const int helprows = sizeof(helps) / sizeof(*helps) - 1 +
     sizeof(helps_block) / sizeof(*helps_block) - 1 +
     sizeof(helps_target) / sizeof(*helps_target) - 1; // NULL != row
@@ -4555,49 +4560,49 @@ err:
   return ERR;
 }
 
-/*
 #define ENVROWS 10
 #define COLORSPERROW 32
 
 static int
-env_details(WINDOW *hw,int rows){
+env_details(struct ncplane *hw, int rows){
+  /*
   const int col = START_COL;
   const int row = 1;
-  int z,srows,scols,cols;
+  int z, srows, scols, cols;
 
-  cwattrset(hw,SUBDISPLAY_ATTR);
-  getmaxyx(stdscr,srows,scols);
+  cwattrset(hw, SUBDISPLAY_ATTR);
+  notcurses_term_dim_yx(NC, &srows, &cols);
   if((z = rows) >= ENVROWS){
     z = ENVROWS - 1;
   }
-  cols = getmaxx(hw);
+  ncplane_dim_yx(hw, NULL, &cols);
   switch(z){ // Intentional fallthroughs all the way to 0
   case (ENVROWS - 1):{
     while(z > 1){
-      int c0,c1;
+      int c0, c1;
 
-      cmvwhline(hw,row + z,1,' ',cols - 2);
+      cmvwhline(hw, row + z, 1, ' ', cols - 2);
       c0 = (z - 2) * COLORSPERROW;
       c1 = c0 + (COLORSPERROW - 1);
-      mvwprintw(hw,row + z,col,"0x%02x%lc0x%02x: ",c0,L'–',c1);
+      mvwprintw(hw, row + z, col, "0x%02x%lc0x%02x: ", c0, L'–', c1);
       while(c0 <= c1){
         if(c0 < COLORS){
-          cwattrset(hw,COLOR_PAIR(c0));
-          cwprintw(hw,"X");
+          cwattrset(hw, COLOR_PAIR(c0));
+          cwprintw(hw, "X");
         }else{
-          cwattrset(hw,SUBDISPLAY_ATTR);
-          cwprintw(hw," ");
+          cwattrset(hw, SUBDISPLAY_ATTR);
+          cwprintw(hw, " ");
         }
         ++c0;
       }
       --z;
-      cwattrset(hw,SUBDISPLAY_ATTR);
+      cwattrset(hw, SUBDISPLAY_ATTR);
     }
   } // intentional fallthrough
   case 1:{
-    cmvwhline(hw,row + z,1,' ',cols - 2);
-    mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
-        COLORS,COLOR_PAIRS,srows,scols,
+    cmvwhline(hw, row + z, 1, ' ', cols - 2);
+    mvwprintw(hw, row + z, col, "Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
+        COLORS, COLOR_PAIRS, srows, scols,
         can_change_color() ? "dynamic" : "fixed");
     --z;
   } // intentional fallthrough
@@ -4605,18 +4610,20 @@ env_details(WINDOW *hw,int rows){
     const char *lang = getenv("LANG");
     const char *term = getenv("TERM");
 
-    cmvwhline(hw,row + z,1,' ',cols - 2);
+    cmvwhline(hw, row + z, 1, ' ', cols - 2);
     lang = lang ? lang : "Undefined";
-    mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s ESCDELAY: %d",lang,term,ESCDELAY);
+    mvwprintw(hw, row + z, col, "LANG: %-21s TERM: %s ESCDELAY: %d", lang, term, ESCDELAY);
     --z;
     break;
   }default:{
     return ERR;
   }
   }
+  */
   return OK;
 }
 
+/*
 static void
 detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
   char buf[PREFIXSTRLEN + 1],b[256];
@@ -4691,11 +4698,13 @@ detail_targets(WINDOW *w,int *row,int both,const device *d){
     break; // FIXME no space currently
   }
 }
+*/
 
 static int
-map_details(WINDOW *hw){
+map_details(struct ncplane *hw){
+  /*
   const controller *c;
-  int y,rows,cols;
+  int y, rows, cols;
   char *fstab;
 
   cols = getmaxx(hw);
@@ -4704,18 +4713,18 @@ map_details(WINDOW *hw){
   if(growlight_target){
     int blockout;
 
-    cwattrset(hw,A_BOLD|COLOR_PAIR(PHEADING_COLOR));
-    mvwprintw(hw,y,1,"Operating in target mode (%s)",growlight_target);
+    cwattrset(hw, A_BOLD|COLOR_PAIR(PHEADING_COLOR));
+    mvwprintw(hw, y, 1, "Operating in target mode (%s)", growlight_target);
     if( (blockout = cols - getcurx(hw) - 1) ){
-      cwprintw(hw,"%*.*s",blockout,blockout,"");
+      cwprintw(hw, "%*.*s", blockout, blockout, "");
     }
     ++y;
   }
-  cwattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
+  cwattrset(hw, A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
   // First we list the target fstab, and then the targets
   // FIXME this is probably multibyte input and needs be handled as such
   if( (fstab = dump_targets()) ){
-    unsigned pos,linestart;
+    unsigned pos, linestart;
 
     pos = 0;
     linestart = 0;
@@ -4723,7 +4732,7 @@ map_details(WINDOW *hw){
       if(fstab[pos] == '\n'){
         fstab[pos] = '\0';
         if(pos != linestart){
-          mvwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
+          mvwprintw(hw, y, 1, "%-*.*s", cols - 2, cols - 2, fstab + linestart);
           if(++y >= rows){
             return 0;
           }
@@ -4735,34 +4744,34 @@ map_details(WINDOW *hw){
       ++pos;
     }
     if(pos != linestart){
-      mvwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
+      mvwprintw(hw, y, 1, "%-*.*s", cols - 2, cols - 2, fstab + linestart);
       if(++y >= rows){
         return 0;
       }
     }
     free(fstab);
   }
-  cwattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
-  cmvwhline(hw,y,1,' ',cols - 2);
-  mvwprintw(hw,y,1,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
-      FSLABELSIZ,FSLABELSIZ,"Label",
-      "Type","UUID","Bytes","Device");
+  cwattrset(hw, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+  cmvwhline(hw, y, 1, ' ', cols - 2);
+  mvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
+      FSLABELSIZ, FSLABELSIZ, "Label",
+      "Type", "UUID", "Bytes", "Device");
   if(++y >= rows){
     return 0;
   }
-  cwattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
+  cwattrset(hw, A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
     for(d = c->blockdevs ; d ; d = d->next){
       const device *p;
 
-      detail_targets(hw,&y,y + 1 < rows,d);
+      detail_targets(hw, &y, y + 1 < rows, d);
       if(y >= rows){
         return 0;
       }
       for(p = d->parts ; p ; p = p->next){
-        detail_targets(hw,&y,y + 1 < rows,p);
+        detail_targets(hw, &y, y + 1 < rows, p);
         if(y >= rows){
           return 0;
         }
@@ -4770,19 +4779,19 @@ map_details(WINDOW *hw){
     }
   }
   // Now list the existing maps, a superset of the targets
-  cwattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+  cwattrset(hw, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
     for(d = c->blockdevs ; d ; d = d->next){
       const device *p;
 
-      detail_mounts(hw,&y,rows - y,d);
+      detail_mounts(hw, &y, rows - y, d);
       if(y >= rows){
         return 0;
       }
       for(p = d->parts ; p ; p = p->next){
-        detail_mounts(hw,&y,rows - y,p);
+        detail_mounts(hw, &y, rows - y, p);
         if(y >= rows){
           return 0;
         }
@@ -4791,43 +4800,44 @@ map_details(WINDOW *hw){
   }
 
   while(y < rows){
-    cmvwhline(hw,y++,1,' ',cols - 2);
+    cmvwhline(hw, y++, 1, ' ', cols - 2);
   }
+  */
   return 0;
 }
 
 static int
-display_enviroment(WINDOW *mainw,struct panel_state *ps){
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display"
-        ,NULL,PBORDER_COLOR)){
+display_enviroment(struct ncplane* mainw, struct panel_state* ps){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, ENVROWS, 78, L"press 'e' to dismiss display",
+                       NULL, PBORDER_COLOR)){
     goto err;
   }
-  if(env_details(panel_window(ps->p),getmaxy(panel_window(ps->p)) - 1)){
+  int rows;
+  ncplane_dim_yx(ps->p, &rows, NULL);
+  if(env_details(ps->p, rows - 1)){
     goto err;
   }
   return OK;
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
+  memset(ps, 0, sizeof(*ps));
   return ERR;
 }
 
 static int
-display_maps(WINDOW *mainw,struct panel_state *ps){
+display_maps(struct ncplane* mainw, struct panel_state* ps){
   // FIXME compute based off number of maps + targets
-  unsigned rows = getmaxy(mainw) - 15;
+  int rows;
+  ncplane_dim_yx(mainw, &rows, NULL);
+  rows -= 15;
 
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display"
-        ,NULL,PBORDER_COLOR)){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, rows, 0, L"press 'E' to dismiss display",
+                       NULL, PBORDER_COLOR)){
     goto err;
   }
   if(map_details(panel_window(ps->p))){
@@ -4837,20 +4847,15 @@ display_maps(WINDOW *mainw,struct panel_state *ps){
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
+  memset(ps, 0, sizeof(*ps));
   return ERR;
 }
-*/
 
 static void
-toggle_panel(struct notcurses* nc, struct panel_state *ps,
-             int (*psfxn)(struct notcurses*, struct panel_state*)){
+toggle_panel(struct ncplane* nc, struct panel_state *ps,
+             int (*psfxn)(struct ncplane*, struct panel_state*)){
   if(ps->p){
     hide_panel_locked(ps);
     active = NULL;
@@ -5033,10 +5038,11 @@ liberate_disk(void){
   }
   // FIXME liberate it
 }
+*/
 
 static int
 approvedp(const char *op){
-  if(strcasecmp(op,"do it") == 0){
+  if(strcasecmp(op, "do it") == 0){
     return 1;
   }
   return 0;
@@ -5052,14 +5058,14 @@ remove_ptable_confirm(const char *op){
       return;
     }
     if(b->d->layout != LAYOUT_NONE){
-      locked_diag("%s is not partitionable",b->d->name);
+      locked_diag("%s is not partitionable", b->d->name);
       return;
     }
     if(b->d->blkdev.pttable == NULL){
-      locked_diag("%s has no partition table",b->d->name);
+      locked_diag("%s has no partition table", b->d->name);
       return;
     }
-    wipe_ptable(b->d,NULL);
+    wipe_ptable(b->d, NULL);
     return;
   }
   locked_diag("partition table removal was cancelled");
@@ -5074,19 +5080,19 @@ remove_ptable(void){
     return;
   }
   if(b->d->layout != LAYOUT_NONE){
-    locked_diag("%s is not partitionable",b->d->name);
+    locked_diag("%s is not partitionable", b->d->name);
     return;
   }
   if(blockobj_unpartitionedp(b)){
-    locked_diag("%s has no partition table",b->d->name);
+    locked_diag("%s has no partition table", b->d->name);
     return;
   }
-  confirm_operation("remove the partition table",remove_ptable_confirm);
+  confirm_operation("remove the partition table", remove_ptable_confirm);
 }
 
 static struct form_option *
 pttype_table(int *count){
-  struct form_option *fo = NULL,*tmp;
+  struct form_option *fo = NULL, *tmp;
   pttable_type *types;
   int z;
 
@@ -5094,7 +5100,7 @@ pttype_table(int *count){
     return NULL;
   }
   for(z = 0 ; z < *count ; ++z){
-    char *key,*desc;
+    char *key, *desc;
 
     if((key = strdup(types[z].name)) == NULL){
       goto err;
@@ -5103,7 +5109,7 @@ pttype_table(int *count){
       free(key);
       goto err;
     }
-    if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+    if((tmp = realloc(fo, sizeof(*fo) * (*count + 1))) == NULL){
       free(key);
       free(desc);
       goto err;
@@ -5140,7 +5146,7 @@ make_ptable(void){
   if((ops_ptype = pttype_table(&opcount)) == NULL){
     return;
   }
-  raise_form("select a table type",pttype_callback,ops_ptype,opcount,-1,
+  raise_form("select a table type", pttype_callback, ops_ptype, opcount, -1,
       PTTYPE_TEXT);
 }
 
@@ -5148,28 +5154,28 @@ static void
 new_filesystem(void){
   blockobj *b = get_selected_blockobj();
   struct form_option *ops_fs;
-  int opcount,defidx;
+  int opcount, defidx;
 
   if(b == NULL){
     locked_diag("A block device must be selected");
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(selected_emptyp()){
-    locked_diag("Selected region of %s is empty space",b->d->name);
+    locked_diag("Selected region of %s is empty space", b->d->name);
     return;
   }
   if(!selected_mkfs_safe_p()){
     return;
   }
-  if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
+  if((ops_fs = fs_table(&opcount, NULL, &defidx)) == NULL){
     return;
   }
-  raise_form("select a filesystem type",fs_callback,ops_fs,opcount,
-      defidx,FSTYPE_TEXT);
+  raise_form("select a filesystem type", fs_callback, ops_fs, opcount,
+      defidx, FSTYPE_TEXT);
   return;
 }
 
@@ -5184,7 +5190,7 @@ kill_filesystem_confirm(const char *op){
       return;
     }
     if(selected_unloadedp()){
-      locked_diag("Media is not loaded on %s",b->d->name);
+      locked_diag("Media is not loaded on %s", b->d->name);
       return;
     }
     if(selected_emptyp()){
@@ -5202,7 +5208,7 @@ kill_filesystem_confirm(const char *op){
       return;
     }
     redraw_adapter(current_adapter);
-    locked_diag("Wiped filesystem on %s",d->name);
+    locked_diag("Wiped filesystem on %s", d->name);
     return;
   }
   locked_diag("filesystem wipe was cancelled");
@@ -5217,7 +5223,7 @@ kill_filesystem(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(selected_emptyp()){
@@ -5226,22 +5232,22 @@ kill_filesystem(void){
   }
   if(b->zone){
     if(b->zone->p && !b->zone->p->mnttype){
-      locked_diag("No filesystem signature on %s\n",b->zone->p->name);
+      locked_diag("No filesystem signature on %s\n", b->zone->p->name);
     }else if(b->zone->p->mnt.count){
-      locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n",b->zone->p->name);
+      locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n", b->zone->p->name);
     }else{
-      confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
+      confirm_operation("wipe the filesystem signature", kill_filesystem_confirm);
     }
   }else if(!b->zone){
     if(!b->d->mnttype){
-      locked_diag("No filesystem signature on %s\n",b->d->name);
+      locked_diag("No filesystem signature on %s\n", b->d->name);
     }else if(b->d->mnt.count){
-      locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n",b->d->name);
+      locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n", b->d->name);
     }else{
-      confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
+      confirm_operation("wipe the filesystem signature", kill_filesystem_confirm);
     }
   }else{
-    confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
+    confirm_operation("wipe the filesystem signature", kill_filesystem_confirm);
   }
 }
 
@@ -5256,30 +5262,30 @@ static const struct form_option gpt_flags[] = {
   { // protects OEM partitions from being overwritten by windows
     .option = "0x0000000000000001", // 2^0, 1
     .desc = "System partition",
-  },{
+  }, {
     .option = "0x0000000000000002", // 2^1, 2
     .desc = "Hide from EFI",
-  },{
+  }, {
     .option = "0x0000000000000004", // 2^2, 4
     .desc = "Legacy BIOS bootable",
-  },{ // readonly for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+  }, { // readonly for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
     .option = "0x1000000000000000", // 2^60
     .desc = "Read-only",
-  },{
+  }, {
     .option = "0x2000000000000000", // 2^61
     .desc = "Shadow copy",
-  },{ // hidden for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+  }, { // hidden for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
     .option = "0x4000000000000000", // 2^62
     .desc = "Hidden",
-  },{ // no default drive letter for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+  }, { // no default drive letter for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
     .option = "0x8000000000000000", // 2^63
     .desc = "Inhibit automounting",
   },
 };
 
 static struct form_option *
-flag_table(int *count,const char *match,int *defidx,char ***selarray,int *selections,
-    const struct form_option *flags,unsigned fcount){
+flag_table(int *count, const char *match, int *defidx, char ***selarray, int *selections,
+    const struct form_option *flags, unsigned fcount){
   struct form_option *fo = NULL;
   int z = 0;
 
@@ -5301,16 +5307,16 @@ flag_table(int *count,const char *match,int *defidx,char ***selarray,int *select
       free(fo[z].desc);
       goto err;
     }
-    if(match && strcmp(match,fo[z].option) == 0){
+    if(match && strcmp(match, fo[z].option) == 0){
       int zz;
 
       *defidx = z;
       for(zz = 0 ; selections && zz < *selections ; ++zz){
-        if(strcmp(key,(*selarray)[zz]) == 0){
+        if(strcmp(key, (*selarray)[zz]) == 0){
           free((*selarray)[zz]);
           (*selarray)[zz] = NULL;
           if(zz < *selections - 1){
-            memmove(&(*selarray)[zz],&(*selarray)[zz + 1],sizeof(**selarray) * (*selections - 1 - zz));
+            memmove(&(*selarray)[zz], &(*selarray)[zz + 1], sizeof(**selarray) * (*selections - 1 - zz));
           }
           --*selections;
           zz = -1;
@@ -5320,7 +5326,7 @@ flag_table(int *count,const char *match,int *defidx,char ***selarray,int *select
       if(zz >= *selections){
         typeof(*selarray) tmp;
 
-        if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+        if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
           free(fo[zz].option);
           free(fo[zz].desc);
           goto err;
@@ -5345,7 +5351,7 @@ err:
 }
 
 static void
-do_partflag(char **selarray,int selections){
+do_partflag(char **selarray, int selections){
   unsigned long long flags;
   device *d;
   int z;
@@ -5361,76 +5367,76 @@ do_partflag(char **selarray,int selections){
     unsigned long long ul;
 
     errno = 0;
-    ul = strtoull(selarray[z],&eptr,16);
+    ul = strtoull(selarray[z], &eptr, 16);
     assert(ul && (ul < ULLONG_MAX || errno != ERANGE) && !*eptr);
     flags |= ul;
   }
-  if(partition_set_flags(d,flags)){
+  if(partition_set_flags(d, flags)){
     return;
   }
 }
 
 static void
-partflag_callback(const char *fn,char **selarray,int selections,int scrollp){
+partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
   struct form_option *flags_agg;
-  int opcount,defidx;
+  int opcount, defidx;
 
   if(fn == NULL){
     // FIXME free selections
     return;
   }
-  if(strcmp(fn,"") == 0){
-    do_partflag(selarray,selections);
+  if(strcmp(fn, "") == 0){
+    do_partflag(selarray, selections);
     // FIXME free
     return;
   }
-  if((flags_agg = flag_table(&opcount,fn,&defidx,&selarray,&selections,
-      gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
+  if((flags_agg = flag_table(&opcount, fn, &defidx, &selarray, &selections,
+      gpt_flags, sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
     // FIXME free
     return;
   }
-  raise_checkform("set GPT partition flags",partflag_callback,flags_agg,
-    opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollp);
+  raise_checkform("set GPT partition flags", partflag_callback, flags_agg,
+    opcount, defidx, selarray, selections, PARTFLAG_TEXT, scrollp);
 }
 
 static void
-dos_partflag_callback(const char *fn,char **selarray,int selections,int scrollp){
+dos_partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
   struct form_option *flags_agg;
-  int opcount,defidx;
+  int opcount, defidx;
 
   if(fn == NULL){
     // FIXME free selections
     return;
   }
-  if(strcmp(fn,"") == 0){
-    do_partflag(selarray,selections);
+  if(strcmp(fn, "") == 0){
+    do_partflag(selarray, selections);
     // FIXME free
     return;
   }
-  if((flags_agg = flag_table(&opcount,fn,&defidx,&selarray,&selections,
-      dos_flags,sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
+  if((flags_agg = flag_table(&opcount, fn, &defidx, &selarray, &selections,
+      dos_flags, sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
     // FIXME free
     return;
   }
-  raise_checkform("set DOS partition flags",dos_partflag_callback,flags_agg,
-    opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollp);
+  raise_checkform("set DOS partition flags", dos_partflag_callback, flags_agg,
+    opcount, defidx, selarray, selections, PARTFLAG_TEXT, scrollp);
 }
 
 static int
-flag_to_selections(uint64_t flags,char ***selarray,int *selections,
-      const struct form_option *ops,unsigned opcount){
+flag_to_selections(uint64_t flags, char ***selarray, int *selections,
+      const struct form_option *ops, unsigned opcount){
   assert(selarray && selections);
   assert(!*selarray && !*selections);
   while(opcount--){
     unsigned long long ul;
     char *eptr;
 
-    ul = strtoull(ops[opcount].option,&eptr,16);
+    ul = strtoull(ops[opcount].option, &eptr, 16);
     assert(ul && (ul < ULLONG_MAX || errno != ERANGE) && !*eptr);
     if(flags & ul){
       typeof(*selarray) tmp;
 
-      if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+      if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
         // FIXME backfree
         return -1;
       }
@@ -5447,7 +5453,7 @@ set_partition_attrs(void){
   struct form_option *flags_agg;
   char **selarray = NULL;
   int selections = 0;
-  int opcount,defidx;
+  int opcount, defidx;
   blockobj *b;
 
   if((b = get_selected_blockobj()) == NULL){
@@ -5455,7 +5461,7 @@ set_partition_attrs(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_partitionp()){
@@ -5463,31 +5469,31 @@ set_partition_attrs(void){
     return;
   }
   // FIXME need to initialize widget based off current flags
-  if(strcmp("gpt",b->d->blkdev.pttable) == 0){
-    if(flag_to_selections(b->zone->p->partdev.flags,&selarray,&selections,
-          gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))){
+  if(strcmp("gpt", b->d->blkdev.pttable) == 0){
+    if(flag_to_selections(b->zone->p->partdev.flags, &selarray, &selections,
+          gpt_flags, sizeof(gpt_flags) / sizeof(*gpt_flags))){
       return;
     }
-    if((flags_agg = flag_table(&opcount,NULL,&defidx,&selarray,&selections,
-        gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
+    if((flags_agg = flag_table(&opcount, NULL, &defidx, &selarray, &selections,
+        gpt_flags, sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
       // FIXME free selarray
       return;
     }
-    raise_checkform("set GPT partition flags",partflag_callback,flags_agg,
-        opcount,defidx,selarray,selections,PARTFLAG_TEXT,0);
-  }else if(strcmp("dos",b->d->blkdev.pttable) == 0 ||
-    strcmp("msdos",b->d->blkdev.pttable) == 0){
+    raise_checkform("set GPT partition flags", partflag_callback, flags_agg,
+        opcount, defidx, selarray, selections, PARTFLAG_TEXT, 0);
+  }else if(strcmp("dos", b->d->blkdev.pttable) == 0 ||
+    strcmp("msdos", b->d->blkdev.pttable) == 0){
 
-    if(flag_to_selections(b->zone->p->partdev.flags,&selarray,&selections,
-          dos_flags,sizeof(dos_flags) / sizeof(*dos_flags))){
+    if(flag_to_selections(b->zone->p->partdev.flags, &selarray, &selections,
+          dos_flags, sizeof(dos_flags) / sizeof(*dos_flags))){
       return;
     }
-    if((flags_agg = flag_table(&opcount,NULL,&defidx,&selarray,&selections,
-        dos_flags,sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
+    if((flags_agg = flag_table(&opcount, NULL, &defidx, &selarray, &selections,
+        dos_flags, sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
       return;
     }
-    raise_checkform("set DOS partition flags",dos_partflag_callback,flags_agg,
-        opcount,defidx,selarray,selections,PARTFLAG_TEXT,0);
+    raise_checkform("set DOS partition flags", dos_partflag_callback, flags_agg,
+        opcount, defidx, selarray, selections, PARTFLAG_TEXT, 0);
   }else{
     assert(0);
   }
@@ -5496,11 +5502,11 @@ set_partition_attrs(void){
 static inline int
 fsck_suitable_p(const device *d){
   if(d->mnt.count){
-    locked_diag("Will not fsck mounted filesystem on %s",d->name);
+    locked_diag("Will not fsck mounted filesystem on %s", d->name);
     return 0;
   }
   if(d->mnttype == NULL){
-    locked_diag("No filesystem found on %s",d->name);
+    locked_diag("No filesystem found on %s", d->name);
     return 0;
   }
   return 1;
@@ -5516,7 +5522,7 @@ fsck_partition(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(selected_emptyp()){
@@ -5531,7 +5537,7 @@ fsck_partition(void){
   }
   if(fsck_suitable_p(d)){
     if(check_partition(d) == 0){
-      locked_diag("Validated filesystem on %s",d->name);
+      locked_diag("Validated filesystem on %s", d->name);
     }
   }
 }
@@ -5546,7 +5552,7 @@ delete_partition_confirm(const char *op){
       return;
     }
     if(selected_unloadedp()){
-      locked_diag("Media is not loaded on %s",b->d->name);
+      locked_diag("Media is not loaded on %s", b->d->name);
       return;
     }
     if(selected_unpartitionedp()){
@@ -5575,7 +5581,7 @@ delete_partition(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(selected_unpartitionedp()){
@@ -5587,10 +5593,10 @@ delete_partition(void){
     return;
   }
   if(b->zone->p->mnttype){
-    locked_diag("%s has a valid filesystem signature. Wipe it with 'w'.",b->zone->p->name);
+    locked_diag("%s has a valid filesystem signature. Wipe it with 'w'.", b->zone->p->name);
     return;
   }
-  confirm_operation("delete the partition",delete_partition_confirm);
+  confirm_operation("delete the partition", delete_partition_confirm);
 }
 
 static void
@@ -5606,7 +5612,7 @@ wipe_mbr_confirm(const char *op){
     return;
   }
   if(blockobj_unloadedp(b)){
-    locked_diag("Media is unloaded on %s\n",b->d->name);
+    locked_diag("Media is unloaded on %s\n", b->d->name);
     return;
   }
   wipe_dosmbr(b->d);
@@ -5621,10 +5627,10 @@ wipe_mbr(void){
     return;
   }
   if(blockobj_unloadedp(b)){
-    locked_diag("Media is unloaded on %s\n",b->d->name);
+    locked_diag("Media is unloaded on %s\n", b->d->name);
     return;
   }
-  confirm_operation("wipe the mbr",wipe_mbr_confirm);
+  confirm_operation("wipe the mbr", wipe_mbr_confirm);
 }
 
 static void
@@ -5637,7 +5643,7 @@ badblock_do_internal(void){
     return;
   }
   ps = show_splash(L"Performing block check...");
-  badblock_scan(b->d,0); // FIXME allow destructive badblock check
+  badblock_scan(b->d, 0); // FIXME allow destructive badblock check
   if(ps){
     kill_splash(ps);
   }
@@ -5657,7 +5663,7 @@ mountpoint_callback(const char *path){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(path == NULL){
@@ -5665,10 +5671,10 @@ mountpoint_callback(const char *path){
     return;
   }
   if(selected_unpartitionedp()){
-    mmount(b->d,path,0,NULL);
+    mmount(b->d, path, 0, NULL);
   }else{
     assert(selected_partitionp());
-    mmount(b->zone->p,path,0,NULL);
+    mmount(b->zone->p, path, 0, NULL);
   }
 }
 
@@ -5681,7 +5687,7 @@ mount_filesystem(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_unpartitionedp()){
@@ -5690,7 +5696,7 @@ mount_filesystem(void){
       return;
     }
     if(b->zone->p->mnttype == NULL){
-      locked_diag("No filesystem detected on %s",b->zone->p->name);
+      locked_diag("No filesystem detected on %s", b->zone->p->name);
       return;
     }
     if(fstype_swap_p(b->zone->p->mnttype)){
@@ -5701,7 +5707,7 @@ mount_filesystem(void){
     }
   }else{
     if(b->d->mnttype == NULL){
-      locked_diag("No filesystem detected on %s",b->d->name);
+      locked_diag("No filesystem detected on %s", b->d->name);
       return;
     }
     if(fstype_swap_p(b->d->mnttype)){
@@ -5711,7 +5717,7 @@ mount_filesystem(void){
       return;
     }
   }
-  raise_str_form("enter mountpount",mountpoint_callback,"/",MOUNT_TEXT);
+  raise_str_form("enter mountpount", mountpoint_callback, "/", MOUNT_TEXT);
 }
 
 static void
@@ -5723,7 +5729,7 @@ numount_target(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_unpartitionedp()){
@@ -5732,20 +5738,20 @@ numount_target(void){
       return;
     }
     if(!targeted_p(b->zone->p)){
-      locked_diag("Block device %s is not a target",b->zone->p->name);
+      locked_diag("Block device %s is not a target", b->zone->p->name);
       return;
     }
-    if(unmount(b->zone->p,NULL)){
+    if(unmount(b->zone->p, NULL)){
       return;
     }
     redraw_adapter(current_adapter);
     return;
   }else{
     if(!targeted_p(b->d)){
-      locked_diag("Block device %s is not a target",b->d->name);
+      locked_diag("Block device %s is not a target", b->d->name);
       return;
     }
-    if(unmount(b->d,NULL)){
+    if(unmount(b->d, NULL)){
       return;
     }
     redraw_adapter(current_adapter);
@@ -5767,11 +5773,11 @@ biosboot(void){
     return -1;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return -1;
   }
   if(selected_unpartitionedp()){
-    locked_diag("BIOS cannot boot from unpartitioned %s",b->d->name);
+    locked_diag("BIOS cannot boot from unpartitioned %s", b->d->name);
     return -1;
   }
   if(b->zone->p){
@@ -5784,7 +5790,7 @@ biosboot(void){
     d = b->d;
   }
   if(!targeted_p(d)){
-    locked_diag("Block device %s is not a target",d->name);
+    locked_diag("Block device %s is not a target", d->name);
     return -1;
   }
   // Do not enforce a check against the path for '/'; it can be in /boot
@@ -5812,11 +5818,11 @@ uefiboot(void){
     return -1;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return -1;
   }
   if(selected_unpartitionedp()){
-    locked_diag("UEFI cannot boot from unpartitioned %s",b->d->name);
+    locked_diag("UEFI cannot boot from unpartitioned %s", b->d->name);
     return -1;
   }
   if(b->zone->p){
@@ -5829,7 +5835,7 @@ uefiboot(void){
     d = b->d;
   }
   if(!targeted_p(d)){
-    locked_diag("Block device %s is not a target",d->name);
+    locked_diag("Block device %s is not a target", d->name);
     return -1;
   }
   // Do not enforce a check against the path for '/'; it can be in /boot
@@ -5856,7 +5862,7 @@ nmount_target(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_unpartitionedp()){
@@ -5865,25 +5871,24 @@ nmount_target(void){
       return;
     }
     if(targeted_p(b->zone->p)){
-      locked_diag("%s is already a target",b->zone->p->name);
+      locked_diag("%s is already a target", b->zone->p->name);
       return;
     }
     if(b->zone->p->mnttype == NULL){
-      locked_diag("No filesystem detected on %s",b->zone->p->name);
+      locked_diag("No filesystem detected on %s", b->zone->p->name);
       return;
     }
   }else{
     if(targeted_p(b->d)){
-      locked_diag("%s is already a target",b->d->name);
+      locked_diag("%s is already a target", b->d->name);
       return;
     }
     if(b->d->mnttype == NULL){
-      locked_diag("No filesystem detected on %s",b->d->name);
+      locked_diag("No filesystem detected on %s", b->d->name);
       return;
     }
   }
-  raise_str_form("enter target mountpount",targpoint_callback,"/",
-      TARG_TEXT);
+  raise_str_form("enter target mountpount", targpoint_callback, "/", TARG_TEXT);
 }
 
 static void
@@ -5896,7 +5901,7 @@ umount_filesystem(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_unpartitionedp()){
@@ -5907,13 +5912,13 @@ umount_filesystem(void){
     if(fstype_swap_p(b->zone->p->mnttype)){
       r = swapoffdev(b->zone->p);
     }else{
-      r = unmount(b->zone->p,NULL);
+      r = unmount(b->zone->p, NULL);
     }
   }else{
     if(fstype_swap_p(b->d->mnttype)){
       r = swapoffdev(b->d);
     }else{
-      r = unmount(b->d,NULL);
+      r = unmount(b->d, NULL);
     }
   }
   if(!r){
@@ -5927,8 +5932,8 @@ remove_last_bufchar(char *buf){
   mbstate_t mb;
   size_t m;
 
-  memset(&mb,0,sizeof(mb));
-  while( (m = mbrlen(buf,strlen(buf),&mb)) ){
+  memset(&mb, 0, sizeof(mb));
+  while( (m = mbrlen(buf, strlen(buf), &mb)) ){
     if(m == (size_t)-1 || m == (size_t)-2){
       break;
     }
@@ -5984,11 +5989,11 @@ handle_actform_string_input(int ch){
     char *tmp;
 
     if(ch >= 256 || !isgraph(ch)){
-      diag("please %s, or cancel",actform->boxstr);
+      diag("please %s, or cancel", actform->boxstr);
     }
     lock_ncurses();
-    if((tmp = realloc(fs->inp.buffer,strlen(fs->inp.buffer) + 2)) == NULL){
-      locked_diag("Couldn't allocate input buffer (%s?)",strerror(errno));
+    if((tmp = realloc(fs->inp.buffer, strlen(fs->inp.buffer) + 2)) == NULL){
+      locked_diag("Couldn't allocate input buffer (%s?)", strerror(errno));
       unlock_ncurses();
       return;
     }
@@ -6025,10 +6030,10 @@ handle_actform_splash_input(void){
 // We received input while a modal form was active. Divert it from the typical
 // UI, and handle it according to the form. Returning non-zero quits the
 // program, and should pretty much only indicate that 'q' was pressed.
-static int
-handle_actform_input(int ch){
+static wchar_t
+handle_actform_input(wchar_t ch){
   struct form_state *fs = actform;
-  void (*mcb)(const char *,char **,int,int);
+  void (*mcb)(const char *, char **, int, int);
   void (*cb)(const char *);
 
   if(fs->formtype == FORM_STRING_INPUT){
@@ -6051,7 +6056,7 @@ handle_actform_input(int ch){
       unlock_ncurses();
       break;
     case ' ': case '\r': case '\n': case KEY_ENTER:{
-      int op,selections,scrolloff;
+      int op, selections, scrolloff;
       char **selarray;
       char *optstr;
 
@@ -6067,7 +6072,7 @@ handle_actform_input(int ch){
         actform = NULL;
         setup_colors();
         if(mcb){
-          mcb(optstr,selarray,selections,scrolloff);
+          mcb(optstr, selarray, selections, scrolloff);
         }else{
           cb(optstr);
         }
@@ -6080,7 +6085,7 @@ handle_actform_input(int ch){
         int scrolloff = fs->scrolloff;
         free_form(actform);
         actform = NULL;
-        mcb(NULL,NULL,0,scrolloff);
+        mcb(NULL, NULL, 0, scrolloff);
       }else{
         free_form(actform);
         actform = NULL;
@@ -6088,7 +6093,7 @@ handle_actform_input(int ch){
       }
       unlock_ncurses();
       break;
-    }case KEY_UP: case 'k':{
+    }case NCKEY_UP: case 'k':{
       lock_ncurses();
       if(fs->idx == fs->scrolloff){
         if(--fs->scrolloff < 0){
@@ -6107,10 +6112,11 @@ handle_actform_input(int ch){
       }
       unlock_ncurses();
       break;
-    }case KEY_DOWN: case 'j':{
+    }case NCKEY_DOWN: case 'j':{
       lock_ncurses();
       int maxz;
-      maxz = getmaxy(panel_window(fs->p)) - 5 >= fs->opcount - 1 ? fs->opcount - 1 : getmaxy(panel_window(fs->p)) - 5;
+      ncplane_dim_yx(fs->p, &maxz, NULL);
+      maxz = maxz - 5 >= fs->opcount - 1 ? fs->opcount - 1 : maxz - 5;
       if(fs->idx == (fs->scrolloff + maxz) % fs->opcount){
         if(++fs->scrolloff >= fs->opcount){
           fs->scrolloff = 0;
@@ -6131,7 +6137,7 @@ handle_actform_input(int ch){
     }case 'q':{
       return 'q';
     }case 'C':{
-      int selections,scrolloff;
+      int selections, scrolloff;
       char **selarray;
 
       lock_ncurses();
@@ -6142,14 +6148,14 @@ handle_actform_input(int ch){
         fs->selarray = NULL;
         free_form(actform);
         actform = NULL;
-        mcb("",selarray,selections,scrolloff);
+        mcb("", selarray, selections, scrolloff);
         unlock_ncurses();
         break;
       }
       unlock_ncurses();
     } // intentional fallthrough
     default:{
-      diag("please %s, or cancel",actform->boxstr);
+      diag("please %s, or cancel", actform->boxstr);
       break;
     }
   }
@@ -6169,7 +6175,7 @@ destroy_aggregate_confirm(const char *op){
     return;
   }
   if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
-    locked_diag("%s is not an aggregate",b->d->name);
+    locked_diag("%s is not an aggregate", b->d->name);
   }else if(b->d->layout == LAYOUT_ZPOOL){
     destroy_zpool(b->d);
   }else if(b->d->layout == LAYOUT_MDADM){
@@ -6177,7 +6183,7 @@ destroy_aggregate_confirm(const char *op){
   }else if(b->d->layout == LAYOUT_DM){
     locked_diag("Not yet implemented FIXME"); // FIXME
   }else{
-    locked_diag("Unknown layout type %d on %s",b->d->layout,b->d->name);
+    locked_diag("Unknown layout type %d on %s", b->d->layout, b->d->name);
   }
 }
 
@@ -6190,6 +6196,7 @@ untargeted_exit_confirm(const char *op){
   shutdown_cycle();
 }
 
+/*
 static void
 destroy_aggregate(void){
   blockobj *b;
@@ -6199,10 +6206,10 @@ destroy_aggregate(void){
     return;
   }
   if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
-    locked_diag("%s is not an aggregate",b->d->name);
+    locked_diag("%s is not an aggregate", b->d->name);
     return;
   }
-  confirm_operation("destroy the aggregate",destroy_aggregate_confirm);
+  confirm_operation("destroy the aggregate", destroy_aggregate_confirm);
 }
 
 static void
@@ -6214,7 +6221,7 @@ modify_aggregate(void){
     return;
   }
   if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
-    locked_diag("%s is not an aggregate",b->d->name);
+    locked_diag("%s is not an aggregate", b->d->name);
     return;
   }
   locked_diag("Aggregate modification not yet implemented FIXME");
@@ -6322,13 +6329,14 @@ unset_target(void){
   }
   locked_diag("Successfully left target mode");
 }
+*/
 
 static void
-handle_ncurses_input(WINDOW *w){
-  wchar_t ch
+handle_ncurses_input(struct ncplane* w){
+  wchar_t ch;
   int r;
 
-  while((ch = getch()) != ERR){
+  while((ch = notcurses_getc_blocking(NC)) != (wchar_t)-1){
     if(ch == 12){ // CTRL+L FIXME
       lock_ncurses();
       wrefresh(curscr);
@@ -6354,34 +6362,35 @@ handle_ncurses_input(WINDOW *w){
     switch(ch){
       case 'H':{
         lock_ncurses();
-        toggle_panel(w,&help,display_help);
+        toggle_panel(w, &help, display_help);
         unlock_ncurses();
         break;
       }
       case 'D':{
         lock_ncurses();
-        toggle_panel(w,&diags,display_diags);
+        toggle_panel(w, &diags, display_diags);
         unlock_ncurses();
         break;
       }
       case 'v':{
         lock_ncurses();
-        toggle_panel(w,&details,display_details);
+        toggle_panel(w, &details, display_details);
         unlock_ncurses();
         break;
       }
       case 'e':{
         lock_ncurses();
-        toggle_panel(w,&environment,display_enviroment);
+        toggle_panel(w, &environment, display_enviroment);
         unlock_ncurses();
         break;
       }
       case 'E':{
         lock_ncurses();
-        toggle_panel(w,&maps,display_maps);
+        toggle_panel(w, &maps, display_maps);
         unlock_ncurses();
         break;
       }
+/*
       case '+':
         lock_ncurses();
         expand_adapter_locked();
@@ -6631,21 +6640,22 @@ handle_ncurses_input(WINDOW *w){
           return;
         }
         break;
+*/
       case 'q':
         if(!growlight_target){
           return;
         }else if(finalized){
           return;
         }
-        confirm_operation("exit without finalizing a target",untargeted_exit_confirm);
+        confirm_operation("exit without finalizing a target", untargeted_exit_confirm);
         break;
       default:{
         const char *hstr = !help.p ? " ('H' for help)" : "";
         // diag() locks/unlocks, and calls screen_update()
         if(isprint(ch)){
-          diag("unknown command '%c'%s",ch,hstr);
+          diag("unknown command '%c'%s", ch, hstr);
         }else{
-          diag("unknown scancode %d%s",ch,hstr);
+          diag("unknown scancode %d%s", ch, hstr);
         }
         break;
       }
@@ -6654,6 +6664,7 @@ handle_ncurses_input(WINDOW *w){
   diag("Error reading from console, aborting");
 }
 
+/*
 static adapterstate *
 create_adapter_state(controller *a){
   adapterstate *as;
@@ -7174,13 +7185,14 @@ int main(int argc, char * const *argv){
     dump_diags();
     return EXIT_FAILURE;
   }
+  struct ncplane* n = notcurses_stdplane(NC);
   lock_growlight();
   kill_splash(ps);
   if(showhelp){
-    toggle_panel(NC, &help, display_help);
+    toggle_panel(n, &help, display_help);
     screen_update();
   }
   unlock_growlight();
-  // handle_ncurses_input(w);
+  handle_ncurses_input(n);
   shutdown_cycle(); // calls exit() on all paths
 }
