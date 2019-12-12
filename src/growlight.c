@@ -2060,7 +2060,6 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
 	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
-diag("222222222222222222222222\n");
 	if(event_thread(fd, udevfd, syswd, bypathwd, byidwd, mdwd)){
 		goto err;
 	}
