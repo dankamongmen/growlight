@@ -18,10 +18,9 @@
 #include "health.h"
 #include "ptable.h"
 #include "ptypes.h"
-#include "ncurses.h"
 #include "growlight.h"
 #include "aggregate.h"
-#include "ui-aggregate.h"
+#include "notui-aggregate.h"
 
 #define KEY_ESC 27
 
@@ -93,12 +92,10 @@ static const char FSTYPE_TEXT[] =
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 struct panel_state {
-  PANEL *p;
+  struct ncplane *p;
 };
 
 #define PANEL_STATE_INITIALIZER { .p = NULL, }
-#define SUBDISPLAY_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR) | A_BOLD)
-#define SUBDISPLAY_INVAL_ATTR (COLOR_PAIR(SUBDISPLAY_COLOR))
 
 static struct panel_state *splash;
 static struct panel_state *active;
@@ -108,28 +105,28 @@ static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
 static struct panel_state environment = PANEL_STATE_INITIALIZER;
 
-static int helpstrs(WINDOW *);
-static int map_details(WINDOW *);
-static int update_details(WINDOW *);
+static int helpstrs(struct ncplane* n);
+static int map_details(struct ncplane* n);
+static int update_details(struct ncplane* n);
 
 static inline void
-update_details_cond(PANEL *p){
-  if(p){
-    update_details(panel_window(p));
+update_details_cond(struct ncplane *n){
+  if(n){
+    update_details(n);
   }
 }
 
 static inline void
-update_help_cond(PANEL *p){
+update_help_cond(struct ncplane* p){
   if(p){
-    helpstrs(panel_window(p));
+    helpstrs(p);
   }
 }
 
 static inline void
-update_map_cond(PANEL *p){
+update_map_cond(struct ncplane* p){
   if(p){
-    map_details(panel_window(p));
+    map_details(p);
   }
 }
 
@@ -159,11 +156,11 @@ typedef enum {
 // opcount - 1. All option selection windows scroll, even if they fit all their
 // options, to maintain continuity of UI.
 struct form_state {
-  PANEL *p;
-  void (*fxn)(const char *);  // callback once form is done
-  void (*mcb)(const char *,char **,int,int); // multiform callback
+  struct ncplane* p;
+  void (*fxn)(const char*);  // callback once form is done
+  void (*mcb)(const char* ,char** ,int,int); // multiform callback
   int longop;      // length of prompt or longest op
-  char *boxstr;      // string for box label
+  char* boxstr;      // string for box label
   form_enum formtype;    // type of form
   struct panel_state *extext;  // explication text, above the form
   union {
@@ -186,7 +183,7 @@ struct form_state {
       int opcount;    // total number of ops
       int selectno;    // number of selections, total
       int selections;    // number of active selections
-      char **selarray;  // array of selections by name
+      char** selarray;  // array of selections by name
     };
     struct form_input inp;  // form_input state for this instance
   };
@@ -205,6 +202,8 @@ enum {
   DBORDER_COLOR,      // Block bar borders
   PBORDER_COLOR,
   PHEADING_COLOR,
+
+  //10
   SUBDISPLAY_COLOR,
   OPTICAL_COLOR,
   ROTATE_COLOR,
@@ -215,6 +214,8 @@ enum {
   METADATA_COLOR,      // Partition table metadata
   MDADM_COLOR,
   ZPOOL_COLOR,
+
+  // 20
   PART_COLOR0,      // A defined but unused partition
   PART_COLOR1,
   PART_COLOR2,
@@ -225,6 +226,8 @@ enum {
   SELECTED_COLOR,      // Selected options in multiform
   MOUNT_COLOR0,      // Mounted, untargeted filesystems
   MOUNT_COLOR1,
+
+  //30
   MOUNT_COLOR2,
   MOUNT_COLOR3,
   TARGET_COLOR0,      // Targeted filesystems
@@ -241,6 +244,64 @@ enum {
 
   FIRST_FREE_COLOR
 };
+
+static void
+compat_set_fg(struct ncplane* nc, int pair){
+  switch(pair){
+    case HEADER_COLOR:
+      ncplane_set_fg_rgb(nc, 95, 0, 175);
+      break;
+    case STATUS_COLOR:
+      ncplane_set_fg_rgb(nc, 0, 95, 175);
+      break;
+    case UHEADING_COLOR:
+      ncplane_set_fg_rgb(nc, 218, 218, 218);
+      break;
+    case UNHEADING_COLOR:
+      ncplane_set_fg_rgb(nc, 135, 175, 255);
+      break;
+    case FORMTEXT_COLOR:
+      ncplane_set_fg_rgb(nc, 97, 214, 214);
+      break;
+    case SUBDISPLAY_COLOR:
+      ncplane_set_fg_rgb(nc, 204, 204, 204);
+      break;
+    case PHEADING_COLOR:
+      ncplane_set_fg_rgb(nc, 197, 15, 31);
+      break;
+    case SPLASHBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 95, 95, 215);
+      break;
+    case PBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 215, 255, 0);
+      break;
+    default:
+      assert(false);
+  }
+}
+
+enum {
+  SUBDISPLAY_ATTR,
+  SUBDISPLAY_INVAL_ATTR,
+};
+
+static void
+compat_set_fg_all(struct ncplane* nc, int attr){
+  switch(attr){
+    case SUBDISPLAY_ATTR:
+      ncplane_styles_set(nc, CELL_STYLE_BOLD);
+      compat_set_fg(nc, SUBDISPLAY_COLOR);
+      break;
+    case SUBDISPLAY_INVAL_ATTR:
+      ncplane_styles_set(nc, 0);
+      compat_set_fg(nc, SUBDISPLAY_COLOR);
+      break;
+    default:
+      assert(false);
+  }
+}
+
+/*
 
 static inline int
 next_targco(int targco){
@@ -300,138 +361,115 @@ subscript(int in){
   assert(in >= 0 && in < 10);
   return L'\u2080' + in;
 }
+*/
+
+static struct notcurses* NC;
+static struct panelreel* PR;
 
 static inline void
 screen_update(void){
-  if(active){
-    assert(top_panel(active->p) != ERR);
-  }
-  if(actform){
-    if(actform->extext){
-      assert(top_panel(actform->extext->p) != ERR);
-    }
-    assert(top_panel(actform->p) != ERR);
-  }
-  if(splash){
-    assert(top_panel(splash->p) != ERR);
-  }
-  update_panels();
-  assert(doupdate() == OK);
+  int r = notcurses_render(NC);
+  assert(0 == r);
 }
 
 static int
 setup_colors(void){
+/*
   int z;
 
-  if(init_pair(HEADER_COLOR,COLOR_LIGHTPURPLE,-1) == ERR){
-    assert(init_pair(HEADER_COLOR,COLOR_BLUE,-1) == OK);
+  assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) != -1);
+  assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == 0);
+  if(init_pair(DBORDER_COLOR,COLOR_CRAP,-1) == -1){
+    assert(init_pair(DBORDER_COLOR,COLOR_RED,-1) != -1);
   }
-  if(init_pair(STATUS_COLOR,COLOR_SKYBLUE,-1) == ERR){
-    assert(init_pair(STATUS_COLOR,COLOR_YELLOW,-1) != ERR);
+  assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == 0);
+  assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == 0);
+  if(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == -1){
+    assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) != -1);
   }
-  if(init_pair(UHEADING_COLOR,COLOR_WHITE,-1) == ERR){
-    assert(init_pair(UHEADING_COLOR,COLOR_BLUE,-1) != ERR);
-    assert(init_pair(SELBORDER_COLOR,COLOR_CYAN,-1) != ERR);
-  }else{
-    assert(init_pair(SELBORDER_COLOR,COLOR_BLUE,-1) != ERR);
+  assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == 0);
+  if(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == -1){
+    assert(init_pair(SSD_COLOR,COLOR_WHITE,-1) != -1);
   }
-  if(init_pair(UNHEADING_COLOR,COLOR_SKYBLUE,-1) == ERR){
-    assert(init_pair(UNHEADING_COLOR,COLOR_BLUE,-1) != ERR);
+  assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == 0);
+  if(init_pair(EMPTY_COLOR,COLOR_MAIZE,-1) == -1){
+    assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == 0);
   }
-  assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) != ERR);
-  assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == OK);
-  if(init_pair(DBORDER_COLOR,COLOR_CRAP,-1) == ERR){
-    assert(init_pair(DBORDER_COLOR,COLOR_RED,-1) != ERR);
+  if(init_pair(METADATA_COLOR,COLOR_LIGHTYELLOW,-1) == -1){
+    assert(init_pair(METADATA_COLOR,COLOR_YELLOW,-1) == 0);
   }
-  assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == OK);
-  assert(init_pair(SUBDISPLAY_COLOR,COLOR_WHITE,-1) == OK);
-  assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == OK);
-  if(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
-    assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) != ERR);
+  if(init_pair(MDADM_COLOR,COLOR_LIGHTBLUE,-1) == -1){
+    assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != -1);
   }
-  assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == OK);
-  if(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == ERR){
-    assert(init_pair(SSD_COLOR,COLOR_WHITE,-1) != ERR);
+  assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == 0);
+  if(init_pair(PART_COLOR0,COLOR_CYAN0,-1) == -1){
+    assert(init_pair(PART_COLOR0,COLOR_CYAN,-1) == 0);
   }
-  assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == OK);
-  if(init_pair(EMPTY_COLOR,COLOR_MAIZE,-1) == ERR){
-    assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == OK);
+  if(init_pair(PART_COLOR1,COLOR_CYAN1,-1) == -1){
+    assert(init_pair(PART_COLOR1,COLOR_CYAN,-1) == 0);
   }
-  if(init_pair(METADATA_COLOR,COLOR_LIGHTYELLOW,-1) == ERR){
-    assert(init_pair(METADATA_COLOR,COLOR_YELLOW,-1) == OK);
+  if(init_pair(PART_COLOR2,COLOR_CYAN2,-1) == -1){
+    assert(init_pair(PART_COLOR2,COLOR_CYAN,-1) == 0);
   }
-  if(init_pair(MDADM_COLOR,COLOR_LIGHTBLUE,-1) == ERR){
-    assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != ERR);
+  if(init_pair(PART_COLOR3,COLOR_CYAN3,-1) == -1){
+    assert(init_pair(PART_COLOR3,COLOR_CYAN,-1) == 0);
   }
-  assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == OK);
-  if(init_pair(PART_COLOR0,COLOR_CYAN0,-1) == ERR){
-    assert(init_pair(PART_COLOR0,COLOR_CYAN,-1) == OK);
+  assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == 0);
+  if(init_pair(FORMTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == -1){
+    assert(init_pair(FORMTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != -1);
   }
-  if(init_pair(PART_COLOR1,COLOR_CYAN1,-1) == ERR){
-    assert(init_pair(PART_COLOR1,COLOR_CYAN,-1) == OK);
+  if(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == -1){
+    assert(init_pair(INPUT_COLOR,COLOR_GREEN,COLOR_BLACK) != -1);
   }
-  if(init_pair(PART_COLOR2,COLOR_CYAN2,-1) == ERR){
-    assert(init_pair(PART_COLOR2,COLOR_CYAN,-1) == OK);
+  if(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == -1){
+    assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != -1);
   }
-  if(init_pair(PART_COLOR3,COLOR_CYAN3,-1) == ERR){
-    assert(init_pair(PART_COLOR3,COLOR_CYAN,-1) == OK);
+  if(init_pair(MOUNT_COLOR0,COLOR_WHITE0,-1) == -1){
+    assert(init_pair(MOUNT_COLOR0,COLOR_WHITE,-1) == 0);
   }
-  assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == OK);
-  if(init_pair(FORMTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == ERR){
-    assert(init_pair(FORMTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != ERR);
+  if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,-1) == -1){
+    assert(init_pair(MOUNT_COLOR1,COLOR_WHITE,-1) == 0);
   }
-  if(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == ERR){
-    assert(init_pair(INPUT_COLOR,COLOR_GREEN,COLOR_BLACK) != ERR);
+  if(init_pair(MOUNT_COLOR2,COLOR_WHITE2,-1) == -1){
+    assert(init_pair(MOUNT_COLOR2,COLOR_WHITE,-1) == 0);
   }
-  if(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == ERR){
-    assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != ERR);
+  if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,-1) == -1){
+    assert(init_pair(MOUNT_COLOR3,COLOR_WHITE,-1) == 0);
   }
-  if(init_pair(MOUNT_COLOR0,COLOR_WHITE0,-1) == ERR){
-    assert(init_pair(MOUNT_COLOR0,COLOR_WHITE,-1) == OK);
+  if(init_pair(TARGET_COLOR0,COLOR_MAGENTA0,-1) == -1){
+    assert(init_pair(TARGET_COLOR0,COLOR_MAGENTA,-1) == 0);
   }
-  if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,-1) == ERR){
-    assert(init_pair(MOUNT_COLOR1,COLOR_WHITE,-1) == OK);
+  if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,-1) == -1){
+    assert(init_pair(TARGET_COLOR1,COLOR_MAGENTA,-1) == 0);
   }
-  if(init_pair(MOUNT_COLOR2,COLOR_WHITE2,-1) == ERR){
-    assert(init_pair(MOUNT_COLOR2,COLOR_WHITE,-1) == OK);
+  if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,-1) == -1){
+    assert(init_pair(TARGET_COLOR2,COLOR_MAGENTA,-1) == 0);
   }
-  if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,-1) == ERR){
-    assert(init_pair(MOUNT_COLOR3,COLOR_WHITE,-1) == OK);
+  if(init_pair(TARGET_COLOR3,COLOR_MAGENTA3,-1) == -1){
+    assert(init_pair(TARGET_COLOR3,COLOR_MAGENTA,-1) == 0);
   }
-  if(init_pair(TARGET_COLOR0,COLOR_MAGENTA0,-1) == ERR){
-    assert(init_pair(TARGET_COLOR0,COLOR_MAGENTA,-1) == OK);
+  if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == -1){
+    assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) != -1);
   }
-  if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,-1) == ERR){
-    assert(init_pair(TARGET_COLOR1,COLOR_MAGENTA,-1) == OK);
+  if(init_pair(SPLASHBORDER_COLOR,COLOR_PURPLE,COLOR_BLACK) == -1){
+    assert(init_pair(SPLASHBORDER_COLOR,COLOR_GREEN,COLOR_BLACK) != -1);
   }
-  if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,-1) == ERR){
-    assert(init_pair(TARGET_COLOR2,COLOR_MAGENTA,-1) == OK);
+  if(init_pair(SPLASHTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == -1){
+    assert(init_pair(SPLASHTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != -1);
   }
-  if(init_pair(TARGET_COLOR3,COLOR_MAGENTA3,-1) == ERR){
-    assert(init_pair(TARGET_COLOR3,COLOR_MAGENTA,-1) == OK);
-  }
-  if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == ERR){
-    assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) != ERR);
-  }
-  if(init_pair(SPLASHBORDER_COLOR,COLOR_PURPLE,COLOR_BLACK) == ERR){
-    assert(init_pair(SPLASHBORDER_COLOR,COLOR_GREEN,COLOR_BLACK) != ERR);
-  }
-  if(init_pair(SPLASHTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == ERR){
-    assert(init_pair(SPLASHTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != ERR);
-  }
-  assert(init_pair(ORANGE_COLOR,COLOR_YELLOW,-1) == OK);
-  assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == OK);
-  assert(init_pair(BLACK_COLOR,COLOR_BLACK,COLOR_BLACK) == OK);
+  assert(init_pair(ORANGE_COLOR,COLOR_YELLOW,-1) == 0);
+  assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == 0);
+  assert(init_pair(BLACK_COLOR,COLOR_BLACK,COLOR_BLACK) == 0);
   for(z = FIRST_FREE_COLOR ; z < COLORS ; ++z){
     init_pair(z,z,-1);
   }
-  wrefresh(curscr);
-  screen_update();
-  return 0;
+  */
+  return notcurses_render(NC);
 }
 
-static void
+static int
 form_colors(void){
+/* FIXME
   // Don't reset the status color or header color, nor (obviously) the
   // form nor splash colors.
   locked_diag("%s",""); // Don't leave a highlit status up from long ago
@@ -467,8 +505,8 @@ form_colors(void){
   init_pair(FUCKED_COLOR,-1,-1);
   init_pair(ORANGE_COLOR,-1,-1);
   init_pair(GREEN_COLOR,-1,-1);
-  wrefresh(curscr);
-  screen_update();
+  */
+  return notcurses_render(NC);
 }
 
 static int update_diags(struct panel_state *);
@@ -480,17 +518,19 @@ struct partobj;
 // See below (blockobj) for description of zones.
 typedef struct zobj {
   int zoneno;      // in-order, starting at 0
-  uintmax_t fsector,lsector;  // first and last logical sector, inclusive
-  device *p;      // partition/block device, NULL for empty space
+  uintmax_t fsector, lsector;  // first and last logical sector, inclusive
+  device* p;      // partition/block device, NULL for empty space
   wchar_t rep;      // character used for representation
           //  if ->p is NULL
   int following;      // Number of zones following us on disk
-  struct zobj *prev,*next;
+  struct zobj* prev;
+  struct zobj* next;
 } zobj;
 
 typedef struct blockobj {
-  struct blockobj *next,*prev;
-  device *d;
+  struct blockobj* next;
+  struct blockobj* prev;
+  device* d;
   // Zones refer to sets of contiguously allocated or unallocated sectors
   // on a block object. Each partition is a zone. Each empty space
   // between partitions is a zone. Empty space at the beginning or end of
@@ -501,55 +541,51 @@ typedef struct blockobj {
   // of the block device. Zones are indexed by 0, obviously.
   // zchain: list of zone objects
   // zone: currently selected zone, NULL iff |zchain| == 0
-  zobj *zchain,*zone;
+  zobj* zchain;
+  zobj* zone;
 } blockobj;
 
-typedef struct reelbox {
-  WINDOW *win;
-  PANEL *panel;
-  struct reelbox *next,*prev;
-  struct adapterstate *as;
-  int scrline,selline;
-  blockobj *selected;
-} reelbox;
-
+// An adapter, which might be invisible (in which case the tablet is NULL). If a
+// tablet exists for this adapter, its userptr is the adapterstate.
 typedef struct adapterstate {
-  controller *c;
+  controller* c;
   unsigned devs;
   enum {
     EXPANSION_NONE,
     EXPANSION_FULL,
   } expansion;
-  struct adapterstate *next,*prev;
-  blockobj *bobjs;
-  reelbox *rb;
+  int scrline, selline;
+  blockobj* selected;
+  struct adapterstate* next;
+  struct adapterstate* prev;
+  blockobj* bobjs;
+  struct tablet* rb;   // FIXME name is an anachronism
 } adapterstate;
 
 #define EXPANSION_MAX EXPANSION_FULL
 
 static char statusmsg[BUFSIZ];
-
 static unsigned count_adapters;
-// dequeue + single selection
-static reelbox *current_adapter,*top_reelbox,*last_reelbox;
+
+static adapterstate *current_adapter/*,*top_reelbox,*last_reelbox*/;
 
 #define START_COL 1    // Room to leave for borders
 #define PAD_COLS(cols) ((cols))
 
-static blockobj *
+static blockobj*
 get_selected_blockobj(void){
-  reelbox *rb;
+  adapterstate *as;
 
-  if((rb = current_adapter) == NULL){
+  if((as = current_adapter) == NULL){
     return NULL;
   }
-  return rb->selected;
+  return as->selected;
 }
 
 static inline int
-blockobj_unloadedp(const blockobj *bo){
+blockobj_unloadedp(const blockobj* bo){
   return bo && ((bo->d->layout == LAYOUT_NONE && bo->d->blkdev.unloaded)
-    || bo->d->size == 0);
+                || bo->d->size == 0);
 }
 
 static inline int
@@ -558,7 +594,7 @@ selected_unloadedp(void){
 }
 
 static inline int
-blockobj_unpartitionedp(const blockobj *bo){
+blockobj_unpartitionedp(const blockobj* bo){
   return bo && !bo->zone &&
     (bo->d->mnttype ||
      (bo->d->layout == LAYOUT_NONE && !bo->d->blkdev.pttable)
@@ -573,7 +609,7 @@ selected_unpartitionedp(void){
 }
 
 static inline int
-blockobj_emptyp(const blockobj *bo){
+blockobj_emptyp(const blockobj* bo){
   return bo && bo->zone && !bo->zone->p;
 }
 
@@ -592,6 +628,7 @@ selected_partitionp(void){
   return blockobj_partitionp(get_selected_blockobj());
 }
 
+/*
 static inline device *
 selected_filesystem(void){
   blockobj *bo;
@@ -660,16 +697,16 @@ bevel_bottom(WINDOW *w){
   int rows,cols,z;
 
   getmaxyx(w,rows,cols);
-  assert(mvwadd_wch(w,rows - 1,0,&bchr[0]) != ERR);
+  assert(cmvwadd_wch(w,rows - 1,0,&bchr[0]) != -1);
   for(z = 1 ; z < cols - 1 ; ++z){
-    assert(mvwadd_wch(w,rows - 1,z,&bchr[2]) != ERR);
+    assert(cmvwadd_wch(w,rows - 1,z,&bchr[2]) != -1);
   }
-  assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[1]) != ERR);
+  assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[1]) != -1);
   for(z = 0 ; z < rows - 1 ; ++z){
-    mvwadd_wch(w,z,0,&bchr[3]);
+    cmvwadd_wch(w,z,0,&bchr[3]);
     mvwins_wch(w,z,cols - 1,&bchr[3]);
   }
-  return OK;
+  return 0;
 }
 
 static int
@@ -684,75 +721,160 @@ bevel_top(WINDOW *w){
 
   getmaxyx(w,rows,cols);
   assert(rows && cols);
-  assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
+  assert(cmvwadd_wch(w,0,0,&bchr[0]) != -1);
   for(z = 1 ; z < cols - 1 ; ++z){
-    assert(mvwadd_wch(w,0,z,&bchr[2]) != ERR);
+    assert(cmvwadd_wch(w,0,z,&bchr[2]) != -1);
   }
-  assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
+  assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != -1);
   for(z = 1 ; z < rows ; ++z){
-    mvwadd_wch(w,z,0,&bchr[3]);
+    cmvwadd_wch(w,z,0,&bchr[3]);
     mvwins_wch(w,z,cols - 1,&bchr[3]);
   }
-  return OK;
+  return 0;
+}
+*/
+
+static int
+bevel(struct ncplane *nc){
+  int rows,cols;
+  ncplane_dim_yx(nc, &rows, &cols);
+  assert(rows && cols);
+  ncplane_cursor_move_yx(nc, 0, 0);
+  return ncplane_rounded_box_sized(nc, 0, 0, rows, cols, 0);
 }
 
 static int
-bevel(WINDOW *w){
-  static const cchar_t bchr[] = {
-    { .attr = 0, .chars = L"╭", },
-    { .attr = 0, .chars = L"╮", },
-    { .attr = 0, .chars = L"╰", },
-    { .attr = 0, .chars = L"╯", },
-    { .attr = 0, .chars = L"│", },
-    { .attr = 0, .chars = L"─", },
-  };
-  int rows,cols,z;
+cmvwadd_wch(struct ncplane* n, int y, int x, const char* s){
+  int sbytes;
+  uint64_t channels = ncplane_get_channels(n);
+  return ncplane_putegc_yx(n, y, x, s, 0, channels, &sbytes);
+}
 
-  getmaxyx(w,rows,cols);
-  assert(rows && cols);
-  // called as one expects: 'mvwadd_wch(w,rows - 1,cols - 1,&bchr[3]);'
-  // we get ERR returned. this is known behavior: fuck ncurses. instead,
-  // we use mvwins_wch, which doesn't update the cursor position.
-  // see http://lists.gnu.org/archive/html/bug-ncurses/2007-09/msg00001.html
-  assert(mvwadd_wch(w,0,0,&bchr[0]) != ERR);
-  for(z = 1 ; z < cols - 1 ; ++z){
-    assert(mvwadd_wch(w,0,z,&bchr[5]) != ERR);
+static int
+cwattrset(struct ncplane* n, int style){
+  ncplane_styles_set(n, style >> 16);
+  return 0;
+}
+
+static int
+cwattroff(struct ncplane* n, int style){
+  ncplane_styles_off(n, style >> 16);
+  compat_set_fg(n, style & 0xffff);
+  return 0;
+}
+
+static int
+cwattron(struct ncplane* n, int style){
+  ncplane_styles_on(n, style >> 16);
+  compat_set_fg(n, style & 0xffff);
+  return 0;
+}
+
+static int
+cmvwaddstr(struct ncplane* n, int y, int x, const char* s){
+  if(ncplane_cursor_move_yx(n, y, x)){
+    return -1;
   }
-  for(z = rows - 2 ; z > 0 ; --z){
-    assert(mvwadd_wch(w,z,0,&bchr[4]) != ERR);
-    assert(mvwins_wch(w,z,cols - 1,&bchr[4]) != ERR);
+  return ncplane_putstr(n, s);
+}
+
+static int
+cmvwaddwstr(struct ncplane* n, int y, int x, const wchar_t* ws){
+  if(ncplane_cursor_move_yx(n, y, x)){
+    return -1;
   }
-  assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != ERR);
-  assert(mvwadd_wch(w,rows - 1,0,&bchr[2]) != ERR);
-  for(z = 1 ; z < cols - 1 ; ++z){
-    assert(mvwadd_wch(w,rows - 1,z,&bchr[5]) != ERR);
+  return ncplane_putwstr(n, ws);
+}
+
+static int
+cwaddstr(struct ncplane* n, const char* s){
+  return ncplane_putstr(n, s);
+}
+
+static int
+cwaddwstr(struct ncplane* n, const wchar_t* ws){
+  return ncplane_putwstr(n, ws);
+}
+
+static int
+cmvwaddnstr(struct ncplane* nc, int y, int x, const char* s, size_t n){
+  if(ncplane_cursor_move_yx(nc, y, x)){
+    return -1;
   }
-  assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[3]) != ERR);
-  return OK;
+  return ncplane_putstr(nc, s); // FIXME
+}
+
+static int
+cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
+  if(ncplane_cursor_move_yx(nc, y, x)){
+    return -1;
+  }
+  cell c = CELL_TRIVIAL_INITIALIZER;
+  if(cell_load(nc, &c, ch) < 0){
+    return -1;
+  }
+  c.channels = ncplane_get_channels(nc);
+  if(ncplane_hline(nc, &c, n) != n){
+    cell_release(nc, &c);
+    return -1;
+  }
+  cell_release(nc, &c);
+  return 0;
+}
+
+static int
+cmvwprintw(struct ncplane* n, int y, int x, const char* fmt, ...){
+  if(ncplane_cursor_move_yx(n, y, x)){
+    return -1;
+  }
+  va_list va;
+  va_start(va, fmt);
+  int ret = ncplane_vprintf(n, fmt, va);
+  va_end(va);
+  return ret;
+}
+
+static int
+cwprintw(struct ncplane* n, const char* fmt, ...){
+  va_list va;
+  va_start(va, fmt);
+  int ret = ncplane_vprintf(n, fmt, va);
+  va_end(va);
+  return ret;
+}
+
+static int
+cwbkgd(struct ncplane* nc){
+  cell cl = CELL_TRIVIAL_INITIALIZER;
+  cell_load(nc, &cl, " ");
+  cell_set_fg(&cl, 0, 0, 0);
+  ncplane_set_background(nc, &cl);
+  cell_release(nc, &cl);
+  return 0;
 }
 
 static void
-draw_main_window(WINDOW *w){
-  int rows,cols,scol,x,y;
+draw_main_window(struct ncplane* n){
+  int rows, cols, scol, x, y;
   char buf[BUFSIZ];
 
-  scol = snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE,VERSION, count_adapters - 1);
+  scol = snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE, VERSION, count_adapters - 1);
   assert(scol > 0 && (unsigned)scol < sizeof(buf));
-  getmaxyx(w,rows,cols);
-  assert(wattrset(w,COLOR_PAIR(HEADER_COLOR)) != ERR);
-  mvwaddstr(w,rows - 1,0,buf);
-  getyx(w,y,x);
+  ncplane_dim_yx(n, &rows, &cols);
+  cwattrset(n, HEADER_COLOR);
+  cmvwaddstr(n, rows - 1, 0, buf);
+  ncplane_yx(n, &y, &x);
   assert(y >= 0);
   cols -= x + 2;
-  assert(wattron(w,A_BOLD | COLOR_PAIR(STATUS_COLOR)) != ERR);
-  assert(wprintw(w," %-*.*s",cols,cols,statusmsg) != ERR);
+  assert(cwattron(n, (CELL_STYLE_BOLD << 16u) | STATUS_COLOR) != -1);
+  assert(cwprintw(n, " %-*.*s", cols, cols, statusmsg) != -1);
 }
 
 static void
-locked_vdiag(const char *fmt,va_list v){
+locked_vdiag(const char *fmt, va_list v){
   size_t off;
 
-  vsnprintf(statusmsg,sizeof(statusmsg) / sizeof(*statusmsg) - 1,fmt,v);
+  vsnprintf(statusmsg, sizeof(statusmsg) / sizeof(*statusmsg) - 1, fmt, v);
   statusmsg[sizeof(statusmsg) / sizeof(*statusmsg) - 1] = '\0';
   for(off = 0 ; off < sizeof(statusmsg) / sizeof(*statusmsg) - 1 ; ++off){
     if(!isgraph(statusmsg[off])){
@@ -762,23 +884,23 @@ locked_vdiag(const char *fmt,va_list v){
       statusmsg[off] = ' ';
     }
   }
-  draw_main_window(stdscr);
+  draw_main_window(notcurses_stdplane(NC));
   if(diags.p){
     update_diags(&diags);
   }
   screen_update();
 }
 
-void locked_diag(const char *fmt,...){
+void locked_diag(const char *fmt, ...){
   va_list v;
 
-  va_start(v,fmt);
-  locked_vdiag(fmt,v);
+  va_start(v, fmt);
+  locked_vdiag(fmt, v);
   va_end(v);
 }
 
 static inline int
-device_lines(int expa,const blockobj *bo){
+device_lines(int expa, const blockobj* bo){
   int l = 0;
 
   if(expa != EXPANSION_NONE){
@@ -790,6 +912,7 @@ device_lines(int expa,const blockobj *bo){
   return l;
 }
 
+/*
 // This is the number of lines we'd have in an optimal world; we might have
 // fewer available to us on this screen at this time.
 static int
@@ -869,22 +992,23 @@ bottom_space_p(int rows){
   }
   return (rows - 1) - (getmaxy(last_reelbox->win) + getbegy(last_reelbox->win));
 }
+*/
 
 // Create a panel at the bottom of the window, referred to as the "subdisplay".
 // Only one can currently be active at a time. Window decoration and placement
 // is managed here; only the rows needed for display ought be provided.
 static int
-new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
-      const wchar_t *hstr,const wchar_t *bstr,int borderpair){
+new_display_panel(struct ncplane* nc, struct panel_state *ps,
+                  int rows, int cols, const wchar_t *hstr,
+                  const wchar_t *bstr, int borderpair){
   const int crightlen = bstr ? wcslen(bstr) : 0;
-  int ybelow,yabove;
-  WINDOW *psw;
-  int x,y;
+  int ybelow, yabove;
+  int x, y;
 
   // Desired space above and below, which will be impugned upon as needed
   ybelow = 3;
   yabove = 5;
-  getmaxyx(w,y,x);
+  ncplane_dim_yx(nc, &y, &x);
   if(cols == 0){
     cols = x - START_COL * 2; // indent 2 on the left, 0 on the right
   }else{
@@ -899,44 +1023,33 @@ new_display_panel(WINDOW *w,struct panel_state *ps,int rows,int cols,
   }else{
     yabove += y - (rows + ybelow + yabove);
   }
-  if((psw = newwin(rows + 2,cols,yabove,0)) == NULL){
-    locked_diag("Can't display subwindow, uh-oh");
-    return ERR;
-  }
-  if((ps->p = new_panel(psw)) == NULL){
+  if((ps->p = notcurses_newplane(NC, rows + 2, cols, yabove, 0, NULL)) == NULL){
     locked_diag("Couldn't create subpanel, uh-oh");
-    delwin(psw);
-    return ERR;
+    return -1;
   }
-  assert(top_panel(ps->p) != ERR);
-  // memory leaks follow if we're compiled with NDEBUG! FIXME
-  assert(wattron(psw,A_BOLD) != ERR);
-  assert(wcolor_set(psw,borderpair,NULL) == OK);
-  assert(bevel(psw) == OK);
-  assert(wattroff(psw,A_BOLD) != ERR);
-  assert(wcolor_set(psw,PHEADING_COLOR,NULL) == OK);
+  cwattron(ps->p, CELL_STYLE_BOLD);
+  compat_set_fg(ps->p, borderpair);
+  bevel(ps->p);
+  cwattroff(ps->p, CELL_STYLE_BOLD);
+  compat_set_fg(ps->p, PHEADING_COLOR);
   if(hstr){
-    assert(mvwaddwstr(psw,0,START_COL * 2,hstr) != ERR);
+    cmvwaddwstr(ps->p, 0, START_COL * 2, hstr);
   }
   if(bstr){
-    assert(mvwaddwstr(psw,rows + 1,cols - (crightlen + START_COL * 2),bstr) != ERR);
+    cmvwaddwstr(ps->p, rows + 1, cols - (crightlen + START_COL * 2), bstr);
   }
-  return OK;
+  return 0;
 }
 
 static void
 hide_panel_locked(struct panel_state *ps){
   if(ps){
-    WINDOW *psw;
-
-    psw = panel_window(ps->p);
-    hide_panel(ps->p);
-    assert(del_panel(ps->p) == OK);
+    ncplane_destroy(ps->p);
     ps->p = NULL;
-    assert(delwin(psw) == OK);
   }
 }
 
+/*
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
 print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
@@ -964,9 +1077,9 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
   // the bogon block device mnttype.
   if(d->mnttype && (d->layout != LAYOUT_NONE || !d->blkdev.pttable)){
     int co = mnttype_aggregablep(d->mnttype) ?
-      COLOR_PAIR(PART_COLOR0) : COLOR_PAIR(FS_COLOR);
+      PART_COLOR0) : COLOR_PAIR(FS_COLOR;
 
-    assert(wattrset(w,A_BOLD|co) == OK);
+    assert(cwattrset(w,CELL_STYLE_BOLD|co) == 0);
     qprefix(zs,1,pre,1);
     if(!d->mnt.count || swprintf(wbuf, wchars , L" %s%s%ls%s%ls%s%s%sat %s ",
       d->label ? "" : "nameless ",
@@ -992,34 +1105,34 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
         }
       }
     }
-    mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
-    mvwadd_wch(w,y,sx,&bchr[1]);
-    mvwaddwstr(w,y,sx + (ex - sx + 1 - wcslen(wbuf)) / 2,wbuf);
-    mvwadd_wch(w,y,ex - 1,&bchr[2]);
+    cmvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
+    cmvwadd_wch(w,y,sx,&bchr[1]);
+    cmvwaddwstr(w,y,sx + (ex - sx + 1 - wcslen(wbuf)) / 2,wbuf);
+    cmvwadd_wch(w,y,ex - 1,&bchr[2]);
     selstr = d->name;
   }else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
-    assert(wattrset(w,A_BOLD|COLOR_PAIR(OPTICAL_COLOR)) == OK);
+    assert(cwattrset(w,CELL_STYLE_BOLD|OPTICAL_COLOR)) == 0;
     selstr = "No media detected in drive";
-    mvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,selstr);
+    cmvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,selstr);
   }else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
     (d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
     (d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
-    assert(wattrset(w,A_BOLD|COLOR_PAIR(EMPTY_COLOR)) == OK);
+    assert(cwattrset(w,CELL_STYLE_BOLD|EMPTY_COLOR)) == 0;
     selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
         "unpartitionable space";
     assert(snprintf(buf,sizeof(buf)," %s %s ",
         qprefix(d->size,1,pre,1),
         selstr) < (int)sizeof(buf));
-    mvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
-    mvwadd_wch(w,y,sx,&bchr[1]);
-    mvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
-    mvwadd_wch(w,y,ex - 1,&bchr[2]);
+    cmvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
+    cmvwadd_wch(w,y,sx,&bchr[1]);
+    cmvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
+    cmvwadd_wch(w,y,ex - 1,&bchr[2]);
   }
   if((z = bo->zchain) == NULL){
     if(selected){
-      wattron(w,A_REVERSE);
-      mvwprintw(w,y - 1,sx + 1,"⇗⇨⇨⇨%.*s",(int)(ex - (sx + 5)),selstr);
-      wattroff(w,A_REVERSE);
+      cwattron(w,CELL_STYLE_REVERSE);
+      cmvwprintw(w,y - 1,sx + 1,"⇗⇨⇨⇨%.*s",(int)(ex - (sx + 5)),selstr);
+      cwattroff(w,CELL_STYLE_REVERSE);
     }
     return;
   }
@@ -1034,16 +1147,16 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     zs = (z->lsector - z->fsector + 1) * bo->d->logsec;
     qprefix(zs, 1, pre, 1);
     if(z->p == NULL){ // unused space among partitions, or metadata
-      int co = (z->rep == REP_METADATA ? COLOR_PAIR(METADATA_COLOR) :
-          COLOR_PAIR(EMPTY_COLOR));
+      int co = (z->rep == REP_METADATA ? METADATA_COLOR :
+          EMPTY_COLOR);
       const char *repstr = z->rep == REP_METADATA ?
         "partition table metadata" : "empty space";
 
       if(selected && z == bo->zone){
         selstr = repstr;
-        assert(wattrset(w,A_BOLD|A_UNDERLINE|co) == OK);
+        assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|co) == 0);
       }else{
-        assert(wattrset(w,co) == OK);
+        assert(cwattrset(w,co) == 0);
       }
       if(swprintf(wbuf, wchars - 2, L"%s %s", pre, repstr) >= wchars - 2){
         if(swprintf(wbuf, wchars - 2,L"%s",repstr) >= wchars - 2){
@@ -1054,15 +1167,15 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     }else{ // dedicated partition
       if(selected && z == bo->zone){ // partition and device are selected
         if(targeted_p(z->p)){
-          assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(targco)) == OK);
+          assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|targco)) == 0;
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(mountco)) == OK);
+          assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|mountco)) == 0;
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(FS_COLOR)) == OK);
+          assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|FS_COLOR)) == 0;
         }else{
-          assert(wattrset(w,A_BOLD|A_UNDERLINE|COLOR_PAIR(partco)) == OK);
+          assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|partco)) == 0;
           partco = next_partco(partco);
         }
         // FIXME need to store pname as multibyte char *
@@ -1077,15 +1190,15 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
         }
       }else{ // partition is not selected
         if(targeted_p(z->p)){
-          assert(wattrset(w,COLOR_PAIR(targco)) == OK);
+          assert(cwattrset(w,targco)) == 0;
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          assert(wattrset(w,COLOR_PAIR(mountco)) == OK);
+          assert(cwattrset(w,mountco)) == 0;
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          assert(wattrset(w,COLOR_PAIR(FS_COLOR)) == OK);
+          assert(cwattrset(w,FS_COLOR)) == 0;
         }else{
-          assert(wattrset(w,COLOR_PAIR(partco)) == OK);
+          assert(cwattrset(w,partco)) == 0;
           partco = next_partco(partco);
         }
         if(swprintf(wbuf, wchars - 2,L"%s %s", pre,z->p->name) >= wchars - 2){
@@ -1095,7 +1208,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
         }
       }
       if(z->p->partdev.alignment < d->physsec){ // misaligned!
-        assert(wattrset(w,A_BOLD|COLOR_PAIR(FUCKED_COLOR)) == OK);
+        assert(cwattrset(w,CELL_STYLE_BOLD|FUCKED_COLOR)) == 0;
       }
       if(z->p->mnttype){
         if((!z->p->mnt.count || swprintf(wbuf, wchars - 2, L"%s at %s (%s)",z->p->mnttype,z->p->mnt.list[0],pre) >= wchars - 2)){
@@ -1120,21 +1233,21 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     och = off;
     while(ch--){
       cchar_t crep[] = { { .attr = 0, .chars[0] = rep, }, };
-      mvwadd_wch(w,y,off,crep);
+      cmvwadd_wch(w,y,off,crep);
       if(++off > ex - z->following){
         off = ex - z->following;
         break;
       }
     }
-    wattron(w,A_REVERSE);
+    cwattron(w,CELL_STYLE_REVERSE);
     if(selstr){
       if(och < ex / 2u){
-        mvwprintw(w,y - 1,och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
+        cmvwprintw(w,y - 1,och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
       }else{
-        mvwprintw(w,y - 1,off - 4 - strlen(selstr),"%s⇦⇦⇦⇖",selstr);
+        cmvwprintw(w,y - 1,off - 4 - strlen(selstr),"%s⇦⇦⇦⇖",selstr);
       }
     }
-    wattroff(w,A_REVERSE);
+    cwattroff(w,CELL_STYLE_REVERSE);
     // Truncate it at whitespace until it's small enough to fit
     while(wcslen(wbuf) && wcslen(wbuf) + 2 > (off - och + 1)){
       wchar_t *wtrunc = wcsrchr(wbuf,L' ');
@@ -1148,8 +1261,8 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     if(wcslen(wbuf)){
       size_t start = och + ((off - och + 1) - wcslen(wbuf)) / 2;
 
-      wattron(w,A_BOLD);
-      mvwaddwstr(w,y,start,wbuf);
+      cwattron(w,CELL_STYLE_BOLD);
+      cmvwaddwstr(w,y,start,wbuf);
       mvwaddch(w,y,start - 1,' ');
       mvwaddch(w,y,start + wcslen(wbuf),' ');
     }
@@ -1174,11 +1287,11 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
 case LAYOUT_NONE:
     if(bo->d->blkdev.realdev){
       if(bo->d->blkdev.rotation == SSD_ROTATION){
-        wattrset(rb->win, COLOR_PAIR(SSD_COLOR));
+        cwattrset(rb->win, SSD_COLOR);
         strncpy(rolestr,"solidstate",sizeof(rolestr));
       }else if(bo->d->blkdev.rotation > 0){
         int32_t speed = bo->d->blkdev.rotation;
-        wattrset(rb->win,COLOR_PAIR(ROTATE_COLOR));
+        cwattrset(rb->win,ROTATE_COLOR);
         if(speed > 0){
           if(speed > 99999){
             speed = 99999;
@@ -1189,15 +1302,15 @@ case LAYOUT_NONE:
           strncpy(rolestr, "ferromag", sizeof(rolestr));
         }
       }else if(bo->d->kerneltype == TYPE_ROM){
-        wattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
+        cwattrset(rb->win, OPTICAL_COLOR);
         strncpy(rolestr, "optical", sizeof(rolestr));
       }else if(bo->d->kerneltype == TYPE_TAPE){
-        wattrset(rb->win, COLOR_PAIR(OPTICAL_COLOR));
+        cwattrset(rb->win, OPTICAL_COLOR);
         strncpy(rolestr, "tape", sizeof(rolestr));
       }
       // FIXME do we want a default here?
     }else{
-      wattrset(rb->win, COLOR_PAIR(VIRTUAL_COLOR));
+      cwattrset(rb->win, VIRTUAL_COLOR);
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
     if(line + !!topp >= 1){
@@ -1205,9 +1318,9 @@ case LAYOUT_NONE:
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          wattron(rb->win, A_REVERSE);
+          cwattron(rb->win, CELL_STYLE_REVERSE);
         }
-    mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    cmvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
@@ -1229,19 +1342,19 @@ case LAYOUT_MDADM:
       rolestr[sizeof(rolestr) - 1] = '\0';
     }
     if(bo->d->mddev.degraded){
-      co = COLOR_PAIR(FUCKED_COLOR);
+      co = FUCKED_COLOR;
     }else{
-      co = COLOR_PAIR(MDADM_COLOR);
+      co = MDADM_COLOR;
     }
-    assert(wattrset(rb->win,co) == OK);
+    assert(cwattrset(rb->win,co) == 0);
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          wattron(rb->win,A_REVERSE);
+          cwattron(rb->win,CELL_STYLE_REVERSE);
         }
-    mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    cmvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
@@ -1256,19 +1369,19 @@ case LAYOUT_MDADM:
         }
       }
     }
-    assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
+    assert(cwattrset(rb->win,MDADM_COLOR)) == 0;
     break;
 case LAYOUT_DM:
     strncpy(rolestr,"dm",sizeof(rolestr));
-    assert(wattrset(rb->win,COLOR_PAIR(MDADM_COLOR)) == OK);
+    assert(cwattrset(rb->win,MDADM_COLOR)) == 0;
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          wattron(rb->win,A_REVERSE);
+          cwattron(rb->win,CELL_STYLE_REVERSE);
         }
-    mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    cmvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
@@ -1288,15 +1401,15 @@ case LAYOUT_PARTITION:
     break;
 case LAYOUT_ZPOOL:
     strncpy(rolestr,"zpool",sizeof(rolestr));
-    assert(wattrset(rb->win,COLOR_PAIR(ZPOOL_COLOR)) == OK);
+    assert(cwattrset(rb->win,ZPOOL_COLOR)) == 0;
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          wattron(rb->win,A_REVERSE);
+          cwattron(rb->win,CELL_STYLE_REVERSE);
         }
-    mvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    cmvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           (uintmax_t)bo->d->zpool.zpoolver,
@@ -1316,12 +1429,12 @@ case LAYOUT_ZPOOL:
   if(bo->d->size == 0){
     return;
   }
-  wattroff(rb->win, A_REVERSE);
-  wattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+  cwattroff(rb->win, CELL_STYLE_REVERSE);
+  cwattrset(rb->win, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
 
   // Box-diagram (3-line) mode. Print the name on the first line.
   if(line + !!topp >= 1){
-    mvwprintw(rb->win, line, START_COL, "%11.11s", bo->d->name);
+    cmvwprintw(rb->win, line, START_COL, "%11.11s", bo->d->name);
   }
 
   // Print summary below device name, in the same color, but prefix it
@@ -1330,23 +1443,23 @@ case LAYOUT_ZPOOL:
     wchar_t rep = L' ';
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
-        wattrset(rb->win, A_BOLD|COLOR_PAIR(GREEN_COLOR));
+        cwattrset(rb->win, CELL_STYLE_BOLD|GREEN_COLOR);
         rep = L'✔';
       }else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
           && bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
-        wattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
+        cwattrset(rb->win, CELL_STYLE_BOLD|ORANGE_COLOR);
         rep = L'☠';
       }else{
-        wattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+        cwattrset(rb->win, CELL_STYLE_BOLD|FUCKED_COLOR);
         rep = L'✗';
       }
     }
-    mvwprintw(rb->win, line + 1, START_COL, "%lc", rep);
-    wattrset(rb->win, A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+    cmvwprintw(rb->win, line + 1, START_COL, "%lc", rep);
+    cwattrset(rb->win, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
     if(strlen(rolestr)){
-      wprintw(rb->win, "%10.10s", rolestr);
+      cwprintw(rb->win, "%10.10s", rolestr);
     }else{
-      wprintw(rb->win, "          ");
+      cwprintw(rb->win, "          ");
     }
   }
   // ...and finally the temperature/vfailure status, and utilization...
@@ -1355,37 +1468,37 @@ case LAYOUT_ZPOOL:
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
         if(bo->d->blkdev.celsius >= 60u){
-          wattrset(rb->win, A_BOLD|COLOR_PAIR(FUCKED_COLOR));
+          cwattrset(rb->win, CELL_STYLE_BOLD|FUCKED_COLOR);
         }else if(bo->d->blkdev.celsius >= 40u){
-          wattrset(rb->win, A_BOLD|COLOR_PAIR(ORANGE_COLOR));
+          cwattrset(rb->win, CELL_STYLE_BOLD|ORANGE_COLOR);
         }else{
-          wattrset(rb->win, COLOR_PAIR(GREEN_COLOR));
+          cwattrset(rb->win, GREEN_COLOR);
         }
         // FIXME would be nice to use ℃ , but it looks weird
-        mvwprintw(rb->win, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
+        cmvwprintw(rb->win, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
       }else{
-        mvwprintw(rb->win, sumline, START_COL, "    ");
+        cmvwprintw(rb->win, sumline, START_COL, "    ");
       }
     }else if(bo->d->layout == LAYOUT_MDADM){
       if(bo->d->mddev.degraded){
-        wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-        mvwprintw(rb->win, sumline, START_COL,
+        cwattrset(rb->win,CELL_STYLE_BOLD|FUCKED_COLOR);
+        cmvwprintw(rb->win, sumline, START_COL,
             "%1lux☠ ", bo->d->mddev.degraded);
       }else{
-        wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-        mvwprintw(rb->win, sumline, START_COL, "up  ");
+        cwattrset(rb->win,GREEN_COLOR);
+        cmvwprintw(rb->win, sumline, START_COL, "up  ");
       }
     }else if(bo->d->layout == LAYOUT_DM){
       // FIXME add more detail...type of dm etc
-      wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-      mvwprintw(rb->win,sumline,START_COL,"up  ");
+      cwattrset(rb->win,GREEN_COLOR);
+      cmvwprintw(rb->win,sumline,START_COL,"up  ");
     }else if(bo->d->layout == LAYOUT_ZPOOL){
       if(bo->d->zpool.state != POOL_STATE_ACTIVE){
-        wattrset(rb->win,A_BOLD|COLOR_PAIR(FUCKED_COLOR));
-        mvwprintw(rb->win,sumline,START_COL,"☠☠☠ ");
+        cwattrset(rb->win,CELL_STYLE_BOLD|FUCKED_COLOR);
+        cmvwprintw(rb->win,sumline,START_COL,"☠☠☠ ");
       }else{
-        wattrset(rb->win,COLOR_PAIR(GREEN_COLOR));
-        mvwprintw(rb->win,sumline,START_COL,"up  ");
+        cwattrset(rb->win,GREEN_COLOR);
+        cmvwprintw(rb->win,sumline,START_COL,"up  ");
       }
     }
     uintmax_t io;
@@ -1393,25 +1506,25 @@ case LAYOUT_ZPOOL:
     io += bo->d->statdelta.sectors_written;
     io *= bo->d->logsec;
     // FIXME normalize according to timeq
-    wattrset(rb->win, COLOR_PAIR(SELECTED_COLOR));
+    cwattrset(rb->win, SELECTED_COLOR);
     // FIXME 'i' shows up only when there are fewer than 3 sigfigs
     // to the left of the decimal point...very annoying
     if(io){
       char qbuf[BPREFIXSTRLEN + 1];
       bprefix(io, 1, qbuf,  1);
-      wprintw(rb->win, "%7.7s", qbuf); // might chop off 'i'
+      cwprintw(rb->win, "%7.7s", qbuf); // might chop off 'i'
     }else{
-      wprintw(rb->win, " no i/o");
+      cwprintw(rb->win, " no i/o");
     }
   }
 
-  assert(wattrset(rb->win,A_BOLD|COLOR_PAIR(DBORDER_COLOR)) == OK);
+  assert(cwattrset(rb->win,CELL_STYLE_BOLD|DBORDER_COLOR)) == 0;
   if(selected){
-    wattron(rb->win,A_REVERSE);
+    cwattron(rb->win,CELL_STYLE_REVERSE);
   }
   if(line + !!topp >= 1){
     mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
-    mvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
+    cmvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
     mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
   }
   if(++line >= rows - !endp){
@@ -1423,10 +1536,10 @@ case LAYOUT_ZPOOL:
     print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
           cols - START_COL - 1,selected);
   }
-  attr = A_BOLD | COLOR_PAIR(DBORDER_COLOR);
-  wattrset(rb->win,attr);
+  attr = CELL_STYLE_BOLD | DBORDER_COLOR;
+  cwattrset(rb->win,attr);
   if(selected){
-    wattron(rb->win,A_REVERSE);
+    cwattron(rb->win,CELL_STYLE_REVERSE);
   }
   if(line + !!topp >= 1){
     mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
@@ -1443,7 +1556,7 @@ case LAYOUT_ZPOOL:
 
     mvwaddch(rb->win,line,START_COL + 10 + 1,attr | ACS_LLCORNER);
     wadd_wch(rb->win,&bchrs[0]);
-    mvwadd_wch(rb->win,line,cols - 3 - c,&bchrs[1]);
+    cmvwadd_wch(rb->win,line,cols - 3 - c,&bchrs[1]);
     if(c > 0){
       whline(rb->win,ACS_HLINE,c);
       wmove(rb->win,line,cols - 2);
@@ -1452,38 +1565,35 @@ case LAYOUT_ZPOOL:
   }
   ++line;
 }
+*/
 
 static void
-print_adapter_devs(const adapterstate *as,int rows,int cols,
-        unsigned topp,unsigned endp){
+print_adapter_devs(const adapterstate *as, int rows, int cols, unsigned topp,
+                   unsigned endp){
   // If the interface is down, we don't lead with the summary line
   const blockobj *cur;
-  const reelbox *rb;
   long line;
 
-  if((rb = as->rb) == NULL){
-    return;
-  }
   if(as->expansion == EXPANSION_NONE){
     return;
   }
   // First, print the selected device (if there is one), and those above
-  cur = rb->selected;
-  line = rb->selline;
-  while(cur && line + (long)device_lines(as->expansion,cur) >= !!topp){
-    print_dev(rb,cur,line,rows,cols,topp,endp);
+  cur = as->selected;
+  line = as->selline;
+  while(cur && line + (long)device_lines(as->expansion, cur) >= !!topp){
+    // FIXME print_dev(as, cur, line, rows, cols, topp, endp);
     // here we traverse, then account...
     if( (cur = cur->prev) ){
-      line -= device_lines(as->expansion,cur);
+      line -= device_lines(as->expansion, cur);
     }
   }
-  line = rb->selected ? (rb->selline +
-    (long)device_lines(as->expansion,rb->selected)) : -(long)topp + 1;
-  cur = (rb->selected ? rb->selected->next : as->bobjs);
+  line = as->selected ? (as->selline +
+    (long)device_lines(as->expansion, as->selected)) : -(long)topp + 1;
+  cur = (as->selected ? as->selected->next : as->bobjs);
   while(cur && line < rows){
-    print_dev(rb,cur,line,rows,cols,topp,endp);
+    // FIXME print_dev(as, cur, line, rows, cols, topp, endp);
     // here, we account before we traverse. this is correct.
-    line += device_lines(as->expansion,cur);
+    line += device_lines(as->expansion, cur);
     cur = cur->next;
   }
 }
@@ -1491,149 +1601,137 @@ print_adapter_devs(const adapterstate *as,int rows,int cols,
 // Abovetop: lines hidden at the top of the screen
 // Belowend: lines hidden at the bottom of the screen
 static void
-adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend){
-  int current = as->rb == current_adapter;
-  int bcolor,hcolor,rows,cols;
+adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsigned belowend){
+  int current = as == current_adapter;
+  int bcolor, hcolor, rows, cols;
   int attrs;
 
-  getmaxyx(w,rows,cols);
+  ncplane_dim_yx(nc, &rows, &cols);
   if(current){
-    hcolor = UHEADING_COLOR; // plus A_BOLD
+    hcolor = UHEADING_COLOR; // plus CELL_STYLE_BOLD
     bcolor = SELBORDER_COLOR;
-    attrs = A_BOLD;
+    attrs = CELL_STYLE_BOLD;
   }else{
     hcolor = UNHEADING_COLOR;;
     bcolor = UBORDER_COLOR;
-    attrs = A_NORMAL;
+    attrs = 0;
   }
-  assert(wattrset(w,attrs | COLOR_PAIR(bcolor)) == OK);
+  cwattrset(nc, (attrs << 16u) | bcolor);
   if(abovetop == 0){
     if(belowend == 0){
-      assert(bevel(w) == OK);
+      assert(bevel(nc) == 0);
     }else{
-      assert(bevel_top(w) == OK);
+      assert(bevel_top(nc) == 0);
     }
   }else{
     if(belowend == 0){
-      assert(bevel_bottom(w) == OK);
+      assert(bevel_bottom(nc) == 0);
     } // otherwise it has no top or bottom visible
   }
   if(abovetop == 0){
     if(current){
-      assert(wattron(w,A_BOLD) == OK);
+      assert(cwattron(nc, CELL_STYLE_BOLD) == 0);
     }else{
-      assert(wattroff(w,A_BOLD) == OK);
+      assert(cwattroff(nc, CELL_STYLE_BOLD) == 0);
     }
-    assert(mvwprintw(w,0,7,"%ls",L"[") != ERR);
-    assert(wcolor_set(w,hcolor,NULL) == OK);
-    assert(waddstr(w,as->c->ident) != ERR);
+    cmvwprintw(nc, 0, 7, "%ls", L"[");
+    compat_set_fg(nc, hcolor);
+    cwaddstr(nc, as->c->ident);
     if(as->c->numa_node >= 0){
-      assert(wprintw(w," [%d]",as->c->numa_node) != ERR);
+      assert(cwprintw(nc, " [%d]", as->c->numa_node) != -1);
     }
     if(as->c->bandwidth){
-      char buf[PREFIXSTRLEN + 1],dbuf[PREFIXSTRLEN + 1];
+      char buf[PREFIXSTRLEN + 1], dbuf[PREFIXSTRLEN + 1];
 
       if(as->c->demand){
-        wprintw(w," (%sbps to Southbridge, %sbps (%ju%%) demanded)",
-          qprefix(as->c->bandwidth,1,buf,1),
-          qprefix(as->c->demand,1,dbuf,1),
+        cwprintw(nc, " (%sbps to Southbridge, %sbps (%ju%%) demanded)",
+          qprefix(as->c->bandwidth, 1, buf, 1),
+          qprefix(as->c->demand, 1, dbuf, 1),
           as->c->demand * 100 / as->c->bandwidth);
       }else{
-        wprintw(w," (%sbps to Southbridge)",
-          qprefix(as->c->bandwidth,1,buf,1));
+        cwprintw(nc, " (%sbps to Southbridge)",
+          qprefix(as->c->bandwidth, 1, buf, 1));
       }
     }else if(as->c->bus != BUS_VIRTUAL && as->c->demand){
       char dbuf[PREFIXSTRLEN + 1];
 
-      wprintw(w," (%sbps demanded)",qprefix(as->c->demand,1,dbuf,1));
+      cwprintw(nc, " (%sbps demanded)", qprefix(as->c->demand, 1, dbuf, 1));
     }
-    assert(wcolor_set(w,bcolor,NULL) != ERR);
-    assert(wprintw(w,"]") != ERR);
-    assert(wattron(w,A_BOLD) == OK);
-    assert(wmove(w,0,cols - 5) != ERR);
-    waddwstr(w,as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
-    assert(wattron(w,attrs) != ERR);
+    compat_set_fg(nc, bcolor);
+    assert(cwprintw(nc, "]") != -1);
+    assert(cwattron(nc, CELL_STYLE_BOLD) == 0);
+    ncplane_move_yx(nc, 0, cols - 5);
+    cwaddwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
+    assert(cwattron(nc, attrs) != -1);
   }
   if(belowend == 0){
     if(as->c->bus == BUS_PCIe){
-      assert(wcolor_set(w,bcolor,NULL) != ERR);
+      compat_set_fg(nc, bcolor);
       if(current){
-        assert(wattron(w,A_BOLD) == OK);
+        assert(cwattron(nc, CELL_STYLE_BOLD) == 0);
       }else{
-        assert(wattroff(w,A_BOLD) == OK);
+        assert(cwattroff(nc, CELL_STYLE_BOLD) == 0);
       }
-      assert(mvwprintw(w,rows - 1,6,"[") != ERR);
-      assert(wcolor_set(w,hcolor,NULL) != ERR);
+      cmvwprintw(nc, rows - 1, 6, "[");
+      compat_set_fg(nc, hcolor);
       if(as->c->pcie.lanes_neg == 0){
-        wprintw(w,"Southbridge device %04x:%02x.%02x.%x",
-          as->c->pcie.domain,as->c->pcie.bus,
-          as->c->pcie.dev,as->c->pcie.func);
+        cwprintw(nc, "Southbridge device %04x:%02x.%02x.%x",
+          as->c->pcie.domain, as->c->pcie.bus,
+          as->c->pcie.dev, as->c->pcie.func);
       }else{
-        wprintw(w,"PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)",
-            as->c->pcie.domain,as->c->pcie.bus,
-            as->c->pcie.dev,as->c->pcie.func,
-            as->c->pcie.lanes_neg,pcie_gen(as->c->pcie.gen));
+        cwprintw(nc, "PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)",
+            as->c->pcie.domain, as->c->pcie.bus,
+            as->c->pcie.dev, as->c->pcie.func,
+            as->c->pcie.lanes_neg, pcie_gen(as->c->pcie.gen));
       }
-      assert(wcolor_set(w,bcolor,NULL) != ERR);
-      assert(wprintw(w,"]") != ERR);
+      compat_set_fg(nc, bcolor);
+      assert(cwprintw(nc, "]") != -1);
     }
   }
 }
 
 static int
-redraw_adapter(const reelbox *rb){
-  const adapterstate *as = rb->as;
-  int scrrows,scrcols,rows,cols;
-  unsigned topp,endp;
+redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
+               bool cliptop, void* vas){
+  const adapterstate *as = vas;
+  int rows, cols;
+  unsigned topp, endp;
 
-// fprintf(stderr, "  ASKED TO DRAW %s\n", rb->as->c->name);
-  if(panel_hidden(rb->panel)){
-// fprintf(stderr, "  I'M HIDDEN, BITCH!\n");
-    return OK;
-  }
-  getmaxyx(stdscr,scrrows,scrcols);
-  assert(scrcols); // FIXME
-  if(adapter_wholly_visible_p(scrrows,rb) || active){ // completely visible
-    topp = endp = 0;
-  }else if(getbegy(rb->win) == 0){ // no top
-    topp = adapter_lines_unbounded(as) - getmaxy(rb->win);
-    endp = 0;
-  }else{
-    topp = 0;
-    endp = 1; // no bottom FIXME
-  }
-  getmaxyx(rb->win,rows,cols);
+  ncplane_dim_yx(n, &rows, &cols);
   assert(cols); // FIXME
-  werase(rb->win);
-  adapter_box(as,rb->win,topp,endp);
-  print_adapter_devs(as,rows,cols,topp,endp);
-  return OK;
+  adapter_box(as, n, topp, endp);
+  // FIXME express in terms of begx/begy/maxx/maxy
+  print_adapter_devs(as, rows, cols, cliptop, !cliptop);
+  return 0;
 }
 
 // -------------------------------------------------------------------------
 // -- splash API. splashes are displayed during long operations, especially
 //    those requiring an external program.
 // -------------------------------------------------------------------------
-struct panel_state *show_splash(const wchar_t *msg){
-  struct panel_state *ps;
+struct panel_state* show_splash(const wchar_t* msg){
+  struct panel_state* ps;
 
   assert(!splash);
   if((ps = malloc(sizeof(*ps))) == NULL){
     return NULL;
   }
-  memset(ps,0,sizeof(*ps));
+  memset(ps, 0, sizeof(*ps));
   // FIXME gross, clean all of this up
-  if(new_display_panel(stdscr,ps,3,wcslen(msg) + 4,NULL,NULL,SPLASHBORDER_COLOR)){
+  if(new_display_panel(notcurses_stdplane(NC), ps, 3, wcslen(msg) + 4, NULL,
+                       NULL, SPLASHBORDER_COLOR)){
     free(ps);
     return NULL;
   }
-  wattrset(panel_window(ps->p),A_BOLD|COLOR_PAIR(SPLASHTEXT_COLOR));
-  mvwhline(panel_window(ps->p),1,1,' ',getmaxx(panel_window(ps->p)) - 2);
-  mvwhline(panel_window(ps->p),2,1,' ',getmaxx(panel_window(ps->p)) - 2);
-  mvwaddwstr(panel_window(ps->p),2,2,msg);
-  mvwhline(panel_window(ps->p),3,1,' ',getmaxx(panel_window(ps->p)) - 2);
+  int cols;
+  ncplane_dim_yx(ps->p, NULL, &cols);
+  cwattrset(ps->p, CELL_STYLE_BOLD|SPLASHTEXT_COLOR);
+  cmvwhline(ps->p, 1, 1, " ", cols - 2);
+  cmvwhline(ps->p, 2, 1, " ", cols - 2);
+  cmvwaddwstr(ps->p, 2, 2, msg);
+  cmvwhline(ps->p, 3, 1, " ", cols - 2);
   form_colors();
-  move_panel(ps->p,3,3);
+  ncplane_move_yx(ps->p, 3, 3);
   return splash = ps;
 }
 // -------------------------------------------------------------------------
@@ -1650,14 +1748,14 @@ struct panel_state *show_splash(const wchar_t *msg){
 // -------------------------------------------------------------------------
 // -- form creation
 // -------------------------------------------------------------------------
-static struct form_state *
-create_form(const char *str,void (*fxn)(const char *),form_enum ftype,int scrolloff){
-  struct form_state *fs;
+static struct form_state*
+create_form(const char* str, void (*fxn)(const char*), form_enum ftype, int scrolloff){
+  struct form_state* fs;
 
   if( (fs = malloc(sizeof(*fs))) ){
-    memset(fs,0,sizeof(*fs));
+    memset(fs, 0, sizeof(*fs));
     if((fs->boxstr = strdup(str)) == NULL){
-      locked_diag("Couldn't create input dialog (%s?)",strerror(errno));
+      locked_diag("Couldn't create input dialog (%s?)", strerror(errno));
       free(fs);
       return NULL;
     }
@@ -1666,23 +1764,19 @@ create_form(const char *str,void (*fxn)(const char *),form_enum ftype,int scroll
     fs->formtype = ftype;
     fs->fxn = fxn;
   }else{
-    locked_diag("Couldn't create input dialog (%s?)",strerror(errno));
+    locked_diag("Couldn't create input dialog (%s?)", strerror(errno));
   }
   return fs;
 }
 
 static void
-destroy_form_locked(struct form_state *fs){
+destroy_form_locked(struct form_state* fs){
   if(fs){
-    WINDOW *fsw;
     int z;
 
     assert(fs == actform);
-    fsw = panel_window(fs->p);
-    hide_panel(fs->p);
-    del_panel(fs->p);
+    ncplane_destroy(fs->p);
     fs->p = NULL;
-    delwin(fsw);
     hide_panel_locked(fs->extext);
     free(fs->extext);
     fs->extext = NULL;
@@ -1722,97 +1816,91 @@ free_form(struct form_state *fs){
     if(splash == NULL){
       setup_colors();
     }
-    if(current_adapter){
+    /*if(current_adapter){
       touchwin(current_adapter->win);
-    }
+    }*/
     screen_update();
   }
 }
 
 static void
 multiform_options(struct form_state *fs){
-  static const cchar_t bchr[] = {
-    { .attr = 0, .chars = L"╮", },
-    { .attr = 0, .chars = L"╯", },
-    { .attr = 0, .chars = L"╭", },
-    { .attr = 0, .chars = L"╰", },
-    { .attr = 0, .chars = L"│", },
-  };
   const struct form_option *opstrs = fs->ops;
-  WINDOW *fsw = panel_window(fs->p);
-  int z,cols,selidx,maxz;
+  struct ncplane* fsw = fs->p;
+  int z, cols, selidx, maxz;
 
   assert(fs->formtype == FORM_MULTISELECT);
-  cols = getmaxx(fsw);
-  wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-  wattron(fsw,A_BOLD);
-  mvwadd_wch(fsw,1,1,&bchr[2]);
-  mvwadd_wch(fsw,1,fs->longop + 4,&bchr[0]);
-  maxz = getmaxy(fsw) - 3;
+  ncplane_dim_yx(fsw, &maxz, &cols);
+  cwattrset(fsw, FORMBORDER_COLOR);
+  cwattron(fsw, CELL_STYLE_BOLD);
+  cmvwadd_wch(fsw, 1, 1, "╭");
+  cmvwadd_wch(fsw, 1, fs->longop + 4, "╮");
+  maxz -= 3;
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    wattroff(fsw,A_BOLD);
-    wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+    cwattroff(fsw, CELL_STYLE_BOLD);
+    compat_set_fg(fsw, FORMBORDER_COLOR);
     if(fs->selectno >= z){
-      mvwprintw(fsw,z + 1,START_COL * 2,"%d",z);
+      cmvwprintw(fsw, z + 1, START_COL * 2, "%d", z);
     }else if(fs->selections >= z){
-      mvwprintw(fsw,z + 2,START_COL * 2,"%d",z);
+      cmvwprintw(fsw, z + 2, START_COL * 2, "%d", z);
     }
     if(z < fs->opcount + 1){
-      wattron(fsw,A_BOLD);
-      wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-      mvwprintw(fsw,z + 1,START_COL * 2 + fs->longop + 4,"%-*.*s ",
-        fs->longop,fs->longop,opstrs[op].option);
+      cwattron(fsw, CELL_STYLE_BOLD);
+      compat_set_fg(fsw, FORMTEXT_COLOR);
+      cmvwprintw(fsw, z + 1, START_COL * 2 + fs->longop + 4, "%-*.*s ",
+                 fs->longop, fs->longop, opstrs[op].option);
       if(op == fs->idx){
-        wattron(fsw,A_REVERSE);
+        cwattron(fsw, CELL_STYLE_REVERSE);
       }
-      wcolor_set(fsw,INPUT_COLOR,NULL);
+      compat_set_fg(fsw, INPUT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
-        if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
-          wcolor_set(fsw,SELECTED_COLOR,NULL);
+        if(strcmp(opstrs[op].option, fs->selarray[selidx]) == 0){
+          compat_set_fg(fsw, SELECTED_COLOR);
           break;
         }
       }
-      wprintw(fsw,"%-*.*s",cols - fs->longop * 2 - 9,
-        cols - fs->longop * 2 - 9,opstrs[op].desc);
-      wattroff(fsw,A_REVERSE);
+      cwprintw(fsw, "%-*.*s", cols - fs->longop * 2 - 9,
+        cols - fs->longop * 2 - 9, opstrs[op].desc);
+      cwattroff(fsw, CELL_STYLE_REVERSE);
     }
   }
-  wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-  wattron(fsw,A_BOLD);
+  cwattrset(fsw, FORMBORDER_COLOR);
+  cwattron(fsw, CELL_STYLE_BOLD);
   for(z = 0 ; z < fs->selections ; ++z){
-    mvwaddstr(fsw,z >= fs->selectno ? 3 + z : 2 + z,4,fs->selarray[z]);
+    cmvwaddstr(fsw, z >= fs->selectno ? 3 + z : 2 + z, 4, fs->selarray[z]);
   }
-  mvwadd_wch(fsw,fs->selectno + 2,1,&bchr[3]);
-  mvwadd_wch(fsw,fs->selectno + 2,fs->longop + 4,&bchr[1]);
+  cmvwadd_wch(fsw, fs->selectno + 2, 1, "╰");
+  cmvwadd_wch(fsw, fs->selectno + 2, fs->longop + 4, "╯");
 }
 
 static void
 check_options(struct form_state *fs){
+  /*
   const struct form_option *opstrs = fs->ops;
-  WINDOW *fsw = panel_window(fs->p);
+  WINDOW *fsw = fs->p;
   int z,cols,selidx,maxz;
 
   assert(fs->formtype == FORM_CHECKBOXEN);
   cols = getmaxx(fsw);
-  wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
-  wattron(fsw,A_BOLD);
+  cwattrset(fsw,FORMBORDER_COLOR);
+  cwattron(fsw,CELL_STYLE_BOLD);
   maxz = getmaxy(fsw) - 3;
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    wattroff(fsw,A_BOLD);
-    wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+    cwattroff(fsw,CELL_STYLE_BOLD);
+    compat_set_fg(fsw,FORMBORDER_COLOR);
     if(z < fs->opcount + 1){
       wchar_t ballot = L'☐';
 
-      wattron(fsw,A_BOLD);
-      wcolor_set(fsw,FORMTEXT_COLOR,NULL);
+      cwattron(fsw,CELL_STYLE_BOLD);
+      compat_set_fg(fsw,FORMTEXT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
         if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
           ballot = L'☒';
@@ -1820,60 +1908,61 @@ check_options(struct form_state *fs){
         }
       }
       if(op == fs->idx){
-        wattron(fsw,A_REVERSE);
+        cwattron(fsw,CELL_STYLE_REVERSE);
       }else{
-        wcolor_set(fsw,INPUT_COLOR,NULL);
+        compat_set_fg(fsw,INPUT_COLOR);
       }
-      mvwprintw(fsw,z + 1,START_COL * 2,"%lc %-*.*s ",
+      cmvwprintw(fsw,z + 1,START_COL * 2,"%lc %-*.*s ",
         ballot,fs->longop,fs->longop,opstrs[op].option);
-      wprintw(fsw,"%-*.*s",cols - fs->longop - 7,
+      cwprintw(fsw,"%-*.*s",cols - fs->longop - 7,
         cols - fs->longop - 7,opstrs[op].desc);
-      wattroff(fsw,A_REVERSE);
+      cwattroff(fsw,CELL_STYLE_REVERSE);
     }
   }
-  wattrset(fsw,COLOR_PAIR(FORMBORDER_COLOR));
+  cwattrset(fsw,FORMBORDER_COLOR);
+  */
 }
 
 static void
 form_options(struct form_state *fs){
   const struct form_option *opstrs = fs->ops;
-  WINDOW *fsw = panel_window(fs->p);
-  int z,cols;
+  int z, cols, rows;
 
   if(fs->formtype != FORM_SELECT){
     return;
   }
-  cols = getmaxx(fsw);
-  wattron(fsw,A_BOLD);
-  for(z = 1 ; z < getmaxy(fsw) - 3 ; ++z){
+  ncplane_dim_yx(fs->p, &rows, &cols);
+  cwattron(fs->p, CELL_STYLE_BOLD);
+  for(z = 1 ; z < rows - 3 ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-    mvwprintw(fsw,z + 1,START_COL * 2,"%-*.*s ",
-      fs->longop,fs->longop,opstrs[op].option);
+    compat_set_fg(fs->p, FORMTEXT_COLOR);
+    cmvwprintw(fs->p, z + 1, START_COL * 2, "%-*.*s ",
+      fs->longop, fs->longop, opstrs[op].option);
     if(op == fs->idx){
-      wattron(fsw,A_REVERSE);
+      cwattron(fs->p, CELL_STYLE_REVERSE);
     }
-    wcolor_set(fsw,INPUT_COLOR,NULL);
-    wprintw(fsw,"%-*.*s",cols - fs->longop - 1 - START_COL * 4,
-      cols - fs->longop - 1 - START_COL * 4,opstrs[op].desc);
-    wattroff(fsw,A_REVERSE);
+    compat_set_fg(fs->p, INPUT_COLOR);
+    cwprintw(fs->p, "%-*.*s", cols - fs->longop - 1 - START_COL * 4,
+      cols - fs->longop - 1 - START_COL * 4, opstrs[op].desc);
+    cwattroff(fs->p, CELL_STYLE_REVERSE);
   }
 }
 
 #define FORM_Y_OFFSET 5
+
 static struct panel_state *
-raise_form_explication(const WINDOW *w,const char *text,int linesz){
+raise_form_explication(const struct ncplane* n, const char* text, int linesz){
+  int cols, x, y, brk, tot;
   int linepre[linesz - 1];
   int linelen[linesz - 1];
   struct panel_state *ps;
-  int cols,x,y,brk,tot;
-  WINDOW *win;
 
-  // There's two columns of padding surrounding the subwindow
-  cols = getmaxx(w) - 1;
+  // There're two columns of padding surrounding the subwindow
+  ncplane_dim_yx(n, NULL, &cols);
+  --cols;
   tot = 0;
   for(y = 0 ; (unsigned)y < sizeof(linepre) / sizeof(*linepre) ; ++y){
     while(isspace(text[tot])){
@@ -1911,31 +2000,31 @@ raise_form_explication(const WINDOW *w,const char *text,int linesz){
   assert(!text[tot]);
   ps = malloc(sizeof(*ps));
   assert(ps);
-  win = newwin(y + 3,cols,linesz - (y + 2),getmaxx(w) - cols);
-  assert(win);
-  ps->p = new_panel(win);
+  int ncols;
+  ncplane_dim_yx(n, NULL, &ncols);
+  ps->p = notcurses_newplane(NC, y + 3, cols, linesz - (y + 2), ncols - cols, NULL);
   assert(ps->p);
-  wbkgd(win,COLOR_PAIR(BLACK_COLOR));
-  wattrset(win,COLOR_PAIR(FORMBORDER_COLOR));
-  bevel(win);
-  wattrset(win,COLOR_PAIR(FORMTEXT_COLOR));
+  cwbkgd(ps->p);
+  cwattrset(ps->p, FORMBORDER_COLOR);
+  bevel(ps->p);
+  compat_set_fg(ps->p, FORMTEXT_COLOR);
   do{
-    mvwaddnstr(win,y + 1,1,text + linepre[y],linelen[y]);
+    cmvwaddnstr(ps->p, y + 1, 1, text + linepre[y], linelen[y]);
   }while(y--);
-  top_panel(ps->p);
   screen_update();
   return ps;
 }
 
-void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
-    struct form_option *opstrs,int ops,int defidx,
-    int selectno,char **selarray,int selections,const char *text,
+void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, int),
+    struct form_option *opstrs, int ops, int defidx,
+    int selectno, char **selarray, int selections, const char *text,
     int scrollidx){
-  size_t longop,longdesc;
+  /*
+  size_t longop, longdesc;
   struct form_state *fs;
-  int cols,rows;
+  int cols, rows;
   WINDOW *fsw;
-  int x,y;
+  int x, y;
 
   assert(ops);
   assert(opstrs);
@@ -1958,7 +2047,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
     cols = wcslen(ESCSTR) + 2;
   }
   rows = (ops > selectno ? ops : selectno) + 4;
-  getmaxyx(stdscr,y,x);
+  getmaxyx(stdscr, y, x);
   if(x < cols){
     locked_diag("Window too thin for form, uh-oh");
     return;
@@ -1970,11 +2059,11 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
       return;
     }
   }
-  if((fs = create_form(str,NULL,FORM_MULTISELECT,scrollidx)) == NULL){
+  if((fs = create_form(str, NULL, FORM_MULTISELECT, scrollidx)) == NULL){
     return;
   }
   fs->mcb = fxn;
-  if((fsw = newwin(rows,cols,FORM_Y_OFFSET,x - cols)) == NULL){
+  if((fsw = newwin(rows, cols, FORM_Y_OFFSET, x - cols)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -1985,7 +2074,7 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
     free_form(fs);
     return;
   }
-  wbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
+  cwbkgd(fsw);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
@@ -1993,36 +2082,36 @@ void raise_multiform(const char *str,void (*fxn)(const char *,char **,int,int),
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw, CELL_STYLE_BOLD);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 4,"%s",fs->boxstr);
-  mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
+  cwattron(fsw, CELL_STYLE_BOLD);
+  cmvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 4, "%s", fs->boxstr);
+  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
-  wattroff(fsw,A_BOLD);
+  cwattroff(fsw, CELL_STYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   fs->selectno = selectno;
   multiform_options(fs);
-  fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
   actform = fs;
   form_colors();
   top_panel(fs->p);
   screen_update();
+  */
 }
 
 // A collection of checkboxes
 static void
-raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
-    struct form_option *opstrs,int ops,int defidx,
-    char **selarray,int selections,const char *text,
-    int scrollidx){
-  size_t longop,longdesc;
-  struct form_state *fs;
-  int cols,rows;
-  WINDOW *fsw;
-  int x,y;
+raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
+                struct form_option* opstrs, int ops, int defidx,
+                char** selarray, int selections, const char* text,
+                int scrollidx){
+  size_t longop, longdesc;
+  struct form_state* fs;
+  int cols, rows;
+  int x, y;
 
   assert(ops);
   assert(opstrs);
@@ -2045,7 +2134,7 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
     cols = wcslen(ESCSTR) + 2;
   }
   rows = ops + 4;
-  getmaxyx(stdscr,y,x);
+  notcurses_term_dim_yx(NC, &y, &x);
   if(x < cols){
     locked_diag("Window too thin for form, uh-oh");
     return;
@@ -2057,22 +2146,18 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
       return;
     }
   }
-  if((fs = create_form(str,NULL,FORM_CHECKBOXEN,scrollidx)) == NULL){
+  if((fs = create_form(str, NULL, FORM_CHECKBOXEN, scrollidx)) == NULL){
     return;
   }
   fs->mcb = fxn;
-  if((fsw = newwin(rows,cols,FORM_Y_OFFSET,x - cols)) == NULL){
-    locked_diag("Couldn't create form window, uh-oh");
-    free_form(fs);
-    return;
-  }
-  if((fs->p = new_panel(fsw)) == NULL){
+  fs->p = notcurses_newplane(NC, rows, cols, FORM_Y_OFFSET, x - cols, NULL);
+  if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
-    delwin(fsw);
     free_form(fs);
     return;
   }
-  wbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
+  struct ncplane* fsw = fs->p;
+  cwbkgd(fsw);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
@@ -2080,37 +2165,39 @@ raise_checkform(const char *str,void (*fxn)(const char *,char **,int,int),
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw, CELL_STYLE_BOLD);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr) - 2,"%s",fs->boxstr);
-  mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(ESCSTR) - 1,ESCSTR);
+  cwattron(fsw, CELL_STYLE_BOLD);
+  cmvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 2, "%s", fs->boxstr);
+  int nrows;
+  ncplane_dim_yx(fsw, &nrows, NULL);
+  cmvwaddwstr(fsw, nrows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
-  wattroff(fsw,A_BOLD);
+  cwattroff(fsw, CELL_STYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   check_options(fs);
-  fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   actform = fs;
   form_colors();
-  top_panel(fs->p);
   screen_update();
 }
 
 // -------------------------------------------------------------------------
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
-void raise_form(const char *str,void (*fxn)(const char *),struct form_option *opstrs,
-      int ops,int defidx,const char *text){
-  size_t longop,longdesc;
+void raise_form(const char *str, void (*fxn)(const char *), struct form_option *opstrs,
+      int ops, int defidx, const char *text){
+  /*
+  size_t longop, longdesc;
   struct form_state *fs;
-  int cols,rows;
+  int cols, rows;
   WINDOW *fsw;
-  int x,y;
+  int x, y;
 
   if(opstrs == NULL || !ops){
-    locked_diag("Passed empty %u-option string table",ops);
+    locked_diag("Passed empty %u-option string table", ops);
     return;
   }
   if(actform){
@@ -2128,7 +2215,7 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
   }
   cols = longdesc + longop + 1;
   rows = ops + 4;
-  getmaxyx(stdscr,y,x);
+  getmaxyx(stdscr, y, x);
   if(x < cols + 4){
     locked_diag("Window too thin for form, uh-oh");
     return;
@@ -2140,10 +2227,10 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
       return;
     }
   }
-  if((fs = create_form(str,fxn,FORM_SELECT,0)) == NULL){
+  if((fs = create_form(str, fxn, FORM_SELECT, 0)) == NULL){
     return;
   }
-  if((fsw = newwin(rows,cols + START_COL * 4,FORM_Y_OFFSET,x - cols - 4)) == NULL){
+  if((fsw = newwin(rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -2154,27 +2241,28 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
     free_form(fs);
     return;
   }
-  wbkgd(fsw,COLOR_PAIR(BLACK_COLOR));
+  cwbkgd(fsw);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
   }
   fs->opcount = ops;
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw, CELL_STYLE_BOLD);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
-  mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
-  wattroff(fsw,A_BOLD);
+  cwattron(fsw, CELL_STYLE_BOLD);
+  cmvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
+  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
+  cwattroff(fsw, CELL_STYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   form_options(fs);
   actform = fs;
-  fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
   form_colors();
   top_panel(fs->p);
   screen_update();
+  */
 }
 
 // -------------------------------------------------------------------------
@@ -2182,44 +2270,44 @@ void raise_form(const char *str,void (*fxn)(const char *),struct form_option *op
 // -------------------------------------------------------------------------
 static void
 form_string_options(struct form_state *fs){
-  WINDOW *fsw = panel_window(fs->p);
+  struct ncplane* n = fs->p;
   int cols;
 
   if(fs->formtype != FORM_STRING_INPUT){
     return;
   }
-  cols = getmaxx(fsw);
-  wattrset(fsw,A_BOLD);
-  wcolor_set(fsw,FORMTEXT_COLOR,NULL);
-  mvwhline(fsw,1,1,' ',cols - 2);
-  mvwprintw(fsw,1,START_COL,"%-*.*s: ",
-    fs->longop,fs->longop,fs->inp.prompt);
-  wcolor_set(fsw,INPUT_COLOR,NULL);
-  wprintw(fsw,"%.*s",cols - fs->longop - 2 - 2,fs->inp.buffer);
-  wattroff(fsw,A_BOLD);
+  ncplane_dim_yx(n, NULL, &cols);
+  ncplane_styles_set(n, CELL_STYLE_BOLD);
+  compat_set_fg(n, FORMTEXT_COLOR);
+  cmvwhline(n, 1, 1, " ", cols - 2);
+  cmvwprintw(n, 1, START_COL, "%-*.*s: ", fs->longop, fs->longop, fs->inp.prompt);
+  compat_set_fg(n, INPUT_COLOR);
+  cwprintw(n, "%.*s", cols - fs->longop - 2 - 2, fs->inp.buffer);
+  ncplane_styles_off(n, CELL_STYLE_BOLD);
 }
 
-void raise_str_form(const char *str,void (*fxn)(const char *),
-      const char *def,const char *text){
+void raise_str_form(const char *str, void (*fxn)(const char *),
+      const char *def, const char *text){
+  /*
   struct form_state *fs;
   WINDOW *fsw;
   int cols;
-  int x,y;
+  int x, y;
 
   assert(str && fxn);
   if(actform){
     locked_diag("An input dialog is already active");
     return;
   }
-  if((fs = create_form(str,fxn,FORM_STRING_INPUT,0)) == NULL){
+  if((fs = create_form(str, fxn, FORM_STRING_INPUT, 0)) == NULL){
     return;
   }
   fs->longop = strlen(str);
   cols = fs->longop + 40 + 1; // FIXME? 40 for input currently
-  getmaxyx(stdscr,y,x);
+  getmaxyx(stdscr, y, x);
   assert(x >= cols + 3);
   assert(y >= 3);
-  if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET,x - cols - 3)) == NULL){
+  if((fsw = newwin(3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -2231,21 +2319,22 @@ void raise_str_form(const char *str,void (*fxn)(const char *),
     return;
   }
   top_panel(fs->p);
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
+  cwattroff(fsw, CELL_STYLE_BOLD);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,0,cols - strlen(fs->boxstr),"%s",fs->boxstr);
-  mvwaddwstr(fsw,getmaxy(fsw) - 1,cols - wcslen(L"⎋esc returns"),L"⎋esc returns");
+  cwattron(fsw, CELL_STYLE_BOLD);
+  cmvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
+  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
   fs->inp.prompt = fs->boxstr;
   def = def ? def : "";
   fs->inp.buffer = strdup(def);
   form_string_options(fs);
   actform = fs;
-  fs->extext = raise_form_explication(stdscr,text,FORM_Y_OFFSET);
-  curs_set(1);
+  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
+  notcurses_cursor_enable(NC);
   form_colors();
   screen_update();
+  */
 }
 
 static const struct form_option common_fsops[] = {
@@ -2292,8 +2381,8 @@ static const struct form_option common_fsops[] = {
 };
 
 static struct form_option *
-ops_table(int *count,const char *match,int *defidx,char ***selarray,int *selections,
-    const struct form_option *flags,unsigned fcount){
+ops_table(int *count, const char *match, int *defidx, char ***selarray, int *selections,
+    const struct form_option *flags, unsigned fcount){
   struct form_option *fo = NULL;
   int z = 0;
 
@@ -2315,16 +2404,16 @@ ops_table(int *count,const char *match,int *defidx,char ***selarray,int *selecti
       free(fo[z].desc);
       goto err;
     }
-    if(match && strcmp(match,fo[z].option) == 0){
+    if(match && strcmp(match, fo[z].option) == 0){
       int zz;
 
       *defidx = z;
       for(zz = 0 ; selections && zz < *selections ; ++zz){
-        if(strcmp(key,(*selarray)[zz]) == 0){
+        if(strcmp(key, (*selarray)[zz]) == 0){
           free((*selarray)[zz]);
           (*selarray)[zz] = NULL;
           if(zz < *selections - 1){
-            memmove(&(*selarray)[zz],&(*selarray)[zz + 1],sizeof(**selarray) * (*selections - 1 - zz));
+            memmove(&(*selarray)[zz], &(*selarray)[zz + 1], sizeof(**selarray) * (*selections - 1 - zz));
           }
           --*selections;
           zz = -1;
@@ -2334,7 +2423,7 @@ ops_table(int *count,const char *match,int *defidx,char ***selarray,int *selecti
       if(zz >= *selections){
         typeof(*selarray) tmp;
 
-        if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+        if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
           free(fo[zz].option);
           free(fo[zz].desc);
           goto err;
@@ -2361,9 +2450,9 @@ err:
 static char forming_targ[PATH_MAX + 1];
 
 static void
-mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
+mountop_callback(const char *op, char **selarray, int selections, int scrollidx){
   struct form_option *ops_agg;
-  int opcount,defidx;
+  int opcount, defidx;
   blockobj *b;
 
   if(op == NULL){
@@ -2379,36 +2468,34 @@ mountop_callback(const char *op,char **selarray,int selections,int scrollidx){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
-  if(strcmp(op,"") == 0){
+  if(strcmp(op, "") == 0){
     unsigned mntos = 0;
 
     while(selections--){
       mntos |= flag_for_mountop(selarray[selections]);
     }
     if(blockobj_unpartitionedp(b)){
-      mmount(b->d,forming_targ,mntos,NULL);
-      redraw_adapter(current_adapter);
+      mmount(b->d, forming_targ, mntos, NULL);
     }else if(blockobj_emptyp(b)){
-      locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+      locked_diag("%s is not a partition, aborting.\n", b->zone->p->name);
     }else{
-      mmount(b->zone->p,forming_targ,mntos,NULL);
-      redraw_adapter(current_adapter);
+      mmount(b->zone->p, forming_targ, mntos, NULL);
     }
     return;
   }
   ops_agg = NULL;
   opcount = 0;
   defidx = 1;
-  if((ops_agg = ops_table(&opcount,op,&defidx,&selarray,&selections,
-      common_fsops,sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
+  if((ops_agg = ops_table(&opcount, op, &defidx, &selarray, &selections,
+      common_fsops, sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
     // FIXME free
     return;
   }
-  raise_checkform("set mount options",mountop_callback,ops_agg,
-    opcount,defidx,selarray,selections,MOUNTOPS_TEXT,scrollidx);
+  raise_checkform("set mount options", mountop_callback, ops_agg,
+    opcount, defidx, selarray, selections, MOUNTOPS_TEXT, scrollidx);
 }
 
 // -------------------------------------------------------------------------
@@ -2428,8 +2515,8 @@ targpoint_callback(const char *path){
     locked_diag("No target is set");
     return;
   }
-  if((unsigned)snprintf(forming_targ,sizeof(forming_targ),"%s%s",growlight_target,path) >= sizeof(forming_targ)){
-    locked_diag("Bad mountpoint: %s",path);
+  if((unsigned)snprintf(forming_targ, sizeof(forming_targ), "%s%s", growlight_target, path) >= sizeof(forming_targ)){
+    locked_diag("Bad mountpoint: %s", path);
     return;
   }
   if((b = get_selected_blockobj()) == NULL){
@@ -2437,25 +2524,25 @@ targpoint_callback(const char *path){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(blockobj_emptyp(b)){
-    locked_diag("%s is not a partition, aborting.\n",b->zone->p->name);
+    locked_diag("%s is not a partition, aborting.\n", b->zone->p->name);
     return;
   }else{
-    int opcount = 0,defidx = 0;
+    int opcount = 0, defidx = 0;
     ops_agg = NULL;
     char **selarray = NULL;
     int selections = 0;
 
-    if((ops_agg = ops_table(&opcount,NULL,&defidx,&selarray,&selections,
-        common_fsops,sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
+    if((ops_agg = ops_table(&opcount, NULL, &defidx, &selarray, &selections,
+        common_fsops, sizeof(common_fsops) / sizeof(*common_fsops))) == NULL){
       // FIXME free
       return;
     }
-    raise_checkform("set mount options",mountop_callback,ops_agg,
-      opcount,defidx,selarray,selections,MOUNTOPS_TEXT,scrollidx);
+    raise_checkform("set mount options", mountop_callback, ops_agg,
+      opcount, defidx, selarray, selections, MOUNTOPS_TEXT, scrollidx);
     return;
   }
   locked_diag("I'm confused. Aborting.\n");
@@ -2465,9 +2552,10 @@ targpoint_callback(const char *path){
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
 static struct form_option *
-fs_table(int *count,const char *match,int *defidx){
-  struct form_option *fo = NULL,*tmp;
-  pttable_type *types;
+fs_table(int *count, const char *match, int *defidx){
+  struct form_option* fo = NULL;
+  struct form_option* tmp;
+  pttable_type* types;
   int z;
 
   *defidx = -1;
@@ -2475,13 +2563,13 @@ fs_table(int *count,const char *match,int *defidx){
     return NULL;
   }
   for(z = 0 ; z < *count ; ++z){
-    char *key,*desc;
+    char *key, *desc;
 
     if((key = strdup(types[z].name)) == NULL){
       goto err;
     }
     if(match){
-      if(strcmp(key,match) == 0){
+      if(strcmp(key, match) == 0){
         *defidx = z;
       }
     }else{
@@ -2493,7 +2581,7 @@ fs_table(int *count,const char *match,int *defidx){
       free(key);
       goto err;
     }
-    if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+    if((tmp = realloc(fo, sizeof(*fo) * (*count + 1))) == NULL){
       free(key);
       free(desc);
       goto err;
@@ -2533,15 +2621,15 @@ void kill_splash(struct panel_state *ps){
   if(actform == NULL){
     setup_colors();
   }else{
-    /*assert(top_panel(actform->p) != ERR);
-    if(actform->extext){
-      assert(top_panel(actform->extext->p) != ERR);
-    }*/
+    //assert(top_panel(actform->p) != -1);
+    //if(actform->extext){
+    //  assert(top_panel(actform->extext->p) != -1);
+    //}
   }
 }
 
 static int
-fs_do_internal(device *d,const char *fst,const char *name){
+fs_do_internal(device *d, const char *fst, const char *name){
   struct panel_state *ps;
   int r;
 
@@ -2549,7 +2637,7 @@ fs_do_internal(device *d,const char *fst,const char *name){
     return -1;
   }
   ps = show_splash(L"Creating filesystem...");
-  r = make_filesystem(d,fst,name);
+  r = make_filesystem(d, fst, name);
   if(ps){
     kill_splash(ps);
   }
@@ -2571,18 +2659,17 @@ fs_do(const char *name){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("%s is unloaded, aborting.\n",b->d->name);
+    locked_diag("%s is unloaded, aborting.\n", b->d->name);
   }else if(selected_unpartitionedp()){
-    r = fs_do_internal(b->d,pending_fstype,name);
+    r = fs_do_internal(b->d, pending_fstype, name);
   }else if(selected_partitionp()){
-    r = fs_do_internal(b->zone->p,pending_fstype,name);
+    r = fs_do_internal(b->zone->p, pending_fstype, name);
   }else if(selected_emptyp()){
     locked_diag("Cannot make filesystems in empty space");
   }
   if(r == 0){
-    locked_diag("Successfully created %s filesystem",pending_fstype);
+    locked_diag("Successfully created %s filesystem", pending_fstype);
   }
-  redraw_adapter(current_adapter);
   destroy_fs_forms();
 }
 
@@ -2590,14 +2677,14 @@ static void
 fs_named_callback(const char *name){
   if(name == NULL){
     struct form_option *ops_fs;
-    int opcount,defidx;
+    int opcount, defidx;
 
-    if((ops_fs = fs_table(&opcount,pending_fstype,&defidx)) == NULL){
+    if((ops_fs = fs_table(&opcount, pending_fstype, &defidx)) == NULL){
       destroy_fs_forms();
       return;
     }
-    raise_form("select a filesystem type",fs_callback,ops_fs,
-        opcount,defidx,FSTYPE_TEXT);
+    raise_form("select a filesystem type", fs_callback, ops_fs,
+        opcount, defidx, FSTYPE_TEXT);
     return;
   }
   fs_do(name);
@@ -2620,9 +2707,10 @@ fs_callback(const char *fs){
     return;
   }
   // FIXME come up with a good default
-  raise_str_form("enter filesystem name",fs_named_callback,NULL,FSNAME_TEXT);
+  raise_str_form("enter filesystem name", fs_named_callback, NULL, FSNAME_TEXT);
 }
 
+/*
 // -------------------------------------------------------------------------
 // -- end filesystem type form
 // -------------------------------------------------------------------------
@@ -3035,6 +3123,7 @@ partition_table_makeablep(const blockobj *b){
   }
   return 1;
 }
+*/
 
 static void
 pttype_callback(const char *pttype){
@@ -3080,35 +3169,7 @@ confirm_operation(const char *op,void (*confirmcb)(const char *)){
 // -- end form API
 // -------------------------------------------------------------------------
 
-static int
-ncurses_cleanup(WINDOW **w){
-  int ret = 0;
-
-  if(*w){
-    if(delwin(*w) != OK){
-      ret = -1;
-    }
-    *w = NULL;
-  }
-  if(stdscr){
-    if(delwin(stdscr) != OK){
-      ret = -2;
-    }
-    stdscr = NULL;
-  }
-  if(endwin() != OK){
-    ret = -3;
-  }
-  switch(ret){
-  case -3: fprintf(stderr,"Couldn't end main window\n"); break;
-  case -2: fprintf(stderr,"Couldn't delete main window\n"); break;
-  case -1: fprintf(stderr,"Couldn't delete main pad\n"); break;
-  case 0: break;
-  default: fprintf(stderr,"Couldn't cleanup ncurses\n"); break;
-  }
-  return ret;
-}
-
+/*
 static WINDOW *
 ncurses_setup(void){
   const char *errstr = NULL;
@@ -3119,28 +3180,28 @@ ncurses_setup(void){
     return NULL;
   }
   w = stdscr;
-  if(cbreak() != OK){
+  if(cbreak() != 0){
     errstr = "Couldn't disable input buffering\n";
     goto err;
   }
-  if(noecho() != OK){
+  if(noecho() != 0){
     errstr = "Couldn't disable input echoing\n";
     goto err;
   }
-  if(intrflush(stdscr,TRUE) != OK){
+  if(intrflush(stdscr,TRUE) != 0){
     errstr = "Couldn't set flush-on-interrupt\n";
     goto err;
   }
   leaveok(stdscr, TRUE); // just an optimization
-  if(scrollok(stdscr,FALSE) != OK){
+  if(scrollok(stdscr,FALSE) != 0){
     errstr = "Couldn't disable scrolling\n";
     goto err;
   }
-  if(nonl() != OK){
+  if(nonl() != 0){
     errstr = "Couldn't disable nl translation\n";
     goto err;
   }
-  if(start_color() != OK){
+  if(start_color() != 0){
     errstr = "Couldn't initialize ncurses color\n";
     goto err;
   }
@@ -3150,15 +3211,15 @@ ncurses_setup(void){
   }
   ESCDELAY = 100;
   keypad(stdscr,TRUE);
-  if(nodelay(stdscr,FALSE) != OK){
+  if(nodelay(stdscr,FALSE) != 0){
     errstr = "Couldn't set blocking input\n";
     goto err;
   }
-  if(setup_colors() != OK){
+  if(setup_colors() != 0){
     errstr = "Couldn't set up colors\n";
     goto err;
   }
-  if(curs_set(0) == ERR){
+  if(notcurses_cursor_disable(NC) == -1){
     errstr = "Couldn't disable cursor\n";
     goto err;
   }
@@ -3213,7 +3274,7 @@ select_adapter_dev(reelbox *rb,blockobj *bo,int delta){
   }else{
     rb->selline += delta;
   }
-  return redraw_adapter(rb);
+  return 0;
 }
 
 // Positive delta moves down, negative delta moves up, except for l2 == NULL
@@ -3226,7 +3287,6 @@ select_adapter_node(reelbox *rb,struct blockobj *bo,int delta){
   }else{
     rb->selline += delta;
   }
-  redraw_adapter(rb);
 }
 
 static void
@@ -3239,7 +3299,7 @@ deselect_adapter_locked(void){
   if(rb->selected == NULL){
     return;
   }
-  select_adapter_node(rb,NULL,0); // calls redraw_adapter()
+  select_adapter_node(rb,NULL,0);
 }
 
 // Move this adapter, possibly hiding it. Negative delta indicates movement
@@ -3264,7 +3324,6 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
         show_panel(rb->panel);
       }
     }
-    redraw_adapter(rb);
     return;
   }
   rr = getmaxy(rb->win);
@@ -3300,7 +3359,6 @@ move_adapter(reelbox *rb,int targ,int rows,int cols,int delta){
   }else{
     move_panel(rb->panel,targ,0);
   }
-  redraw_adapter(rb);
   show_panel(rb->panel);
   return;
 }
@@ -3310,22 +3368,9 @@ move_adapter_generic(reelbox *rb, int rows, int cols, int delta){
 //   fprintf(stderr, "  moved %s by %d to %d\n",
 //          rb->as->c->name, delta, rb->scrline);
   move_adapter(rb,rb->scrline,rows,cols,delta);
-  /*fprintf(stderr, "-------------> CORRECTING SCRLINE: %d becomes %d (%d / %d?)\n",
+  fprintf(stderr, "-------------> CORRECTING SCRLINE: %d becomes %d (%d / %d?)\n",
           rb->scrline, getbegy(rb->win), getmaxy(rb->win), getpary(rb->win));
-  rb->scrline = getbegy(rb->win);*/
-}
-
-static void
-free_reelbox(reelbox *rb){
-  if(rb){
-    assert(rb->as);
-    assert(rb->as->rb == rb);
-
-    rb->as->rb = NULL;
-    delwin(rb->win);
-    del_panel(rb->panel);
-    free(rb);
-  }
+  rb->scrline = getbegy(rb->win);
 }
 
 // An adapter (pusher) has had its bottom border moved up or down (positive or
@@ -3369,28 +3414,30 @@ detail_fs(WINDOW *hw,const device *d,int row){
   if(d->mnttype){
     char buf[BPREFIXSTRLEN + 1];
 
-    wattroff(hw,A_BOLD);
-    mvwprintw(hw,row,START_COL,BPREFIXFMT "%c ",
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cmvwprintw(hw,row,START_COL,BPREFIXFMT "%c ",
         d->mntsize ? bprefix(d->mntsize,1,buf,1) : "",
         d->mntsize ? 'B' : ' ');
-    wattron(hw,A_BOLD);
-    wprintw(hw,"%s%s",d->label ? "" : "unlabeled ",d->mnttype);
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%s%s",d->label ? "" : "unlabeled ",d->mnttype);
     if(d->label){
-      wattroff(hw,A_BOLD);
-      wprintw(hw," %lc%s%lc",L'“',d->label,L'”');
-      wattron(hw,A_BOLD);
+      cwattroff(hw,CELL_STYLE_BOLD);
+      cwprintw(hw," %lc%s%lc",L'“',d->label,L'”');
+      cwattron(hw,CELL_STYLE_BOLD);
     }
-    wprintw(hw,"%s",d->mnt.count ? " at " : "");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%s",d->mnt.count ? d->mnt.list[0] : "");
-    wattron(hw,A_BOLD);
+    cwprintw(hw,"%s",d->mnt.count ? " at " : "");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%s",d->mnt.count ? d->mnt.list[0] : "");
+    cwattron(hw,CELL_STYLE_BOLD);
   }
 }
+*/
 
 // One must not call diag() from any function called by update_details(), or
 // else you will get one of a deadlock or a stack overflow due to corecursion.
 static int
-update_details(WINDOW *hw){
+update_details(struct ncplane* hw){
+  /*
   const controller *c = get_current_adapter();
   char buf[BPREFIXSTRLEN + 1];
   const char *pttype;
@@ -3409,30 +3456,30 @@ update_details(WINDOW *hw){
     return 0;
   }
   for(n = 1 ; n < rows - 1 ; ++n){
-    mvwhline(hw,n,START_COL,' ',cols - 2);
+    cmvwhline(hw,n,START_COL,' ',cols - 2);
   }
-  wattrset(hw,SUBDISPLAY_ATTR);
-  mvwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name);
+  cwattrset(hw,SUBDISPLAY_ATTR);
+  cmvwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name);
   if(rows == 1){
     return 0;
   }
   if(c->bus == BUS_VIRTUAL){
-    mvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available");
+    cmvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available");
   }else{
-    mvwprintw(hw,2,START_COL,"Firmware: ");
-    wattroff(hw,A_BOLD);
-    waddstr(hw,c->fwver ? c->fwver : "Unknown");
-    wattron(hw,A_BOLD);
-    waddstr(hw," BIOS: ");
-    wattroff(hw,A_BOLD);
-    waddstr(hw,c->biosver ? c->biosver : "Unknown");
-    wattron(hw,A_BOLD);
-    waddstr(hw," Load: ");
+    cmvwprintw(hw,2,START_COL,"Firmware: ");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwaddstr(hw,c->fwver ? c->fwver : "Unknown");
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwaddstr(hw," BIOS: ");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwaddstr(hw,c->biosver ? c->biosver : "Unknown");
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwaddstr(hw," Load: ");
     qprefix(c->demand,1,buf,1);
-    wattroff(hw,A_BOLD);
-    waddstr(hw,buf);
-    waddstr(hw,"bps");
-    wattron(hw,A_BOLD);
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwaddstr(hw,buf);
+    cwaddstr(hw,"bps");
+    cwattron(hw,CELL_STYLE_BOLD);
   }
   if((b = current_adapter->selected) == NULL){
     return 0;
@@ -3441,109 +3488,109 @@ update_details(WINDOW *hw){
   if(d->layout == LAYOUT_NONE){
     const char *sn = d->blkdev.serial;
 
-    mvwprintw(hw, 3, START_COL, "%s: ", d->name);
-    wattroff(hw, A_BOLD);
-    waddstr(hw, d->model ? d->model : "n/a");
-    waddstr(hw, d->revision ? d->revision : "");
-    wattron(hw, A_BOLD);
-    wprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf,  1));
-    wattroff(hw, A_BOLD);
-    waddstr(hw, sn ? sn : "n/a");
-    wattron(hw, A_BOLD);
+    cmvwprintw(hw, 3, START_COL, "%s: ", d->name);
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwaddstr(hw, d->model ? d->model : "n/a");
+    cwaddstr(hw, d->revision ? d->revision : "");
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf,  1));
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwaddstr(hw, sn ? sn : "n/a");
+    cwattron(hw, CELL_STYLE_BOLD);
     if(getmaxx(hw) - getcurx(hw) > 13){
-      wprintw(hw," WC%lc WRV%lc RO%lc",
+      cwprintw(hw," WC%lc WRV%lc RO%lc",
           d->blkdev.wcache ? L'+' : L'-',
           d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
           d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
           d->roflag ? L'+' : L'-');
     }
     assert(d->physsec <= 4096);
-    mvwprintw(hw,4,START_COL,"Sectors: ");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
-    wattron(hw,A_BOLD);
-    wprintw(hw,"(");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%uB ",d->logsec);
-    wattron(hw,A_BOLD);
-    wprintw(hw,"logical / ");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%uB ",d->physsec);
-    wattron(hw,A_BOLD);
-    wprintw(hw,"physical) %s",
+    cmvwprintw(hw,4,START_COL,"Sectors: ");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"(");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%uB ",d->logsec);
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"logical / ");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%uB ",d->physsec);
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"physical) %s",
     transport_str(d->blkdev.transport));
     if(transport_bw(d->blkdev.transport)){
       uintmax_t transbw = transport_bw(d->blkdev.transport);
-      wprintw(hw," (");
-      wattroff(hw,A_BOLD);
+      cwprintw(hw," (");
+      cwattroff(hw,CELL_STYLE_BOLD);
       // FIXME throws -Wformat-truncation on gcc9
-      wprintw(hw, "%sbps", qprefix(transbw, 1, buf,  1));
-      wattron(hw,A_BOLD);
-      wprintw(hw,")");
+      cwprintw(hw, "%sbps", qprefix(transbw, 1, buf,  1));
+      cwattron(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,")");
     }
   }else{
-    mvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
+    cmvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
           d->model ? d->model : "n/a",
           d->revision ? d->revision : "n/a",
           bprefix(d->size,1,buf,1),
           d->roflag ? L'+' : L'-');
     if(d->layout == LAYOUT_MDADM){
-      wprintw(hw," Stride: ");
-      wattroff(hw,A_BOLD);
+      cwprintw(hw," Stride: ");
+      cwattroff(hw,CELL_STYLE_BOLD);
       if(d->mddev.stride == 0){
-        waddstr(hw,"n/a");
+        cwaddstr(hw,"n/a");
       }else{
-        wprintw(hw,"%sB",bprefix(d->mddev.stride,1,buf,1));
+        cwprintw(hw,"%sB",bprefix(d->mddev.stride,1,buf,1));
       }
-      wattron(hw,A_BOLD);
-      wprintw(hw," SWidth: ");
-      wattroff(hw,A_BOLD);
+      cwattron(hw,CELL_STYLE_BOLD);
+      cwprintw(hw," SWidth: ");
+      cwattroff(hw,CELL_STYLE_BOLD);
       if(d->mddev.swidth == 0){
-        waddstr(hw,"n/a");
+        cwaddstr(hw,"n/a");
       }else{
-        wprintw(hw,"%u",d->mddev.swidth);
+        cwprintw(hw,"%u",d->mddev.swidth);
       }
-      wattron(hw,A_BOLD);
+      cwattron(hw,CELL_STYLE_BOLD);
     }
     assert(d->physsec <= 4096);
-    mvwprintw(hw,4,START_COL,"Sectors: ");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
-    wattron(hw,A_BOLD);
-    wprintw(hw,"(");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%uB ",d->logsec);
-    wattron(hw,A_BOLD);
-    wprintw(hw,"logical / ");
-    wattroff(hw,A_BOLD);
-    wprintw(hw,"%uB ",d->physsec);
-    wattron(hw,A_BOLD);
-    wprintw(hw,"physical)");
+    cmvwprintw(hw,4,START_COL,"Sectors: ");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"(");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%uB ",d->logsec);
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"logical / ");
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%uB ",d->physsec);
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"physical)");
   }
-  mvwprintw(hw,5,START_COL,"Partitioning: ");
-  wattroff(hw,A_BOLD);
+  cmvwprintw(hw,5,START_COL,"Partitioning: ");
+  cwattroff(hw,CELL_STYLE_BOLD);
   pttype = (d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
       d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
       d->layout == LAYOUT_DM ? d->dmdev.pttable ? d->dmdev.pttable : "none" :
       "n/a");
-  wprintw(hw,"%s",pttype);
-  wattron(hw,A_BOLD);
-  waddstr(hw," I/O scheduler: ");
-  wattroff(hw,A_BOLD);
-  waddstr(hw,d->sched ? d->sched : "custom");
-  wattron(hw,A_BOLD);
+  cwprintw(hw,"%s",pttype);
+  cwattron(hw,CELL_STYLE_BOLD);
+  cwaddstr(hw," I/O scheduler: ");
+  cwattroff(hw,CELL_STYLE_BOLD);
+  cwaddstr(hw,d->sched ? d->sched : "custom");
+  cwattron(hw,CELL_STYLE_BOLD);
   if(blockobj_unloadedp(b)){
-    mvwprintw(hw,6,START_COL,"Media is not loaded");
+    cmvwprintw(hw,6,START_COL,"Media is not loaded");
     return 0;
   }
   if(blockobj_unpartitionedp(b)){
     char ubuf[BPREFIXSTRLEN + 1];
 
-    wattroff(hw,A_BOLD);
-    mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
+    cwattroff(hw,CELL_STYLE_BOLD);
+    cmvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
         bprefix(d->size,1,ubuf,1));
-    wattron(hw,A_BOLD);
-    wprintw(hw,"%s","unpartitioned media");
+    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw,"%s","unpartitioned media");
     detail_fs(hw,b->d,7);
     return 0;
   }
@@ -3555,53 +3602,54 @@ update_details(WINDOW *hw){
       assert(b->zone->p->layout == LAYOUT_PARTITION);
       bprefix(b->zone->p->partdev.alignment, 1, align, 1);
       // FIXME limit length!
-      wattroff(hw,A_BOLD);
-      mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
+      cwattroff(hw,CELL_STYLE_BOLD);
+      cmvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
           bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,1));
-      wattron(hw,A_BOLD);
-      wprintw(hw,"P%lc%lc ",subscript((b->zone->p->partdev.pnumber % 100 / 10)),
+      cwattron(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,"P%lc%lc ",subscript((b->zone->p->partdev.pnumber % 100 / 10)),
           subscript((b->zone->p->partdev.pnumber % 10)));
-      wattroff(hw,A_BOLD);
-      wprintw(hw,"%ju",b->zone->fsector);
-      wattron(hw,A_BOLD);
-      wprintw(hw,"→");
-      wattroff(hw,A_BOLD);
-      wprintw(hw,"%ju ",b->zone->lsector);
-      wattron(hw,A_BOLD);
-      waddstr(hw,b->zone->p->name);
-      wattroff(hw,A_BOLD);
+      cwattroff(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,"%ju",b->zone->fsector);
+      cwattron(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,"→");
+      cwattroff(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,"%ju ",b->zone->lsector);
+      cwattron(hw,CELL_STYLE_BOLD);
+      cwaddstr(hw,b->zone->p->name);
+      cwattroff(hw,CELL_STYLE_BOLD);
       if(b->zone->p->partdev.pname){
-        wprintw(hw," “%ls” ",b->zone->p->partdev.pname);
+        cwprintw(hw," “%ls” ",b->zone->p->partdev.pname);
       }else{
-        wprintw(hw," (%s) ","unnamed");
+        cwprintw(hw," (%s) ","unnamed");
       }
-      wattron(hw,A_BOLD);
+      cwattron(hw,CELL_STYLE_BOLD);
                         if(getcurx(hw) <= cols - 2 - 4){
-        wprintw(hw,"%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
+        cwprintw(hw,"%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
       }
       if(getcurx(hw) <= cols - 2 - 11){
-        wprintw(hw, " %sB align", align);
+        cwprintw(hw, " %sB align", align);
       }
       detail_fs(hw,b->zone->p,7);
     }else{
       // FIXME print alignment for unpartitioned space as well,
       // but not until we implement zones in core (bug 252)
       // or we'll need recreate alignment() etc here
-      wattroff(hw,A_BOLD);
-      mvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
+      cwattroff(hw,CELL_STYLE_BOLD);
+      cmvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
           bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,1));
-      wattron(hw,A_BOLD);
-      wattroff(hw,A_BOLD);
-      wprintw(hw,"%ju",b->zone->fsector);
-      wattron(hw,A_BOLD);
-      wprintw(hw,"→");
-      wattroff(hw,A_BOLD);
-      wprintw(hw,"%ju ",b->zone->lsector);
-      wattron(hw,A_BOLD);
-      wprintw(hw,"%s ",b->zone->rep == REP_METADATA ?
+      cwattron(hw,CELL_STYLE_BOLD);
+      cwattroff(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,"%ju",b->zone->fsector);
+      cwattron(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,"→");
+      cwattroff(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,"%ju ",b->zone->lsector);
+      cwattron(hw,CELL_STYLE_BOLD);
+      cwprintw(hw,"%s ",b->zone->rep == REP_METADATA ?
           "partition table metadata" : "unpartitioned space");
     }
   }
+*/
   return 0;
 }
 
@@ -3619,14 +3667,14 @@ static const wchar_t *helps[] = {
   L"'E': view mounts / targets    'z': modify aggregate",
   L"'A': create aggregate         'Z': destroy aggregate",
   L"'-': collapse adapter         '+': expand adapter",
-  L"'k'/'↑': navigate up          'j'/'↓': navigate down",
-  L"'⇞PageUp': previous adapter   ⇟PageDown': next adapter",
+  L"'k'/↑: navigate up            'j'/↓: navigate down",
+  L"PageUp: previous adapter      PageDown: next adapter",
   L"'/': search                   'p': configure loop device",
   NULL
 };
 
 static const wchar_t *helps_block[] = {
-  L"'h'/'←': navigate left        'l'/'→': navigate right",
+  L"'h'/←: navigate left          'l'/→: navigate right",
   L"'m': make partition table     'r': remove partition table",
   L"'W': wipe master boot record  'B': bad blocks check",
   L"'n': new partition            'd': delete partition",
@@ -3658,39 +3706,38 @@ max_helpstr_len(const wchar_t **h){
 }
 
 static int
-helpstrs(WINDOW *hw){
+helpstrs(struct ncplane* n){
   const wchar_t *hs;
-  int z,rows,cols;
+  int z, rows, cols;
   int row = 1;
 
-  rows = getmaxy(hw);
-  cols = getmaxx(hw);
-  wattrset(hw,SUBDISPLAY_ATTR);
+  ncplane_dim_yx(n, &rows, &cols);
+  compat_set_fg_all(n, SUBDISPLAY_ATTR);
   for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
-    mvwhline(hw,row + z,START_COL,' ',cols - 2);
-    mvwaddwstr(hw,row + z,START_COL,hs);
+    cmvwhline(n, row + z, START_COL, " ", cols - 2);
+    cmvwaddwstr(n, row + z, START_COL, hs);
   }
   row += z;
   if(!current_adapter || !current_adapter->selected){
-    wattrset(hw,SUBDISPLAY_INVAL_ATTR);
+    cwattrset(n, SUBDISPLAY_INVAL_ATTR);
   }else{
-    wattrset(hw,SUBDISPLAY_ATTR);
+    cwattrset(n, SUBDISPLAY_ATTR);
   }
   for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
-    mvwhline(hw,row + z,START_COL,' ',cols - 2);
-    mvwaddwstr(hw,row + z,START_COL,hs);
+    cmvwhline(n, row + z, START_COL, " ", cols - 2);
+    cmvwaddwstr(n, row + z, START_COL, hs);
   }
   row += z;
   if(!target_mode_p()){
-    wattrset(hw,SUBDISPLAY_INVAL_ATTR);
+    compat_set_fg_all(n, SUBDISPLAY_INVAL_ATTR);
   }else{
-    wattrset(hw,SUBDISPLAY_ATTR);
+    compat_set_fg_all(n, SUBDISPLAY_ATTR);
   }
   for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
-    mvwhline(hw,row + z,START_COL,' ',cols - 2);
-    mvwaddwstr(hw,row + z,START_COL,hs);
+    cmvwhline(n, row + z, START_COL, " ", cols - 2);
+    cmvwaddwstr(n, row + z, START_COL, hs);
   }
-  return OK;
+  return 0;
 }
 
 static inline void
@@ -3725,6 +3772,7 @@ unlock_ncurses_growlight(void){
   pthread_mutex_unlock(&bfl);
 }
 
+/*
 static void pull_adapters_down(reelbox *,int,int,int);
 
 // Pass a NULL puller to move all adapters up
@@ -3769,7 +3817,6 @@ pull_adapters_up(reelbox *puller,int rows,int cols,int delta){
     last_reelbox->next = rb;
     rb->next = NULL;
     last_reelbox = rb;
-    redraw_adapter(rb);
   }
 }
 
@@ -3850,7 +3897,7 @@ resize_adapter(reelbox *rb){
 
   i = rb->as->c;
   if(panel_hidden(rb->panel)){ // resize upon becoming visible
-    return OK;
+    return 0;
   }
   is = rb->as;
   getmaxyx(stdscr,rows,cols);
@@ -3870,9 +3917,9 @@ resize_adapter(reelbox *rb){
     }else{
       pull_adapters_up(rb,rows,cols,subrows - nlines);
     }
-    return OK;
+    return 0;
   }else if(nlines == subrows){ // otherwise, expansion
-    return OK;
+    return 0;
   }
   // The current adapter grows in both directions and never becomes a
   // partial adapter. We don't try to make it one here, and
@@ -3974,7 +4021,7 @@ resize_adapter(reelbox *rb){
       }
     }
   }
-  return OK;
+  return 0;
 }
 
 // Pull the adapters above the puller down to fill unused space. Move from
@@ -4038,7 +4085,6 @@ pull_adapters_down(reelbox *puller,int rows,int cols,int delta){
     top_reelbox->prev = rb;
     rb->prev = NULL;
     top_reelbox = rb;
-    redraw_adapter(rb);
   }
 }
 
@@ -4095,7 +4141,6 @@ use_next_controller(WINDOW *w){
       if( (delta = top_space_p(rows)) ){
         pull_adapters_up(NULL,rows,cols,delta);
       }
-      redraw_adapter(is->rb);
       return;
     }
     current_adapter = is->rb; // it's at the top
@@ -4110,7 +4155,6 @@ use_next_controller(WINDOW *w){
   if(adapter_wholly_visible_p(rows, rb)){
 // fprintf(stderr, "[%s] is VISIBLE\n", rb->as->c->name); // current_adapter
     if(rb->scrline > oldrb->scrline){ // new is below old
-      redraw_adapter(oldrb);
       redraw_adapter(rb);
     }else{ // we were at the bottom (rotate)
       if(top_reelbox->next){
@@ -4142,7 +4186,6 @@ use_next_controller(WINDOW *w){
       move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
       wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
       replace_panel(rb->panel,rb->win);
-      redraw_adapter(rb);
     }else{ // ...at the top (rotate)
 // fprintf(stderr, "rb->as->c->name [%s] is PART-VISIBLE-TOP\n",
 //         rb->as->c->name); // current_adapter
@@ -4165,7 +4208,6 @@ use_next_controller(WINDOW *w){
       move_adapter_generic(rb,rows,cols,rb->scrline);
       wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
       replace_panel(rb->panel,rb->win);
-      redraw_adapter(rb);
     }
   }
   if( (delta = top_space_p(rows)) ){
@@ -4218,7 +4260,6 @@ use_prev_controller(WINDOW *w){
       }
       current_adapter->prev = NULL;
       top_reelbox = current_adapter;
-      redraw_adapter(current_adapter);
       return;
     }
   }
@@ -4229,7 +4270,6 @@ use_prev_controller(WINDOW *w){
   // position. Redraw all affected adapters.
   if(adapter_wholly_visible_p(rows,rb)){
     if(rb->scrline < oldrb->scrline){ // new is above old
-      redraw_adapter(oldrb);
       redraw_adapter(rb);
     }else{ // we were at the top
       // Selecting the previous adapter is simpler -- we
@@ -4256,7 +4296,6 @@ use_prev_controller(WINDOW *w){
       push_adapters_below(rb,rows,cols,-(getmaxy(rb->win) - adapter_lines_bounded(is,rows)));
       wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
       replace_panel(rb->panel,rb->win);
-      redraw_adapter(rb);
     }else{ // at the bottom
       if(last_reelbox->prev){
         last_reelbox->prev->next = NULL;
@@ -4276,7 +4315,6 @@ use_prev_controller(WINDOW *w){
       move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
       wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
       replace_panel(rb->panel,rb->win);
-      redraw_adapter(rb);
     }
   }
 }
@@ -4323,6 +4361,7 @@ use_next_device(void){
   }
   select_adapter_dev(rb,rb->selected->next,delta);
 }
+*/
 
 static const int DIAGROWS = 14;
 
@@ -4352,19 +4391,18 @@ dump_diags(void){
 
 static int
 update_diags(struct panel_state *ps){
-  WINDOW *w = panel_window(ps->p);
   logent l[DIAGROWS];
-  int y,x,r;
+  int y, x, r;
 
-  getmaxyx(w,y,x);
-  y = getmaxy(w) - 2;
+  ncplane_dim_yx(ps->p, &y, &x);
+  y -= 2;
   assert(x > 26 + START_COL * 2); // see ctime_r(3)
-  if((y = get_logs(y,l)) < 0){
+  if((y = get_logs(y, l)) < 0){
     return -1;
   }
-  wattrset(w,SUBDISPLAY_ATTR);
+  compat_set_fg_all(ps->p, SUBDISPLAY_ATTR);
   for(r = 0 ; r < y ; ++r){
-    char *c,tbuf[x];
+    char *c, tbuf[x];
     struct tm tm;
     size_t tb;
     int p;
@@ -4372,66 +4410,64 @@ update_diags(struct panel_state *ps){
     if(l[r].msg == NULL){
       break;
     }
-    if(localtime_r(&l[r].when,&tm) == NULL){
+    if(localtime_r(&l[r].when, &tm) == NULL){
       break;
     }
-    if(strftime(tbuf,sizeof(tbuf),"%F %T",&tm) == 0){
+    if(strftime(tbuf, sizeof(tbuf), "%F %T", &tm) == 0){
       break;;
     }
     tb = sizeof(tbuf) / sizeof(*tbuf) - strlen(tbuf);
-    p = snprintf(tbuf + strlen(tbuf),tb," %-*.*s",
-        (int)tb - 2,(int)tb - 2,l[r].msg);
+    p = snprintf(tbuf + strlen(tbuf), tb, " %-*.*s",
+        (int)tb - 2, (int)tb - 2, l[r].msg);
     if(p < 0 || (unsigned)p >= tb){
       tbuf[sizeof(tbuf) / sizeof(*tbuf) - 1] = '\0';
     }
-    if( (c = strchr(tbuf,'\n')) ){
+    if( (c = strchr(tbuf, '\n')) ){
       *c = '\0';
     }
     c = tbuf;
-    while((c = strchr(tbuf,'\b')) || (c = strchr(tbuf,'\t'))){
+    while((c = strchr(tbuf, '\b')) || (c = strchr(tbuf, '\t'))){
       *c = ' ';
     }
-    mvwprintw(w,y - r,START_COL,"%-*.*s",x - 2,x - 2,tbuf);
+    cmvwprintw(ps->p, y - r, START_COL, "%-*.*s", x - 2, x - 2, tbuf);
     free(l[r].msg);
   }
   return 0;
 }
 
 static int
-display_diags(WINDOW *mainw,struct panel_state *ps){
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,DIAGROWS,0,L"press 'D' to dismiss diagnostics"
-        ,NULL,PBORDER_COLOR)){
+display_diags(struct ncplane* mainw, struct panel_state* ps){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, DIAGROWS, 0,
+                       L"press 'D' to dismiss diagnostics", NULL,
+                       PBORDER_COLOR)){
     goto err;
   }
   if(update_diags(ps)){
     goto err;
   }
-  return OK;
+  return 0;
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
-  return ERR;
+  memset(ps, 0, sizeof(*ps));
+  return -1;
 }
 
 static const int DETAILROWS = 7; // FIXME make it dynamic based on selections
 
 static int
-display_details(WINDOW *mainw,struct panel_state *ps){
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,DETAILROWS,78,L"press 'v' to dismiss details"
-        ,NULL,PBORDER_COLOR)){
+display_details(struct ncplane* mainw, struct panel_state* ps){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, DETAILROWS, 78,
+                       L"press 'v' to dismiss details",
+                       NULL, PBORDER_COLOR)){
     goto err;
   }
   if(current_adapter){
-    if(update_details(panel_window(ps->p))){
+    if(update_details(ps->p)){
       goto err;
     }
   }
@@ -4439,18 +4475,14 @@ display_details(WINDOW *mainw,struct panel_state *ps){
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
-  return ERR;
+  memset(ps, 0, sizeof(*ps));
+  return -1;
 }
 
 static int
-display_help(WINDOW *mainw,struct panel_state *ps){
+display_help(struct ncplane* nc, struct panel_state* ps){
   static const int helprows = sizeof(helps) / sizeof(*helps) - 1 +
     sizeof(helps_block) / sizeof(*helps_block) - 1 +
     sizeof(helps_target) / sizeof(*helps_target) - 1; // NULL != row
@@ -4464,90 +4496,90 @@ display_help(WINDOW *mainw,struct panel_state *ps){
     helpcols = max_helpstr_len(helps_block);
   }
   helpcols += 2; // spacing + borders
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,helprows,helpcols,L"press 'H' to dismiss help",
-      L"https://nick-black.com/dankwiki/index.php/Growlight",
-      PBORDER_COLOR)){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(nc, ps, helprows, helpcols,
+                       L"press 'H' to dismiss help",
+                       L"https://nick-black.com/dankwiki/index.php/Growlight",
+                       PBORDER_COLOR)){
     goto err;
   }
-  if(helpstrs(panel_window(ps->p))){
+  if(helpstrs(ps->p)){
     goto err;
   }
-  return OK;
+  return 0;
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
-  return ERR;
+  memset(ps, 0, sizeof(*ps));
+  return -1;
 }
 
 #define ENVROWS 10
 #define COLORSPERROW 32
 
 static int
-env_details(WINDOW *hw,int rows){
+env_details(struct ncplane *hw, int rows){
+  /*
   const int col = START_COL;
   const int row = 1;
-  int z,srows,scols,cols;
+  int z, srows, scols, cols;
 
-  wattrset(hw,SUBDISPLAY_ATTR);
-  getmaxyx(stdscr,srows,scols);
+  cwattrset(hw, SUBDISPLAY_ATTR);
+  notcurses_term_dim_yx(NC, &srows, &cols);
   if((z = rows) >= ENVROWS){
     z = ENVROWS - 1;
   }
-  cols = getmaxx(hw);
+  ncplane_dim_yx(hw, NULL, &cols);
   switch(z){ // Intentional fallthroughs all the way to 0
   case (ENVROWS - 1):{
     while(z > 1){
-      int c0,c1;
+      int c0, c1;
 
-      mvwhline(hw,row + z,1,' ',cols - 2);
+      cmvwhline(hw, row + z, 1, ' ', cols - 2);
       c0 = (z - 2) * COLORSPERROW;
       c1 = c0 + (COLORSPERROW - 1);
-      mvwprintw(hw,row + z,col,"0x%02x%lc0x%02x: ",c0,L'–',c1);
+      cmvwprintw(hw, row + z, col, "0x%02x%lc0x%02x: ", c0, L'–', c1);
       while(c0 <= c1){
         if(c0 < COLORS){
-          wattrset(hw,COLOR_PAIR(c0));
-          wprintw(hw,"X");
+          cwattrset(hw, c0);
+          cwprintw(hw, "X");
         }else{
-          wattrset(hw,SUBDISPLAY_ATTR);
-          wprintw(hw," ");
+          cwattrset(hw, SUBDISPLAY_ATTR);
+          cwprintw(hw, " ");
         }
         ++c0;
       }
       --z;
-      wattrset(hw,SUBDISPLAY_ATTR);
+      cwattrset(hw, SUBDISPLAY_ATTR);
     }
-  } /* intentional fallthrough */
+  } // intentional fallthrough
   case 1:{
-    mvwhline(hw,row + z,1,' ',cols - 2);
-    mvwprintw(hw,row + z,col,"Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
-        COLORS,COLOR_PAIRS,srows,scols,
+    cmvwhline(hw, row + z, 1, ' ', cols - 2);
+    cmvwprintw(hw, row + z, col, "Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
+        COLORS, COLOR_PAIRS, srows, scols,
         can_change_color() ? "dynamic" : "fixed");
     --z;
-  } /* intentional fallthrough */
+  } // intentional fallthrough
   case 0:{
     const char *lang = getenv("LANG");
     const char *term = getenv("TERM");
 
-    mvwhline(hw,row + z,1,' ',cols - 2);
+    cmvwhline(hw, row + z, 1, ' ', cols - 2);
     lang = lang ? lang : "Undefined";
-    mvwprintw(hw,row + z,col,"LANG: %-21s TERM: %s ESCDELAY: %d",lang,term,ESCDELAY);
+    cmvwprintw(hw, row + z, col, "LANG: %-21s TERM: %s ESCDELAY: %d", lang, term, ESCDELAY);
     --z;
     break;
   }default:{
-    return ERR;
+    return -1;
   }
   }
-  return OK;
+  */
+  return 0;
 }
 
+/*
 static void
 detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
   char buf[PREFIXSTRLEN + 1],b[256];
@@ -4562,8 +4594,8 @@ detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
     if(growlight_target && !strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
       continue;
     }
-    mvwhline(w,*row,START_COL,' ',cols - 2);
-    mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+    cmvwhline(w,*row,START_COL,' ',cols - 2);
+    cmvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
         FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
@@ -4574,13 +4606,13 @@ detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
     if(++*row == maxy){
       return;
     }
-    wattroff(w,A_BOLD);
+    cwattroff(w,CELL_STYLE_BOLD);
     if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
       b[sizeof(b) - 1] = '\0';
     }
-    mvwhline(w,*row,START_COL,' ',cols - 2);
-    mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
-    wattron(w,A_BOLD);
+    cmvwhline(w,*row,START_COL,' ',cols - 2);
+    cmvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
+    cwattron(w,CELL_STYLE_BOLD);
     ++*row;
   }
 }
@@ -4598,8 +4630,8 @@ detail_targets(WINDOW *w,int *row,int both,const device *d){
     if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
       continue;
     }
-    mvwhline(w,*row,START_COL,' ',cols - 2);
-    mvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+    cmvwhline(w,*row,START_COL,' ',cols - 2);
+    cmvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
         FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
@@ -4611,22 +4643,24 @@ detail_targets(WINDOW *w,int *row,int both,const device *d){
     if(!both){
       return;
     }
-    wattroff(w,A_BOLD);
+    cwattroff(w,CELL_STYLE_BOLD);
     if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
       b[sizeof(b) - 1] = '\0';
     }
-    mvwhline(w,*row,START_COL,' ',cols - 2);
-    mvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
-    wattron(w,A_BOLD);
+    cmvwhline(w,*row,START_COL,' ',cols - 2);
+    cmvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
+    cwattron(w,CELL_STYLE_BOLD);
     ++*row;
     break; // FIXME no space currently
   }
 }
+*/
 
 static int
-map_details(WINDOW *hw){
+map_details(struct ncplane *hw){
+  /*
   const controller *c;
-  int y,rows,cols;
+  int y, rows, cols;
   char *fstab;
 
   cols = getmaxx(hw);
@@ -4635,18 +4669,18 @@ map_details(WINDOW *hw){
   if(growlight_target){
     int blockout;
 
-    wattrset(hw,A_BOLD|COLOR_PAIR(PHEADING_COLOR));
-    mvwprintw(hw,y,1,"Operating in target mode (%s)",growlight_target);
+    cwattrset(hw, CELL_STYLE_BOLD|PHEADING_COLOR);
+    cmvwprintw(hw, y, 1, "Operating in target mode (%s)", growlight_target);
     if( (blockout = cols - getcurx(hw) - 1) ){
-      wprintw(hw,"%*.*s",blockout,blockout,"");
+      cwprintw(hw, "%*.*s", blockout, blockout, "");
     }
     ++y;
   }
-  wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
+  cwattrset(hw, CELL_STYLE_BOLD|FORMTEXT_COLOR);
   // First we list the target fstab, and then the targets
   // FIXME this is probably multibyte input and needs be handled as such
   if( (fstab = dump_targets()) ){
-    unsigned pos,linestart;
+    unsigned pos, linestart;
 
     pos = 0;
     linestart = 0;
@@ -4654,7 +4688,7 @@ map_details(WINDOW *hw){
       if(fstab[pos] == '\n'){
         fstab[pos] = '\0';
         if(pos != linestart){
-          mvwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
+          cmvwprintw(hw, y, 1, "%-*.*s", cols - 2, cols - 2, fstab + linestart);
           if(++y >= rows){
             return 0;
           }
@@ -4666,34 +4700,34 @@ map_details(WINDOW *hw){
       ++pos;
     }
     if(pos != linestart){
-      mvwprintw(hw,y,1,"%-*.*s",cols - 2,cols - 2,fstab + linestart);
+      cmvwprintw(hw, y, 1, "%-*.*s", cols - 2, cols - 2, fstab + linestart);
       if(++y >= rows){
         return 0;
       }
     }
     free(fstab);
   }
-  wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
-  mvwhline(hw,y,1,' ',cols - 2);
-  mvwprintw(hw,y,1,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
-      FSLABELSIZ,FSLABELSIZ,"Label",
-      "Type","UUID","Bytes","Device");
+  cwattrset(hw, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
+  cmvwhline(hw, y, 1, ' ', cols - 2);
+  cmvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
+      FSLABELSIZ, FSLABELSIZ, "Label",
+      "Type", "UUID", "Bytes", "Device");
   if(++y >= rows){
     return 0;
   }
-  wattrset(hw,A_BOLD|COLOR_PAIR(FORMTEXT_COLOR));
+  cwattrset(hw, CELL_STYLE_BOLD|FORMTEXT_COLOR);
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
     for(d = c->blockdevs ; d ; d = d->next){
       const device *p;
 
-      detail_targets(hw,&y,y + 1 < rows,d);
+      detail_targets(hw, &y, y + 1 < rows, d);
       if(y >= rows){
         return 0;
       }
       for(p = d->parts ; p ; p = p->next){
-        detail_targets(hw,&y,y + 1 < rows,p);
+        detail_targets(hw, &y, y + 1 < rows, p);
         if(y >= rows){
           return 0;
         }
@@ -4701,19 +4735,19 @@ map_details(WINDOW *hw){
     }
   }
   // Now list the existing maps, a superset of the targets
-  wattrset(hw,A_BOLD|COLOR_PAIR(SUBDISPLAY_COLOR));
+  cwattrset(hw, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
     for(d = c->blockdevs ; d ; d = d->next){
       const device *p;
 
-      detail_mounts(hw,&y,rows - y,d);
+      detail_mounts(hw, &y, rows - y, d);
       if(y >= rows){
         return 0;
       }
       for(p = d->parts ; p ; p = p->next){
-        detail_mounts(hw,&y,rows - y,p);
+        detail_mounts(hw, &y, rows - y, p);
         if(y >= rows){
           return 0;
         }
@@ -4722,74 +4756,72 @@ map_details(WINDOW *hw){
   }
 
   while(y < rows){
-    mvwhline(hw,y++,1,' ',cols - 2);
+    cmvwhline(hw, y++, 1, ' ', cols - 2);
   }
+  */
   return 0;
 }
 
 static int
-display_enviroment(WINDOW *mainw,struct panel_state *ps){
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,ENVROWS,78,L"press 'e' to dismiss display"
-        ,NULL,PBORDER_COLOR)){
+display_enviroment(struct ncplane* mainw, struct panel_state* ps){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, ENVROWS, 78, L"press 'e' to dismiss display",
+                       NULL, PBORDER_COLOR)){
     goto err;
   }
-  if(env_details(panel_window(ps->p),getmaxy(panel_window(ps->p)) - 1)){
+  int rows;
+  ncplane_dim_yx(ps->p, &rows, NULL);
+  if(env_details(ps->p, rows - 1)){
     goto err;
   }
-  return OK;
+  return 0;
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
-  return ERR;
+  memset(ps, 0, sizeof(*ps));
+  return -1;
 }
 
 static int
-display_maps(WINDOW *mainw,struct panel_state *ps){
+display_maps(struct ncplane* mainw, struct panel_state* ps){
   // FIXME compute based off number of maps + targets
-  unsigned rows = getmaxy(mainw) - 15;
+  int rows;
+  ncplane_dim_yx(mainw, &rows, NULL);
+  rows -= 15;
 
-  memset(ps,0,sizeof(*ps));
-  if(new_display_panel(mainw,ps,rows,0,L"press 'E' to dismiss display"
-        ,NULL,PBORDER_COLOR)){
+  memset(ps, 0, sizeof(*ps));
+  if(new_display_panel(mainw, ps, rows, 0, L"press 'E' to dismiss display",
+                       NULL, PBORDER_COLOR)){
     goto err;
   }
-  if(map_details(panel_window(ps->p))){
+  if(map_details(ps->p)){
     goto err;
   }
-  return OK;
+  return 0;
 
 err:
   if(ps->p){
-    WINDOW *psw = panel_window(ps->p);
-
-    hide_panel(ps->p);
-    del_panel(ps->p);
-    delwin(psw);
+    ncplane_destroy(ps->p);
   }
-  memset(ps,0,sizeof(*ps));
-  return ERR;
+  memset(ps, 0, sizeof(*ps));
+  return -1;
 }
 
 static void
-toggle_panel(WINDOW *w,struct panel_state *ps,int (*psfxn)(WINDOW *,struct panel_state *)){
+toggle_panel(struct ncplane* nc, struct panel_state *ps,
+             int (*psfxn)(struct ncplane*, struct panel_state*)){
   if(ps->p){
     hide_panel_locked(ps);
     active = NULL;
   }else{
     hide_panel_locked(active);
-    active = ((psfxn(w,ps) == OK) ? ps : NULL);
+    active = ((psfxn(nc, ps) == 0) ? ps : NULL);
   }
 }
 
-
+/*
 static unsigned
 node_lines(int e,const blockobj *l){
   unsigned lns;
@@ -4870,20 +4902,12 @@ recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
   if(newsel > bef){
     newsel = bef;
   }
-  /*wstatus_locked(stdscr,"newsel: %d bef: %d aft: %d oldsel: %d maxy: %d",
-      newsel,bef,aft,oldsel,getmaxy(is->rb->win));
-  update_panels();
-  doupdate();*/
   if(newsel + aft <= getmaxy(is->rb->win) - 3){
     newsel = getmaxy(is->rb->win) - aft - 3;
   }
   if(newsel + (int)node_lines(is->expansion,is->rb->selected) >= getmaxy(is->rb->win) - 2){
     newsel = getmaxy(is->rb->win) - 1 - node_lines(is->expansion,is->rb->selected);
   }
-  /*wstatus_locked(stdscr,"newsel: %d bef: %d aft: %d oldsel: %d maxy: %d",
-      newsel,bef,aft,oldsel,getmaxy(is->rb->win));
-  update_panels();
-  doupdate();*/
   if(newsel){
     is->rb->selline = newsel;
   }
@@ -4906,7 +4930,6 @@ expand_adapter_locked(void){
   oldrows = getmaxy(current_adapter->win);
   resize_adapter(current_adapter);
   recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
-  redraw_adapter(current_adapter);
   return 0;
 }
 
@@ -4927,7 +4950,6 @@ collapse_adapter_locked(void){
   oldrows = getmaxy(current_adapter->win);
   resize_adapter(current_adapter);
   recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
-  redraw_adapter(current_adapter);
   return 0;
 }
 
@@ -4970,10 +4992,11 @@ liberate_disk(void){
   }
   // FIXME liberate it
 }
+*/
 
 static int
 approvedp(const char *op){
-  if(strcasecmp(op,"do it") == 0){
+  if(strcasecmp(op, "do it") == 0){
     return 1;
   }
   return 0;
@@ -4989,14 +5012,14 @@ remove_ptable_confirm(const char *op){
       return;
     }
     if(b->d->layout != LAYOUT_NONE){
-      locked_diag("%s is not partitionable",b->d->name);
+      locked_diag("%s is not partitionable", b->d->name);
       return;
     }
     if(b->d->blkdev.pttable == NULL){
-      locked_diag("%s has no partition table",b->d->name);
+      locked_diag("%s has no partition table", b->d->name);
       return;
     }
-    wipe_ptable(b->d,NULL);
+    wipe_ptable(b->d, NULL);
     return;
   }
   locked_diag("partition table removal was cancelled");
@@ -5011,19 +5034,19 @@ remove_ptable(void){
     return;
   }
   if(b->d->layout != LAYOUT_NONE){
-    locked_diag("%s is not partitionable",b->d->name);
+    locked_diag("%s is not partitionable", b->d->name);
     return;
   }
   if(blockobj_unpartitionedp(b)){
-    locked_diag("%s has no partition table",b->d->name);
+    locked_diag("%s has no partition table", b->d->name);
     return;
   }
-  confirm_operation("remove the partition table",remove_ptable_confirm);
+  confirm_operation("remove the partition table", remove_ptable_confirm);
 }
 
 static struct form_option *
 pttype_table(int *count){
-  struct form_option *fo = NULL,*tmp;
+  struct form_option *fo = NULL, *tmp;
   pttable_type *types;
   int z;
 
@@ -5031,7 +5054,7 @@ pttype_table(int *count){
     return NULL;
   }
   for(z = 0 ; z < *count ; ++z){
-    char *key,*desc;
+    char *key, *desc;
 
     if((key = strdup(types[z].name)) == NULL){
       goto err;
@@ -5040,7 +5063,7 @@ pttype_table(int *count){
       free(key);
       goto err;
     }
-    if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+    if((tmp = realloc(fo, sizeof(*fo) * (*count + 1))) == NULL){
       free(key);
       free(desc);
       goto err;
@@ -5077,7 +5100,7 @@ make_ptable(void){
   if((ops_ptype = pttype_table(&opcount)) == NULL){
     return;
   }
-  raise_form("select a table type",pttype_callback,ops_ptype,opcount,-1,
+  raise_form("select a table type", pttype_callback, ops_ptype, opcount, -1,
       PTTYPE_TEXT);
 }
 
@@ -5085,28 +5108,28 @@ static void
 new_filesystem(void){
   blockobj *b = get_selected_blockobj();
   struct form_option *ops_fs;
-  int opcount,defidx;
+  int opcount, defidx;
 
   if(b == NULL){
     locked_diag("A block device must be selected");
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(selected_emptyp()){
-    locked_diag("Selected region of %s is empty space",b->d->name);
+    locked_diag("Selected region of %s is empty space", b->d->name);
     return;
   }
   if(!selected_mkfs_safe_p()){
     return;
   }
-  if((ops_fs = fs_table(&opcount,NULL,&defidx)) == NULL){
+  if((ops_fs = fs_table(&opcount, NULL, &defidx)) == NULL){
     return;
   }
-  raise_form("select a filesystem type",fs_callback,ops_fs,opcount,
-      defidx,FSTYPE_TEXT);
+  raise_form("select a filesystem type", fs_callback, ops_fs, opcount,
+      defidx, FSTYPE_TEXT);
   return;
 }
 
@@ -5121,7 +5144,7 @@ kill_filesystem_confirm(const char *op){
       return;
     }
     if(selected_unloadedp()){
-      locked_diag("Media is not loaded on %s",b->d->name);
+      locked_diag("Media is not loaded on %s", b->d->name);
       return;
     }
     if(selected_emptyp()){
@@ -5138,8 +5161,7 @@ kill_filesystem_confirm(const char *op){
     if(wipe_filesystem(d)){
       return;
     }
-    redraw_adapter(current_adapter);
-    locked_diag("Wiped filesystem on %s",d->name);
+    locked_diag("Wiped filesystem on %s", d->name);
     return;
   }
   locked_diag("filesystem wipe was cancelled");
@@ -5154,7 +5176,7 @@ kill_filesystem(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(selected_emptyp()){
@@ -5163,22 +5185,22 @@ kill_filesystem(void){
   }
   if(b->zone){
     if(b->zone->p && !b->zone->p->mnttype){
-      locked_diag("No filesystem signature on %s\n",b->zone->p->name);
+      locked_diag("No filesystem signature on %s\n", b->zone->p->name);
     }else if(b->zone->p->mnt.count){
-      locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n",b->zone->p->name);
+      locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n", b->zone->p->name);
     }else{
-      confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
+      confirm_operation("wipe the filesystem signature", kill_filesystem_confirm);
     }
   }else if(!b->zone){
     if(!b->d->mnttype){
-      locked_diag("No filesystem signature on %s\n",b->d->name);
+      locked_diag("No filesystem signature on %s\n", b->d->name);
     }else if(b->d->mnt.count){
-      locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n",b->d->name);
+      locked_diag("Filesystem on %s is mounted. Use 'O'/'T' to unmount.\n", b->d->name);
     }else{
-      confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
+      confirm_operation("wipe the filesystem signature", kill_filesystem_confirm);
     }
   }else{
-    confirm_operation("wipe the filesystem signature",kill_filesystem_confirm);
+    confirm_operation("wipe the filesystem signature", kill_filesystem_confirm);
   }
 }
 
@@ -5193,30 +5215,30 @@ static const struct form_option gpt_flags[] = {
   { // protects OEM partitions from being overwritten by windows
     .option = "0x0000000000000001", // 2^0, 1
     .desc = "System partition",
-  },{
+  }, {
     .option = "0x0000000000000002", // 2^1, 2
     .desc = "Hide from EFI",
-  },{
+  }, {
     .option = "0x0000000000000004", // 2^2, 4
     .desc = "Legacy BIOS bootable",
-  },{ // readonly for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+  }, { // readonly for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
     .option = "0x1000000000000000", // 2^60
     .desc = "Read-only",
-  },{
+  }, {
     .option = "0x2000000000000000", // 2^61
     .desc = "Shadow copy",
-  },{ // hidden for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+  }, { // hidden for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
     .option = "0x4000000000000000", // 2^62
     .desc = "Hidden",
-  },{ // no default drive letter for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+  }, { // no default drive letter for EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
     .option = "0x8000000000000000", // 2^63
     .desc = "Inhibit automounting",
   },
 };
 
 static struct form_option *
-flag_table(int *count,const char *match,int *defidx,char ***selarray,int *selections,
-    const struct form_option *flags,unsigned fcount){
+flag_table(int *count, const char *match, int *defidx, char ***selarray, int *selections,
+    const struct form_option *flags, unsigned fcount){
   struct form_option *fo = NULL;
   int z = 0;
 
@@ -5238,16 +5260,16 @@ flag_table(int *count,const char *match,int *defidx,char ***selarray,int *select
       free(fo[z].desc);
       goto err;
     }
-    if(match && strcmp(match,fo[z].option) == 0){
+    if(match && strcmp(match, fo[z].option) == 0){
       int zz;
 
       *defidx = z;
       for(zz = 0 ; selections && zz < *selections ; ++zz){
-        if(strcmp(key,(*selarray)[zz]) == 0){
+        if(strcmp(key, (*selarray)[zz]) == 0){
           free((*selarray)[zz]);
           (*selarray)[zz] = NULL;
           if(zz < *selections - 1){
-            memmove(&(*selarray)[zz],&(*selarray)[zz + 1],sizeof(**selarray) * (*selections - 1 - zz));
+            memmove(&(*selarray)[zz], &(*selarray)[zz + 1], sizeof(**selarray) * (*selections - 1 - zz));
           }
           --*selections;
           zz = -1;
@@ -5257,7 +5279,7 @@ flag_table(int *count,const char *match,int *defidx,char ***selarray,int *select
       if(zz >= *selections){
         typeof(*selarray) tmp;
 
-        if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+        if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
           free(fo[zz].option);
           free(fo[zz].desc);
           goto err;
@@ -5282,7 +5304,7 @@ err:
 }
 
 static void
-do_partflag(char **selarray,int selections){
+do_partflag(char **selarray, int selections){
   unsigned long long flags;
   device *d;
   int z;
@@ -5298,76 +5320,76 @@ do_partflag(char **selarray,int selections){
     unsigned long long ul;
 
     errno = 0;
-    ul = strtoull(selarray[z],&eptr,16);
+    ul = strtoull(selarray[z], &eptr, 16);
     assert(ul && (ul < ULLONG_MAX || errno != ERANGE) && !*eptr);
     flags |= ul;
   }
-  if(partition_set_flags(d,flags)){
+  if(partition_set_flags(d, flags)){
     return;
   }
 }
 
 static void
-partflag_callback(const char *fn,char **selarray,int selections,int scrollp){
+partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
   struct form_option *flags_agg;
-  int opcount,defidx;
+  int opcount, defidx;
 
   if(fn == NULL){
     // FIXME free selections
     return;
   }
-  if(strcmp(fn,"") == 0){
-    do_partflag(selarray,selections);
+  if(strcmp(fn, "") == 0){
+    do_partflag(selarray, selections);
     // FIXME free
     return;
   }
-  if((flags_agg = flag_table(&opcount,fn,&defidx,&selarray,&selections,
-      gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
+  if((flags_agg = flag_table(&opcount, fn, &defidx, &selarray, &selections,
+      gpt_flags, sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
     // FIXME free
     return;
   }
-  raise_checkform("set GPT partition flags",partflag_callback,flags_agg,
-    opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollp);
+  raise_checkform("set GPT partition flags", partflag_callback, flags_agg,
+    opcount, defidx, selarray, selections, PARTFLAG_TEXT, scrollp);
 }
 
 static void
-dos_partflag_callback(const char *fn,char **selarray,int selections,int scrollp){
+dos_partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
   struct form_option *flags_agg;
-  int opcount,defidx;
+  int opcount, defidx;
 
   if(fn == NULL){
     // FIXME free selections
     return;
   }
-  if(strcmp(fn,"") == 0){
-    do_partflag(selarray,selections);
+  if(strcmp(fn, "") == 0){
+    do_partflag(selarray, selections);
     // FIXME free
     return;
   }
-  if((flags_agg = flag_table(&opcount,fn,&defidx,&selarray,&selections,
-      dos_flags,sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
+  if((flags_agg = flag_table(&opcount, fn, &defidx, &selarray, &selections,
+      dos_flags, sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
     // FIXME free
     return;
   }
-  raise_checkform("set DOS partition flags",dos_partflag_callback,flags_agg,
-    opcount,defidx,selarray,selections,PARTFLAG_TEXT,scrollp);
+  raise_checkform("set DOS partition flags", dos_partflag_callback, flags_agg,
+    opcount, defidx, selarray, selections, PARTFLAG_TEXT, scrollp);
 }
 
 static int
-flag_to_selections(uint64_t flags,char ***selarray,int *selections,
-      const struct form_option *ops,unsigned opcount){
+flag_to_selections(uint64_t flags, char ***selarray, int *selections,
+      const struct form_option *ops, unsigned opcount){
   assert(selarray && selections);
   assert(!*selarray && !*selections);
   while(opcount--){
     unsigned long long ul;
     char *eptr;
 
-    ul = strtoull(ops[opcount].option,&eptr,16);
+    ul = strtoull(ops[opcount].option, &eptr, 16);
     assert(ul && (ul < ULLONG_MAX || errno != ERANGE) && !*eptr);
     if(flags & ul){
       typeof(*selarray) tmp;
 
-      if((tmp = realloc(*selarray,sizeof(*selarray) * (*selections + 1))) == NULL){
+      if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
         // FIXME backfree
         return -1;
       }
@@ -5384,7 +5406,7 @@ set_partition_attrs(void){
   struct form_option *flags_agg;
   char **selarray = NULL;
   int selections = 0;
-  int opcount,defidx;
+  int opcount, defidx;
   blockobj *b;
 
   if((b = get_selected_blockobj()) == NULL){
@@ -5392,7 +5414,7 @@ set_partition_attrs(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_partitionp()){
@@ -5400,31 +5422,31 @@ set_partition_attrs(void){
     return;
   }
   // FIXME need to initialize widget based off current flags
-  if(strcmp("gpt",b->d->blkdev.pttable) == 0){
-    if(flag_to_selections(b->zone->p->partdev.flags,&selarray,&selections,
-          gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))){
+  if(strcmp("gpt", b->d->blkdev.pttable) == 0){
+    if(flag_to_selections(b->zone->p->partdev.flags, &selarray, &selections,
+          gpt_flags, sizeof(gpt_flags) / sizeof(*gpt_flags))){
       return;
     }
-    if((flags_agg = flag_table(&opcount,NULL,&defidx,&selarray,&selections,
-        gpt_flags,sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
+    if((flags_agg = flag_table(&opcount, NULL, &defidx, &selarray, &selections,
+        gpt_flags, sizeof(gpt_flags) / sizeof(*gpt_flags))) == NULL){
       // FIXME free selarray
       return;
     }
-    raise_checkform("set GPT partition flags",partflag_callback,flags_agg,
-        opcount,defidx,selarray,selections,PARTFLAG_TEXT,0);
-  }else if(strcmp("dos",b->d->blkdev.pttable) == 0 ||
-    strcmp("msdos",b->d->blkdev.pttable) == 0){
+    raise_checkform("set GPT partition flags", partflag_callback, flags_agg,
+        opcount, defidx, selarray, selections, PARTFLAG_TEXT, 0);
+  }else if(strcmp("dos", b->d->blkdev.pttable) == 0 ||
+    strcmp("msdos", b->d->blkdev.pttable) == 0){
 
-    if(flag_to_selections(b->zone->p->partdev.flags,&selarray,&selections,
-          dos_flags,sizeof(dos_flags) / sizeof(*dos_flags))){
+    if(flag_to_selections(b->zone->p->partdev.flags, &selarray, &selections,
+          dos_flags, sizeof(dos_flags) / sizeof(*dos_flags))){
       return;
     }
-    if((flags_agg = flag_table(&opcount,NULL,&defidx,&selarray,&selections,
-        dos_flags,sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
+    if((flags_agg = flag_table(&opcount, NULL, &defidx, &selarray, &selections,
+        dos_flags, sizeof(dos_flags) / sizeof(*dos_flags))) == NULL){
       return;
     }
-    raise_checkform("set DOS partition flags",dos_partflag_callback,flags_agg,
-        opcount,defidx,selarray,selections,PARTFLAG_TEXT,0);
+    raise_checkform("set DOS partition flags", dos_partflag_callback, flags_agg,
+        opcount, defidx, selarray, selections, PARTFLAG_TEXT, 0);
   }else{
     assert(0);
   }
@@ -5433,11 +5455,11 @@ set_partition_attrs(void){
 static inline int
 fsck_suitable_p(const device *d){
   if(d->mnt.count){
-    locked_diag("Will not fsck mounted filesystem on %s",d->name);
+    locked_diag("Will not fsck mounted filesystem on %s", d->name);
     return 0;
   }
   if(d->mnttype == NULL){
-    locked_diag("No filesystem found on %s",d->name);
+    locked_diag("No filesystem found on %s", d->name);
     return 0;
   }
   return 1;
@@ -5453,7 +5475,7 @@ fsck_partition(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(selected_emptyp()){
@@ -5468,7 +5490,7 @@ fsck_partition(void){
   }
   if(fsck_suitable_p(d)){
     if(check_partition(d) == 0){
-      locked_diag("Validated filesystem on %s",d->name);
+      locked_diag("Validated filesystem on %s", d->name);
     }
   }
 }
@@ -5483,7 +5505,7 @@ delete_partition_confirm(const char *op){
       return;
     }
     if(selected_unloadedp()){
-      locked_diag("Media is not loaded on %s",b->d->name);
+      locked_diag("Media is not loaded on %s", b->d->name);
       return;
     }
     if(selected_unpartitionedp()){
@@ -5497,7 +5519,6 @@ delete_partition_confirm(const char *op){
     if(wipe_partition(b->zone->p)){
       return;
     }
-    redraw_adapter(current_adapter);
     return;
   }
   locked_diag("partition deletion was cancelled");
@@ -5512,7 +5533,7 @@ delete_partition(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(selected_unpartitionedp()){
@@ -5524,10 +5545,10 @@ delete_partition(void){
     return;
   }
   if(b->zone->p->mnttype){
-    locked_diag("%s has a valid filesystem signature. Wipe it with 'w'.",b->zone->p->name);
+    locked_diag("%s has a valid filesystem signature. Wipe it with 'w'.", b->zone->p->name);
     return;
   }
-  confirm_operation("delete the partition",delete_partition_confirm);
+  confirm_operation("delete the partition", delete_partition_confirm);
 }
 
 static void
@@ -5543,7 +5564,7 @@ wipe_mbr_confirm(const char *op){
     return;
   }
   if(blockobj_unloadedp(b)){
-    locked_diag("Media is unloaded on %s\n",b->d->name);
+    locked_diag("Media is unloaded on %s\n", b->d->name);
     return;
   }
   wipe_dosmbr(b->d);
@@ -5558,10 +5579,10 @@ wipe_mbr(void){
     return;
   }
   if(blockobj_unloadedp(b)){
-    locked_diag("Media is unloaded on %s\n",b->d->name);
+    locked_diag("Media is unloaded on %s\n", b->d->name);
     return;
   }
-  confirm_operation("wipe the mbr",wipe_mbr_confirm);
+  confirm_operation("wipe the mbr", wipe_mbr_confirm);
 }
 
 static void
@@ -5574,7 +5595,7 @@ badblock_do_internal(void){
     return;
   }
   ps = show_splash(L"Performing block check...");
-  badblock_scan(b->d,0); // FIXME allow destructive badblock check
+  badblock_scan(b->d, 0); // FIXME allow destructive badblock check
   if(ps){
     kill_splash(ps);
   }
@@ -5594,7 +5615,7 @@ mountpoint_callback(const char *path){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(path == NULL){
@@ -5602,10 +5623,10 @@ mountpoint_callback(const char *path){
     return;
   }
   if(selected_unpartitionedp()){
-    mmount(b->d,path,0,NULL);
+    mmount(b->d, path, 0, NULL);
   }else{
     assert(selected_partitionp());
-    mmount(b->zone->p,path,0,NULL);
+    mmount(b->zone->p, path, 0, NULL);
   }
 }
 
@@ -5618,7 +5639,7 @@ mount_filesystem(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_unpartitionedp()){
@@ -5627,28 +5648,22 @@ mount_filesystem(void){
       return;
     }
     if(b->zone->p->mnttype == NULL){
-      locked_diag("No filesystem detected on %s",b->zone->p->name);
+      locked_diag("No filesystem detected on %s", b->zone->p->name);
       return;
     }
     if(fstype_swap_p(b->zone->p->mnttype)){
-      if(swapondev(b->zone->p) == 0){
-        redraw_adapter(current_adapter);
-      }
       return;
     }
   }else{
     if(b->d->mnttype == NULL){
-      locked_diag("No filesystem detected on %s",b->d->name);
+      locked_diag("No filesystem detected on %s", b->d->name);
       return;
     }
     if(fstype_swap_p(b->d->mnttype)){
-      if(swapondev(b->d) == 0){
-        redraw_adapter(current_adapter);
-      }
       return;
     }
   }
-  raise_str_form("enter mountpount",mountpoint_callback,"/",MOUNT_TEXT);
+  raise_str_form("enter mountpount", mountpoint_callback, "/", MOUNT_TEXT);
 }
 
 static void
@@ -5660,7 +5675,7 @@ numount_target(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_unpartitionedp()){
@@ -5669,23 +5684,21 @@ numount_target(void){
       return;
     }
     if(!targeted_p(b->zone->p)){
-      locked_diag("Block device %s is not a target",b->zone->p->name);
+      locked_diag("Block device %s is not a target", b->zone->p->name);
       return;
     }
-    if(unmount(b->zone->p,NULL)){
+    if(unmount(b->zone->p, NULL)){
       return;
     }
-    redraw_adapter(current_adapter);
     return;
   }else{
     if(!targeted_p(b->d)){
-      locked_diag("Block device %s is not a target",b->d->name);
+      locked_diag("Block device %s is not a target", b->d->name);
       return;
     }
-    if(unmount(b->d,NULL)){
+    if(unmount(b->d, NULL)){
       return;
     }
-    redraw_adapter(current_adapter);
     return;
   }
 }
@@ -5704,11 +5717,11 @@ biosboot(void){
     return -1;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return -1;
   }
   if(selected_unpartitionedp()){
-    locked_diag("BIOS cannot boot from unpartitioned %s",b->d->name);
+    locked_diag("BIOS cannot boot from unpartitioned %s", b->d->name);
     return -1;
   }
   if(b->zone->p){
@@ -5721,7 +5734,7 @@ biosboot(void){
     d = b->d;
   }
   if(!targeted_p(d)){
-    locked_diag("Block device %s is not a target",d->name);
+    locked_diag("Block device %s is not a target", d->name);
     return -1;
   }
   // Do not enforce a check against the path for '/'; it can be in /boot
@@ -5749,11 +5762,11 @@ uefiboot(void){
     return -1;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return -1;
   }
   if(selected_unpartitionedp()){
-    locked_diag("UEFI cannot boot from unpartitioned %s",b->d->name);
+    locked_diag("UEFI cannot boot from unpartitioned %s", b->d->name);
     return -1;
   }
   if(b->zone->p){
@@ -5766,7 +5779,7 @@ uefiboot(void){
     d = b->d;
   }
   if(!targeted_p(d)){
-    locked_diag("Block device %s is not a target",d->name);
+    locked_diag("Block device %s is not a target", d->name);
     return -1;
   }
   // Do not enforce a check against the path for '/'; it can be in /boot
@@ -5793,7 +5806,7 @@ nmount_target(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_unpartitionedp()){
@@ -5802,25 +5815,24 @@ nmount_target(void){
       return;
     }
     if(targeted_p(b->zone->p)){
-      locked_diag("%s is already a target",b->zone->p->name);
+      locked_diag("%s is already a target", b->zone->p->name);
       return;
     }
     if(b->zone->p->mnttype == NULL){
-      locked_diag("No filesystem detected on %s",b->zone->p->name);
+      locked_diag("No filesystem detected on %s", b->zone->p->name);
       return;
     }
   }else{
     if(targeted_p(b->d)){
-      locked_diag("%s is already a target",b->d->name);
+      locked_diag("%s is already a target", b->d->name);
       return;
     }
     if(b->d->mnttype == NULL){
-      locked_diag("No filesystem detected on %s",b->d->name);
+      locked_diag("No filesystem detected on %s", b->d->name);
       return;
     }
   }
-  raise_str_form("enter target mountpount",targpoint_callback,"/",
-      TARG_TEXT);
+  raise_str_form("enter target mountpount", targpoint_callback, "/", TARG_TEXT);
 }
 
 static void
@@ -5833,7 +5845,7 @@ umount_filesystem(void){
     return;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return;
   }
   if(!selected_unpartitionedp()){
@@ -5844,17 +5856,14 @@ umount_filesystem(void){
     if(fstype_swap_p(b->zone->p->mnttype)){
       r = swapoffdev(b->zone->p);
     }else{
-      r = unmount(b->zone->p,NULL);
+      r = unmount(b->zone->p, NULL);
     }
   }else{
     if(fstype_swap_p(b->d->mnttype)){
       r = swapoffdev(b->d);
     }else{
-      r = unmount(b->d,NULL);
+      r = unmount(b->d, NULL);
     }
-  }
-  if(!r){
-    redraw_adapter(current_adapter);
   }
 }
 
@@ -5864,8 +5873,8 @@ remove_last_bufchar(char *buf){
   mbstate_t mb;
   size_t m;
 
-  memset(&mb,0,sizeof(mb));
-  while( (m = mbrlen(buf,strlen(buf),&mb)) ){
+  memset(&mb, 0, sizeof(mb));
+  while( (m = mbrlen(buf, strlen(buf), &mb)) ){
     if(m == (size_t)-1 || m == (size_t)-2){
       break;
     }
@@ -5890,7 +5899,7 @@ handle_actform_string_input(int ch){
     form_string_options(fs);
     unlock_ncurses();
     break;
-  case '\r': case '\n': case KEY_ENTER:{
+  case '\r': case '\n': case NCKEY_ENTER:{  
     char *str;
 
     lock_ncurses();
@@ -5898,7 +5907,7 @@ handle_actform_string_input(int ch){
     assert(NULL != str);
     free_form(actform);
     actform = NULL;
-    curs_set(0);
+    notcurses_cursor_disable(NC);
     cb(str);
     free(str);
     unlock_ncurses();
@@ -5907,11 +5916,11 @@ handle_actform_string_input(int ch){
     lock_ncurses();
     free_form(actform);
     actform = NULL;
-    curs_set(0);
+    notcurses_cursor_disable(NC);
     cb(NULL);
     unlock_ncurses();
     break;
-  }case KEY_BACKSPACE:{
+  }case NCKEY_BACKSPACE:{
     lock_ncurses();
     remove_last_bufchar(fs->inp.buffer);
     form_string_options(fs);
@@ -5921,11 +5930,11 @@ handle_actform_string_input(int ch){
     char *tmp;
 
     if(ch >= 256 || !isgraph(ch)){
-      diag("please %s, or cancel",actform->boxstr);
+      diag("please %s, or cancel", actform->boxstr);
     }
     lock_ncurses();
-    if((tmp = realloc(fs->inp.buffer,strlen(fs->inp.buffer) + 2)) == NULL){
-      locked_diag("Couldn't allocate input buffer (%s?)",strerror(errno));
+    if((tmp = realloc(fs->inp.buffer, strlen(fs->inp.buffer) + 2)) == NULL){
+      locked_diag("Couldn't allocate input buffer (%s?)", strerror(errno));
       unlock_ncurses();
       return;
     }
@@ -5943,10 +5952,10 @@ handle_actform_string_input(int ch){
 // indicate intercept.
 static int
 handle_subwindow_input(int ch){
-  /*switch(ch){
+  switch(ch){
     default:
       locked_diag("FIXME handle subwindow input");
-  }*/
+  }
   return ch;
 }
 
@@ -5955,17 +5964,17 @@ handle_actform_splash_input(void){
   lock_ncurses();
   free_form(actform);
   actform = NULL;
-  curs_set(0);
+  notcurses_cursor_disable(NC);
   unlock_ncurses();
 }
 
 // We received input while a modal form was active. Divert it from the typical
 // UI, and handle it according to the form. Returning non-zero quits the
 // program, and should pretty much only indicate that 'q' was pressed.
-static int
-handle_actform_input(int ch){
+static wchar_t
+handle_actform_input(wchar_t ch){
   struct form_state *fs = actform;
-  void (*mcb)(const char *,char **,int,int);
+  void (*mcb)(const char *, char **, int, int);
   void (*cb)(const char *);
 
   if(fs->formtype == FORM_STRING_INPUT){
@@ -5984,11 +5993,11 @@ handle_actform_input(int ch){
   switch(ch){
     case 12: // CTRL+L FIXME
       lock_ncurses();
-      wrefresh(curscr);
+      notcurses_refresh(NC);
       unlock_ncurses();
       break;
-    case ' ': case '\r': case '\n': case KEY_ENTER:{
-      int op,selections,scrolloff;
+    case ' ': case '\r': case '\n': case NCKEY_ENTER:{
+      int op, selections, scrolloff;
       char **selarray;
       char *optstr;
 
@@ -6004,7 +6013,7 @@ handle_actform_input(int ch){
         actform = NULL;
         setup_colors();
         if(mcb){
-          mcb(optstr,selarray,selections,scrolloff);
+          mcb(optstr, selarray, selections, scrolloff);
         }else{
           cb(optstr);
         }
@@ -6017,7 +6026,7 @@ handle_actform_input(int ch){
         int scrolloff = fs->scrolloff;
         free_form(actform);
         actform = NULL;
-        mcb(NULL,NULL,0,scrolloff);
+        mcb(NULL, NULL, 0, scrolloff);
       }else{
         free_form(actform);
         actform = NULL;
@@ -6025,7 +6034,7 @@ handle_actform_input(int ch){
       }
       unlock_ncurses();
       break;
-    }case KEY_UP: case 'k':{
+    }case NCKEY_UP: case 'k':{
       lock_ncurses();
       if(fs->idx == fs->scrolloff){
         if(--fs->scrolloff < 0){
@@ -6044,10 +6053,11 @@ handle_actform_input(int ch){
       }
       unlock_ncurses();
       break;
-    }case KEY_DOWN: case 'j':{
+    }case NCKEY_DOWN: case 'j':{
       lock_ncurses();
       int maxz;
-      maxz = getmaxy(panel_window(fs->p)) - 5 >= fs->opcount - 1 ? fs->opcount - 1 : getmaxy(panel_window(fs->p)) - 5;
+      ncplane_dim_yx(fs->p, &maxz, NULL);
+      maxz = maxz - 5 >= fs->opcount - 1 ? fs->opcount - 1 : maxz - 5;
       if(fs->idx == (fs->scrolloff + maxz) % fs->opcount){
         if(++fs->scrolloff >= fs->opcount){
           fs->scrolloff = 0;
@@ -6068,7 +6078,7 @@ handle_actform_input(int ch){
     }case 'q':{
       return 'q';
     }case 'C':{
-      int selections,scrolloff;
+      int selections, scrolloff;
       char **selarray;
 
       lock_ncurses();
@@ -6079,14 +6089,14 @@ handle_actform_input(int ch){
         fs->selarray = NULL;
         free_form(actform);
         actform = NULL;
-        mcb("",selarray,selections,scrolloff);
+        mcb("", selarray, selections, scrolloff);
         unlock_ncurses();
         break;
       }
       unlock_ncurses();
-    } /* intentional fallthrough */
+    } // intentional fallthrough
     default:{
-      diag("please %s, or cancel",actform->boxstr);
+      diag("please %s, or cancel", actform->boxstr);
       break;
     }
   }
@@ -6106,7 +6116,7 @@ destroy_aggregate_confirm(const char *op){
     return;
   }
   if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
-    locked_diag("%s is not an aggregate",b->d->name);
+    locked_diag("%s is not an aggregate", b->d->name);
   }else if(b->d->layout == LAYOUT_ZPOOL){
     destroy_zpool(b->d);
   }else if(b->d->layout == LAYOUT_MDADM){
@@ -6114,7 +6124,7 @@ destroy_aggregate_confirm(const char *op){
   }else if(b->d->layout == LAYOUT_DM){
     locked_diag("Not yet implemented FIXME"); // FIXME
   }else{
-    locked_diag("Unknown layout type %d on %s",b->d->layout,b->d->name);
+    locked_diag("Unknown layout type %d on %s", b->d->layout, b->d->name);
   }
 }
 
@@ -6127,6 +6137,7 @@ untargeted_exit_confirm(const char *op){
   shutdown_cycle();
 }
 
+/*
 static void
 destroy_aggregate(void){
   blockobj *b;
@@ -6136,10 +6147,10 @@ destroy_aggregate(void){
     return;
   }
   if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
-    locked_diag("%s is not an aggregate",b->d->name);
+    locked_diag("%s is not an aggregate", b->d->name);
     return;
   }
-  confirm_operation("destroy the aggregate",destroy_aggregate_confirm);
+  confirm_operation("destroy the aggregate", destroy_aggregate_confirm);
 }
 
 static void
@@ -6151,7 +6162,7 @@ modify_aggregate(void){
     return;
   }
   if(b->d->layout == LAYOUT_NONE || b->d->layout == LAYOUT_PARTITION){
-    locked_diag("%s is not an aggregate",b->d->name);
+    locked_diag("%s is not an aggregate", b->d->name);
     return;
   }
   locked_diag("Aggregate modification not yet implemented FIXME");
@@ -6259,20 +6270,22 @@ unset_target(void){
   }
   locked_diag("Successfully left target mode");
 }
+*/
 
 static void
-handle_ncurses_input(WINDOW *w){
-  int ch,r;
+handle_ncurses_input(struct ncplane* w){
+  wchar_t ch;
+  int r;
 
-  while((ch = getch()) != ERR){
+  while((ch = notcurses_getc_blocking(NC)) != (wchar_t)-1){
     if(ch == 12){ // CTRL+L FIXME
       lock_ncurses();
-      wrefresh(curscr);
+      notcurses_refresh(NC);
       unlock_ncurses();
       continue;
     }
     if(actform){
-      if((ch = handle_actform_input(ch)) == ERR){
+      if((ch = handle_actform_input(ch)) == -1){
         break;
       }
       if(ch == 0){
@@ -6280,7 +6293,7 @@ handle_ncurses_input(WINDOW *w){
       }
     }
     if(active){
-      if((ch = handle_subwindow_input(ch)) == ERR){
+      if((ch = handle_subwindow_input(ch)) == -1){
         return;
       }
       if(ch == 0){ // intercepted
@@ -6290,34 +6303,35 @@ handle_ncurses_input(WINDOW *w){
     switch(ch){
       case 'H':{
         lock_ncurses();
-        toggle_panel(w,&help,display_help);
+        toggle_panel(w, &help, display_help);
         unlock_ncurses();
         break;
       }
       case 'D':{
         lock_ncurses();
-        toggle_panel(w,&diags,display_diags);
+        toggle_panel(w, &diags, display_diags);
         unlock_ncurses();
         break;
       }
       case 'v':{
         lock_ncurses();
-        toggle_panel(w,&details,display_details);
+        toggle_panel(w, &details, display_details);
         unlock_ncurses();
         break;
       }
       case 'e':{
         lock_ncurses();
-        toggle_panel(w,&environment,display_enviroment);
+        toggle_panel(w, &environment, display_enviroment);
         unlock_ncurses();
         break;
       }
       case 'E':{
         lock_ncurses();
-        toggle_panel(w,&maps,display_maps);
+        toggle_panel(w, &maps, display_maps);
         unlock_ncurses();
         break;
       }
+/*
       case '+':
         lock_ncurses();
         expand_adapter_locked();
@@ -6334,7 +6348,6 @@ handle_ncurses_input(WINDOW *w){
         if(selection_active()){
           use_next_zone(current_adapter->selected);
         }
-        redraw_adapter(current_adapter);
         unlock_ncurses();
         break;
       }
@@ -6343,7 +6356,6 @@ handle_ncurses_input(WINDOW *w){
         if(selection_active()){
           use_prev_zone(current_adapter->selected);
         }
-        redraw_adapter(current_adapter);
         unlock_ncurses();
         break;
       }
@@ -6567,21 +6579,22 @@ handle_ncurses_input(WINDOW *w){
           return;
         }
         break;
+*/
       case 'q':
         if(!growlight_target){
           return;
         }else if(finalized){
           return;
         }
-        confirm_operation("exit without finalizing a target",untargeted_exit_confirm);
+        confirm_operation("exit without finalizing a target", untargeted_exit_confirm);
         break;
       default:{
         const char *hstr = !help.p ? " ('H' for help)" : "";
         // diag() locks/unlocks, and calls screen_update()
         if(isprint(ch)){
-          diag("unknown command '%c'%s",ch,hstr);
+          diag("unknown command '%c'%s", ch, hstr);
         }else{
-          diag("unknown scancode %d%s",ch,hstr);
+          diag("unknown scancode %d%s", ch, hstr);
         }
         break;
       }
@@ -6595,10 +6608,13 @@ create_adapter_state(controller *a){
   adapterstate *as;
 
   if( (as = malloc(sizeof(*as))) ){
-    memset(as,0,sizeof(*as));
+    memset(as, 0, sizeof(*as));
     as->c = a;
     as->expansion = EXPANSION_MAX;
-    // next, prev, rb are managed by caller
+    as->scrline = 0; // FIXME used to be set based on position
+    as->selected = NULL;
+    as->selline = -1;
+    as->rb = NULL;
   }
   return as;
 }
@@ -6617,65 +6633,29 @@ free_adapter_state(adapterstate *as){
 }
 
 static void *
-adapter_callback(controller *a,void *state){
+adapter_callback(controller *a, void *state){
   adapterstate *as;
-  reelbox *rb;
 
   lock_ncurses_growlight();
   if((as = state) == NULL){
     if(a->blockdevs){
       if( (state = as = create_adapter_state(a)) ){
-        int newrb,rows,cols;
+        int newrb, rows, cols;
 
-        getmaxyx(stdscr,rows,cols);
-        if( (newrb = bottom_space_p(rows)) ){
-          newrb = rows - newrb;
-          if((rb = create_reelbox(as,rows,newrb,cols)) == NULL){
-            free_adapter_state(as);
-            unlock_ncurses_growlight();
-            return NULL;
-          }
-          if(last_reelbox){
-            // set up the adapter list entries
-            as->next = last_reelbox->as->next;
-            as->next->prev = as;
-            as->prev = last_reelbox->as;
-            last_reelbox->as->next = as;
-            // and also the rb list entries
-            if( (rb->next = last_reelbox->next) ){
-              rb->next->prev = rb;
-            }
-            rb->prev = last_reelbox;
-            last_reelbox->next = rb;
-          }else{
-            as->prev = as->next = as;
-            rb->next = rb->prev = NULL;
-            top_reelbox = rb;
-            current_adapter = rb;
-          }
-          last_reelbox = rb;
-        }else{ // insert it after the last visible one, no rb
-          as->next = top_reelbox->as;
-          top_reelbox->as->prev->next = as;
-          as->prev = top_reelbox->as->prev;
-          top_reelbox->as->prev = as;
-          as->rb = NULL;
-          rb = NULL;
+        notcurses_term_dim_yx(NC, &rows, &cols);
+        if((as->rb = panelreel_add(PR, NULL, NULL, redraw_adapter, as)) == NULL){
+          free_adapter_state(as);
+          unlock_ncurses_growlight();
+          return NULL;
+        }
+        if(current_adapter == NULL){
+          current_adapter = as;
         }
         ++count_adapters;
-        draw_main_window(stdscr);
-      }else{
-        rb = NULL;
       }
     }else{
-      rb = NULL;
+      as = NULL;
     }
-  }else{
-    rb = as->rb;
-  }
-  if(rb){
-    //resize_adapter(rb);
-    redraw_adapter(rb);
   }
   unlock_ncurses_growlight();
   return as;
@@ -6696,6 +6676,7 @@ free_zchain(zobj **z){
   *z = NULL;
 }
 
+/*
 // b->zone == NULL:
 //   d->layout == LAYOUT_NONE:
 //     d->blkdev.unloaded: device unloaded or inaccessible
@@ -6819,9 +6800,12 @@ create_blockobj(device *d){
   }
   return b;
 }
+*/
 
 static void *
-block_callback(device *d,void *v){
+block_callback(device *d, void *v){
+  return NULL;
+  /*
   adapterstate *as;
   blockobj *b;
 
@@ -6832,7 +6816,7 @@ block_callback(device *d,void *v){
 // fprintf(stderr, "---------begin block event on %s\n", d->name);
   if((as = d->c->uistate) == NULL){
 // fprintf(stderr, "MAKE THAT INVISIBLE block event on %s\n!", d->name);
-    if((as = d->c->uistate = adapter_callback(d->c,NULL)) == NULL){
+    if((as = d->c->uistate = adapter_callback(d->c, NULL)) == NULL){
       return NULL;
     }
   }
@@ -6851,32 +6835,32 @@ block_callback(device *d,void *v){
       ++as->devs;
     }
   }else{
-    update_blockobj(b,d);
+    update_blockobj(b, d);
   }
   if(as->rb){
-    int old,oldrows;
+    int old, oldrows;
 
     old = as->rb->selline;
     oldrows = getmaxy(as->rb->win);
 // fprintf(stderr, "into resize_adapter line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
     resize_adapter(as->rb);
 // fprintf(stderr, "into recompute_selection line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
-    recompute_selection(as,old,oldrows,getmaxy(as->rb->win));
+    recompute_selection(as, old, oldrows, getmaxy(as->rb->win));
     if(current_adapter == as->rb){
       if(b->prev == NULL && b->next == NULL){
         select_adapter();
       }
     }
-// fprintf(stderr, "into redraw_adapter line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
-    redraw_adapter(as->rb);
   }
 // fprintf(stderr, "---------end block event on %s\n", d->name);
   unlock_ncurses_growlight();
   return b;
+  */
 }
 
 static void
-block_free(void *cv,void *bv){
+block_free(void *cv, void *bv){
+  /*
   adapterstate *as = cv;
   blockobj *bo = bv;
   reelbox *rb;
@@ -6885,11 +6869,11 @@ block_free(void *cv,void *bv){
   if( (rb = as->rb) ){
     if(bo == rb->selected){
       if(bo->prev){
-        select_adapter_dev(rb,bo->prev,-1);
+        select_adapter_dev(rb, bo->prev, -1);
       }else if(bo->next){
-        select_adapter_dev(rb,bo->next,1);
+        select_adapter_dev(rb, bo->next, 1);
       }else{
-        select_adapter_dev(rb,NULL,0);
+        select_adapter_dev(rb, NULL, 0);
       }
     }
   }
@@ -6906,19 +6890,20 @@ block_free(void *cv,void *bv){
   --as->devs;
   free(bo);
   if(as->rb){
-    int old,oldrows;
+    int old, oldrows;
 
     old = as->rb->selline;
     oldrows = getmaxy(rb->win);
     resize_adapter(as->rb);
-    recompute_selection(as,old,oldrows,getmaxy(rb->win));
-    redraw_adapter(as->rb);
+    recompute_selection(as, old, oldrows, getmaxy(rb->win));
   }
   unlock_ncurses_growlight();
+  */
 }
 
 static void
 adapter_free(void *cv){
+  /*
   adapterstate *as = cv;
   reelbox *rb = rb;
 
@@ -6926,12 +6911,12 @@ adapter_free(void *cv){
   as->prev->next = as->next;
   as->next->prev = as->prev;
   if( (rb = as->rb) ){
-    int delta = getmaxy(rb->win) + 1,scrrows,scrcols;
+    int delta = getmaxy(rb->win) + 1, scrrows, scrcols;
 
-// fprintf(stderr,"Removing iface at %d\n",rb->scrline);
-    assert(werase(rb->win) == OK);
-    assert(hide_panel(rb->panel) == OK);
-    getmaxyx(stdscr,scrrows,scrcols);
+// fprintf(stderr, "Removing iface at %d\n", rb->scrline);
+    assert(werase(rb->win) == 0);
+    assert(hide_panel(rb->panel) == 0);
+    getmaxyx(stdscr, scrrows, scrcols);
     if(rb->next){
       rb->next->prev = rb->prev;
     }else{
@@ -6949,7 +6934,7 @@ adapter_free(void *cv){
       if((current_adapter = rb->next) == NULL){
         current_adapter = rb->prev;
       }
-      pull_adapters_up(rb,scrrows,scrcols,delta);
+      pull_adapters_up(rb, scrrows, scrcols, delta);
       // give the details window to new current_iface
       if(details.p){
         if(current_adapter == NULL){
@@ -6958,13 +6943,13 @@ adapter_free(void *cv){
         }
       }
     }else if(rb->scrline > current_adapter->scrline){
-      pull_adapters_up(rb,scrrows,scrcols,delta);
+      pull_adapters_up(rb, scrrows, scrcols, delta);
     }else{ // pull them down; removed is above current_adapter
       int ts;
 
-      pull_adapters_down(rb,scrrows,scrcols,delta);
+      pull_adapters_down(rb, scrrows, scrcols, delta);
       if( (ts = top_space_p(scrrows)) ){
-        pull_adapters_up(NULL,scrrows,scrcols,ts);
+        pull_adapters_up(NULL, scrrows, scrcols, ts);
       }
     }
     free_reelbox(rb);
@@ -6974,88 +6959,83 @@ adapter_free(void *cv){
   }
   free_adapter_state(as); // clears subentries
   --count_adapters;
-  draw_main_window(stdscr); // Update the device count
+  draw_main_window(notcurses_stdplane(NC)); // Update the device count
   unlock_ncurses_growlight();
+  */
 }
 
 static void
-vdiag(const char *fmt,va_list v){
+vdiag(const char *fmt, va_list v){
   lock_ncurses_growlight();
-  locked_vdiag(fmt,v);
+  locked_vdiag(fmt, v);
   unlock_ncurses_growlight();
 }
 
+// FIXME destroy panelreel
 static void
 shutdown_cycle(void){
   struct panel_state *ps;
-  WINDOW *w = stdscr;
 
   diag("User-initiated shutdown\n");
   ps = show_splash(L"Shutting down...");
   if(growlight_stop()){
     kill_splash(ps);
-    ncurses_cleanup(&w);
+    notcurses_stop(NC);
     dump_diags();
     exit(EXIT_FAILURE);
   }
   kill_splash(ps);
-  if(ncurses_cleanup(&w)){
+  if(notcurses_stop(NC)){
     dump_diags();
     exit(EXIT_FAILURE);
   }
   exit(EXIT_SUCCESS);
-};
+}
 
-static void raise_info_form(const char *str,const char *text){
+static void raise_info_form(const char *str, const char *text){
   struct form_state *fs;
   int lineguess;
-  WINDOW *fsw;
   int cols;
-  int x,y;
+  int x, y;
 
   assert(str && text);
   if(actform){
     locked_diag("An input dialog is already active");
     return;
   }
-  if((fs = create_form(str,NULL,FORM_SPLASH_PROMPT,0)) == NULL){
+  if((fs = create_form(str, NULL, FORM_SPLASH_PROMPT, 0)) == NULL){
     return;
   }
   fs->longop = strlen(str);
   cols = fs->longop; // FIXME? 40 for input currently
-  getmaxyx(stdscr,y,x);
+  struct ncplane* stdn = notcurses_stdplane(NC);
+  ncplane_dim_yx(stdn, &y, &x);
   assert(x >= cols + 3);
   assert(y >= 3);
   // It could be more than this due to line breaking, so add a fudge
   // factor of 2...FIXME
   lineguess = 2; // yuck
   lineguess += strlen(text) / (x - 2) + 1;
-  if((fsw = newwin(3,cols + START_COL * 2,FORM_Y_OFFSET + lineguess,x - cols - 3)) == NULL){
-    locked_diag("Couldn't create form window, uh-oh");
+  fs->p = notcurses_newplane(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET + lineguess, x - cols - 3, NULL);
+  if(fs->p == NULL){
+    locked_diag("Couldn't create plane, uh-oh");
     free_form(fs);
     return;
   }
-  if((fs->p = new_panel(fsw)) == NULL){
-    locked_diag("Couldn't create form panel, uh-oh");
-    delwin(fsw);
-    free_form(fs);
-    return;
-  }
-  assert(top_panel(fs->p) != ERR);
-  wattroff(fsw,A_BOLD);
-  wcolor_set(fsw,FORMBORDER_COLOR,NULL);
-  bevel(fsw);
-  wattron(fsw,A_BOLD);
-  mvwprintw(fsw,1,START_COL,"%-*.*s",cols,cols,str);
+  cwattroff(fs->p, CELL_STYLE_BOLD);
+  compat_set_fg(fs->p, FORMBORDER_COLOR);
+  bevel(fs->p);
+  cwattron(fs->p, CELL_STYLE_BOLD);
+  cmvwprintw(fs->p, 1, START_COL, "%-*.*s", cols, cols, str);
   form_string_options(fs);
   actform = fs;
-  fs->extext = raise_form_explication(stdscr,text,20);
+  fs->extext = raise_form_explication(notcurses_stdplane(NC), text, 20);
   form_colors();
   screen_update();
 }
 
 static void
-boxinfo(const char *text,...){
+boxinfo(const char *text, ...){
   va_list v;
   char *buf;
   int max;
@@ -7067,17 +7047,17 @@ boxinfo(const char *text,...){
     unlock_ncurses_growlight();
     return;
   }
-  va_start(v,text);
-  if(vsnprintf(buf,max,text,v) >= max){
+  va_start(v, text);
+  if(vsnprintf(buf, max, text, v) >= max){
     buf[max - 1] = '\0';
   }
   lock_ncurses_growlight();
-  raise_info_form("Press any key to continue...",buf);
+  raise_info_form("Press any key to continue...", buf);
   unlock_ncurses_growlight();
   va_end(v);
 }
 
-int main(int argc,char * const *argv){
+int main(int argc, char * const *argv){
   const glightui ui = {
     .vdiag = vdiag,
     .boxinfo = boxinfo,
@@ -7086,31 +7066,45 @@ int main(int argc,char * const *argv){
     .adapter_free = adapter_free,
     .block_free = block_free,
   };
-  WINDOW *w;
   struct panel_state *ps;
   int showhelp = 1;
 
-  if(setlocale(LC_ALL,"") == NULL){
+  if(setlocale(LC_ALL, "") == NULL){
     fprintf(stderr,"Warning: couldn't load locale\n");
-    //return EXIT_FAILURE;
-  }
-  if((w = ncurses_setup()) == NULL){
     return EXIT_FAILURE;
   }
+  notcurses_options opts;
+  memset(&opts, 0, sizeof(opts));
+  if((NC = notcurses_init(&opts, stdout)) == NULL){
+    return EXIT_FAILURE;
+  }
+  struct ncplane* n = notcurses_stdplane(NC);
   ps = show_splash(L"Initializing...");
-  if(growlight_init(argc,argv,&ui,&showhelp)){
+  panelreel_options popts;
+  memset(&popts, 0, sizeof(popts));
+  popts.bordermask = NCBOXMASK_TOP | NCBOXMASK_BOTTOM
+                     | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
+  PR = panelreel_create(n, &popts, -1);
+  if(PR == NULL){
     kill_splash(ps);
-    ncurses_cleanup(&w);
+    notcurses_stop(NC);
+    dump_diags();
+    return EXIT_FAILURE;
+  }
+  if(growlight_init(argc, argv, &ui, &showhelp)){
+    panelreel_destroy(PR);
+    kill_splash(ps);
+    notcurses_stop(NC);
     dump_diags();
     return EXIT_FAILURE;
   }
   lock_growlight();
   kill_splash(ps);
   if(showhelp){
-    toggle_panel(w,&help,display_help);
+    toggle_panel(n, &help, display_help);
     screen_update();
   }
   unlock_growlight();
-  handle_ncurses_input(w);
+  handle_ncurses_input(n);
   shutdown_cycle(); // calls exit() on all paths
 }
