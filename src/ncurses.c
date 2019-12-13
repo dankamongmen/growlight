@@ -3667,14 +3667,14 @@ static const wchar_t *helps[] = {
   L"'E': view mounts / targets    'z': modify aggregate",
   L"'A': create aggregate         'Z': destroy aggregate",
   L"'-': collapse adapter         '+': expand adapter",
-  L"'k'/'↑': navigate up          'j'/'↓': navigate down",
-  L"'⇞PageUp': previous adapter   ⇟PageDown': next adapter",
+  L"'k'/↑: navigate up            'j'/↓: navigate down",
+  L"PageUp: previous adapter      PageDown: next adapter",
   L"'/': search                   'p': configure loop device",
   NULL
 };
 
 static const wchar_t *helps_block[] = {
-  L"'h'/'←': navigate left        'l'/'→': navigate right",
+  L"'h'/←: navigate left          'l'/→: navigate right",
   L"'m': make partition table     'r': remove partition table",
   L"'W': wipe master boot record  'B': bad blocks check",
   L"'n': new partition            'd': delete partition",
@@ -7082,6 +7082,8 @@ int main(int argc, char * const *argv){
   ps = show_splash(L"Initializing...");
   panelreel_options popts;
   memset(&popts, 0, sizeof(popts));
+  popts.bordermask = NCBOXMASK_TOP | NCBOXMASK_BOTTOM
+                     | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
   PR = panelreel_create(n, &popts, -1);
   if(PR == NULL){
     kill_splash(ps);
