@@ -353,6 +353,7 @@ subscript(int in){
 */
 
 static struct notcurses* NC;
+static struct panelreel* PR;
 
 static inline void
 screen_update(void){
@@ -1684,7 +1685,8 @@ adapter_box(const adapterstate *as,WINDOW *w,unsigned abovetop,unsigned belowend
 }
 
 static int
-redraw_adapter(const reelbox *rb){
+redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
+               bool cliptop, void* vas){
   const adapterstate *as = rb->as;
   int scrrows,scrcols,rows,cols;
   unsigned topp,endp;
@@ -1705,14 +1707,13 @@ redraw_adapter(const reelbox *rb){
     topp = 0;
     endp = 1; // no bottom FIXME
   }
-  getmaxyx(rb->win,rows,cols);
+  ncplane_dim_yx(n, &rows, &cols);
   assert(cols); // FIXME
   werase(rb->win);
   adapter_box(as,rb->win,topp,endp);
   print_adapter_devs(as,rows,cols,topp,endp);
   return OK;
 }
-*/
 
 // -------------------------------------------------------------------------
 // -- splash API. splashes are displayed during long operations, especially
@@ -1815,6 +1816,7 @@ destroy_form_locked(struct form_state *fs){
     actform = NULL;
   }
 }
+*/
 
 static void
 free_form(struct form_state *fs){
@@ -1832,6 +1834,7 @@ free_form(struct form_state *fs){
   }
 }
 
+/*
 static void
 multiform_options(struct form_state *fs){
   static const cchar_t bchr[] = {
@@ -6675,7 +6678,6 @@ handle_ncurses_input(struct ncplane* w){
   diag("Error reading from console, aborting");
 }
 
-/*
 static adapterstate *
 create_adapter_state(controller *a){
   adapterstate *as;
@@ -6688,7 +6690,6 @@ create_adapter_state(controller *a){
   }
   return as;
 }
-*/
 
 static void
 free_adapter_state(adapterstate *as){
@@ -6705,9 +6706,7 @@ free_adapter_state(adapterstate *as){
 
 static void *
 adapter_callback(controller *a, void *state){
-  return NULL;
-  /*
-  adapterstate *as;
+  adapterstate *as = NULL;
   reelbox *rb;
 
   lock_ncurses_growlight();
@@ -6716,40 +6715,15 @@ adapter_callback(controller *a, void *state){
       if( (state = as = create_adapter_state(a)) ){
         int newrb, rows, cols;
 
-        getmaxyx(stdscr, rows, cols);
-        if( (newrb = bottom_space_p(rows)) ){
-          newrb = rows - newrb;
-          if((rb = create_reelbox(as, rows, newrb, cols)) == NULL){
-            free_adapter_state(as);
-            unlock_ncurses_growlight();
-            return NULL;
-          }
-          if(last_reelbox){
-            // set up the adapter list entries
-            as->next = last_reelbox->as->next;
-            as->next->prev = as;
-            as->prev = last_reelbox->as;
-            last_reelbox->as->next = as;
-            // and also the rb list entries
-            if( (rb->next = last_reelbox->next) ){
-              rb->next->prev = rb;
-            }
-            rb->prev = last_reelbox;
-            last_reelbox->next = rb;
-          }else{
-            as->prev = as->next = as;
-            rb->next = rb->prev = NULL;
-            top_reelbox = rb;
-            current_adapter = rb;
-          }
-          last_reelbox = rb;
-        }else{ // insert it after the last visible one, no rb
-          as->next = top_reelbox->as;
-          top_reelbox->as->prev->next = as;
-          as->prev = top_reelbox->as->prev;
-          top_reelbox->as->prev = as;
-          as->rb = NULL;
-          rb = NULL;
+        ncplane_dim_yx(notcurses_stdplane(NC), &rows, &cols);
+        if((rb = panelreel_add(PR, NULL, NULL, redraw_adapter, as)) == NULL){
+          free_adapter_state(as);
+          unlock_ncurses_growlight();
+          return NULL;
+        }
+        if(current_adapter == NULL){
+          current_adapter = rb;
+          as->prev = as->next = as;
         }
         ++count_adapters;
         draw_main_window(stdscr);
@@ -6762,13 +6736,8 @@ adapter_callback(controller *a, void *state){
   }else{
     rb = as->rb;
   }
-  if(rb){
-    //resize_adapter(rb);
-    redraw_adapter(rb);
-  }
   unlock_ncurses_growlight();
   return as;
-  */
 }
 
 static void
@@ -7085,6 +7054,7 @@ vdiag(const char *fmt, va_list v){
   unlock_ncurses_growlight();
 }
 
+// FIXME destroy panelreel
 static void
 shutdown_cycle(void){
   struct panel_state *ps;
@@ -7191,14 +7161,24 @@ int main(int argc, char * const *argv){
   if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
+  struct ncplane* n = notcurses_stdplane(NC);
   ps = show_splash(L"Initializing...");
-  if(growlight_init(argc, argv, &ui, &showhelp)){
+  panelreel_options popts;
+  memset(&popts, 0, sizeof(popts));
+  PR = panelreel_create(n, &popts, -1);
+  if(PR == NULL){
     kill_splash(ps);
     notcurses_stop(NC);
     dump_diags();
     return EXIT_FAILURE;
   }
-  struct ncplane* n = notcurses_stdplane(NC);
+  if(growlight_init(argc, argv, &ui, &showhelp)){
+    panelreel_destroy(PR);
+    kill_splash(ps);
+    notcurses_stop(NC);
+    dump_diags();
+    return EXIT_FAILURE;
+  }
   lock_growlight();
   kill_splash(ps);
   if(showhelp){
