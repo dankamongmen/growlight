@@ -248,6 +248,9 @@ enum {
 static void
 compat_set_fg(struct ncplane* nc, int pair){
   switch(pair){
+    case 0:
+      ncplane_set_fg_rgb(nc, 64, 64, 64);
+      break;
     case HEADER_COLOR:
       ncplane_set_fg_rgb(nc, 95, 0, 175);
       break;
@@ -260,22 +263,36 @@ compat_set_fg(struct ncplane* nc, int pair){
     case UNHEADING_COLOR:
       ncplane_set_fg_rgb(nc, 135, 175, 255);
       break;
+    case UBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 0, 215, 175);
+      break;
+    case SELBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 0, 255, 215);
+      break;
+    case DBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 135, 175, 255);
+      break;
+    case PBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 215, 255, 0);
+      break;
+    case PHEADING_COLOR:
+      ncplane_set_fg_rgb(nc, 197, 15, 31);
+      break;
     case FORMTEXT_COLOR:
       ncplane_set_fg_rgb(nc, 97, 214, 214);
       break;
     case SUBDISPLAY_COLOR:
       ncplane_set_fg_rgb(nc, 204, 204, 204);
       break;
-    case PHEADING_COLOR:
-      ncplane_set_fg_rgb(nc, 197, 15, 31);
+    case OPTICAL_COLOR:
+      break;
+    case ROTATE_COLOR:
       break;
     case SPLASHBORDER_COLOR:
       ncplane_set_fg_rgb(nc, 95, 95, 215);
       break;
-    case PBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 215, 255, 0);
-      break;
     default:
+      fprintf(stderr, "DON'T YET KNOW COMPAT COLOR %d\n", pair);
       assert(false);
   }
 }
@@ -377,7 +394,6 @@ setup_colors(void){
 /*
   int z;
 
-  assert(init_pair(UBORDER_COLOR,COLOR_CYAN,-1) != -1);
   assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == 0);
   if(init_pair(DBORDER_COLOR,COLOR_CRAP,-1) == -1){
     assert(init_pair(DBORDER_COLOR,COLOR_RED,-1) != -1);
@@ -473,10 +489,6 @@ form_colors(void){
   // Don't reset the status color or header color, nor (obviously) the
   // form nor splash colors.
   locked_diag("%s",""); // Don't leave a highlit status up from long ago
-  init_pair(UBORDER_COLOR,-1,-1);
-  init_pair(SELBORDER_COLOR,-1,-1);
-  init_pair(UHEADING_COLOR,-1,-1);
-  init_pair(UNHEADING_COLOR,-1,-1);
   init_pair(PBORDER_COLOR,-1,-1);
   init_pair(DBORDER_COLOR,-1,-1);
   init_pair(PHEADING_COLOR,-1,-1);
@@ -628,7 +640,6 @@ selected_partitionp(void){
   return blockobj_partitionp(get_selected_blockobj());
 }
 
-/*
 static inline device *
 selected_filesystem(void){
   blockobj *bo;
@@ -653,7 +664,7 @@ selected_filesystem(void){
 static inline int
 mkfs_safe_p(const device *d){
   if(d->mnttype){
-    locked_diag("Filesystem signature already exists on %s",d->name);
+    locked_diag("Filesystem signature already exists on %s", d->name);
     return 0;
   }
   return 1;
@@ -687,52 +698,46 @@ selection_active(void){
 }
 
 static int
-bevel_bottom(WINDOW *w){
-  static const cchar_t bchr[] = {
-    { .attr = 0, .chars = L"╰", },
-    { .attr = 0, .chars = L"╯", },
-    { .attr = 0, .chars = L"─", },
-    { .attr = 0, .chars = L"│", },
-  };
-  int rows,cols,z;
+cmvwadd_wch(struct ncplane* n, int y, int x, const char* s){
+  int sbytes;
+  uint64_t channels = ncplane_get_channels(n);
+  return ncplane_putegc_yx(n, y, x, s, 0, channels, &sbytes);
+}
 
-  getmaxyx(w,rows,cols);
-  assert(cmvwadd_wch(w,rows - 1,0,&bchr[0]) != -1);
+static int
+bevel_bottom(struct ncplane* w){
+  int rows, cols, z;
+
+  ncplane_dim_yx(w, &rows, &cols);
+  assert(cmvwadd_wch(w, rows - 1, 0, L"╰") != -1);
   for(z = 1 ; z < cols - 1 ; ++z){
-    assert(cmvwadd_wch(w,rows - 1,z,&bchr[2]) != -1);
+    assert(cmvwadd_wch(w, rows - 1, z, L"─") != -1);
   }
-  assert(mvwins_wch(w,rows - 1,cols - 1,&bchr[1]) != -1);
+  assert(mvwins_wch(w, rows - 1, cols - 1, L"╯") != -1);
   for(z = 0 ; z < rows - 1 ; ++z){
-    cmvwadd_wch(w,z,0,&bchr[3]);
-    mvwins_wch(w,z,cols - 1,&bchr[3]);
+    cmvwadd_wch(w, z, 0, L"│");
+    mvwins_wch(w, z, cols - 1, L"│");
   }
   return 0;
 }
 
 static int
-bevel_top(WINDOW *w){
-  static const cchar_t bchr[] = {
-    { .attr = 0, .chars = L"╭", },
-    { .attr = 0, .chars = L"╮", },
-    { .attr = 0, .chars = L"─", },
-    { .attr = 0, .chars = L"│", },
-  };
-  int rows,cols,z;
+bevel_top(struct ncplane* w){
+  int rows, cols, z;
 
-  getmaxyx(w,rows,cols);
+  ncplane_dim_yx(w, &rows, &cols);
   assert(rows && cols);
-  assert(cmvwadd_wch(w,0,0,&bchr[0]) != -1);
+  assert(cmvwadd_wch(w, 0, 0, L"╭") != -1);
   for(z = 1 ; z < cols - 1 ; ++z){
-    assert(cmvwadd_wch(w,0,z,&bchr[2]) != -1);
+    assert(cmvwadd_wch(w, 0, z, L"─") != -1);
   }
-  assert(mvwins_wch(w,0,cols - 1,&bchr[1]) != -1);
+  assert(mvwins_wch(w, 0, cols - 1, L"╮") != -1);
   for(z = 1 ; z < rows ; ++z){
-    cmvwadd_wch(w,z,0,&bchr[3]);
-    mvwins_wch(w,z,cols - 1,&bchr[3]);
+    cmvwadd_wch(w, z, 0, L"│");
+    mvwins_wch(w, z, cols - 1, L"│");
   }
   return 0;
 }
-*/
 
 static int
 bevel(struct ncplane *nc){
@@ -741,13 +746,6 @@ bevel(struct ncplane *nc){
   assert(rows && cols);
   ncplane_cursor_move_yx(nc, 0, 0);
   return ncplane_rounded_box_sized(nc, 0, 0, rows, cols, 0);
-}
-
-static int
-cmvwadd_wch(struct ncplane* n, int y, int x, const char* s){
-  int sbytes;
-  uint64_t channels = ncplane_get_channels(n);
-  return ncplane_putegc_yx(n, y, x, s, 0, channels, &sbytes);
 }
 
 static int
@@ -1567,7 +1565,8 @@ case LAYOUT_ZPOOL:
 }
 */
 
-static void
+// returns the number of lines printed
+static int
 print_adapter_devs(const adapterstate *as, int rows, int cols, unsigned topp,
                    unsigned endp){
   // If the interface is down, we don't lead with the summary line
@@ -1575,7 +1574,7 @@ print_adapter_devs(const adapterstate *as, int rows, int cols, unsigned topp,
   long line;
 
   if(as->expansion == EXPANSION_NONE){
-    return;
+    return 0;
   }
   // First, print the selected device (if there is one), and those above
   cur = as->selected;
@@ -1596,6 +1595,7 @@ print_adapter_devs(const adapterstate *as, int rows, int cols, unsigned topp,
     line += device_lines(as->expansion, cur);
     cur = cur->next;
   }
+  return line - as->selline + 1;
 }
 
 // Abovetop: lines hidden at the top of the screen
@@ -1701,8 +1701,7 @@ redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
   assert(cols); // FIXME
   adapter_box(as, n, topp, endp);
   // FIXME express in terms of begx/begy/maxx/maxy
-  print_adapter_devs(as, rows, cols, cliptop, !cliptop);
-  return 0;
+  return print_adapter_devs(as, rows, cols, cliptop, !cliptop);
 }
 
 // -------------------------------------------------------------------------
@@ -3265,18 +3264,20 @@ get_current_adapter(void){
   }
   return NULL;
 }
+*/
 
 static int
-select_adapter_dev(reelbox *rb,blockobj *bo,int delta){
-  assert(bo != rb->selected);
-  if((rb->selected = bo) == NULL){
-    rb->selline = -1;
+select_adapter_dev(adapterstate* as, blockobj* bo, int delta){
+  assert(bo != as->selected);
+  if((as->selected = bo) == NULL){
+    as->selline = -1;
   }else{
-    rb->selline += delta;
+    as->selline += delta;
   }
   return 0;
 }
 
+/*
 // Positive delta moves down, negative delta moves up, except for l2 == NULL
 // where we always move to -1 (and delta is ignored).
 static void
@@ -4952,23 +4953,23 @@ collapse_adapter_locked(void){
   recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
   return 0;
 }
+*/
 
 static int
 select_adapter(void){
-  reelbox *rb;
-
-  if((rb = current_adapter) == NULL){
+  adapterstate* as;
+  if((as = current_adapter) == NULL){
     return -1;
   }
-  if(rb->selected){
-    // locked_diag("Already browsing [%s]", rb->as->c->ident);
+  if(as->selected){
+    // locked_diag("Already browsing [%s]", as->c->ident);
     return 0;
   }
-  if(rb->as->bobjs == NULL){
+  if(as->bobjs == NULL){
     return -1;
   }
-  assert(rb->selline == -1);
-  return select_adapter_dev(rb, rb->as->bobjs, 2);
+  assert(as->selline == -1);
+  return select_adapter_dev(as, as->bobjs, 2);
 }
 
 static void
@@ -4992,7 +4993,6 @@ liberate_disk(void){
   }
   // FIXME liberate it
 }
-*/
 
 static int
 approvedp(const char *op){
@@ -6676,7 +6676,6 @@ free_zchain(zobj **z){
   *z = NULL;
 }
 
-/*
 // b->zone == NULL:
 //   d->layout == LAYOUT_NONE:
 //     d->blkdev.unloaded: device unloaded or inaccessible
@@ -6685,7 +6684,8 @@ free_zchain(zobj **z){
 // b->zone->p == NULL: empty space
 // b->zone->p: partition
 static void
-update_blockobj(blockobj *b,device *d){
+update_blockobj(blockobj* b,device* d){
+/*
   zobj *z,*lastz,*firstchoice;
   uintmax_t sector;
   int zonesel = -1; // -1 for no choice (b->zone == NULL on entry)
@@ -6787,27 +6787,25 @@ err:
     free(lastz);
   }
   assert(0); // FIXME
+*/
 }
 
 static blockobj *
-create_blockobj(device *d){
-  blockobj *b;
+create_blockobj(device* d){
+  blockobj* b;
 
   if( (b = malloc(sizeof(*b))) ){
-    memset(b,0,sizeof(*b));
+    memset(b, 0, sizeof(*b));
     b->d = d;
-    update_blockobj(b,d);
+    update_blockobj(b, d);
   }
   return b;
 }
-*/
 
 static void *
-block_callback(device *d, void *v){
-  return NULL;
-  /*
-  adapterstate *as;
-  blockobj *b;
+block_callback(device* d, void* v){
+  adapterstate* as;
+  blockobj* b;
 
   if(d->layout == LAYOUT_PARTITION){
     return NULL; // FIXME ought be an assert; this shouldn't happen
@@ -6838,14 +6836,15 @@ block_callback(device *d, void *v){
     update_blockobj(b, d);
   }
   if(as->rb){
-    int old, oldrows;
+    //FIXME
+    /*int old, oldrows;
 
-    old = as->rb->selline;
+    old = as->selline;
     oldrows = getmaxy(as->rb->win);
 // fprintf(stderr, "into resize_adapter line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
     resize_adapter(as->rb);
 // fprintf(stderr, "into recompute_selection line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
-    recompute_selection(as, old, oldrows, getmaxy(as->rb->win));
+    recompute_selection(as, old, oldrows, getmaxy(as->rb->win));*/
     if(current_adapter == as->rb){
       if(b->prev == NULL && b->next == NULL){
         select_adapter();
@@ -6855,7 +6854,6 @@ block_callback(device *d, void *v){
 // fprintf(stderr, "---------end block event on %s\n", d->name);
   unlock_ncurses_growlight();
   return b;
-  */
 }
 
 static void
