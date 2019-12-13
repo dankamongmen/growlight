@@ -545,14 +545,8 @@ typedef struct blockobj {
   zobj *zchain,*zone;
 } blockobj;
 
-typedef struct reelbox {
-  struct ncplane* nc;
-  struct reelbox *next,*prev;
-  struct adapterstate *as;
-  int scrline,selline;
-  blockobj *selected;
-} reelbox;
-
+// An adapter, which might be invisible (in which case the tablet is NULL). If a
+// tablet exists for this adapter, its userptr is the adapterstate.
 typedef struct adapterstate {
   controller *c;
   unsigned devs;
@@ -560,9 +554,11 @@ typedef struct adapterstate {
     EXPANSION_NONE,
     EXPANSION_FULL,
   } expansion;
+  int scrline,selline;
+  blockobj *selected;
   struct adapterstate *next,*prev;
   blockobj *bobjs;
-  reelbox *rb;
+  struct tablet* rb;   // FIXME name is an anachronism
 } adapterstate;
 
 #define EXPANSION_MAX EXPANSION_FULL
@@ -570,8 +566,7 @@ typedef struct adapterstate {
 static char statusmsg[BUFSIZ];
 static unsigned count_adapters;
 
-// dequeue + single selection
-static reelbox *current_adapter/*,*top_reelbox,*last_reelbox*/;
+static adapterstate *current_adapter/*,*top_reelbox,*last_reelbox*/;
 
 #define START_COL 1    // Room to leave for borders
 #define PAD_COLS(cols) ((cols))
@@ -3404,20 +3399,7 @@ move_adapter_generic(reelbox *rb, int rows, int cols, int delta){
           rb->scrline, getbegy(rb->win), getmaxy(rb->win), getpary(rb->win));
   rb->scrline = getbegy(rb->win);
 }
-*/
 
-static void
-free_reelbox(reelbox *rb){
-  if(rb){
-    assert(rb->as);
-    assert(rb->as->rb == rb);
-
-    rb->as->rb = NULL;
-    free(rb);
-  }
-}
-
-/*
 // An adapter (pusher) has had its bottom border moved up or down (positive or
 // negative delta, respectively). Update the adapters below it on the screen
 // (all those up until those actually displayed above it on the screen). Should
@@ -6675,20 +6657,24 @@ handle_ncurses_input(struct ncplane* w){
   diag("Error reading from console, aborting");
 }
 
-/*
 static adapterstate *
 create_adapter_state(controller *a){
   adapterstate *as;
 
   if( (as = malloc(sizeof(*as))) ){
-    memset(as,0,sizeof(*as));
+    memset(as, 0, sizeof(*as));
     as->c = a;
     as->expansion = EXPANSION_MAX;
+    as->tablet = NULL;
+    as->scr
     // next, prev, rb are managed by caller
+    ret->scrline = 0; // FIXME used to be set based on position
+    ret->selected = NULL;
+    ret->selline = -1;
+    as->rb = ret;
   }
   return as;
 }
-*/
 
 static void
 free_adapter_state(adapterstate *as){
@@ -6705,8 +6691,6 @@ free_adapter_state(adapterstate *as){
 
 static void *
 adapter_callback(controller *a, void *state){
-  return NULL;
-  /*
   adapterstate *as;
   reelbox *rb;
 
@@ -6716,7 +6700,7 @@ adapter_callback(controller *a, void *state){
       if( (state = as = create_adapter_state(a)) ){
         int newrb, rows, cols;
 
-        getmaxyx(stdscr, rows, cols);
+        notcurses_term_dim_yx(NC, &rows, &cols);
         if( (newrb = bottom_space_p(rows)) ){
           newrb = rows - newrb;
           if((rb = create_reelbox(as, rows, newrb, cols)) == NULL){
@@ -6768,7 +6752,6 @@ adapter_callback(controller *a, void *state){
   }
   unlock_ncurses_growlight();
   return as;
-  */
 }
 
 static void
