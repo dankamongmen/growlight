@@ -698,10 +698,8 @@ selection_active(void){
 }
 
 static int
-cmvwadd_wch(struct ncplane* n, int y, int x, const char* s){
-  int sbytes;
-  uint64_t channels = ncplane_get_channels(n);
-  return ncplane_putegc_yx(n, y, x, s, 0, channels, &sbytes);
+cmvwadd_wch(struct ncplane* n, int y, int x, wchar_t* w){
+  return ncplane_putwstr_yx(n, y, x, w);
 }
 
 static int
@@ -713,10 +711,10 @@ bevel_bottom(struct ncplane* w){
   for(z = 1 ; z < cols - 1 ; ++z){
     assert(cmvwadd_wch(w, rows - 1, z, L"─") != -1);
   }
-  assert(mvwins_wch(w, rows - 1, cols - 1, L"╯") != -1);
+  assert(cmvwadd_wch(w, rows - 1, cols - 1, L"╯") != -1);
   for(z = 0 ; z < rows - 1 ; ++z){
     cmvwadd_wch(w, z, 0, L"│");
-    mvwins_wch(w, z, cols - 1, L"│");
+    cmvwadd_wch(w, z, cols - 1, L"│");
   }
   return 0;
 }
@@ -731,10 +729,10 @@ bevel_top(struct ncplane* w){
   for(z = 1 ; z < cols - 1 ; ++z){
     assert(cmvwadd_wch(w, 0, z, L"─") != -1);
   }
-  assert(mvwins_wch(w, 0, cols - 1, L"╮") != -1);
+  assert(cmvwadd_wch(w, 0, cols - 1, L"╮") != -1);
   for(z = 1 ; z < rows ; ++z){
     cmvwadd_wch(w, z, 0, L"│");
-    mvwins_wch(w, z, cols - 1, L"│");
+    cmvwadd_wch(w, z, cols - 1, L"│");
   }
   return 0;
 }
@@ -845,8 +843,8 @@ static int
 cwbkgd(struct ncplane* nc){
   cell cl = CELL_TRIVIAL_INITIALIZER;
   cell_load(nc, &cl, " ");
-  cell_set_fg(&cl, 0, 0, 0);
-  ncplane_set_background(nc, &cl);
+  cell_set_fg_rgb(&cl, 0, 0, 0);
+  ncplane_set_default(nc, &cl);
   cell_release(nc, &cl);
   return 0;
 }
@@ -1832,8 +1830,8 @@ multiform_options(struct form_state *fs){
   ncplane_dim_yx(fsw, &maxz, &cols);
   cwattrset(fsw, FORMBORDER_COLOR);
   cwattron(fsw, CELL_STYLE_BOLD);
-  cmvwadd_wch(fsw, 1, 1, "╭");
-  cmvwadd_wch(fsw, 1, fs->longop + 4, "╮");
+  cmvwadd_wch(fsw, 1, 1, L"╭");
+  cmvwadd_wch(fsw, 1, fs->longop + 4, L"╮");
   maxz -= 3;
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
@@ -1872,8 +1870,8 @@ multiform_options(struct form_state *fs){
   for(z = 0 ; z < fs->selections ; ++z){
     cmvwaddstr(fsw, z >= fs->selectno ? 3 + z : 2 + z, 4, fs->selarray[z]);
   }
-  cmvwadd_wch(fsw, fs->selectno + 2, 1, "╰");
-  cmvwadd_wch(fsw, fs->selectno + 2, fs->longop + 4, "╯");
+  cmvwadd_wch(fsw, fs->selectno + 2, 1, L"╰");
+  cmvwadd_wch(fsw, fs->selectno + 2, fs->longop + 4, L"╯");
 }
 
 static void
@@ -6845,7 +6843,7 @@ block_callback(device* d, void* v){
     resize_adapter(as->rb);
 // fprintf(stderr, "into recompute_selection line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
     recompute_selection(as, old, oldrows, getmaxy(as->rb->win));*/
-    if(current_adapter == as->rb){
+    if(current_adapter == as){
       if(b->prev == NULL && b->next == NULL){
         select_adapter();
       }
