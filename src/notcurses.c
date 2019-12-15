@@ -773,7 +773,9 @@ bevel_top(struct ncplane* w){
 
 static int
 bevel(struct ncplane* nc, int rows, int cols){
-  assert(rows && cols);
+  if(rows <= 0 || cols <= 0){
+    return -1;
+  }
   ncplane_cursor_move_yx(nc, 0, 0);
   return ncplane_rounded_box_sized(nc, 0, ncplane_get_channels(nc), rows, cols, 0);
 }
@@ -948,21 +950,6 @@ device_lines(int expa, const blockobj* bo){
   return l;
 }
 
-/*
-// This is the number of lines we'd have in an optimal world; we might have
-// fewer available to us on this screen at this time.
-static int
-lines_for_adapter(const struct adapterstate *as){
-  int l = 2;
-
-  const blockobj *bo;
-
-  for(bo = as->bobjs ; bo ; bo = bo->next){
-    l += device_lines(as->expansion,bo);
-  }
-  return l;
-}
-
 static zobj *
 create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,
       device *p,wchar_t rep){
@@ -984,51 +971,6 @@ create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,
   }
   return z;
 }
-
-static inline int
-adapter_lines_bounded(const adapterstate *as,int rows){
-  int l = lines_for_adapter(as);
-
-  if(l > rows - 1){ // bottom summary line
-    l = rows - 1;
-  }
-  return l;
-}
-
-static inline int
-adapter_lines_unbounded(const adapterstate *is){
-  return adapter_lines_bounded(is,INT_MAX);
-}
-
-// Is the adapter window entirely visible? We can't draw it otherwise, as it
-// will obliterate the global bounding box.
-static int
-adapter_wholly_visible_p(int rows, const reelbox *rb){
-  const adapterstate *as = rb->as;
-
-// fprintf(stderr, "   %s at %d wants %d\n", rb->as->c->name, rb->scrline, adapter_lines_bounded(as, rows));
-  if(rb->scrline + adapter_lines_bounded(as,rows) >= rows){
-    return 0;
-  }else if(rb->scrline < 0){
-    return 0;
-  }else if(rb->scrline == 0 && adapter_lines_bounded(as,rows) != getmaxy(rb->win)){
-    return 0;
-  }
-  return 1;
-}
-
-// Returns the amount of space available at the bottom.
-static inline int
-bottom_space_p(int rows){
-  if(!last_reelbox){
-    return rows;
-  }
-  if(getmaxy(last_reelbox->win) + getbegy(last_reelbox->win) >= rows - 2){
-    return 0;
-  }
-  return (rows - 1) - (getmaxy(last_reelbox->win) + getbegy(last_reelbox->win));
-}
-*/
 
 // Create a panel at the bottom of the window, referred to as the "subdisplay".
 // Only one can currently be active at a time. Window decoration and placement
@@ -1595,7 +1537,9 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
                    int rows, int cols, unsigned topp, unsigned endp){
   // If the interface is down, we don't lead with the summary line
   const blockobj *cur;
+  int printed = 0;
   long line;
+  int p;
 
   if(as->expansion == EXPANSION_NONE){
     return 0;
@@ -1607,7 +1551,9 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
     print_dev(n, as, cur, line, rows, cols, topp, endp);
     // here we traverse, then account...
     if( (cur = cur->prev) ){
-      line -= device_lines(as->expansion, cur);
+      p = device_lines(as->expansion, cur);
+      line -= p;
+      printed += p;
     }
   }
   line = as->selected ? (as->selline +
@@ -1616,11 +1562,13 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
   while(cur && line < rows){
     print_dev(n, as, cur, line, rows, cols, topp, endp);
     // here, we account before we traverse. this is correct.
-    line += device_lines(as->expansion, cur);
+    p = device_lines(as->expansion, cur);
+    line += p;
+    printed += p;
     cur = cur->next;
   }
-// fprintf(stderr, "PRINTED %ld for %s\n", line - as->selline, as->c->name);
-  return line - as->selline;
+// fprintf(stderr, "PRINTED %d for %s\n", printed, as->c->name);
+  return printed;
 }
 
 // Abovetop: lines hidden at the top of the screen
@@ -1642,7 +1590,6 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
     bcolor = UBORDER_COLOR;
     attrs = 0;
   }
-fprintf(stderr, "ROWS: %d COLS: %d\n", rows, cols);
   cwattrset(nc, attrs | bcolor);
   if(current){
     ncplane_set_bg_rgb(nc, 100, 100, 100);
@@ -1659,7 +1606,6 @@ fprintf(stderr, "ROWS: %d COLS: %d\n", rows, cols);
     } // otherwise it has no top or bottom visible
   }
   ncplane_set_bg_rgb(nc, 0, 0, 0);
-  /*
   if(abovetop == 0){
     if(current){
       cwattron(nc, CELL_STYLE_BOLD);
@@ -1692,7 +1638,7 @@ fprintf(stderr, "ROWS: %d COLS: %d\n", rows, cols);
     compat_set_fg(nc, bcolor);
     cwprintw(nc, "]");
     cwattron(nc, CELL_STYLE_BOLD);
-    ncplane_move_yx(nc, 0, cols - 5);
+    ncplane_cursor_move_yx(nc, 0, cols - 5);
     cwaddwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
     cwattron(nc, attrs);
   }
@@ -1720,7 +1666,6 @@ fprintf(stderr, "ROWS: %d COLS: %d\n", rows, cols);
       assert(cwprintw(nc, "]") != -1);
     }
   }
-  */
 }
 
 static int
@@ -3517,7 +3462,6 @@ update_details(struct ncplane* hw){
   if((b = get_selected_blockobj()) == NULL){
     return 0;
   }
-fprintf(stderr, "SLEECT BLOCK: %p ADA: %p\n", b, get_current_adapter());
   d = b->d;
   assert(d);
   if(d->layout == LAYOUT_NONE){
