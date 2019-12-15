@@ -602,16 +602,16 @@ static unsigned count_adapters;
 #define START_COL 1    // Room to leave for borders
 #define PAD_COLS(cols) ((cols))
 
-static const adapterstate *
+static adapterstate *
 get_current_adapter(void){
-  const struct tablet* t = panelreel_focused(PR);
-  const adapterstate* as = tablet_userptr_const(t);
+  struct tablet* t = panelreel_focused(PR);
+  adapterstate* as = tablet_userptr(t);
   return as;
 }
 
-static const blockobj*
+static blockobj*
 get_selected_blockobj(void){
-  const adapterstate *as;
+  adapterstate *as;
 
   if((as = get_current_adapter()) == NULL){
     return NULL;
@@ -2717,7 +2717,6 @@ fs_callback(const char *fs){
   raise_str_form("enter filesystem name", fs_named_callback, NULL, FSNAME_TEXT);
 }
 
-/*
 // -------------------------------------------------------------------------
 // -- end filesystem type form
 // -------------------------------------------------------------------------
@@ -2725,8 +2724,8 @@ fs_callback(const char *fs){
 // A NULL return is only an error if *count is set to -1. If *count is set to
 // 0, it simply means this partition table type doesn't have type tags.
 static struct form_option *
-ptype_table(const device *d,int *count,int match,int *defidx){
-  struct form_option *fo = NULL,*tmp;
+ptype_table(const device *d, int *count, int match, int *defidx){
+  struct form_option *fo = NULL, *tmp;
   const char *pttable;
   const ptype *pt;
 
@@ -2742,9 +2741,9 @@ ptype_table(const device *d,int *count,int match,int *defidx){
   *count = 0;
   for(pt = ptypes ; pt->name ; ++pt){
     const size_t KEYSIZE = 5; // 4 hex digit code
-    char *key,*desc;
+    char *key, *desc;
 
-    if(!ptype_supported(pttable,pt)){
+    if(!ptype_supported(pttable, pt)){
       continue;
     }
     if((key = malloc(KEYSIZE)) == NULL){
@@ -2754,13 +2753,13 @@ ptype_table(const device *d,int *count,int match,int *defidx){
       free(key);
       goto err;
     }
-    if(snprintf(key,KEYSIZE,"%04x",pt->code) >= (int)KEYSIZE){
-      locked_diag("Couldn't convert key 0x%x",pt->code);
+    if(snprintf(key, KEYSIZE, "%04x", pt->code) >= (int)KEYSIZE){
+      locked_diag("Couldn't convert key 0x%x", pt->code);
       free(key);
       free(desc);
       goto err;
     }
-    if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
+    if((tmp = realloc(fo, sizeof(*fo) * (*count + 1))) == NULL){
       free(key);
       free(desc);
       goto err;
@@ -2796,7 +2795,7 @@ static void ptype_callback(const char *);
 static void psectors_callback(const char *);
 
 static unsigned long pending_ptype; // set by partition type callback
-static uintmax_t pending_fsect,pending_lsect; // set by partition spec callback
+static uintmax_t pending_fsect, pending_lsect; // set by partition spec callback
 static char *pending_spec;    // set by spec callback; heap-allocated
 
 // Call on exit from the new partition form path
@@ -2819,7 +2818,7 @@ partition_base_p(void){
     return NULL;
   }
   if(selected_unloadedp()){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return NULL;
   }
   if(selected_unpartitionedp()){
@@ -2827,11 +2826,11 @@ partition_base_p(void){
     return NULL;
   }
   if(b->zone->rep == REP_METADATA){
-    locked_diag("Remove partition table on %s to reclaim metadata",b->d->name);
+    locked_diag("Remove partition table on %s to reclaim metadata", b->d->name);
     return NULL;
   }
   if(b->zone->p){
-    locked_diag("Partition %s exists; remove it first",b->zone->p->name);
+    locked_diag("Partition %s exists; remove it first", b->zone->p->name);
     return NULL;
   }
   return b;
@@ -2848,17 +2847,17 @@ ptype_name_callback(const char *name){
   int r;
 
   if(name == NULL){ // go back to partition spec
-    raise_str_form("enter partition spec",psectors_callback,
-        pending_spec,PSPEC_TEXT);
+    raise_str_form("enter partition spec", psectors_callback,
+        pending_spec, PSPEC_TEXT);
     return;
   }
   if((b = partition_base_p()) == NULL){
     return;
   }
   n = name;
-  memset(&ps,0,sizeof(ps));
-  if((wcs = mbsrtowcs(NULL,&n,0,&ps)) == (size_t)-1){
-    locked_diag("Couldn't interpret multibyte '%s'",name);
+  memset(&ps, 0, sizeof(ps));
+  if((wcs = mbsrtowcs(NULL, &n, 0, &ps)) == (size_t)-1){
+    locked_diag("Couldn't interpret multibyte '%s'", name);
     cleanup_new_partition();
     return;
   }
@@ -2868,40 +2867,40 @@ ptype_name_callback(const char *name){
     return;
   }
   n = name;
-  memset(&ps,0,sizeof(ps));
-  if(mbsrtowcs(wstr,&n,wcs + 1,&ps) != wcs){
-    locked_diag("Error converting multibyte '%s'",name);
+  memset(&ps, 0, sizeof(ps));
+  if(mbsrtowcs(wstr, &n, wcs + 1, &ps) != wcs){
+    locked_diag("Error converting multibyte '%s'", name);
     cleanup_new_partition();
     return;
   }
   sps = show_splash(L"Creating partition...");
   // Cannot reference b further until we've had a callback
-  r = add_partition(b->d,wstr,pending_fsect,pending_lsect,pending_ptype);
+  r = add_partition(b->d, wstr, pending_fsect, pending_lsect, pending_ptype);
   if(sps){
     kill_splash(sps);
   }
   free(wstr);
   cleanup_new_partition();
   if(!r){
-    if(strcmp(name,"")){
-      locked_diag("Created new partition %s on %s\n",name,b->d->name);
+    if(strcmp(name, "")){
+      locked_diag("Created new partition %s on %s\n", name, b->d->name);
     }else{
-      locked_diag("Created new unnamed partition on %s\n",b->d->name);
+      locked_diag("Created new unnamed partition on %s\n", b->d->name);
     }
   }
 }
 
 static int
-lex_part_spec(const char *psects,zobj *z,size_t sectsize,
-      uintmax_t *fsect,uintmax_t *lsect){
+lex_part_spec(const char *psects, zobj *z, size_t sectsize,
+      uintmax_t *fsect, uintmax_t *lsect){
   unsigned long long ull;
-  const char *col,*pct;
+  const char *col, *pct;
   char *el;
 
   // If we have a percent, it must be the last character, and there may
   // not be a colon present, and the value must be between 1 and 100,
   // inclusive, and the value must be an integer.
-  if( (pct = strchr(psects,'%')) ){
+  if( (pct = strchr(psects, '%')) ){
     unsigned long ul;
 
     if(pct[1]){
@@ -2913,39 +2912,39 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
     if(pct == psects){
       return -1;
     }
-    if((ul = strtoul(psects,&el,10)) > 100){
+    if((ul = strtoul(psects, &el, 10)) > 100){
       return -1;
     }
     *fsect = z->fsector;
     *lsect = ((z->lsector - z->fsector) * ul) / 100 + *fsect;
     return 0;
-  }else if( (col = strchr(psects,':')) ){
+  }else if( (col = strchr(psects, ':')) ){
     unsigned long long ull2;
 
     if(*psects == '-'){ // reject negative numbers
-      locked_diag("Not a number: %s",psects);
+      locked_diag("Not a number: %s", psects);
       return -1;
     }
-    if((ull = strtoull(psects,&el,0)) == ULLONG_MAX){
-      locked_diag("Not a number: %s",psects);
+    if((ull = strtoull(psects, &el, 0)) == ULLONG_MAX){
+      locked_diag("Not a number: %s", psects);
       return -1;
     }
     if(el != col){
-      locked_diag("Invalid delimiter: %s",psects);
+      locked_diag("Invalid delimiter: %s", psects);
       return -1;
     }
     ++el;
     ++col;
     if(*col == '-'){ // reject negative numbers
-      locked_diag("Not a number: %s",psects);
+      locked_diag("Not a number: %s", psects);
       return -1;
     }
-    if((ull2 = strtoull(col,&el,0)) == ULLONG_MAX){
-      locked_diag("Not a number: %s",col);
+    if((ull2 = strtoull(col, &el, 0)) == ULLONG_MAX){
+      locked_diag("Not a number: %s", col);
       return -1;
     }
     if(*el){
-      locked_diag("Not a number: %s",col);
+      locked_diag("Not a number: %s", col);
       return -1;
     }
     *fsect = ull;
@@ -2956,11 +2955,11 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
     ++psects;
   }
   if(*psects == '-'){ // reject negative numbers
-    locked_diag("Not a number: %s",psects);
+    locked_diag("Not a number: %s", psects);
     return -1;
   }
-  if((ull = strtoull(psects,&el,0)) == ULLONG_MAX && errno == ERANGE){
-    locked_diag("Not a number: %s",psects);
+  if((ull = strtoull(psects, &el, 0)) == ULLONG_MAX && errno == ERANGE){
+    locked_diag("Not a number: %s", psects);
     return -1;
   }
   if(el == psects){
@@ -2988,12 +2987,12 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
     }
   }
   if(ull % sectsize){
-    locked_diag("%llu is not a multiple of %zu",ull,sectsize);
+    locked_diag("%llu is not a multiple of %zu", ull, sectsize);
     return -1;
   }
   ull /= sectsize;
   if(ull > (z->lsector - z->fsector + 1)){
-    locked_diag("There are only %ju sectors available\n",z->lsector - z->fsector);
+    locked_diag("There are only %ju sectors available\n", z->lsector - z->fsector);
     return -1;
   }
   *fsect = z->fsector;
@@ -3003,7 +3002,7 @@ lex_part_spec(const char *psects,zobj *z,size_t sectsize,
 
 static void
 psectors_callback(const char *psects){
-  uintmax_t fsect,lsect;
+  uintmax_t fsect, lsect;
   struct panel_state *ps;
   blockobj *b;
   int r;
@@ -3013,44 +3012,44 @@ psectors_callback(const char *psects){
   }
   if(psects == NULL){ // go back to partition type
     struct form_option *ops_ptype;
-    int opcount,defidx;
+    int opcount, defidx;
 
-    if((ops_ptype = ptype_table(b->d,&opcount,pending_ptype,&defidx)) == NULL){
+    if((ops_ptype = ptype_table(b->d, &opcount, pending_ptype, &defidx)) == NULL){
       if(opcount == 0){
-        raise_str_form("enter partition spec",psectors_callback,
-            pending_spec ? pending_spec : "100%",PSPEC_TEXT);
+        raise_str_form("enter partition spec", psectors_callback,
+            pending_spec ? pending_spec : "100%", PSPEC_TEXT);
         return;
       }
       cleanup_new_partition();
       return;
     }
-    raise_form("select a partition type",ptype_callback,ops_ptype,
-        opcount,defidx,PARTTYPE_TEXT);
+    raise_form("select a partition type", ptype_callback, ops_ptype,
+        opcount, defidx, PARTTYPE_TEXT);
     return;
   }
   pending_spec = strdup(psects);
-  if(lex_part_spec(psects,b->zone,b->d->logsec,&fsect,&lsect)){
-    locked_diag("Not a valid partition spec: \"%s\"\n",psects);
-    raise_str_form("enter partition spec",psectors_callback,
-        psects,PSPEC_TEXT);
+  if(lex_part_spec(psects, b->zone, b->d->logsec, &fsect, &lsect)){
+    locked_diag("Not a valid partition spec: \"%s\"\n", psects);
+    raise_str_form("enter partition spec", psectors_callback,
+        psects, PSPEC_TEXT);
     return;
   }
   if(partitions_named_p(b->d)){
     pending_spec = strdup(psects);
     pending_fsect = fsect;
     pending_lsect = lsect;
-    raise_str_form("enter partition name",ptype_name_callback,
-        NULL,PNAME_TEXT);
+    raise_str_form("enter partition name", ptype_name_callback,
+        NULL, PNAME_TEXT);
     return;
   }
   ps = show_splash(L"Creating partition...");
-  r = add_partition(b->d,NULL,fsect,lsect,pending_ptype);
+  r = add_partition(b->d, NULL, fsect, lsect, pending_ptype);
   if(ps){
     kill_splash(ps);
   }
   cleanup_new_partition();
   if(!r){
-    locked_diag("Created new partition on %s\n",b->d->name);
+    locked_diag("Created new partition on %s\n", b->d->name);
   }
 }
 
@@ -3067,14 +3066,14 @@ ptype_callback(const char *pty){
     cleanup_new_partition();
     return;
   }
-  if(((pt = strtoul(pty,&pend,16)) == ULONG_MAX && errno == ERANGE) || *pend){
-    locked_diag("Bad partition type selection: %s",pty);
+  if(((pt = strtoul(pty, &pend, 16)) == ULONG_MAX && errno == ERANGE) || *pend){
+    locked_diag("Bad partition type selection: %s", pty);
     cleanup_new_partition();
     return;
   }
   pending_ptype = pt;
-  raise_str_form("enter partition spec",psectors_callback,
-      pending_spec ? pending_spec : "100%",PSPEC_TEXT);
+  raise_str_form("enter partition spec", psectors_callback,
+      pending_spec ? pending_spec : "100%", PSPEC_TEXT);
 }
 
 static void
@@ -3087,18 +3086,17 @@ new_partition(void){
   if((b = partition_base_p()) == NULL){
     return;
   }
-  if((ops_ptype = ptype_table(b->d,&opcount,-1,&defidx)) == NULL){
+  if((ops_ptype = ptype_table(b->d, &opcount, -1, &defidx)) == NULL){
     if(opcount == 0){
-      raise_str_form("enter partition spec",psectors_callback,
-          pending_spec ? pending_spec : "100%",PSPEC_TEXT);
+      raise_str_form("enter partition spec", psectors_callback,
+          pending_spec ? pending_spec : "100%", PSPEC_TEXT);
       return;
     }
     return;
   }
-  raise_form("select a partition type",ptype_callback,ops_ptype,opcount,
-      defidx,PARTTYPE_TEXT);
+  raise_form("select a partition type", ptype_callback, ops_ptype, opcount,
+      defidx, PARTTYPE_TEXT);
 }
-*/
 
 // -------------------------------------------------------------------------
 // -- end partition type form
@@ -4216,63 +4214,64 @@ env_details(struct ncplane *hw, int rows){
   return 0;
 }
 
-/*
 static void
-detail_mounts(WINDOW *w,int *row,int maxy,const device *d){
-  char buf[PREFIXSTRLEN + 1],b[256];
-  int cols = getmaxx(w),r;
+detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
+  char buf[PREFIXSTRLEN + 1], b[256];
+  int cols, r;
   unsigned z;
 
+  ncplane_dim_yx(w, NULL, &cols);
   assert(d->mnt.count == d->mntops.count);
   for(z = 0 ; z < d->mnt.count ; ++z){
     if(*row == maxy){
       return;
     }
-    if(growlight_target && !strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
+    if(growlight_target && !strncmp(d->mnt.list[z], growlight_target, strlen(growlight_target))){
       continue;
     }
-    cmvwhline(w,*row,START_COL,' ',cols - 2);
-    cmvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
-        FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+    cmvwhline(w, *row, START_COL, " ", cols - 2);
+    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+        FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
-        qprefix(d->mntsize,1,buf,0),
+        qprefix(d->mntsize, 1, buf, 0),
         cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
         cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
         d->name);
     if(++*row == maxy){
       return;
     }
-    cwattroff(w,CELL_STYLE_BOLD);
-    if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
+    cwattroff(w, CELL_STYLE_BOLD);
+    if((r = snprintf(b, sizeof(b), " %s %s", d->mnt.list[z], d->mntops.list[z])) >= (int)sizeof(b)){
       b[sizeof(b) - 1] = '\0';
     }
-    cmvwhline(w,*row,START_COL,' ',cols - 2);
-    cmvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
-    cwattron(w,CELL_STYLE_BOLD);
+    cmvwhline(w, *row, START_COL, " ", cols - 2);
+    cmvwprintw(w, *row, START_COL, "%-*.*s", cols - 2, cols - 2, b);
+    cwattron(w, CELL_STYLE_BOLD);
     ++*row;
   }
 }
 
 static void
-detail_targets(WINDOW *w,int *row,int both,const device *d){
-  char buf[PREFIXSTRLEN + 1],b[256]; // FIXME uhhhh
-  int cols = getmaxx(w),r;
+detail_targets(struct ncplane* w, int* row, int both, const device* d){
+  char buf[PREFIXSTRLEN + 1], b[256]; // FIXME uhhhh
+  int cols, r;
   unsigned z;
 
+  ncplane_dim_yx(w, NULL, &cols);
   if(growlight_target == NULL){
     return;
   }
   for(z = 0 ; z < d->mnt.count ; ++z){
-    if(strncmp(d->mnt.list[z],growlight_target,strlen(growlight_target))){
+    if(strncmp(d->mnt.list[z], growlight_target, strlen(growlight_target))){
       continue;
     }
-    cmvwhline(w,*row,START_COL,' ',cols - 2);
-    cmvwprintw(w,*row,START_COL,"%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
-        FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
+    cmvwhline(w, *row, START_COL, " ", cols - 2);
+    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+        FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
-        qprefix(d->mntsize,1,buf,0),
+        qprefix(d->mntsize, 1, buf, 0),
         cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
         cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
         d->name);
@@ -4280,18 +4279,17 @@ detail_targets(WINDOW *w,int *row,int both,const device *d){
     if(!both){
       return;
     }
-    cwattroff(w,CELL_STYLE_BOLD);
-    if((r = snprintf(b,sizeof(b)," %s %s",d->mnt.list[z],d->mntops.list[z])) >= (int)sizeof(b)){
+    cwattroff(w, CELL_STYLE_BOLD);
+    if((r = snprintf(b, sizeof(b), " %s %s", d->mnt.list[z], d->mntops.list[z])) >= (int)sizeof(b)){
       b[sizeof(b) - 1] = '\0';
     }
-    cmvwhline(w,*row,START_COL,' ',cols - 2);
-    cmvwprintw(w,*row,START_COL,"%-*.*s",cols - 2,cols - 2,b);
-    cwattron(w,CELL_STYLE_BOLD);
+    cmvwhline(w, *row, START_COL, " ", cols - 2);
+    cmvwprintw(w, *row, START_COL, "%-*.*s", cols - 2, cols - 2, b);
+    cwattron(w, CELL_STYLE_BOLD);
     ++*row;
     break; // FIXME no space currently
   }
 }
-*/
 
 static int
 map_details(struct ncplane *hw){
@@ -5740,7 +5738,7 @@ handle_actform_input(wchar_t ch){
 
 static void
 destroy_aggregate_confirm(const char *op){
-  blockobj *b;
+  const blockobj *b;
 
   if(!op || !approvedp(op)){
     locked_diag("aggregate destruction was cancelled");
@@ -5829,9 +5827,9 @@ loop_callback(const char *term){
 
 static void
 configure_loop_dev(void){
-  raise_str_form("Select a file to loop",loop_callback,NULL,
-      LOOP_TEXT);
+  raise_str_form("Select a file to loop",loop_callback,NULL, LOOP_TEXT);
 }
+*/
 
 static void
 set_label(void){
@@ -5842,7 +5840,7 @@ set_label(void){
     return;
   }
   if(!fstype_named_p(d->mnttype)){
-    locked_diag("%s does not support labels",d->mnttype);
+    locked_diag("%s does not support labels", d->mnttype);
     return;
   }
   // FIXME
@@ -5858,7 +5856,7 @@ set_uuid(void){
     return;
   }
   if(!fstype_uuid_p(d->mnttype)){
-    locked_diag("%s does not support UUIDs",d->mnttype);
+    locked_diag("%s does not support UUIDs", d->mnttype);
     return;
   }
   // FIXME
@@ -5876,22 +5874,22 @@ do_setup_target(const char *token){
     return;
   }
   if(target_mode_p()){
-    locked_diag("Already have a target at %s",growlight_target);
+    locked_diag("Already have a target at %s", growlight_target);
     return;
   }
   if(set_target(token)){
     return;
   }
-  locked_diag("Now targeting %s",token);
+  locked_diag("Now targeting %s", token);
 }
 
 static void
 setup_target(void){
   if(target_mode_p()){
-    locked_diag("Already have a target at %s",growlight_target);
+    locked_diag("Already have a target at %s", growlight_target);
     return;
   }
-  raise_str_form("enter target path",do_setup_target,"/target",TARGET_TEXT);
+  raise_str_form("enter target path", do_setup_target, "/target", TARGET_TEXT);
 }
 
 static void
@@ -5905,7 +5903,6 @@ unset_target(void){
   }
   locked_diag("Successfully left target mode");
 }
-*/
 
 static void
 handle_ncurses_input(struct ncplane* w){
@@ -6030,7 +6027,6 @@ handle_ncurses_input(struct ncplane* w){
         unlock_ncurses();
         break;
       }
-/*
       case 'm':{
         lock_ncurses();
         make_ptable();
@@ -6079,6 +6075,7 @@ handle_ncurses_input(struct ncplane* w){
         unlock_ncurses();
         break;
       }
+/*
       case 'L':{
         lock_ncurses();
         set_label();
