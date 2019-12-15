@@ -352,8 +352,6 @@ compat_set_fg_all(struct ncplane* nc, int attr){
   }
 }
 
-/*
-
 static inline int
 next_targco(int targco){
   if(++targco > TARGET_COLOR3){
@@ -377,6 +375,8 @@ next_partco(int partco){
   }
   return partco;
 }
+
+/*
 
 #define COLOR_LIGHTRED 9
 #define COLOR_LIGHTGREEN 10
@@ -1015,9 +1015,9 @@ bottom_space_p(int rows){
 // Only one can currently be active at a time. Window decoration and placement
 // is managed here; only the rows needed for display ought be provided.
 static int
-new_display_panel(struct ncplane* nc, struct panel_state *ps,
-                  int rows, int cols, const wchar_t *hstr,
-                  const wchar_t *bstr, int borderpair){
+new_display_panel(struct ncplane* nc, struct panel_state* ps,
+                  int rows, int cols, const wchar_t* hstr,
+                  const wchar_t* bstr, int borderpair){
   const int crightlen = bstr ? wcslen(bstr) : 0;
   int ybelow, yabove;
   int x, y;
@@ -1059,7 +1059,7 @@ new_display_panel(struct ncplane* nc, struct panel_state *ps,
 }
 
 static void
-hide_panel_locked(struct panel_state *ps){
+hide_panel_locked(struct panel_state* ps){
   if(ps){
     ncplane_destroy(ps->p);
     ps->p = NULL;
@@ -1068,18 +1068,12 @@ hide_panel_locked(struct panel_state *ps){
 
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
-print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int selected){
-/*
-  static const cchar_t bchr[] = {
-    { .attr = 0, .chars = L"∾", },
-    { .attr = 0, .chars = L" ", },
-    { .attr = 0, .chars = L" ", },
-  };
+print_blockbar(struct ncplane* n,  const blockobj* bo,  int y,  int sx,  int ex,  int selected){
   char pre[BPREFIXSTRLEN + 1];
   const char *selstr = NULL;
   wchar_t wbuf[ex - sx + 2];
   const int wchars = sizeof(wbuf) / sizeof(*wbuf);
-  int targco,mountco,partco;
+  int targco, mountco, partco;
   const device *d = bo->d;
   char buf[ex - sx + 2];
   const zobj *z;
@@ -1088,68 +1082,67 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
 
   zs = d->mntsize ? d->mntsize :
     (last_usable_sector(d) - first_usable_sector(d) + 1) * bo->d->logsec;
-  // Sometimes, a partitioned block device will be given a mnttype by
+  // Sometimes,  a partitioned block device will be given a mnttype by
   // libblkid (usually due to a filesystem signature in unpartitioned
-  // space at the beginning). In that case, don't try to print based off
+  // space at the beginning). In that case,  don't try to print based off
   // the bogon block device mnttype.
   if(d->mnttype && (d->layout != LAYOUT_NONE || !d->blkdev.pttable)){
-    int co = mnttype_aggregablep(d->mnttype) ?
-      PART_COLOR0) : COLOR_PAIR(FS_COLOR;
+    int co = mnttype_aggregablep(d->mnttype) ? PART_COLOR0 : FS_COLOR;
 
-    assert(cwattrset(w,CELL_STYLE_BOLD|co) == 0);
-    qprefix(zs,1,pre,1);
-    if(!d->mnt.count || swprintf(wbuf, wchars , L" %s%s%ls%s%ls%s%s%sat %s ",
-      d->label ? "" : "nameless ",
-      d->mnttype,
-      d->label ? L" “" : L"",
-      d->label ? d->label : "",
-      d->label ? L"” " : L" ",
-      zs ? "(" : "", zs ? pre : "", zs ? ") " : "",
+    cwattrset(n, CELL_STYLE_BOLD|co);
+    qprefix(zs, 1, pre, 1);
+    if(!d->mnt.count || swprintf(wbuf,  wchars ,  L" %s%s%ls%s%ls%s%s%sat %s ", 
+      d->label ? "" : "nameless ", 
+      d->mnttype, 
+      d->label ? L" “" : L"", 
+      d->label ? d->label : "", 
+      d->label ? L"” " : L" ", 
+      zs ? "(" : "",  zs ? pre : "",  zs ? ") " : "", 
       d->mnt.list[0]) >= wchars){
-      if(swprintf(wbuf, wchars, L" %s%s%ls%s%ls%s%s%s ",
-        d->label ? "" : "nameless ",
-        d->mnttype,
-        d->label ? L" “" : L"",
-        d->label ? d->label : "",
-        d->label ? L"” " : L" ",
-        zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
+      if(swprintf(wbuf,  wchars,  L" %s%s%ls%s%ls%s%s%s ", 
+        d->label ? "" : "nameless ", 
+        d->mnttype, 
+        d->label ? L" “" : L"", 
+        d->label ? d->label : "", 
+        d->label ? L"” " : L" ", 
+        zs ? "(" : "",  zs ? pre : "",  zs ? ")" : ""
         ) >= wchars){
-        if(swprintf(wbuf, wchars, L" %s%s%s%s ",
-          d->mnttype,
-          zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
+        if(swprintf(wbuf,  wchars,  L" %s%s%s%s ", 
+          d->mnttype, 
+          zs ? "(" : "",  zs ? pre : "",  zs ? ")" : ""
           ) >= wchars){
-          assert(swprintf(wbuf, wchars, L"%s",d->mnttype) < wchars);
+          assert(swprintf(wbuf,  wchars,  L"%s", d->mnttype) < wchars);
         }
       }
     }
-    cmvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
-    cmvwadd_wch(w,y,sx,&bchr[1]);
-    cmvwaddwstr(w,y,sx + (ex - sx + 1 - wcslen(wbuf)) / 2,wbuf);
-    cmvwadd_wch(w,y,ex - 1,&bchr[2]);
+    cmvwhline(n, y, sx, "∾", ex - sx + 1);
+    cmvwadd_wch(n, y, sx, L" ");
+    cmvwaddwstr(n, y, sx + (ex - sx + 1 - wcslen(wbuf)) / 2, wbuf);
+    cmvwadd_wch(n, y, ex - 1, L" ");
     selstr = d->name;
   }else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
-    assert(cwattrset(w,CELL_STYLE_BOLD|OPTICAL_COLOR)) == 0;
+    cwattrset(n, CELL_STYLE_BOLD|OPTICAL_COLOR);
     selstr = "No media detected in drive";
-    cmvwprintw(w,y,sx,"%-*.*s",ex - sx,ex - sx,selstr);
+    cmvwprintw(n, y, sx, "%-*.*s", ex - sx, ex - sx, selstr);
   }else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
     (d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
     (d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
-    assert(cwattrset(w,CELL_STYLE_BOLD|EMPTY_COLOR)) == 0;
+    cwattrset(n, CELL_STYLE_BOLD|EMPTY_COLOR);
     selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
         "unpartitionable space";
-    assert(snprintf(buf,sizeof(buf)," %s %s ",
-        qprefix(d->size,1,pre,1),
-        selstr) < (int)sizeof(buf));
-    cmvwhline_set(w,y,sx,&bchr[0],ex - sx + 1);
-    cmvwadd_wch(w,y,sx,&bchr[1]);
-    cmvwaddstr(w,y,sx + (ex - sx + 1 - strlen(buf)) / 2,buf);
-    cmvwadd_wch(w,y,ex - 1,&bchr[2]);
+    snprintf(buf, sizeof(buf), " %s %s ", 
+        qprefix(d->size, 1, pre, 1), 
+        selstr) < (int)sizeof(buf);
+    cmvwhline(n, y, sx, "∾", ex - sx + 1);
+    cmvwadd_wch(n, y, sx, L" ");
+    cmvwaddstr(n, y, sx + (ex - sx + 1 - strlen(buf)) / 2, buf);
+    cmvwadd_wch(n, y, ex - 1, L" ");
   }
   if((z = bo->zchain) == NULL){
     if(selected){
-      cwattron(w,CELL_STYLE_REVERSE);
-      cmvwprintw(w,y - 1,sx + 1,"⇗⇨⇨⇨%.*s",(int)(ex - (sx + 5)),selstr);
-      cwattroff(w,CELL_STYLE_REVERSE);
+      cwattron(n, CELL_STYLE_REVERSE);
+      cmvwprintw(n, y - 1, sx + 1, "⇗⇨⇨⇨%.*s", (int)(ex - (sx + 5)), selstr);
+      cwattroff(n, CELL_STYLE_REVERSE);
     }
     return;
   }
@@ -1157,13 +1150,13 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   targco = TARGET_COLOR0;
   mountco = MOUNT_COLOR0;
   do{
-    unsigned ch,och;
+    unsigned ch, och;
     wchar_t rep;
 
     wbuf[0] = L'\0';
     zs = (z->lsector - z->fsector + 1) * bo->d->logsec;
-    qprefix(zs, 1, pre, 1);
-    if(z->p == NULL){ // unused space among partitions, or metadata
+    qprefix(zs,  1,  pre,  1);
+    if(z->p == NULL){ // unused space among partitions,  or metadata
       int co = (z->rep == REP_METADATA ? METADATA_COLOR :
           EMPTY_COLOR);
       const char *repstr = z->rep == REP_METADATA ?
@@ -1171,12 +1164,12 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
 
       if(selected && z == bo->zone){
         selstr = repstr;
-        assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|co) == 0);
+        cwattrset(n, CELL_STYLE_BOLD|CELL_STYLE_UNDERLINE|co);
       }else{
-        assert(cwattrset(w,co) == 0);
+        cwattrset(n, co);
       }
-      if(swprintf(wbuf, wchars - 2, L"%s %s", pre, repstr) >= wchars - 2){
-        if(swprintf(wbuf, wchars - 2,L"%s",repstr) >= wchars - 2){
+      if(swprintf(wbuf,  wchars - 2,  L"%s %s",  pre,  repstr) >= wchars - 2){
+        if(swprintf(wbuf,  wchars - 2, L"%s", repstr) >= wchars - 2){
           wbuf[0] = L'\0';
         }
       }
@@ -1184,53 +1177,53 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     }else{ // dedicated partition
       if(selected && z == bo->zone){ // partition and device are selected
         if(targeted_p(z->p)){
-          assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|targco)) == 0;
+          cwattrset(n, CELL_STYLE_BOLD|CELL_STYLE_UNDERLINE|targco);
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|mountco)) == 0;
+          cwattrset(n, CELL_STYLE_BOLD|CELL_STYLE_UNDERLINE|mountco);
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|FS_COLOR)) == 0;
+          cwattrset(n, CELL_STYLE_BOLD|CELL_STYLE_UNDERLINE|FS_COLOR);
         }else{
-          assert(cwattrset(w,CELL_STYLE_BOLD|A_UNDERLINE|partco)) == 0;
+          cwattrset(n, CELL_STYLE_BOLD|CELL_STYLE_UNDERLINE|partco);
           partco = next_partco(partco);
         }
         // FIXME need to store pname as multibyte char *
         // selstr = z->p->partdev.pname;
         // selstr = selstr ? selstr : z->p->name;
         if( (selstr = z->p->name) ){
-          if(swprintf(wbuf, wchars - 2, L"%s %s", pre,selstr) >= wchars - 2){
-            if(swprintf(wbuf, wchars - 2, L"%s", selstr) >= wchars - 2){
+          if(swprintf(wbuf,  wchars - 2,  L"%s %s",  pre, selstr) >= wchars - 2){
+            if(swprintf(wbuf,  wchars - 2,  L"%s",  selstr) >= wchars - 2){
               wbuf[0] = L'\0';
             }
           }
         }
       }else{ // partition is not selected
         if(targeted_p(z->p)){
-          assert(cwattrset(w,targco)) == 0;
+          cwattrset(n, targco);
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          assert(cwattrset(w,mountco)) == 0;
+          cwattrset(n, mountco);
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          assert(cwattrset(w,FS_COLOR)) == 0;
+          cwattrset(n, FS_COLOR);
         }else{
-          assert(cwattrset(w,partco)) == 0;
+          cwattrset(n, partco);
           partco = next_partco(partco);
         }
-        if(swprintf(wbuf, wchars - 2,L"%s %s", pre,z->p->name) >= wchars - 2){
-          if(swprintf(wbuf, wchars - 2,L"%s",z->p->name) >= wchars - 2){
+        if(swprintf(wbuf,  wchars - 2, L"%s %s",  pre, z->p->name) >= wchars - 2){
+          if(swprintf(wbuf,  wchars - 2, L"%s", z->p->name) >= wchars - 2){
             wbuf[0] = L'\0';
           }
         }
       }
       if(z->p->partdev.alignment < d->physsec){ // misaligned!
-        cwattrset(w,CELL_STYLE_BOLD|FUCKED_COLOR));
+        cwattrset(n, CELL_STYLE_BOLD|FUCKED_COLOR);
       }
       if(z->p->mnttype){
-        if((!z->p->mnt.count || swprintf(wbuf, wchars - 2, L"%s at %s (%s)",z->p->mnttype,z->p->mnt.list[0],pre) >= wchars - 2)){
-          if(!z->p->label || swprintf(wbuf, wchars - 2, L"%s “%s” (%s)", z->p->mnttype,z->p->label,pre) >= wchars - 2){
-            if(swprintf(wbuf, wchars - 2,L"%s (%s)", z->p->mnttype, pre) >= wchars - 2){
+        if((!z->p->mnt.count || swprintf(wbuf,  wchars - 2,  L"%s at %s (%s)", z->p->mnttype, z->p->mnt.list[0], pre) >= wchars - 2)){
+          if(!z->p->label || swprintf(wbuf,  wchars - 2,  L"%s “%s” (%s)",  z->p->mnttype, z->p->label, pre) >= wchars - 2){
+            if(swprintf(wbuf,  wchars - 2, L"%s (%s)",  z->p->mnttype,  pre) >= wchars - 2){
               wbuf[0] = L'\0';
             }
           }
@@ -1249,25 +1242,24 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     }
     och = off;
     while(ch--){
-      cchar_t crep[] = { { .attr = 0, .chars[0] = rep, }, };
-      cmvwadd_wch(w,y,off,crep);
+      cmvwadd_wch(n, y, off, &rep);
       if(++off > ex - z->following){
         off = ex - z->following;
         break;
       }
     }
-    cwattron(w,CELL_STYLE_REVERSE);
+    cwattron(n, CELL_STYLE_REVERSE);
     if(selstr){
       if(och < ex / 2u){
-        cmvwprintw(w,y - 1,och,"⇗⇨⇨⇨%.*s",(int)(ex - (off + strlen(selstr) + 4)),selstr);
+        cmvwprintw(n, y - 1, och, "⇗⇨⇨⇨%.*s", (int)(ex - (off + strlen(selstr) + 4)), selstr);
       }else{
-        cmvwprintw(w,y - 1,off - 4 - strlen(selstr),"%s⇦⇦⇦⇖",selstr);
+        cmvwprintw(n, y - 1, off - 4 - strlen(selstr), "%s⇦⇦⇦⇖", selstr);
       }
     }
-    cwattroff(w,CELL_STYLE_REVERSE);
+    cwattroff(n, CELL_STYLE_REVERSE);
     // Truncate it at whitespace until it's small enough to fit
     while(wcslen(wbuf) && wcslen(wbuf) + 2 > (off - och + 1)){
-      wchar_t *wtrunc = wcsrchr(wbuf,L' ');
+      wchar_t *wtrunc = wcsrchr(wbuf, L' ');
 
       if(wtrunc){
         *wtrunc = L'\0';
@@ -1278,14 +1270,13 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     if(wcslen(wbuf)){
       size_t start = och + ((off - och + 1) - wcslen(wbuf)) / 2;
 
-      cwattron(w,CELL_STYLE_BOLD);
-      cmvwaddwstr(w,y,start,wbuf);
-      mvwaddch(w,y,start - 1,' ');
-      mvwaddch(w,y,start + wcslen(wbuf),' ');
+      cwattron(n, CELL_STYLE_BOLD);
+      cmvwaddwstr(n, y, start, wbuf);
+      cmvwadd_wch(n, y, start - 1,  L" ");
+      cmvwadd_wch(n, y, start + wcslen(wbuf),  L" ");
     }
     selstr = NULL;
   }while((z = z->next) != bo->zchain);
-*/
 }
 
 static void
