@@ -599,19 +599,32 @@ typedef struct adapterstate {
 static char statusmsg[BUFSIZ];
 static unsigned count_adapters;
 
-static adapterstate *current_adapter/*,*top_reelbox,*last_reelbox*/;
-
 #define START_COL 1    // Room to leave for borders
 #define PAD_COLS(cols) ((cols))
 
-static blockobj*
-get_selected_blockobj(void){
-  adapterstate *as;
+static const adapterstate *
+get_current_adapter(void){
+  const struct tablet* t = panelreel_focused(PR);
+  const adapterstate* as = tablet_userptr_const(t);
+  return as;
+}
 
-  if((as = current_adapter) == NULL){
+static const blockobj*
+get_selected_blockobj(void){
+  const adapterstate *as;
+
+  if((as = get_current_adapter()) == NULL){
     return NULL;
   }
   return as->selected;
+}
+
+static int
+selection_active(void){
+  if(get_selected_blockobj()){
+    return 1;
+  }
+  return 0;
 }
 
 static inline int
@@ -704,17 +717,6 @@ selected_mkfs_safe_p(void){
     return mkfs_safe_p(bo->d);
   }
   return 0;
-}
-
-static int
-selection_active(void){
-  if(current_adapter == NULL){
-    return 0;
-  }
-  if(current_adapter->selected == NULL){
-    return 0;
-  }
-  return 1;
 }
 
 static int
@@ -1286,7 +1288,7 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   int selected, co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
-fprintf(stderr, "HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
+// fprintf(stderr, "HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
   if(line >= rows - !endp){
     return;
   }
@@ -1600,14 +1602,15 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
     line += device_lines(as->expansion, cur);
     cur = cur->next;
   }
-  return line - as->selline + 1;
+// fprintf(stderr, "PRINTED %ld for %s\n", line - as->selline, as->c->name);
+  return line - as->selline;
 }
 
 // Abovetop: lines hidden at the top of the screen
 // Belowend: lines hidden at the bottom of the screen
 static void
 adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsigned belowend){
-  int current = as == current_adapter;
+  int current = as == get_current_adapter();
   int bcolor, hcolor, rows, cols;
   int attrs;
 
@@ -1703,9 +1706,9 @@ redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
 
   ncplane_dim_yx(n, &rows, &cols);
   assert(cols); // FIXME
-  // adapter_box(as, n, 0, 0);
+  adapter_box(as, n, 0, 0);
   // FIXME express in terms of begx/begy/maxx/maxy
-fprintf(stderr, "begx/y %d/%d -> maxx/y %d/%d\n", begx, begy, maxx, maxy);
+// fprintf(stderr, "begx/y %d/%d -> maxx/y %d/%d ASS %p\n", begx, begy, maxx, maxy, as);
   return print_adapter_devs(n, as, rows, cols, cliptop, !cliptop);
 }
 
@@ -2657,7 +2660,7 @@ fs_do(const char *name){
     locked_diag("A block device must be selected");
     return;
   }
-  if(!current_adapter || !(b = current_adapter->selected)){
+  if(!(b = get_selected_blockobj())){
     locked_diag("Lost selection while targeting");
     destroy_fs_forms();
     return;
@@ -3137,11 +3140,11 @@ pttype_callback(const char *pttype){
     locked_diag("Partition table creation cancelled by the user");
     return;
   }
-  if(!current_adapter){
+  b = get_selected_blockobj();
+  if(!b){
     locked_diag("Lost selection while choosing table type");
     return;
   }
-  b = current_adapter->selected;
   if(!partition_table_makeablep(b)){
     return;
   }
@@ -3264,9 +3267,10 @@ create_reelbox(adapterstate *as,int rows,int scrline,int cols){
 */
 
 static const controller *
-get_current_adapter(void){
-  if(current_adapter){
-    return current_adapter->c;
+get_current_controller(void){
+  adapterstate* as = get_current_adapter();
+  if(as){
+    return as->c;
   }
   return NULL;
 }
@@ -3294,7 +3298,7 @@ static void
 deselect_adapter_locked(void){
   adapterstate* as;
 
-  if((as = current_adapter) == NULL){
+  if((as = get_current_adapter()) == NULL){
     return;
   }
   if(as->selected == NULL){
@@ -3439,7 +3443,7 @@ detail_fs(struct ncplane* hw, const device* d, int row){
 // else you will get one of a deadlock or a stack overflow due to corecursion.
 static int
 update_details(struct ncplane* hw){
-  const controller* c = get_current_adapter();
+  const controller* c = get_current_controller();
   char buf[BPREFIXSTRLEN + 1];
   int cols, rows, curcol, n;
   const char* pttype;
@@ -3483,10 +3487,12 @@ update_details(struct ncplane* hw){
     cwaddstr(hw, "bps");
     cwattron(hw, CELL_STYLE_BOLD);
   }
-  if((b = current_adapter->selected) == NULL){
+  if((b = get_selected_blockobj()) == NULL){
     return 0;
   }
+fprintf(stderr, "SLEECT BLOCK: %p ADA: %p\n", b, get_current_adapter());
   d = b->d;
+  assert(d);
   if(d->layout == LAYOUT_NONE){
     const char *sn = d->blkdev.serial;
 
@@ -3719,7 +3725,7 @@ helpstrs(struct ncplane* n){
     cmvwaddwstr(n, row + z, START_COL, hs);
   }
   row += z;
-  if(!current_adapter || !current_adapter->selected){
+  if(!get_selected_blockobj()){
     cwattrset(n, SUBDISPLAY_INVAL_ATTR);
   }else{
     cwattrset(n, SUBDISPLAY_ATTR);
@@ -3966,7 +3972,7 @@ static void
 use_prev_device(void){
   adapterstate* as;
 
-  if((as = current_adapter) == NULL){
+  if((as = get_current_adapter()) == NULL){
     return;
   }
   if(as->selected == NULL || as->selected->prev == NULL){
@@ -3982,7 +3988,7 @@ static void
 use_next_device(void){
   adapterstate* as;
 
-  if((as = current_adapter) == NULL){
+  if((as = get_current_adapter()) == NULL){
     return;
   }
   if(as->selected == NULL || as->selected->next == NULL){
@@ -4097,7 +4103,7 @@ display_details(struct ncplane* mainw, struct panel_state* ps){
                        NULL, PBORDER_COLOR)){
     goto err;
   }
-  if(current_adapter){
+  if(get_current_adapter()){
     if(update_details(ps->p)){
       goto err;
     }
@@ -4549,10 +4555,10 @@ static int
 expand_adapter_locked(void){
   adapterstate *is;
 
-  if(!current_adapter){
+  is = get_current_adapter();
+  if(is == NULL){
     return 0;
   }
-  is = current_adapter;
   if(is->expansion == EXPANSION_FULL){
     return 0;
   }
@@ -4568,10 +4574,10 @@ static int
 collapse_adapter_locked(void){
   adapterstate *is;
 
-  if(!current_adapter){
+  is = get_current_adapter();
+  if(is == NULL){
     return 0;
   }
-  is = current_adapter;
   if(is->expansion == EXPANSION_NONE){
     return 0;
   }
@@ -4586,7 +4592,7 @@ collapse_adapter_locked(void){
 static int
 select_adapter(void){
   adapterstate* as;
-  if((as = current_adapter) == NULL){
+  if((as = get_current_adapter()) == NULL){
     return -1;
   }
   if(as->selected){
@@ -5974,7 +5980,7 @@ handle_ncurses_input(struct ncplane* w){
       case NCKEY_RIGHT: case 'l':{
         lock_ncurses();
         if(selection_active()){
-          use_next_zone(current_adapter->selected);
+          use_next_zone(get_selected_blockobj());
         }
         unlock_ncurses();
         break;
@@ -5982,7 +5988,7 @@ handle_ncurses_input(struct ncplane* w){
       case NCKEY_LEFT: case 'h':{
         lock_ncurses();
         if(selection_active()){
-          use_prev_zone(current_adapter->selected);
+          use_prev_zone(get_selected_blockobj());
         }
         unlock_ncurses();
         break;
@@ -6270,14 +6276,12 @@ adapter_callback(controller *a, void *state){
       if( (state = as = create_adapter_state(a)) ){
         int newrb, rows, cols;
 
+// fprintf(stderr, "NEW ADAPTER STATE ASSIGNED %s %p\n", as->c->name, as);
         notcurses_term_dim_yx(NC, &rows, &cols);
         if((as->rb = panelreel_add(PR, NULL, NULL, redraw_adapter, as)) == NULL){
           free_adapter_state(as);
           unlock_ncurses_growlight();
           return NULL;
-        }
-        if(current_adapter == NULL){
-          current_adapter = as;
         }
         ++count_adapters;
       }
@@ -6449,6 +6453,7 @@ block_callback(device* d, void* v){
 // if(as->rb){ fprintf(stderr, "we're on line %d\n", as->rb->scrline); }
   if((b = v) == NULL){
     if( (b = create_blockobj(d)) ){
+// fprintf(stderr, "ASSIGNED %p to %p on %p\n", d, b->d, as);
       if(as->devs == 0){
         b->prev = b->next = NULL;
         as->bobjs = b;
@@ -6471,7 +6476,7 @@ block_callback(device* d, void* v){
     oldrows = getmaxy(as->rb->win);
 // fprintf(stderr, "into recompute_selection line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
     recompute_selection(as, old, oldrows, getmaxy(as->rb->win));*/
-    if(current_adapter == as){
+    if(get_current_adapter() == as){
       if(b->prev == NULL && b->next == NULL){
         select_adapter();
       }
