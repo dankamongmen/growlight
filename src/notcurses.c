@@ -285,11 +285,27 @@ compat_set_fg(struct ncplane* nc, int pair){
       ncplane_set_fg_rgb(nc, 204, 204, 204);
       break;
     case OPTICAL_COLOR:
+      ncplane_set_fg_rgb(nc, 175, 215, 0);
       break;
     case ROTATE_COLOR:
+      ncplane_set_fg_rgb(nc, 175, 175, 135);
+      break;
+    case MOUNT_COLOR2: // FIXME
+    case MOUNT_COLOR3:
+    case TARGET_COLOR0:      // Targeted filesystems
+    case TARGET_COLOR1:
+    case TARGET_COLOR2:
+    case TARGET_COLOR3:
+      ncplane_set_fg_rgb(nc, 175, 95, 135);
+      break;
+    case FUCKED_COLOR:      // Things that warrant attention
+      ncplane_set_fg_rgb(nc, 95, 0, 0);
       break;
     case SPLASHBORDER_COLOR:
       ncplane_set_fg_rgb(nc, 95, 95, 215);
+      break;
+    case SPLASHTEXT_COLOR:
+      ncplane_set_fg_rgb(nc, 95, 95, 255);
       break;
     default:
       fprintf(stderr, "DON'T YET KNOW COMPAT COLOR %d\n", pair);
@@ -399,10 +415,6 @@ setup_colors(void){
     assert(init_pair(DBORDER_COLOR,COLOR_RED,-1) != -1);
   }
   assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == 0);
-  assert(init_pair(OPTICAL_COLOR,COLOR_YELLOW,-1) == 0);
-  if(init_pair(ROTATE_COLOR,COLOR_LIGHTWHITE,-1) == -1){
-    assert(init_pair(ROTATE_COLOR,COLOR_WHITE,-1) != -1);
-  }
   assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == 0);
   if(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == -1){
     assert(init_pair(SSD_COLOR,COLOR_WHITE,-1) != -1);
@@ -461,17 +473,8 @@ setup_colors(void){
   if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,-1) == -1){
     assert(init_pair(TARGET_COLOR2,COLOR_MAGENTA,-1) == 0);
   }
-  if(init_pair(TARGET_COLOR3,COLOR_MAGENTA3,-1) == -1){
-    assert(init_pair(TARGET_COLOR3,COLOR_MAGENTA,-1) == 0);
-  }
-  if(init_pair(FUCKED_COLOR,COLOR_LIGHTRED,-1) == -1){
-    assert(init_pair(FUCKED_COLOR,COLOR_RED,-1) != -1);
-  }
   if(init_pair(SPLASHBORDER_COLOR,COLOR_PURPLE,COLOR_BLACK) == -1){
     assert(init_pair(SPLASHBORDER_COLOR,COLOR_GREEN,COLOR_BLACK) != -1);
-  }
-  if(init_pair(SPLASHTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == -1){
-    assert(init_pair(SPLASHTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != -1);
   }
   assert(init_pair(ORANGE_COLOR,COLOR_YELLOW,-1) == 0);
   assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == 0);
@@ -749,6 +752,7 @@ bevel(struct ncplane *nc){
 static int
 cwattrset(struct ncplane* n, int style){
   ncplane_styles_set(n, style >> 16);
+  compat_set_fg(n, style & 0xffff);
   return 0;
 }
 
@@ -1023,10 +1027,10 @@ new_display_panel(struct ncplane* nc, struct panel_state *ps,
     locked_diag("Couldn't create subpanel, uh-oh");
     return -1;
   }
-  cwattron(ps->p, CELL_STYLE_BOLD);
+  cwattron(ps->p, CELL_STYLE_BOLD << 16u);
   compat_set_fg(ps->p, borderpair);
   bevel(ps->p);
-  cwattroff(ps->p, CELL_STYLE_BOLD);
+  cwattroff(ps->p, CELL_STYLE_BOLD << 16u);
   compat_set_fg(ps->p, PHEADING_COLOR);
   if(hstr){
     cmvwaddwstr(ps->p, 0, START_COL * 2, hstr);
