@@ -4266,20 +4266,20 @@ detail_targets(struct ncplane* w, int* row, int both, const device* d){
 
 static int
 map_details(struct ncplane *hw){
-  /*
+  int y, rows, cols, curcol;
   const controller *c;
-  int y, rows, cols;
   char *fstab;
 
-  cols = getmaxx(hw);
-  rows = getmaxy(hw) - 1;
+  ncplane_dim_yx(hw, &rows, &cols);
+  --rows;
   y = 1;
   if(growlight_target){
     int blockout;
 
     cwattrset(hw, CELL_STYLE_BOLD|PHEADING_COLOR);
     cmvwprintw(hw, y, 1, "Operating in target mode (%s)", growlight_target);
-    if( (blockout = cols - getcurx(hw) - 1) ){
+    ncplane_cursor_yx(hw, NULL, &curcol);
+    if( (blockout = cols - curcol - 1) ){
       cwprintw(hw, "%*.*s", blockout, blockout, "");
     }
     ++y;
@@ -4316,7 +4316,7 @@ map_details(struct ncplane *hw){
     free(fstab);
   }
   cwattrset(hw, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
-  cmvwhline(hw, y, 1, ' ', cols - 2);
+  cmvwhline(hw, y, 1, " ", cols - 2);
   cmvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
       FSLABELSIZ, FSLABELSIZ, "Label",
       "Type", "UUID", "Bytes", "Device");
@@ -4364,9 +4364,8 @@ map_details(struct ncplane *hw){
   }
 
   while(y < rows){
-    cmvwhline(hw, y++, 1, ' ', cols - 2);
+    cmvwhline(hw, y++, 1, " ", cols - 2);
   }
-  */
   return 0;
 }
 
@@ -6572,12 +6571,12 @@ shutdown_cycle(void){
 
   diag("User-initiated shutdown\n");
   ps = show_splash(L"Shutting down...");
-  if(growlight_stop()){
+  /*if(growlight_stop()){
     kill_splash(ps);
     notcurses_stop(NC);
     dump_diags();
     exit(EXIT_FAILURE);
-  }
+  } FIXME */
   kill_splash(ps);
   if(notcurses_stop(NC)){
     dump_diags();
