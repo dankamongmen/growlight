@@ -419,6 +419,18 @@ static struct panelreel* PR;
 
 static inline void
 screen_update(void){
+  if(active){
+    ncplane_move_top(active->p);
+  }
+  if(actform){
+    if(actform->extext){
+      ncplane_move_top(actform->extext->p);
+    }
+    ncplane_move_top(actform->p);
+  }
+  if(splash){
+    ncplane_move_top(splash->p);
+  }
   panelreel_redraw(PR);
   int r = notcurses_render(NC);
   assert(0 == r);
@@ -760,12 +772,17 @@ bevel_top(struct ncplane* w){
 }
 
 static int
-bevel(struct ncplane *nc){
-  int rows,cols;
-  ncplane_dim_yx(nc, &rows, &cols);
+bevel(struct ncplane* nc, int rows, int cols){
   assert(rows && cols);
   ncplane_cursor_move_yx(nc, 0, 0);
-  return ncplane_rounded_box_sized(nc, 0, 0, rows, cols, 0);
+  return ncplane_rounded_box_sized(nc, 0, ncplane_get_channels(nc), rows, cols, 0);
+}
+
+static int
+bevel_all(struct ncplane* nc){
+  int rows, cols;
+  ncplane_dim_yx(nc, &rows, &cols);
+  return bevel(nc, rows, cols);
 }
 
 static int
@@ -1048,7 +1065,7 @@ new_display_panel(struct ncplane* nc, struct panel_state* ps,
   }
   cwattron(ps->p, CELL_STYLE_BOLD);
   compat_set_fg(ps->p, borderpair);
-  bevel(ps->p);
+  bevel_all(ps->p);
   cwattroff(ps->p, CELL_STYLE_BOLD);
   compat_set_fg(ps->p, PHEADING_COLOR);
   if(hstr){
@@ -1609,12 +1626,13 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
 // Abovetop: lines hidden at the top of the screen
 // Belowend: lines hidden at the bottom of the screen
 static void
-adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsigned belowend){
+adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsigned belowend,
+            int rows){
   int current = as == get_current_adapter();
-  int bcolor, hcolor, rows, cols;
+  int bcolor, hcolor, cols;
   int attrs;
 
-  ncplane_dim_yx(nc, &rows, &cols);
+  ncplane_dim_yx(nc, NULL, &cols);
   if(current){
     hcolor = UHEADING_COLOR; // plus CELL_STYLE_BOLD
     bcolor = SELBORDER_COLOR;
@@ -1624,10 +1642,14 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
     bcolor = UBORDER_COLOR;
     attrs = 0;
   }
+fprintf(stderr, "ROWS: %d COLS: %d\n", rows, cols);
   cwattrset(nc, attrs | bcolor);
+  if(current){
+    ncplane_set_bg_rgb(nc, 100, 100, 100);
+  }
   if(abovetop == 0){
     if(belowend == 0){
-      bevel(nc);
+      bevel(nc, rows, cols);
     }else{
       bevel_top(nc);
     }
@@ -1636,6 +1658,8 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
       bevel_bottom(nc);
     } // otherwise it has no top or bottom visible
   }
+  ncplane_set_bg_rgb(nc, 0, 0, 0);
+  /*
   if(abovetop == 0){
     if(current){
       cwattron(nc, CELL_STYLE_BOLD);
@@ -1696,6 +1720,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
       assert(cwprintw(nc, "]") != -1);
     }
   }
+  */
 }
 
 static int
@@ -1706,10 +1731,14 @@ redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
 
   ncplane_dim_yx(n, &rows, &cols);
   assert(cols); // FIXME
-  adapter_box(as, n, 0, 0);
   // FIXME express in terms of begx/begy/maxx/maxy
 // fprintf(stderr, "begx/y %d/%d -> maxx/y %d/%d ASS %p\n", begx, begy, maxx, maxy, as);
-  return print_adapter_devs(n, as, rows, cols, cliptop, !cliptop);
+  int lines = print_adapter_devs(n, as, rows, cols, cliptop, !cliptop);
+  if(lines < 0){
+    return -1;
+  }
+  adapter_box(as, n, 0, 0, lines);
+  return lines;
 }
 
 // -------------------------------------------------------------------------
@@ -2013,7 +2042,7 @@ raise_form_explication(const struct ncplane* n, const char* text, int linesz){
   assert(ps->p);
   cwbkgd(ps->p);
   cwattrset(ps->p, FORMBORDER_COLOR);
-  bevel(ps->p);
+  bevel_all(ps->p);
   compat_set_fg(ps->p, FORMTEXT_COLOR);
   do{
     cmvwaddnstr(ps->p, y + 1, 1, text + linepre[y], linelen[y]);
@@ -2091,7 +2120,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   fs->selections = selections;
   cwattroff(fsw, CELL_STYLE_BOLD);
   compat_set_fg(fsw, FORMBORDER_COLOR);
-  bevel(fsw);
+  bevel_all(fsw);
   cwattron(fsw, CELL_STYLE_BOLD);
   cmvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 4, "%s", fs->boxstr);
   cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
@@ -2174,7 +2203,7 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
   fs->selections = selections;
   cwattroff(fsw, CELL_STYLE_BOLD);
   compat_set_fg(fsw, FORMBORDER_COLOR);
-  bevel(fsw);
+  bevel_all(fsw);
   cwattron(fsw, CELL_STYLE_BOLD);
   cmvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 2, "%s", fs->boxstr);
   int nrows;
@@ -2256,7 +2285,7 @@ void raise_form(const char *str, void (*fxn)(const char *), struct form_option *
   fs->opcount = ops;
   cwattroff(fsw, CELL_STYLE_BOLD);
   compat_set_fg(fsw, FORMBORDER_COLOR);
-  bevel(fsw);
+  bevel_all(fsw);
   cwattron(fsw, CELL_STYLE_BOLD);
   cmvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
   cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
@@ -2328,7 +2357,7 @@ void raise_str_form(const char *str, void (*fxn)(const char *),
   top_panel(fs->p);
   cwattroff(fsw, CELL_STYLE_BOLD);
   compat_set_fg(fsw, FORMBORDER_COLOR);
-  bevel(fsw);
+  bevel_all(fsw);
   cwattron(fsw, CELL_STYLE_BOLD);
   cmvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
   cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
@@ -2628,10 +2657,10 @@ void kill_splash(struct panel_state *ps){
   if(actform == NULL){
     setup_colors();
   }else{
-    //assert(top_panel(actform->p) != -1);
-    //if(actform->extext){
-    //  assert(top_panel(actform->extext->p) != -1);
-    //}
+    ncplane_move_top(actform->p);
+    if(actform->extext){
+      ncplane_move_top(actform->extext->p);
+    }
   }
 }
 
@@ -6649,7 +6678,7 @@ static void raise_info_form(const char *str, const char *text){
   }
   cwattroff(fs->p, CELL_STYLE_BOLD);
   compat_set_fg(fs->p, FORMBORDER_COLOR);
-  bevel(fs->p);
+  bevel_all(fs->p);
   cwattron(fs->p, CELL_STYLE_BOLD);
   cmvwprintw(fs->p, 1, START_COL, "%-*.*s", cols, cols, str);
   form_string_options(fs);
