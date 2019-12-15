@@ -1617,26 +1617,26 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
   cwattrset(nc, (attrs << 16u) | bcolor);
   if(abovetop == 0){
     if(belowend == 0){
-      assert(bevel(nc) == 0);
+      bevel(nc);
     }else{
-      assert(bevel_top(nc) == 0);
+      bevel_top(nc);
     }
   }else{
     if(belowend == 0){
-      assert(bevel_bottom(nc) == 0);
+      bevel_bottom(nc);
     } // otherwise it has no top or bottom visible
   }
   if(abovetop == 0){
     if(current){
-      assert(cwattron(nc, CELL_STYLE_BOLD) == 0);
+      cwattron(nc, CELL_STYLE_BOLD);
     }else{
-      assert(cwattroff(nc, CELL_STYLE_BOLD) == 0);
+      cwattroff(nc, CELL_STYLE_BOLD);
     }
     cmvwprintw(nc, 0, 7, "%ls", L"[");
     compat_set_fg(nc, hcolor);
     cwaddstr(nc, as->c->ident);
     if(as->c->numa_node >= 0){
-      assert(cwprintw(nc, " [%d]", as->c->numa_node) != -1);
+      cwprintw(nc, " [%d]", as->c->numa_node);
     }
     if(as->c->bandwidth){
       char buf[PREFIXSTRLEN + 1], dbuf[PREFIXSTRLEN + 1];
@@ -1656,11 +1656,11 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
       cwprintw(nc, " (%sbps demanded)", qprefix(as->c->demand, 1, dbuf, 1));
     }
     compat_set_fg(nc, bcolor);
-    assert(cwprintw(nc, "]") != -1);
-    assert(cwattron(nc, CELL_STYLE_BOLD) == 0);
+    cwprintw(nc, "]");
+    cwattron(nc, CELL_STYLE_BOLD);
     ncplane_move_yx(nc, 0, cols - 5);
     cwaddwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
-    assert(cwattron(nc, attrs) != -1);
+    cwattron(nc, attrs);
   }
   if(belowend == 0){
     if(as->c->bus == BUS_PCIe){
@@ -7079,6 +7079,8 @@ int main(int argc, char * const *argv){
   panelreel_options popts;
   memset(&popts, 0, sizeof(popts));
   popts.bordermask = NCBOXMASK_TOP | NCBOXMASK_BOTTOM
+                     | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
+  popts.tabletmask = NCBOXMASK_TOP | NCBOXMASK_BOTTOM
                      | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
   PR = panelreel_create(n, &popts, -1);
   if(PR == NULL){
