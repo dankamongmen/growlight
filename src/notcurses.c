@@ -5735,7 +5735,7 @@ destroy_aggregate_confirm(const char *op){
 }
 
 static void
-untargeted_exit_confirm(const char *op){
+untargeted_exit_confirm(const char* op){
   if(!op || !approvedp(op)){
     locked_diag("exit cancelled");
     return;
@@ -5743,7 +5743,6 @@ untargeted_exit_confirm(const char *op){
   shutdown_cycle();
 }
 
-/*
 static void
 destroy_aggregate(void){
   blockobj *b;
@@ -5775,7 +5774,7 @@ modify_aggregate(void){
 }
 
 static void
-search_callback(const char *term){
+search_callback(const char* term){
   if(term == NULL){
     locked_diag("Search was cancelled");
     return;
@@ -5785,12 +5784,12 @@ search_callback(const char *term){
 
 static void
 start_search(void){
-  raise_str_form("start typing an identifier",search_callback,NULL,
+  raise_str_form("start typing an identifier", search_callback, NULL,
       SEARCH_TEXT);
 }
 
 static void
-loop_callback(const char *term){
+loop_callback(const char* term){
   if(term == NULL){
     locked_diag("Loop device setup cancelled");
     return;
@@ -5800,9 +5799,8 @@ loop_callback(const char *term){
 
 static void
 configure_loop_dev(void){
-  raise_str_form("Select a file to loop",loop_callback,NULL, LOOP_TEXT);
+  raise_str_form("Select a file to loop", loop_callback, NULL, LOOP_TEXT);
 }
-*/
 
 static void
 set_label(void){
@@ -6048,7 +6046,6 @@ handle_ncurses_input(struct ncplane* w){
         unlock_ncurses();
         break;
       }
-/*
       case 'L':{
         lock_ncurses();
         set_label();
@@ -6183,7 +6180,6 @@ handle_ncurses_input(struct ncplane* w){
           return;
         }
         break;
-*/
       case 'q':
         if(!growlight_target){
           return;
