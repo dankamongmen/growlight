@@ -103,7 +103,6 @@ static struct panel_state maps = PANEL_STATE_INITIALIZER;
 static struct panel_state help = PANEL_STATE_INITIALIZER;
 static struct panel_state diags = PANEL_STATE_INITIALIZER;
 static struct panel_state details = PANEL_STATE_INITIALIZER;
-static struct panel_state environment = PANEL_STATE_INITIALIZER;
 
 static int helpstrs(struct ncplane* n);
 static int map_details(struct ncplane* n);
@@ -375,35 +374,6 @@ next_partco(int partco){
   }
   return partco;
 }
-
-/*
-
-#define COLOR_LIGHTRED 9
-#define COLOR_LIGHTGREEN 10
-#define COLOR_LIGHTYELLOW 11
-#define COLOR_LIGHTBLUE 12
-#define COLOR_LIGHTMAGENTA 13 // (pink)
-#define COLOR_LIGHTCYAN 14
-#define COLOR_LIGHTWHITE 15
-#define COLOR_HIDDEN 16
-#define COLOR_SKYBLUE 0x20 // 32 (xterm color cube)
-#define COLOR_PURPLE 0x39 // incredibly vibrant 0x68
-#define COLOR_CRAP 0x6f
-#define COLOR_LIGHTPURPLE 0x3f
-#define COLOR_CYAN0 0x7b
-#define COLOR_CYAN1 0x23
-#define COLOR_CYAN2 0x2c
-#define COLOR_CYAN3 0x33
-#define COLOR_MAGENTA0 0x44
-#define COLOR_MAGENTA1 0x46
-#define COLOR_MAGENTA2 0x48
-#define COLOR_MAGENTA3 0x4a
-#define COLOR_MAIZE 0xdc
-#define COLOR_WHITE0 0xfc
-#define COLOR_WHITE1 0xfa
-#define COLOR_WHITE2 0xf8
-#define COLOR_WHITE3 0xf6
-*/
 
 #define REP_METADATA L'm' //L'\u1d50'//L'M', L'ᵐ'
 #define REP_EMPTY L'e' //L'\u2091' //L'E', L'ₑ'
@@ -1531,7 +1501,7 @@ case LAYOUT_ZPOOL:
   ++line;
 }
 
-// returns the number of lines printed
+// returns the number of lines printed, plus borders
 static int
 print_adapter_devs(struct ncplane* n, const adapterstate *as,
                    int rows, int cols, unsigned topp, unsigned endp){
@@ -1567,6 +1537,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
     printed += p;
     cur = cur->next;
   }
+  printed += 2; // top+bottom borders
 // fprintf(stderr, "PRINTED %d for %s\n", printed, as->c->name);
   return printed;
 }
@@ -1860,48 +1831,45 @@ multiform_options(struct form_state *fs){
 
 static void
 check_options(struct form_state *fs){
-  /*
   const struct form_option *opstrs = fs->ops;
-  WINDOW *fsw = fs->p;
-  int z,cols,selidx,maxz;
+  int z, cols, selidx, maxz;
 
   assert(fs->formtype == FORM_CHECKBOXEN);
-  cols = getmaxx(fsw);
-  cwattrset(fsw,FORMBORDER_COLOR);
-  cwattron(fsw,CELL_STYLE_BOLD);
-  maxz = getmaxy(fsw) - 3;
+  ncplane_dim_yx(fs->p, &maxz, &cols);
+  maxz -= 3;
+  cwattrset(fs->p, FORMBORDER_COLOR);
+  cwattron(fs->p, CELL_STYLE_BOLD);
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    cwattroff(fsw,CELL_STYLE_BOLD);
-    compat_set_fg(fsw,FORMBORDER_COLOR);
+    cwattroff(fs->p, CELL_STYLE_BOLD);
+    compat_set_fg(fs->p, FORMBORDER_COLOR);
     if(z < fs->opcount + 1){
       wchar_t ballot = L'☐';
 
-      cwattron(fsw,CELL_STYLE_BOLD);
-      compat_set_fg(fsw,FORMTEXT_COLOR);
+      cwattron(fs->p, CELL_STYLE_BOLD);
+      compat_set_fg(fs->p, FORMTEXT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
-        if(strcmp(opstrs[op].option,fs->selarray[selidx]) == 0){
+        if(strcmp(opstrs[op].option, fs->selarray[selidx]) == 0){
           ballot = L'☒';
           break;
         }
       }
       if(op == fs->idx){
-        cwattron(fsw,CELL_STYLE_REVERSE);
+        cwattron(fs->p, CELL_STYLE_REVERSE);
       }else{
-        compat_set_fg(fsw,INPUT_COLOR);
+        compat_set_fg(fs->p, INPUT_COLOR);
       }
-      cmvwprintw(fsw,z + 1,START_COL * 2,"%lc %-*.*s ",
-        ballot,fs->longop,fs->longop,opstrs[op].option);
-      cwprintw(fsw,"%-*.*s",cols - fs->longop - 7,
-        cols - fs->longop - 7,opstrs[op].desc);
-      cwattroff(fsw,CELL_STYLE_REVERSE);
+      cmvwprintw(fs->p, z + 1, START_COL * 2, "%lc %-*.*s ",
+        ballot, fs->longop, fs->longop, opstrs[op].option);
+      cwprintw(fs->p, "%-*.*s", cols - fs->longop - 7,
+        cols - fs->longop - 7, opstrs[op].desc);
+      cwattroff(fs->p, CELL_STYLE_REVERSE);
     }
   }
-  cwattrset(fsw,FORMBORDER_COLOR);
-  */
+  cwattrset(fs->p, FORMBORDER_COLOR);
 }
 
 static void
@@ -2000,11 +1968,9 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
     struct form_option *opstrs, int ops, int defidx,
     int selectno, char **selarray, int selections, const char *text,
     int scrollidx){
-  /*
   size_t longop, longdesc;
   struct form_state *fs;
   int cols, rows;
-  WINDOW *fsw;
   int x, y;
 
   assert(ops);
@@ -2028,7 +1994,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
     cols = wcslen(ESCSTR) + 2;
   }
   rows = (ops > selectno ? ops : selectno) + 4;
-  getmaxyx(stdscr, y, x);
+  ncplane_dim_yx(notcurses_stdplane(NC), &y, &x);
   if(x < cols){
     locked_diag("Window too thin for form, uh-oh");
     return;
@@ -2044,18 +2010,12 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
     return;
   }
   fs->mcb = fxn;
-  if((fsw = newwin(rows, cols, FORM_Y_OFFSET, x - cols)) == NULL){
+  if((fs->p = notcurses_newplane(NC, rows, cols, FORM_Y_OFFSET, x - cols, NULL)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
   }
-  if((fs->p = new_panel(fsw)) == NULL){
-    locked_diag("Couldn't create form panel, uh-oh");
-    delwin(fsw);
-    free_form(fs);
-    return;
-  }
-  cwbkgd(fsw);
+  cwbkgd(fs->p);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
@@ -2063,24 +2023,23 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
-  cwattroff(fsw, CELL_STYLE_BOLD);
-  compat_set_fg(fsw, FORMBORDER_COLOR);
-  bevel_all(fsw);
-  cwattron(fsw, CELL_STYLE_BOLD);
-  cmvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 4, "%s", fs->boxstr);
-  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
+  cwattroff(fs->p, CELL_STYLE_BOLD);
+  compat_set_fg(fs->p, FORMBORDER_COLOR);
+  bevel_all(fs->p);
+  cwattron(fs->p, CELL_STYLE_BOLD);
+  cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr) - 4, "%s", fs->boxstr);
+  cmvwaddwstr(fs->p, rows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
-  cwattroff(fsw, CELL_STYLE_BOLD);
+  cwattroff(fs->p, CELL_STYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   fs->selectno = selectno;
   multiform_options(fs);
-  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   actform = fs;
   form_colors();
-  top_panel(fs->p);
+  ncplane_move_top(fs->p);
   screen_update();
-  */
 }
 
 // A collection of checkboxes
@@ -3640,7 +3599,7 @@ update_details(struct ncplane* hw){
 // window top padding).
 static const wchar_t *helps[] = {
   L"'q': quit                     ctrl+'L': redraw the screen",
-  L"'e': view environment details 'H': toggle this help display",
+  L"                              'H': toggle this help display",
   L"'v': view selection details   'D': view recent diagnostics",
   L"'E': view mounts / targets    'z': modify aggregate",
   L"'A': create aggregate         'Z': destroy aggregate",
@@ -4124,69 +4083,6 @@ err:
   return -1;
 }
 
-#define ENVROWS 10
-#define COLORSPERROW 32
-
-static int
-env_details(struct ncplane *hw, int rows){
-  /*
-  const int col = START_COL;
-  const int row = 1;
-  int z, srows, scols, cols;
-
-  cwattrset(hw, SUBDISPLAY_ATTR);
-  notcurses_term_dim_yx(NC, &srows, &cols);
-  if((z = rows) >= ENVROWS){
-    z = ENVROWS - 1;
-  }
-  ncplane_dim_yx(hw, NULL, &cols);
-  switch(z){ // Intentional fallthroughs all the way to 0
-  case (ENVROWS - 1):{
-    while(z > 1){
-      int c0, c1;
-
-      cmvwhline(hw, row + z, 1, ' ', cols - 2);
-      c0 = (z - 2) * COLORSPERROW;
-      c1 = c0 + (COLORSPERROW - 1);
-      cmvwprintw(hw, row + z, col, "0x%02x%lc0x%02x: ", c0, L'–', c1);
-      while(c0 <= c1){
-        if(c0 < COLORS){
-          cwattrset(hw, c0);
-          cwprintw(hw, "X");
-        }else{
-          cwattrset(hw, SUBDISPLAY_ATTR);
-          cwprintw(hw, " ");
-        }
-        ++c0;
-      }
-      --z;
-      cwattrset(hw, SUBDISPLAY_ATTR);
-    }
-  } // intentional fallthrough
-  case 1:{
-    cmvwhline(hw, row + z, 1, ' ', cols - 2);
-    cmvwprintw(hw, row + z, col, "Colors (pairs): %u (%u) Geom: %dx%d Palette: %s",
-        COLORS, COLOR_PAIRS, srows, scols,
-        can_change_color() ? "dynamic" : "fixed");
-    --z;
-  } // intentional fallthrough
-  case 0:{
-    const char *lang = getenv("LANG");
-    const char *term = getenv("TERM");
-
-    cmvwhline(hw, row + z, 1, ' ', cols - 2);
-    lang = lang ? lang : "Undefined";
-    cmvwprintw(hw, row + z, col, "LANG: %-21s TERM: %s ESCDELAY: %d", lang, term, ESCDELAY);
-    --z;
-    break;
-  }default:{
-    return -1;
-  }
-  }
-  */
-  return 0;
-}
-
 static void
 detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
   char buf[PREFIXSTRLEN + 1], b[256];
@@ -4367,28 +4263,6 @@ map_details(struct ncplane *hw){
     cmvwhline(hw, y++, 1, " ", cols - 2);
   }
   return 0;
-}
-
-static int
-display_enviroment(struct ncplane* mainw, struct panel_state* ps){
-  memset(ps, 0, sizeof(*ps));
-  if(new_display_panel(mainw, ps, ENVROWS, 78, L"press 'e' to dismiss display",
-                       NULL, PBORDER_COLOR)){
-    goto err;
-  }
-  int rows;
-  ncplane_dim_yx(ps->p, &rows, NULL);
-  if(env_details(ps->p, rows - 1)){
-    goto err;
-  }
-  return 0;
-
-err:
-  if(ps->p){
-    ncplane_destroy(ps->p);
-  }
-  memset(ps, 0, sizeof(*ps));
-  return -1;
 }
 
 static int
@@ -5918,12 +5792,6 @@ handle_ncurses_input(struct ncplane* w){
       case 'v':{
         lock_ncurses();
         toggle_panel(w, &details, display_details);
-        unlock_ncurses();
-        break;
-      }
-      case 'e':{
-        lock_ncurses();
-        toggle_panel(w, &environment, display_enviroment);
         unlock_ncurses();
         break;
       }
