@@ -278,11 +278,23 @@ compat_set_fg(struct ncplane* nc, int pair){
     case PHEADING_COLOR:
       ncplane_set_fg_rgb(nc, 197, 15, 31);
       break;
+    case SELECTED_COLOR:
+      ncplane_set_fg_rgb(nc, 135, 95, 255);
+      break;
+    case VIRTUAL_COLOR:
+    case SSD_COLOR:
+    case FS_COLOR:
+    case EMPTY_COLOR: // Empty sectors
+    case METADATA_COLOR: // Partition table metadata
+    case MDADM_COLOR:
+    case ZPOOL_COLOR:
+      ncplane_set_fg_rgb(nc, 128, 192, 226);
+      break;
     case FORMTEXT_COLOR:
       ncplane_set_fg_rgb(nc, 97, 214, 214);
       break;
     case SUBDISPLAY_COLOR:
-      ncplane_set_fg_rgb(nc, 204, 204, 204);
+      ncplane_set_fg_rgb(nc, 255, 255, 255);
       break;
     case OPTICAL_COLOR:
       ncplane_set_fg_rgb(nc, 175, 215, 0);
@@ -307,9 +319,15 @@ compat_set_fg(struct ncplane* nc, int pair){
     case SPLASHTEXT_COLOR:
       ncplane_set_fg_rgb(nc, 95, 95, 255);
       break;
+    case BLACK_COLOR:
+      ncplane_set_fg_rgb(nc, 0, 0, 0);
+      break;
+    case GREEN_COLOR:
+      ncplane_set_fg_rgb(nc, 95, 255, 215);
+      break;
     default:
-      fprintf(stderr, "DON'T YET KNOW COMPAT COLOR %d\n", pair);
-      assert(false);
+      ncplane_set_fg_rgb(nc, 0, 215, 215);
+      break;
   }
 }
 
@@ -385,6 +403,7 @@ next_partco(int partco){
 #define COLOR_WHITE1 0xfa
 #define COLOR_WHITE2 0xf8
 #define COLOR_WHITE3 0xf6
+*/
 
 #define REP_METADATA L'm' //L'\u1d50'//L'M', L'ᵐ'
 #define REP_EMPTY L'e' //L'\u2091' //L'E', L'ₑ'
@@ -394,13 +413,13 @@ subscript(int in){
   assert(in >= 0 && in < 10);
   return L'\u2080' + in;
 }
-*/
 
 static struct notcurses* NC;
 static struct panelreel* PR;
 
 static inline void
 screen_update(void){
+  panelreel_redraw(PR);
   int r = notcurses_render(NC);
   assert(0 == r);
 }
@@ -429,7 +448,6 @@ setup_colors(void){
   if(init_pair(MDADM_COLOR,COLOR_LIGHTBLUE,-1) == -1){
     assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != -1);
   }
-  assert(init_pair(ZPOOL_COLOR,COLOR_BLUE,-1) == 0);
   if(init_pair(PART_COLOR0,COLOR_CYAN0,-1) == -1){
     assert(init_pair(PART_COLOR0,COLOR_CYAN,-1) == 0);
   }
@@ -504,7 +522,6 @@ form_colors(void){
   init_pair(EMPTY_COLOR,-1,-1);
   init_pair(METADATA_COLOR,-1,-1);
   init_pair(MDADM_COLOR,-1,-1);
-  init_pair(ZPOOL_COLOR,-1,-1);
   init_pair(PART_COLOR0,-1,-1);
   init_pair(PART_COLOR1,-1,-1);
   init_pair(PART_COLOR2,-1,-1);
@@ -751,22 +768,22 @@ bevel(struct ncplane *nc){
 
 static int
 cwattrset(struct ncplane* n, int style){
-  ncplane_styles_set(n, style >> 16);
-  compat_set_fg(n, style & 0xffff);
+  ncplane_styles_set(n, style);
+  compat_set_fg(n, style & ~CELL_STYLE_MASK);
   return 0;
 }
 
 static int
 cwattroff(struct ncplane* n, int style){
-  ncplane_styles_off(n, style >> 16);
-  compat_set_fg(n, style & 0xffff);
+  ncplane_styles_off(n, style);
+  compat_set_fg(n, style & ~CELL_STYLE_MASK);
   return 0;
 }
 
 static int
 cwattron(struct ncplane* n, int style){
-  ncplane_styles_on(n, style >> 16);
-  compat_set_fg(n, style & 0xffff);
+  ncplane_styles_on(n, style);
+  compat_set_fg(n, style & ~CELL_STYLE_MASK);
   return 0;
 }
 
@@ -866,7 +883,7 @@ draw_main_window(struct ncplane* n){
   ncplane_yx(n, &y, &x);
   assert(y >= 0);
   cols -= x + 2;
-  assert(cwattron(n, (CELL_STYLE_BOLD << 16u) | STATUS_COLOR) != -1);
+  assert(cwattron(n, CELL_STYLE_BOLD | STATUS_COLOR) != -1);
   assert(cwprintw(n, " %-*.*s", cols, cols, statusmsg) != -1);
 }
 
@@ -1027,10 +1044,10 @@ new_display_panel(struct ncplane* nc, struct panel_state *ps,
     locked_diag("Couldn't create subpanel, uh-oh");
     return -1;
   }
-  cwattron(ps->p, CELL_STYLE_BOLD << 16u);
+  cwattron(ps->p, CELL_STYLE_BOLD);
   compat_set_fg(ps->p, borderpair);
   bevel(ps->p);
-  cwattroff(ps->p, CELL_STYLE_BOLD << 16u);
+  cwattroff(ps->p, CELL_STYLE_BOLD);
   compat_set_fg(ps->p, PHEADING_COLOR);
   if(hstr){
     cmvwaddwstr(ps->p, 0, START_COL * 2, hstr);
@@ -1049,10 +1066,10 @@ hide_panel_locked(struct panel_state *ps){
   }
 }
 
-/*
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
-print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
+print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int selected){
+/*
   static const cchar_t bchr[] = {
     { .attr = 0, .chars = L"∾", },
     { .attr = 0, .chars = L" ", },
@@ -1208,7 +1225,7 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
         }
       }
       if(z->p->partdev.alignment < d->physsec){ // misaligned!
-        assert(cwattrset(w,CELL_STYLE_BOLD|FUCKED_COLOR)) == 0;
+        cwattrset(w,CELL_STYLE_BOLD|FUCKED_COLOR));
       }
       if(z->p->mnttype){
         if((!z->p->mnt.count || swprintf(wbuf, wchars - 2, L"%s at %s (%s)",z->p->mnttype,z->p->mnt.list[0],pre) >= wchars - 2)){
@@ -1268,49 +1285,50 @@ print_blockbar(WINDOW *w,const blockobj *bo,int y,int sx,int ex,int selected){
     }
     selstr = NULL;
   }while((z = z->next) != bo->zchain);
+*/
 }
 
 static void
-print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
-      unsigned cols,int topp,unsigned endp){
+print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
+          int line, int rows, unsigned cols, int topp, unsigned endp){
   char buf[BPREFIXSTRLEN + 1];
-  int selected,co,rx,attr;
+  int selected, co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
+fprintf(stderr, "HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
   if(line >= rows - !endp){
     return;
   }
   strcpy(rolestr, "");
-  selected = line >= 1 && line == rb->selline;
+  selected = line >= 1 && line == as->selline;
   rx = cols - 79;
   switch(bo->d->layout){
 case LAYOUT_NONE:
     if(bo->d->blkdev.realdev){
       if(bo->d->blkdev.rotation == SSD_ROTATION){
-        cwattrset(rb->win, SSD_COLOR);
-        strncpy(rolestr,"solidstate",sizeof(rolestr));
+        cwattrset(n, SSD_COLOR);
+        strncpy(rolestr, "solidstate", sizeof(rolestr));
       }else if(bo->d->blkdev.rotation > 0){
         int32_t speed = bo->d->blkdev.rotation;
-        cwattrset(rb->win,ROTATE_COLOR);
+        cwattrset(n, ROTATE_COLOR);
         if(speed > 0){
           if(speed > 99999){
             speed = 99999;
           }
-          snprintf(rolestr, sizeof(rolestr),
-             "%d rpm", speed);
+          snprintf(rolestr, sizeof(rolestr), "%d rpm", speed);
         }else{
           strncpy(rolestr, "ferromag", sizeof(rolestr));
         }
       }else if(bo->d->kerneltype == TYPE_ROM){
-        cwattrset(rb->win, OPTICAL_COLOR);
+        cwattrset(n, OPTICAL_COLOR);
         strncpy(rolestr, "optical", sizeof(rolestr));
       }else if(bo->d->kerneltype == TYPE_TAPE){
-        cwattrset(rb->win, OPTICAL_COLOR);
+        cwattrset(n, OPTICAL_COLOR);
         strncpy(rolestr, "tape", sizeof(rolestr));
       }
       // FIXME do we want a default here?
     }else{
-      cwattrset(rb->win, VIRTUAL_COLOR);
+      cwattrset(n, VIRTUAL_COLOR);
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
     if(line + !!topp >= 1){
@@ -1318,18 +1336,18 @@ case LAYOUT_NONE:
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          cwattron(rb->win, CELL_STYLE_REVERSE);
+          cwattron(n, CELL_STYLE_REVERSE);
         }
-    cmvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size,1,buf,0),
+          qprefix(bo->d->size, 1, buf, 0),
           bo->d->physsec,
           bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
           bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
           bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
-          rx,rx,"");
+          rx, rx, "");
         if(bo->d->size){
           line -= 2;
         }
@@ -1346,51 +1364,51 @@ case LAYOUT_MDADM:
     }else{
       co = MDADM_COLOR;
     }
-    assert(cwattrset(rb->win,co) == 0);
+    cwattrset(n, co);
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          cwattron(rb->win,CELL_STYLE_REVERSE);
+          cwattron(n, CELL_STYLE_REVERSE);
         }
-    cmvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size,1,buf,0),
+          qprefix(bo->d->size, 1, buf, 0),
           bo->d->physsec,
           bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
           bo->d->mddev.mdname ? bo->d->mddev.mdname : "n/a",
           transport_str(bo->d->mddev.transport),
-          rx,rx,"");
+          rx, rx, "");
         if(bo->d->size){
           line -= 2;
         }
       }
     }
-    assert(cwattrset(rb->win,MDADM_COLOR)) == 0;
+    cwattrset(n, MDADM_COLOR);
     break;
 case LAYOUT_DM:
-    strncpy(rolestr,"dm",sizeof(rolestr));
-    assert(cwattrset(rb->win,MDADM_COLOR)) == 0;
+    strncpy(rolestr, "dm", sizeof(rolestr));
+    cwattrset(n, MDADM_COLOR);
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          cwattron(rb->win,CELL_STYLE_REVERSE);
+          cwattron(n, CELL_STYLE_REVERSE);
         }
-    cmvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size,1,buf,0),
+          qprefix(bo->d->size, 1, buf, 0),
           bo->d->physsec,
           bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
           bo->d->dmdev.dmname ? bo->d->dmdev.dmname : "n/a",
           transport_str(bo->d->dmdev.transport),
-          rx,rx,"");
+          rx, rx, "");
         if(bo->d->size){
           line -= 2;
         }
@@ -1400,25 +1418,25 @@ case LAYOUT_DM:
 case LAYOUT_PARTITION:
     break;
 case LAYOUT_ZPOOL:
-    strncpy(rolestr,"zpool",sizeof(rolestr));
-    assert(cwattrset(rb->win,ZPOOL_COLOR)) == 0;
+    strncpy(rolestr, "zpool", sizeof(rolestr));
+    cwattrset(n, ZPOOL_COLOR);
     if(line + !!topp >= 1){
       if(!bo->d->size || line + 2 < rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          cwattron(rb->win,CELL_STYLE_REVERSE);
+          cwattron(n, CELL_STYLE_REVERSE);
         }
-    cmvwprintw(rb->win,line,1,"%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           (uintmax_t)bo->d->zpool.zpoolver,
-          qprefix(bo->d->size,1,buf,0),
+          qprefix(bo->d->size, 1, buf, 0),
           bo->d->physsec,
           "spa",
-          "n/a", // FIXME
+          "n/a",  // FIXME
           transport_str(bo->d->zpool.transport),
-          rx,rx,"");
+          rx, rx, "");
         if(bo->d->size){
           line -= 2;
         }
@@ -1429,12 +1447,12 @@ case LAYOUT_ZPOOL:
   if(bo->d->size == 0){
     return;
   }
-  cwattroff(rb->win, CELL_STYLE_REVERSE);
-  cwattrset(rb->win, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
+  cwattroff(n, CELL_STYLE_REVERSE);
+  cwattrset(n, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
 
   // Box-diagram (3-line) mode. Print the name on the first line.
   if(line + !!topp >= 1){
-    cmvwprintw(rb->win, line, START_COL, "%11.11s", bo->d->name);
+    cmvwprintw(n, line, START_COL, "%11.11s", bo->d->name);
   }
 
   // Print summary below device name, in the same color, but prefix it
@@ -1443,23 +1461,23 @@ case LAYOUT_ZPOOL:
     wchar_t rep = L' ';
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
-        cwattrset(rb->win, CELL_STYLE_BOLD|GREEN_COLOR);
+        cwattrset(n, CELL_STYLE_BOLD|GREEN_COLOR);
         rep = L'✔';
       }else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
           && bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
-        cwattrset(rb->win, CELL_STYLE_BOLD|ORANGE_COLOR);
+        cwattrset(n, CELL_STYLE_BOLD|ORANGE_COLOR);
         rep = L'☠';
       }else{
-        cwattrset(rb->win, CELL_STYLE_BOLD|FUCKED_COLOR);
+        cwattrset(n, CELL_STYLE_BOLD|FUCKED_COLOR);
         rep = L'✗';
       }
     }
-    cmvwprintw(rb->win, line + 1, START_COL, "%lc", rep);
-    cwattrset(rb->win, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
+    cmvwprintw(n, line + 1, START_COL, "%lc", rep);
+    cwattrset(n, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
     if(strlen(rolestr)){
-      cwprintw(rb->win, "%10.10s", rolestr);
+      cwprintw(n, "%10.10s", rolestr);
     }else{
-      cwprintw(rb->win, "          ");
+      cwprintw(n, "          ");
     }
   }
   // ...and finally the temperature/vfailure status, and utilization...
@@ -1468,37 +1486,37 @@ case LAYOUT_ZPOOL:
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
         if(bo->d->blkdev.celsius >= 60u){
-          cwattrset(rb->win, CELL_STYLE_BOLD|FUCKED_COLOR);
+          cwattrset(n, CELL_STYLE_BOLD|FUCKED_COLOR);
         }else if(bo->d->blkdev.celsius >= 40u){
-          cwattrset(rb->win, CELL_STYLE_BOLD|ORANGE_COLOR);
+          cwattrset(n, CELL_STYLE_BOLD|ORANGE_COLOR);
         }else{
-          cwattrset(rb->win, GREEN_COLOR);
+          cwattrset(n, GREEN_COLOR);
         }
         // FIXME would be nice to use ℃ , but it looks weird
-        cmvwprintw(rb->win, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
+        cmvwprintw(n, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
       }else{
-        cmvwprintw(rb->win, sumline, START_COL, "    ");
+        cmvwprintw(n, sumline, START_COL, "    ");
       }
     }else if(bo->d->layout == LAYOUT_MDADM){
       if(bo->d->mddev.degraded){
-        cwattrset(rb->win,CELL_STYLE_BOLD|FUCKED_COLOR);
-        cmvwprintw(rb->win, sumline, START_COL,
+        cwattrset(n, CELL_STYLE_BOLD|FUCKED_COLOR);
+        cmvwprintw(n, sumline, START_COL,
             "%1lux☠ ", bo->d->mddev.degraded);
       }else{
-        cwattrset(rb->win,GREEN_COLOR);
-        cmvwprintw(rb->win, sumline, START_COL, "up  ");
+        cwattrset(n, GREEN_COLOR);
+        cmvwprintw(n, sumline, START_COL, "up  ");
       }
     }else if(bo->d->layout == LAYOUT_DM){
       // FIXME add more detail...type of dm etc
-      cwattrset(rb->win,GREEN_COLOR);
-      cmvwprintw(rb->win,sumline,START_COL,"up  ");
+      cwattrset(n, GREEN_COLOR);
+      cmvwprintw(n, sumline, START_COL, "up  ");
     }else if(bo->d->layout == LAYOUT_ZPOOL){
       if(bo->d->zpool.state != POOL_STATE_ACTIVE){
-        cwattrset(rb->win,CELL_STYLE_BOLD|FUCKED_COLOR);
-        cmvwprintw(rb->win,sumline,START_COL,"☠☠☠ ");
+        cwattrset(n, CELL_STYLE_BOLD|FUCKED_COLOR);
+        cmvwprintw(n, sumline, START_COL, "☠☠☠ ");
       }else{
-        cwattrset(rb->win,GREEN_COLOR);
-        cmvwprintw(rb->win,sumline,START_COL,"up  ");
+        cwattrset(n, GREEN_COLOR);
+        cmvwprintw(n, sumline, START_COL, "up  ");
       }
     }
     uintmax_t io;
@@ -1506,71 +1524,65 @@ case LAYOUT_ZPOOL:
     io += bo->d->statdelta.sectors_written;
     io *= bo->d->logsec;
     // FIXME normalize according to timeq
-    cwattrset(rb->win, SELECTED_COLOR);
+    cwattrset(n, SELECTED_COLOR);
     // FIXME 'i' shows up only when there are fewer than 3 sigfigs
     // to the left of the decimal point...very annoying
     if(io){
       char qbuf[BPREFIXSTRLEN + 1];
       bprefix(io, 1, qbuf,  1);
-      cwprintw(rb->win, "%7.7s", qbuf); // might chop off 'i'
+      cwprintw(n, "%7.7s", qbuf); // might chop off 'i'
     }else{
-      cwprintw(rb->win, " no i/o");
+      cwprintw(n, " no i/o");
     }
   }
 
-  assert(cwattrset(rb->win,CELL_STYLE_BOLD|DBORDER_COLOR)) == 0;
+  cwattrset(n, CELL_STYLE_BOLD | DBORDER_COLOR);
   if(selected){
-    cwattron(rb->win,CELL_STYLE_REVERSE);
+    cwattron(n, CELL_STYLE_REVERSE);
   }
   if(line + !!topp >= 1){
-    mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_ULCORNER);
-    cmvwhline(rb->win,line,START_COL + 2 + 10,ACS_HLINE,cols - START_COL * 2 - 2 - 10);
-    mvwaddch(rb->win,line,cols - START_COL * 2,ACS_URCORNER);
+    cmvwadd_wch(n, line, START_COL + 10 + 1, L"╭");
+    cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
+    cmvwadd_wch(n, line, cols - START_COL * 2, L"╮");
   }
   if(++line >= rows - !endp){
     return;
   }
 
   if(line + !!topp >= 1){
-    mvwaddch(rb->win,line,START_COL + 10 + 1,ACS_VLINE);
-    print_blockbar(rb->win,bo,line,START_COL + 10 + 2,
-          cols - START_COL - 1,selected);
+    cmvwadd_wch(n, line, START_COL + 10 + 1, L"│");
+    print_blockbar(n, bo, line, START_COL + 10 + 2,
+          cols - START_COL - 1, selected);
   }
   attr = CELL_STYLE_BOLD | DBORDER_COLOR;
-  cwattrset(rb->win,attr);
+  cwattrset(n, attr);
   if(selected){
-    cwattron(rb->win,CELL_STYLE_REVERSE);
+    cwattron(n, CELL_STYLE_REVERSE);
   }
   if(line + !!topp >= 1){
-    mvwaddch(rb->win,line,cols - START_COL * 2,ACS_VLINE);
+    cmvwadd_wch(n, line, cols - START_COL * 2, L"│");
   }
   if(++line >= rows - !endp){
     return;
   }
   if(line + !!topp >= 1){
     int c = cols - 80;
-    static const cchar_t bchrs[] = {
-      { .attr = 0, .chars = L"┤", },
-      { .attr = 0, .chars = L"├", },
-    };
-
-    mvwaddch(rb->win,line,START_COL + 10 + 1,attr | ACS_LLCORNER);
-    wadd_wch(rb->win,&bchrs[0]);
-    cmvwadd_wch(rb->win,line,cols - 3 - c,&bchrs[1]);
+    cmvwadd_wch(n, line, START_COL + 10 + 1, L"╰");
+    cmvwadd_wch(n, line, START_COL + 12, L"┤");
+    cmvwadd_wch(n, line, cols - 3 - c, L"├");
     if(c > 0){
-      whline(rb->win,ACS_HLINE,c);
-      wmove(rb->win,line,cols - 2);
+      cmvwhline(n, line, cols - 3 - c + 1, "─", c);
+      ncplane_cursor_move_yx(n, line, cols - 2);
     }
-    waddch(rb->win,attr | ACS_LRCORNER);
+    cmvwadd_wch(n, line, cols - 2, L"╯");
   }
   ++line;
 }
-*/
 
 // returns the number of lines printed
 static int
-print_adapter_devs(const adapterstate *as, int rows, int cols, unsigned topp,
-                   unsigned endp){
+print_adapter_devs(struct ncplane* n, const adapterstate *as,
+                   int rows, int cols, unsigned topp, unsigned endp){
   // If the interface is down, we don't lead with the summary line
   const blockobj *cur;
   long line;
@@ -1582,7 +1594,7 @@ print_adapter_devs(const adapterstate *as, int rows, int cols, unsigned topp,
   cur = as->selected;
   line = as->selline;
   while(cur && line + (long)device_lines(as->expansion, cur) >= !!topp){
-    // FIXME print_dev(as, cur, line, rows, cols, topp, endp);
+    print_dev(n, as, cur, line, rows, cols, topp, endp);
     // here we traverse, then account...
     if( (cur = cur->prev) ){
       line -= device_lines(as->expansion, cur);
@@ -1592,7 +1604,7 @@ print_adapter_devs(const adapterstate *as, int rows, int cols, unsigned topp,
     (long)device_lines(as->expansion, as->selected)) : -(long)topp + 1;
   cur = (as->selected ? as->selected->next : as->bobjs);
   while(cur && line < rows){
-    // FIXME print_dev(as, cur, line, rows, cols, topp, endp);
+    print_dev(n, as, cur, line, rows, cols, topp, endp);
     // here, we account before we traverse. this is correct.
     line += device_lines(as->expansion, cur);
     cur = cur->next;
@@ -1618,7 +1630,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
     bcolor = UBORDER_COLOR;
     attrs = 0;
   }
-  cwattrset(nc, (attrs << 16u) | bcolor);
+  cwattrset(nc, attrs | bcolor);
   if(abovetop == 0){
     if(belowend == 0){
       bevel(nc);
@@ -1697,13 +1709,13 @@ redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
                bool cliptop, void* vas){
   const adapterstate *as = vas;
   int rows, cols;
-  unsigned topp, endp;
 
   ncplane_dim_yx(n, &rows, &cols);
   assert(cols); // FIXME
-  adapter_box(as, n, topp, endp);
+  // adapter_box(as, n, 0, 0);
   // FIXME express in terms of begx/begy/maxx/maxy
-  return print_adapter_devs(as, rows, cols, cliptop, !cliptop);
+fprintf(stderr, "begx/y %d/%d -> maxx/y %d/%d\n", begx, begy, maxx, maxy);
+  return print_adapter_devs(n, as, rows, cols, cliptop, !cliptop);
 }
 
 // -------------------------------------------------------------------------
@@ -3092,6 +3104,7 @@ new_partition(void){
   raise_form("select a partition type",ptype_callback,ops_ptype,opcount,
       defidx,PARTTYPE_TEXT);
 }
+*/
 
 // -------------------------------------------------------------------------
 // -- end partition type form
@@ -3107,24 +3120,23 @@ partition_table_makeablep(const blockobj *b){
     return 0;
   }
   if(blockobj_unloadedp(b)){
-    locked_diag("Media is not loaded on %s",b->d->name);
+    locked_diag("Media is not loaded on %s", b->d->name);
     return 0;
   }
   if(!selected_unpartitionedp()){
-    locked_diag("Partition table exists on %s",b->d->name);
+    locked_diag("Partition table exists on %s", b->d->name);
     return 0;
   }
   if(b->d->layout != LAYOUT_NONE){
-    locked_diag("Will not create partition table on %s",b->d->name);
+    locked_diag("Will not create partition table on %s", b->d->name);
     return 0;
   }
   if(b->d->mnttype){
-    locked_diag("Filesystem signature exists on %s",b->d->name);
+    locked_diag("Filesystem signature exists on %s", b->d->name);
     return 0;
   }
   return 1;
 }
-*/
 
 static void
 pttype_callback(const char *pttype){
@@ -3258,53 +3270,49 @@ create_reelbox(adapterstate *as,int rows,int scrline,int cols){
   }
   return ret;
 }
+*/
 
 static const controller *
 get_current_adapter(void){
   if(current_adapter){
-    return current_adapter->as->c;
+    return current_adapter->c;
   }
   return NULL;
 }
-*/
 
 static int
-select_adapter_dev(adapterstate* as, blockobj* bo, int delta){
+select_adapter_dev(adapterstate* as, blockobj* bo){
   assert(bo != as->selected);
   if((as->selected = bo) == NULL){
     as->selline = -1;
   }else{
-    as->selline += delta;
+    // FIXME as->selline += delta;
   }
   return 0;
 }
 
-/*
-// Positive delta moves down, negative delta moves up, except for l2 == NULL
-// where we always move to -1 (and delta is ignored).
 static void
-select_adapter_node(reelbox *rb,struct blockobj *bo,int delta){
-  assert(bo != rb->selected);
-  if((rb->selected = bo) == NULL){
-    rb->selline = -1;
-  }else{
-    rb->selline += delta;
+select_adapter_node(adapterstate* as, struct blockobj* bo){
+  assert(bo != as->selected);
+  if((as->selected = bo) == NULL){
+    as->selline = -1;
   }
 }
 
 static void
 deselect_adapter_locked(void){
-  reelbox *rb;
+  adapterstate* as;
 
-  if((rb = current_adapter) == NULL){
+  if((as = current_adapter) == NULL){
     return;
   }
-  if(rb->selected == NULL){
+  if(as->selected == NULL){
     return;
   }
-  select_adapter_node(rb,NULL,0);
+  select_adapter_node(as, NULL);
 }
 
+/*
 // Move this adapter, possibly hiding it. Negative delta indicates movement
 // up, positive delta moves down. rows and cols describe the containing window.
 static void
@@ -3411,47 +3419,47 @@ push_adapters_below(reelbox *pusher,int rows,int cols,int delta){
   // Now, if our delta was negative, see if we pulled any down below us
   // FIXME pull_adapters_down();
 }
+*/
 
 static void
-detail_fs(WINDOW *hw,const device *d,int row){
+detail_fs(struct ncplane* hw, const device* d, int row){
   if(d->mnttype){
     char buf[BPREFIXSTRLEN + 1];
 
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cmvwprintw(hw,row,START_COL,BPREFIXFMT "%c ",
-        d->mntsize ? bprefix(d->mntsize,1,buf,1) : "",
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cmvwprintw(hw, row, START_COL, BPREFIXFMT "%c ",
+        d->mntsize ? bprefix(d->mntsize, 1, buf, 1) : "",
         d->mntsize ? 'B' : ' ');
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%s%s",d->label ? "" : "unlabeled ",d->mnttype);
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%s%s", d->label ? "" : "unlabeled ", d->mnttype);
     if(d->label){
-      cwattroff(hw,CELL_STYLE_BOLD);
-      cwprintw(hw," %lc%s%lc",L'“',d->label,L'”');
-      cwattron(hw,CELL_STYLE_BOLD);
+      cwattroff(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, " %lc%s%lc", L'“', d->label, L'”');
+      cwattron(hw, CELL_STYLE_BOLD);
     }
-    cwprintw(hw,"%s",d->mnt.count ? " at " : "");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%s",d->mnt.count ? d->mnt.list[0] : "");
-    cwattron(hw,CELL_STYLE_BOLD);
+    cwprintw(hw, "%s", d->mnt.count ? " at " : "");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%s", d->mnt.count ? d->mnt.list[0] : "");
+    cwattron(hw, CELL_STYLE_BOLD);
   }
 }
-*/
 
 // One must not call diag() from any function called by update_details(), or
 // else you will get one of a deadlock or a stack overflow due to corecursion.
 static int
 update_details(struct ncplane* hw){
-  /*
-  const controller *c = get_current_adapter();
+  const controller* c = get_current_adapter();
   char buf[BPREFIXSTRLEN + 1];
-  const char *pttype;
-  const blockobj *b;
-  const device *d;
-  int cols,rows,n;
+  int cols, rows, curcol, n;
+  const char* pttype;
+  const blockobj* b;
+  const device* d;
 
   if(c == NULL){
     return 0; // FIXME hide thyself!
   }
-  getmaxyx(hw,rows,cols);
+  ncplane_dim_yx(hw, &rows, &cols);
+  ncplane_cursor_yx(hw, NULL, &curcol);
   if(cols < START_COL * 2){
     return 0;
   }
@@ -3459,30 +3467,30 @@ update_details(struct ncplane* hw){
     return 0;
   }
   for(n = 1 ; n < rows - 1 ; ++n){
-    cmvwhline(hw,n,START_COL,' ',cols - 2);
+    cmvwhline(hw, n, START_COL, " ", cols - 2);
   }
-  cwattrset(hw,SUBDISPLAY_ATTR);
-  cmvwprintw(hw,1,START_COL,"%-*.*s",cols - 2,cols - 2,c->name);
+  cwattrset(hw, SUBDISPLAY_ATTR);
+  cmvwprintw(hw, 1, START_COL, "%-*.*s", cols - 2, cols - 2, c->name);
   if(rows == 1){
     return 0;
   }
   if(c->bus == BUS_VIRTUAL){
-    cmvwprintw(hw,2,START_COL,"%-*.*s",cols - 2,cols - 2,"No details available");
+    cmvwprintw(hw, 2, START_COL, "%-*.*s", cols - 2, cols - 2, "No details available");
   }else{
-    cmvwprintw(hw,2,START_COL,"Firmware: ");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwaddstr(hw,c->fwver ? c->fwver : "Unknown");
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwaddstr(hw," BIOS: ");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwaddstr(hw,c->biosver ? c->biosver : "Unknown");
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwaddstr(hw," Load: ");
-    qprefix(c->demand,1,buf,1);
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwaddstr(hw,buf);
-    cwaddstr(hw,"bps");
-    cwattron(hw,CELL_STYLE_BOLD);
+    cmvwprintw(hw, 2, START_COL, "Firmware: ");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwaddstr(hw, c->fwver ? c->fwver : "Unknown");
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwaddstr(hw, " BIOS: ");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwaddstr(hw, c->biosver ? c->biosver : "Unknown");
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwaddstr(hw, " Load: ");
+    qprefix(c->demand, 1, buf, 1);
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwaddstr(hw, buf);
+    cwaddstr(hw, "bps");
+    cwattron(hw, CELL_STYLE_BOLD);
   }
   if((b = current_adapter->selected) == NULL){
     return 0;
@@ -3496,105 +3504,105 @@ update_details(struct ncplane* hw){
     cwaddstr(hw, d->model ? d->model : "n/a");
     cwaddstr(hw, d->revision ? d->revision : "");
     cwattron(hw, CELL_STYLE_BOLD);
-    cwprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf,  1));
+    cwprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf, 1));
     cwattroff(hw, CELL_STYLE_BOLD);
     cwaddstr(hw, sn ? sn : "n/a");
     cwattron(hw, CELL_STYLE_BOLD);
-    if(getmaxx(hw) - getcurx(hw) > 13){
-      cwprintw(hw," WC%lc WRV%lc RO%lc",
+    if(cols - curcol > 13){
+      cwprintw(hw, " WC%lc WRV%lc RO%lc",
           d->blkdev.wcache ? L'+' : L'-',
           d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
           d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
           d->roflag ? L'+' : L'-');
     }
     assert(d->physsec <= 4096);
-    cmvwprintw(hw,4,START_COL,"Sectors: ");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"(");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%uB ",d->logsec);
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"logical / ");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%uB ",d->physsec);
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"physical) %s",
+    cmvwprintw(hw, 4, START_COL, "Sectors: ");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%ju ", d->size / (d->logsec ? d->logsec : 1));
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "(");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%uB ", d->logsec);
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "logical / ");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%uB ", d->physsec);
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "physical) %s",
     transport_str(d->blkdev.transport));
     if(transport_bw(d->blkdev.transport)){
       uintmax_t transbw = transport_bw(d->blkdev.transport);
-      cwprintw(hw," (");
-      cwattroff(hw,CELL_STYLE_BOLD);
+      cwprintw(hw, " (");
+      cwattroff(hw, CELL_STYLE_BOLD);
       // FIXME throws -Wformat-truncation on gcc9
-      cwprintw(hw, "%sbps", qprefix(transbw, 1, buf,  1));
-      cwattron(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,")");
+      cwprintw(hw, "%sbps", qprefix(transbw, 1, buf, 1));
+      cwattron(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, ")");
     }
   }else{
-    cmvwprintw(hw,3,START_COL,"%s: %s %s (%s) RO%lc",d->name,
+    cmvwprintw(hw, 3, START_COL, "%s: %s %s (%s) RO%lc", d->name,
           d->model ? d->model : "n/a",
           d->revision ? d->revision : "n/a",
-          bprefix(d->size,1,buf,1),
+          bprefix(d->size, 1, buf, 1),
           d->roflag ? L'+' : L'-');
     if(d->layout == LAYOUT_MDADM){
-      cwprintw(hw," Stride: ");
-      cwattroff(hw,CELL_STYLE_BOLD);
+      cwprintw(hw, " Stride: ");
+      cwattroff(hw, CELL_STYLE_BOLD);
       if(d->mddev.stride == 0){
-        cwaddstr(hw,"n/a");
+        cwaddstr(hw, "n/a");
       }else{
-        cwprintw(hw,"%sB",bprefix(d->mddev.stride,1,buf,1));
+        cwprintw(hw, "%sB", bprefix(d->mddev.stride, 1, buf, 1));
       }
-      cwattron(hw,CELL_STYLE_BOLD);
-      cwprintw(hw," SWidth: ");
-      cwattroff(hw,CELL_STYLE_BOLD);
+      cwattron(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, " SWidth: ");
+      cwattroff(hw, CELL_STYLE_BOLD);
       if(d->mddev.swidth == 0){
-        cwaddstr(hw,"n/a");
+        cwaddstr(hw, "n/a");
       }else{
-        cwprintw(hw,"%u",d->mddev.swidth);
+        cwprintw(hw, "%u", d->mddev.swidth);
       }
-      cwattron(hw,CELL_STYLE_BOLD);
+      cwattron(hw, CELL_STYLE_BOLD);
     }
     assert(d->physsec <= 4096);
-    cmvwprintw(hw,4,START_COL,"Sectors: ");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%ju ",d->size / (d->logsec ? d->logsec : 1));
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"(");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%uB ",d->logsec);
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"logical / ");
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%uB ",d->physsec);
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"physical)");
+    cmvwprintw(hw, 4, START_COL, "Sectors: ");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%ju ", d->size / (d->logsec ? d->logsec : 1));
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "(");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%uB ", d->logsec);
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "logical / ");
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%uB ", d->physsec);
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "physical)");
   }
-  cmvwprintw(hw,5,START_COL,"Partitioning: ");
-  cwattroff(hw,CELL_STYLE_BOLD);
+  cmvwprintw(hw, 5, START_COL, "Partitioning: ");
+  cwattroff(hw, CELL_STYLE_BOLD);
   pttype = (d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
       d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
       d->layout == LAYOUT_DM ? d->dmdev.pttable ? d->dmdev.pttable : "none" :
       "n/a");
-  cwprintw(hw,"%s",pttype);
-  cwattron(hw,CELL_STYLE_BOLD);
-  cwaddstr(hw," I/O scheduler: ");
-  cwattroff(hw,CELL_STYLE_BOLD);
-  cwaddstr(hw,d->sched ? d->sched : "custom");
-  cwattron(hw,CELL_STYLE_BOLD);
+  cwprintw(hw, "%s", pttype);
+  cwattron(hw, CELL_STYLE_BOLD);
+  cwaddstr(hw, " I/O scheduler: ");
+  cwattroff(hw, CELL_STYLE_BOLD);
+  cwaddstr(hw, d->sched ? d->sched : "custom");
+  cwattron(hw, CELL_STYLE_BOLD);
   if(blockobj_unloadedp(b)){
-    cmvwprintw(hw,6,START_COL,"Media is not loaded");
+    cmvwprintw(hw, 6, START_COL, "Media is not loaded");
     return 0;
   }
   if(blockobj_unpartitionedp(b)){
     char ubuf[BPREFIXSTRLEN + 1];
 
-    cwattroff(hw,CELL_STYLE_BOLD);
-    cmvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-        bprefix(d->size,1,ubuf,1));
-    cwattron(hw,CELL_STYLE_BOLD);
-    cwprintw(hw,"%s","unpartitioned media");
-    detail_fs(hw,b->d,7);
+    cwattroff(hw, CELL_STYLE_BOLD);
+    cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
+        bprefix(d->size, 1, ubuf, 1));
+    cwattron(hw, CELL_STYLE_BOLD);
+    cwprintw(hw, "%s", "unpartitioned media");
+    detail_fs(hw, b->d, 7);
     return 0;
   }
   if(b->zone){
@@ -3605,54 +3613,53 @@ update_details(struct ncplane* hw){
       assert(b->zone->p->layout == LAYOUT_PARTITION);
       bprefix(b->zone->p->partdev.alignment, 1, align, 1);
       // FIXME limit length!
-      cwattroff(hw,CELL_STYLE_BOLD);
-      cmvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-          bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,1));
-      cwattron(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,"P%lc%lc ",subscript((b->zone->p->partdev.pnumber % 100 / 10)),
+      cwattroff(hw, CELL_STYLE_BOLD);
+      cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
+          bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1));
+      cwattron(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, "P%lc%lc ", subscript((b->zone->p->partdev.pnumber % 100 / 10)),
           subscript((b->zone->p->partdev.pnumber % 10)));
-      cwattroff(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,"%ju",b->zone->fsector);
-      cwattron(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,"→");
-      cwattroff(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,"%ju ",b->zone->lsector);
-      cwattron(hw,CELL_STYLE_BOLD);
-      cwaddstr(hw,b->zone->p->name);
-      cwattroff(hw,CELL_STYLE_BOLD);
+      cwattroff(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, "%ju", b->zone->fsector);
+      cwattron(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, "→");
+      cwattroff(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, "%ju ", b->zone->lsector);
+      cwattron(hw, CELL_STYLE_BOLD);
+      cwaddstr(hw, b->zone->p->name);
+      cwattroff(hw, CELL_STYLE_BOLD);
       if(b->zone->p->partdev.pname){
-        cwprintw(hw," “%ls” ",b->zone->p->partdev.pname);
+        cwprintw(hw, " “%ls” ", b->zone->p->partdev.pname);
       }else{
-        cwprintw(hw," (%s) ","unnamed");
+        cwprintw(hw, " (%s) ", "unnamed");
       }
-      cwattron(hw,CELL_STYLE_BOLD);
-                        if(getcurx(hw) <= cols - 2 - 4){
-        cwprintw(hw,"%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
+      cwattron(hw, CELL_STYLE_BOLD);
+                        if(curcol <= cols - 2 - 4){
+        cwprintw(hw, "%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
       }
-      if(getcurx(hw) <= cols - 2 - 11){
+      if(curcol <= cols - 2 - 11){
         cwprintw(hw, " %sB align", align);
       }
-      detail_fs(hw,b->zone->p,7);
+      detail_fs(hw, b->zone->p, 7);
     }else{
       // FIXME print alignment for unpartitioned space as well,
       // but not until we implement zones in core (bug 252)
       // or we'll need recreate alignment() etc here
-      cwattroff(hw,CELL_STYLE_BOLD);
-      cmvwprintw(hw,6,START_COL,BPREFIXFMT "B ",
-          bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1,zbuf,1));
-      cwattron(hw,CELL_STYLE_BOLD);
-      cwattroff(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,"%ju",b->zone->fsector);
-      cwattron(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,"→");
-      cwattroff(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,"%ju ",b->zone->lsector);
-      cwattron(hw,CELL_STYLE_BOLD);
-      cwprintw(hw,"%s ",b->zone->rep == REP_METADATA ?
+      cwattroff(hw, CELL_STYLE_BOLD);
+      cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
+          bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1));
+      cwattron(hw, CELL_STYLE_BOLD);
+      cwattroff(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, "%ju", b->zone->fsector);
+      cwattron(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, "→");
+      cwattroff(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, "%ju ", b->zone->lsector);
+      cwattron(hw, CELL_STYLE_BOLD);
+      cwprintw(hw, "%s ", b->zone->rep == REP_METADATA ?
           "partition table metadata" : "unpartitioned space");
     }
   }
-*/
   return 0;
 }
 
@@ -3757,7 +3764,7 @@ unlock_ncurses(void){
   screen_update();
   pthread_mutex_unlock(&bfl);
   unlock_growlight();
-}  
+}
 
 // Used in growlight callbacks, since the growlight lock will already be held
 // in any such case.
@@ -3884,149 +3891,6 @@ push_adapters_above(reelbox *pusher,int rows,int cols,int delta){
   // FIXME pull_adapters_up(pusher,rows,cols,delta);
 }
 
-// Upon entry, the display might not have been updated to reflect a change in
-// the adapter's data. If so, the adapter panel is resized (subject to the
-// containing window's constraints) and other panels are moved as necessary.
-// The adapter's display is synchronized via redraw_adapter() whether a resize
-// is performed or not (unless it's invisible). The display ought be partially
-// visible -- ie, if we ought be invisible, we ought be already and this is not
-// going to make us so. We do not redraw -- that's the callers job (we
-// can't redraw, since we might not yet have been moved).
-static int
-resize_adapter(reelbox *rb){
-  const controller *i,*curi = get_current_adapter();
-  int rows,cols,subrows;
-  adapterstate *is;
-
-  i = rb->as->c;
-  if(panel_hidden(rb->panel)){ // resize upon becoming visible
-    return 0;
-  }
-  is = rb->as;
-  getmaxyx(stdscr,rows,cols);
-  const int nlines = adapter_lines_bounded(is,rows);
-  subrows = getmaxy(rb->win);
-  if(nlines < subrows){ // Shrink the adapter
-    werase(rb->win);
-    // Without screen_update(), the werase() doesn't take effect,
-    // even if wclear() is used.
-    screen_update();
-    wresize(rb->win,nlines,PAD_COLS(cols));
-    replace_panel(rb->panel,rb->win);
-    if(rb->scrline < current_adapter->scrline){
-      rb->scrline += subrows - nlines;
-      move_panel(rb->panel,rb->scrline,0);
-      pull_adapters_down(rb,rows,cols,subrows - nlines);
-    }else{
-      pull_adapters_up(rb,rows,cols,subrows - nlines);
-    }
-    return 0;
-  }else if(nlines == subrows){ // otherwise, expansion
-    return 0;
-  }
-  // The current adapter grows in both directions and never becomes a
-  // partial adapter. We don't try to make it one here, and
-  // move_adapter() will refuse to perform a move resulting in one.
-  if(i == curi){
-    // We can't already occupy the screen, or the nlines == subrows
-    // check would have thrown us out. There *is* space to grow.
-    if(rb->scrline + subrows < rows - 1){ // can we grow down?
-      int delta = (rows - 1) - (rb->scrline + subrows);
-
-      if(delta + subrows > nlines){
-        delta = nlines - subrows;
-      }
-      push_adapters_below(rb,rows,cols,delta);
-      subrows += delta;
-    }
-    if(nlines > subrows){ // can we grow up?
-      int delta;
-
-      if(rb->scrline - 1 + subrows > nlines){
-        delta = subrows - nlines;
-      }else{
-        delta = -1;
-      }
-      rb->scrline += delta;
-      push_adapters_above(rb,rows,cols,delta);
-      move_panel(rb->panel,rb->scrline,0);
-    }
-    wresize(rb->win,nlines,PAD_COLS(cols));
-    replace_panel(rb->panel,rb->win);
-  }else{ // we're not the current adapter
-    int delta;
-
-    if( (delta = bottom_space_p(rows)) ){ // always occupy free rows
-      if(delta > nlines - subrows){
-        delta = nlines - subrows;
-      }
-      delta -= gap_below(rb); // FIXME questionable
-      push_adapters_below(rb,rows,cols,delta);
-      subrows += delta;
-    }
-    if(nlines > subrows){
-      if(rb->scrline > current_adapter->scrline){ // only down
-        delta = (rows - 1) - (rb->scrline + subrows);
-        if(delta > nlines - subrows){
-          delta = nlines - subrows;
-        }
-        delta -= gap_below(rb);
-        if(delta > 0){
-          push_adapters_below(rb,rows,cols,delta);
-        }
-      }else{ // only up
-        delta = rb->scrline - 1;
-        if(delta > nlines - subrows){
-          delta = nlines - subrows;
-        }
-        delta -= gap_above(rb);
-        if(delta > 0){
-          push_adapters_above(rb,rows,cols,-delta);
-          rb->scrline -= delta;
-          move_adapter_generic(rb,rows,cols,-delta);
-        }
-      }
-      if(delta > 0){
-        subrows += delta;
-      }
-      if(nlines > subrows){
-        if( (delta = gap_below(rb)) ){
-          subrows += delta > (nlines - subrows) ?
-            nlines - subrows : delta;
-        }
-      }
-      if(nlines > subrows){
-        if( (delta = gap_above(rb)) ){
-          subrows += delta > (nlines - subrows) ?
-            nlines - subrows : delta;
-        }
-      }
-    }
-    if(subrows != getmaxy(rb->win)){
-      if(subrows > 0){
-        wresize(rb->win,subrows,PAD_COLS(cols));
-        replace_panel(rb->panel,rb->win);
-      }else{
-// fprintf(stderr, "THE BIGGEST HIDE (%d, %d)\n", subrows, getmaxy(rb->win));
-        werase(rb->win);
-        hide_panel(rb->panel);
-        if(rb->next){
-          rb->next->prev = rb->prev;
-        }else{
-          last_reelbox = rb->prev;
-        }
-        if(rb->prev){
-          rb->prev->next = rb->next;
-        }else{
-          top_reelbox = rb->next;
-        }
-        // need NULL out adapter reference FIXME
-      }
-    }
-  }
-  return 0;
-}
-
 // Pull the adapters above the puller down to fill unused space. Move from
 // the puller out, as we might need make visible some unknown number of
 // adapters (and the space has already been made).
@@ -4091,280 +3955,53 @@ pull_adapters_down(reelbox *puller,int rows,int cols,int delta){
   }
 }
 
-static inline int
-top_space_p(int rows){
-  if(!top_reelbox){
-    return rows - 2;
-  }
-  return getbegy(top_reelbox->win) - 1;
-}
-
-// Selecting the previous or next adapter (this doesn't apply to an arbitrary
-// repositioning): There are two phases to be considered.
-//
-//  1. There's not enough data to fill the screen. In this case, none will lose
-//     or gain visibility, but they might be rotated.
-//  2. There's a screen's worth, but not much more than that. An adapter might
-//     be split across the top/bottom boundaries. adapters can be caused to
-//     lose or gain visibility.
-static void
-use_next_controller(WINDOW *w){
-  int rows,cols,delta;
-  reelbox *oldrb;
-  reelbox *rb;
-
-  if(!current_adapter || current_adapter->as->next == current_adapter->as){
-    return;
-  }
-// fprintf(stderr,"\nWant next adapter (%s->%s)\n",current_adapter->as->c->name,
-//         current_adapter->as->next->c->name);
-  getmaxyx(w,rows,cols);
-  oldrb = current_adapter;
-  deselect_adapter_locked();
-  // Don't redraw the old interface yet; it might have been moved/hidden
-  if(current_adapter->next == NULL){
-    adapterstate *is = current_adapter->as->next;
-
-    if(is->rb == NULL){ // it's off-screen
-      is->rb = create_reelbox(is,rows,(rows - 1) - adapter_lines_bounded(is,rows),cols);
-      assert(is->rb);
-      current_adapter = is->rb;
-      delta = -adapter_lines_bounded(is,rows);
-      if(getbegy(last_reelbox->win) + getmaxy(last_reelbox->win) >= rows - 1){
-        --delta;
-      }
-      push_adapters_above(NULL,rows,cols,delta);
-      if((current_adapter->prev = last_reelbox) == NULL){
-        top_reelbox = current_adapter;
-      }else{
-        last_reelbox->next = current_adapter;
-      }
-      current_adapter->next = NULL;
-      last_reelbox = current_adapter;
-      if( (delta = top_space_p(rows)) ){
-        pull_adapters_up(NULL,rows,cols,delta);
-      }
-      return;
-    }
-    current_adapter = is->rb; // it's at the top
-  }else{
-    current_adapter = current_adapter->next; // it's below us
-  }
-  rb = current_adapter;
-  // If the newly-selected adapter is wholly visible, we'll not need
-  // change visibility of any adapters. If it's above us, we'll need
-  // rotate the adapters 1 unit, moving all. Otherwise, none change
-  // position. Redraw all affected adapters.
-  if(adapter_wholly_visible_p(rows, rb)){
-// fprintf(stderr, "[%s] is VISIBLE\n", rb->as->c->name); // current_adapter
-    if(rb->scrline > oldrb->scrline){ // new is below old
-      redraw_adapter(rb);
-    }else{ // we were at the bottom (rotate)
-      if(top_reelbox->next){
-        top_reelbox->next->prev = NULL;
-        top_reelbox = top_reelbox->next;
-      }else{
-        top_reelbox = last_reelbox;
-      }
-      push_adapters_above(rb,rows,cols,-getmaxy(rb->win) - 1);
-      if(last_reelbox){
-        rb->scrline = last_reelbox->scrline + getmaxy(last_reelbox->win) + 1;
-      }else{
-        rb->scrline = 0;
-      }
-      rb->prev = last_reelbox;
-      last_reelbox->next = rb;
-      rb->next = NULL;
-      last_reelbox = rb;
-      move_adapter_generic(rb,rows,cols,rb->scrline - getbegy(rb->win));
-    }
-  }else{ // new is partially visible...
-    if(rb->scrline > oldrb->scrline){ // ...at the bottom
-// fprintf(stderr, "rb->as->c->name [%s] is PART-VISIBLE-BOTTOM\n",
-//         rb->as->c->name); // current_adapter
-      adapterstate *is = current_adapter->as;
-      delta = getmaxy(rb->win) - adapter_lines_bounded(is,rows);
-      rb->scrline = rows - (adapter_lines_bounded(is,rows) + 1);
-      push_adapters_above(rb,rows,cols,delta);
-      move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
-      wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
-      replace_panel(rb->panel,rb->win);
-    }else{ // ...at the top (rotate)
-// fprintf(stderr, "rb->as->c->name [%s] is PART-VISIBLE-TOP\n",
-//         rb->as->c->name); // current_adapter
-      assert(top_reelbox == rb);
-      rb->scrline = rows - 1 - adapter_lines_bounded(rb->as,rows);
-      top_reelbox->next->prev = NULL;
-      top_reelbox = top_reelbox->next;
-      delta = -adapter_lines_bounded(rb->as,rows);
-      if(getbegy(last_reelbox->win) + getmaxy(last_reelbox->win) >= (rows - 1)){
-        --delta;
-      }
-      push_adapters_above(NULL,rows,cols,delta);
-      rb->next = NULL;
-      if( (rb->prev = last_reelbox) ){
-        last_reelbox->next = rb;
-      }else{
-        top_reelbox = rb;
-      }
-      last_reelbox = rb;
-      move_adapter_generic(rb,rows,cols,rb->scrline);
-      wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
-      replace_panel(rb->panel,rb->win);
-    }
-  }
-  if( (delta = top_space_p(rows)) ){
-    pull_adapters_up(NULL,rows,cols,delta);
-  }
-}
+*/
 
 static void
-use_prev_zone(blockobj *b){
+use_prev_zone(blockobj* b){
   if(b->zone){
     b->zone = b->zone->prev;
   }
 }
 
 static void
-use_next_zone(blockobj *b){
+use_next_zone(blockobj* b){
   if(b->zone){
     b->zone = b->zone->next;
   }
 }
 
 static void
-use_prev_controller(WINDOW *w){
-  reelbox *oldrb,*rb;
-  int rows,cols;
-
-  if(!current_adapter || current_adapter->as->next == current_adapter->as){
-    return;
-  }
-  getmaxyx(w,rows,cols);
-  oldrb = current_adapter;
-  deselect_adapter_locked();
-  // Don't redraw the old adapter yet; it might have been moved/hidden
-  if(current_adapter->prev){
-    current_adapter = current_adapter->prev;
-  }else{
-    adapterstate *as = current_adapter->as->prev;
-
-    if(as->rb){
-      current_adapter = as->rb;
-    }else{
-      as->rb = create_reelbox(as,rows,0,cols);
-      assert(as);
-      current_adapter = as->rb;
-      push_adapters_below(NULL,rows,cols,adapter_lines_bounded(as,rows) + 1);
-      if((current_adapter->next = top_reelbox) == NULL){
-        last_reelbox = current_adapter;
-      }else{
-        top_reelbox->prev = current_adapter;
-      }
-      current_adapter->prev = NULL;
-      top_reelbox = current_adapter;
-      return;
-    }
-  }
-  rb = current_adapter;
-  // If the newly-selected adapter is wholly visible, we'll not need
-  // change visibility of any adapters. If it's below us, we'll need
-  // rotate the adapters 1 unit, moving all. Otherwise, none need change
-  // position. Redraw all affected adapters.
-  if(adapter_wholly_visible_p(rows,rb)){
-    if(rb->scrline < oldrb->scrline){ // new is above old
-      redraw_adapter(rb);
-    }else{ // we were at the top
-      // Selecting the previous adapter is simpler -- we
-      // take one from the bottom, and stick it in row 1.
-      if(last_reelbox->prev){
-        last_reelbox->prev->next = NULL;
-        last_reelbox = last_reelbox->prev;
-      }else{
-        last_reelbox = top_reelbox;
-      }
-      pull_adapters_down(rb,rows,cols,getmaxy(rb->win) + 1);
-      rb->scrline = 0;
-      rb->next = top_reelbox;
-      top_reelbox->prev = rb;
-      rb->prev = NULL;
-      top_reelbox = rb;
-      move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
-    }
-  }else{ // partially visible...
-    adapterstate *is = current_adapter->as;
-
-    if(rb->scrline < oldrb->scrline){ // ... at the top
-      rb->scrline = 0;
-      push_adapters_below(rb,rows,cols,-(getmaxy(rb->win) - adapter_lines_bounded(is,rows)));
-      wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
-      replace_panel(rb->panel,rb->win);
-    }else{ // at the bottom
-      if(last_reelbox->prev){
-        last_reelbox->prev->next = NULL;
-        last_reelbox = last_reelbox->prev;
-      }else{
-        last_reelbox = top_reelbox;
-      }
-      push_adapters_below(NULL,rows,cols,adapter_lines_bounded(is,rows) + 1);
-      rb->scrline = 0;
-      if( (rb->next = top_reelbox) ){
-        top_reelbox->prev = rb;
-      }else{
-        last_reelbox = rb;
-      }
-      rb->prev = NULL;
-      top_reelbox = rb;
-      move_adapter_generic(rb,rows,cols,getbegy(rb->win) - rb->scrline);
-      wresize(rb->win,adapter_lines_bounded(rb->as,rows),PAD_COLS(cols));
-      replace_panel(rb->panel,rb->win);
-    }
-  }
-}
-
-static void
 use_prev_device(void){
-  reelbox *rb;
-  int delta;
+  adapterstate* as;
 
-  if((rb = current_adapter) == NULL){
+  if((as = current_adapter) == NULL){
     return;
   }
-  if(rb->selected == NULL || rb->selected->prev == NULL){
-    if(rb->prev){
+  if(as->selected == NULL || as->selected->prev == NULL){
+    if(as->prev){
       locked_diag("Press PageUp to go to the previous adapter");
     }
     return;
   }
-  delta = -device_lines(rb->as->expansion,rb->selected->prev);
-  if(rb->selline + delta <= 1){ // FIXME verify
-    delta = 1 - rb->selline;
-  }
-  select_adapter_dev(rb,rb->selected->prev,delta);
+  select_adapter_dev(as, as->selected->prev);
 }
 
 static void
 use_next_device(void){
-  reelbox *rb;
-  int delta;
+  adapterstate* as;
 
-  if((rb = current_adapter) == NULL){
+  if((as = current_adapter) == NULL){
     return;
   }
-  if(rb->selected == NULL || rb->selected->next == NULL){
-    if(rb->next){
+  if(as->selected == NULL || as->selected->next == NULL){
+    if(as->next){
       locked_diag("Press PageDown to go to the next adapter");
     }
     return;
   }
-  delta = device_lines(rb->as->expansion,rb->selected);
-  if(rb->selline + delta + device_lines(rb->as->expansion,rb->selected->next) >= getmaxy(rb->win) - 1){
-    delta = (getmaxy(rb->win) - 1 - device_lines(rb->as->expansion,rb->selected->next))
-        - rb->selline;
-  }
-  select_adapter_dev(rb,rb->selected->next,delta);
+  select_adapter_dev(as, as->selected->next);
 }
-*/
 
 static const int DIAGROWS = 14;
 
@@ -4915,47 +4552,45 @@ recompute_selection(adapterstate *is,int oldsel,int oldrows,int newrows){
     is->rb->selline = newsel;
   }
 }
+*/
 
 static int
 expand_adapter_locked(void){
   adapterstate *is;
-  int old,oldrows;
 
   if(!current_adapter){
     return 0;
   }
-  is = current_adapter->as;
+  is = current_adapter;
   if(is->expansion == EXPANSION_FULL){
     return 0;
   }
   ++is->expansion;
-  old = current_adapter->selline;
-  oldrows = getmaxy(current_adapter->win);
-  resize_adapter(current_adapter);
-  recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
+  // int old, oldrows;
+  // old = current_adapter->selline;
+  // oldrows = getmaxy(current_adapter->win);
+  // recompute_selection(is, old, oldrows, getmaxy(current_adapter->win));
   return 0;
 }
 
 static int
 collapse_adapter_locked(void){
   adapterstate *is;
-  int old,oldrows;
 
   if(!current_adapter){
     return 0;
   }
-  is = current_adapter->as;
+  is = current_adapter;
   if(is->expansion == EXPANSION_NONE){
     return 0;
   }
   --is->expansion;
-  old = current_adapter->selline;
-  oldrows = getmaxy(current_adapter->win);
-  resize_adapter(current_adapter);
-  recompute_selection(is,old,oldrows,getmaxy(current_adapter->win));
+  // int old, oldrows;
+  // old = current_adapter->selline;
+  // oldrows = getmaxy(current_adapter->win);
+  // recompute_selection(is, old, oldrows, getmaxy(current_adapter->win));
   return 0;
 }
-*/
 
 static int
 select_adapter(void){
@@ -4971,7 +4606,7 @@ select_adapter(void){
     return -1;
   }
   assert(as->selline == -1);
-  return select_adapter_dev(as, as->bobjs, 2);
+  return select_adapter_dev(as, as->bobjs);
 }
 
 static void
@@ -5901,7 +5536,7 @@ handle_actform_string_input(int ch){
     form_string_options(fs);
     unlock_ncurses();
     break;
-  case '\r': case '\n': case NCKEY_ENTER:{  
+  case '\r': case '\n': case NCKEY_ENTER:{
     char *str;
 
     lock_ncurses();
@@ -5956,7 +5591,8 @@ static int
 handle_subwindow_input(int ch){
   switch(ch){
     default:
-      locked_diag("FIXME handle subwindow input");
+      // locked_diag("FIXME handle subwindow input");
+      break;
   }
   return ch;
 }
@@ -6333,7 +5969,6 @@ handle_ncurses_input(struct ncplane* w){
         unlock_ncurses();
         break;
       }
-/*
       case '+':
         lock_ncurses();
         expand_adapter_locked();
@@ -6345,7 +5980,7 @@ handle_ncurses_input(struct ncplane* w){
         unlock_ncurses();
         break;
       }
-      case KEY_RIGHT: case 'l':{
+      case NCKEY_RIGHT: case 'l':{
         lock_ncurses();
         if(selection_active()){
           use_next_zone(current_adapter->selected);
@@ -6353,7 +5988,7 @@ handle_ncurses_input(struct ncplane* w){
         unlock_ncurses();
         break;
       }
-      case KEY_LEFT: case 'h':{
+      case NCKEY_LEFT: case 'h':{
         lock_ncurses();
         if(selection_active()){
           use_prev_zone(current_adapter->selected);
@@ -6361,37 +5996,36 @@ handle_ncurses_input(struct ncplane* w){
         unlock_ncurses();
         break;
       }
-      case KEY_UP: case 'k':{
+      case NCKEY_UP: case 'k':{
         lock_ncurses();
         use_prev_device();
         unlock_ncurses();
         break;
       }
-      case KEY_DOWN: case 'j':{
+      case NCKEY_DOWN: case 'j':{
         lock_ncurses();
         use_next_device();
         unlock_ncurses();
         break;
       }
-      case KEY_PPAGE:{
+      case NCKEY_PGUP:{
         int sel;
         lock_ncurses();
         sel = selection_active();
-        deselect_adapter_locked();
-        use_prev_controller(w);
+        panelreel_prev(PR);
         if(sel){
           select_adapter();
         }
         unlock_ncurses();
         break;
       }
-      case KEY_NPAGE:{
+      case NCKEY_PGDOWN:{
         int sel;
         lock_ncurses();
 // fprintf(stderr, "-------------- BEGIN PgDown ---------------\n");
         sel = selection_active();
         deselect_adapter_locked();
-        use_next_controller(w);
+        panelreel_next(PR);
         if(sel){
           select_adapter();
         }
@@ -6399,6 +6033,7 @@ handle_ncurses_input(struct ncplane* w){
         unlock_ncurses();
         break;
       }
+/*
       case 'm':{
         lock_ncurses();
         make_ptable();
@@ -6843,8 +6478,6 @@ block_callback(device* d, void* v){
 
     old = as->selline;
     oldrows = getmaxy(as->rb->win);
-// fprintf(stderr, "into resize_adapter line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
-    resize_adapter(as->rb);
 // fprintf(stderr, "into recompute_selection line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
     recompute_selection(as, old, oldrows, getmaxy(as->rb->win));*/
     if(current_adapter == as){
@@ -6869,11 +6502,11 @@ block_free(void *cv, void *bv){
   if( (rb = as->rb) ){
     if(bo == rb->selected){
       if(bo->prev){
-        select_adapter_dev(rb, bo->prev, -1);
+        select_adapter_dev(rb, bo->prev);
       }else if(bo->next){
-        select_adapter_dev(rb, bo->next, 1);
+        select_adapter_dev(rb, bo->next);
       }else{
-        select_adapter_dev(rb, NULL, 0);
+        select_adapter_dev(rb, NULL);
       }
     }
   }
@@ -6894,7 +6527,6 @@ block_free(void *cv, void *bv){
 
     old = as->rb->selline;
     oldrows = getmaxy(rb->win);
-    resize_adapter(as->rb);
     recompute_selection(as, old, oldrows, getmaxy(rb->win));
   }
   unlock_ncurses_growlight();
