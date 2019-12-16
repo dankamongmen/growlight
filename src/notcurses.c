@@ -767,7 +767,7 @@ cwattrset(struct ncplane* n, int style){
 static int
 cwattroff(struct ncplane* n, int style){
   ncplane_styles_off(n, style);
-  compat_set_fg(n, style & ~CELL_STYLE_MASK);
+  //compat_set_fg(n, style & ~CELL_STYLE_MASK);
   return 0;
 }
 
@@ -1606,7 +1606,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
 
       cwprintw(nc, " (%sbps demanded)", qprefix(as->c->demand, 1, dbuf, 1));
     }
-    compat_set_fg(nc, bcolor);
+    cwattron(nc, bcolor);
     cwprintw(nc, "]");
     cwattron(nc, CELL_STYLE_BOLD);
     ncplane_cursor_move_yx(nc, 0, cols - 5);
@@ -1617,9 +1617,9 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
     if(as->c->bus == BUS_PCIe){
       compat_set_fg(nc, bcolor);
       if(current){
-        assert(cwattron(nc, CELL_STYLE_BOLD) == 0);
+        cwattron(nc, CELL_STYLE_BOLD);
       }else{
-        assert(cwattroff(nc, CELL_STYLE_BOLD) == 0);
+        cwattroff(nc, CELL_STYLE_BOLD);
       }
       cmvwprintw(nc, rows - 1, 6, "[");
       compat_set_fg(nc, hcolor);
@@ -1634,7 +1634,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
             as->c->pcie.lanes_neg, pcie_gen(as->c->pcie.gen));
       }
       compat_set_fg(nc, bcolor);
-      assert(cwprintw(nc, "]") != -1);
+      cwprintw(nc, "]");
     }
   }
 }
@@ -3352,21 +3352,21 @@ detail_fs(struct ncplane* hw, const device* d, int row){
   if(d->mnttype){
     char buf[BPREFIXSTRLEN + 1];
 
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cmvwprintw(hw, row, START_COL, BPREFIXFMT "%c ",
         d->mntsize ? bprefix(d->mntsize, 1, buf, 1) : "",
         d->mntsize ? 'B' : ' ');
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%s%s", d->label ? "" : "unlabeled ", d->mnttype);
     if(d->label){
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       cwprintw(hw, " %lc%s%lc", L'“', d->label, L'”');
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
     }
     cwprintw(hw, "%s", d->mnt.count ? " at " : "");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%s", d->mnt.count ? d->mnt.list[0] : "");
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
   }
 }
 
@@ -3395,7 +3395,7 @@ update_details(struct ncplane* hw){
   for(n = 1 ; n < rows - 1 ; ++n){
     cmvwhline(hw, n, START_COL, " ", cols - 2);
   }
-  cwattrset(hw, SUBDISPLAY_ATTR);
+  compat_set_fg_all(hw, SUBDISPLAY_ATTR);
   cmvwprintw(hw, 1, START_COL, "%-*.*s", cols - 2, cols - 2, c->name);
   if(rows == 1){
     return 0;
@@ -3404,19 +3404,19 @@ update_details(struct ncplane* hw){
     cmvwprintw(hw, 2, START_COL, "%-*.*s", cols - 2, cols - 2, "No details available");
   }else{
     cmvwprintw(hw, 2, START_COL, "Firmware: ");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwaddstr(hw, c->fwver ? c->fwver : "Unknown");
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwaddstr(hw, " BIOS: ");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwaddstr(hw, c->biosver ? c->biosver : "Unknown");
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwaddstr(hw, " Load: ");
     qprefix(c->demand, 1, buf, 1);
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwaddstr(hw, buf);
     cwaddstr(hw, "bps");
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
   }
   if((b = get_selected_blockobj()) == NULL){
     return 0;
@@ -3427,14 +3427,14 @@ update_details(struct ncplane* hw){
     const char *sn = d->blkdev.serial;
 
     cmvwprintw(hw, 3, START_COL, "%s: ", d->name);
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwaddstr(hw, d->model ? d->model : "n/a");
     cwaddstr(hw, d->revision ? d->revision : "");
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf, 1));
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwaddstr(hw, sn ? sn : "n/a");
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     if(cols - curcol > 13){
       cwprintw(hw, " WC%lc WRV%lc RO%lc",
           d->blkdev.wcache ? L'+' : L'-',
@@ -3444,26 +3444,26 @@ update_details(struct ncplane* hw){
     }
     assert(d->physsec <= 4096);
     cmvwprintw(hw, 4, START_COL, "Sectors: ");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%ju ", d->size / (d->logsec ? d->logsec : 1));
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "(");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%uB ", d->logsec);
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "logical / ");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%uB ", d->physsec);
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "physical) %s",
     transport_str(d->blkdev.transport));
     if(transport_bw(d->blkdev.transport)){
       uintmax_t transbw = transport_bw(d->blkdev.transport);
       cwprintw(hw, " (");
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       // FIXME throws -Wformat-truncation on gcc9
       cwprintw(hw, "%sbps", qprefix(transbw, 1, buf, 1));
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
       cwprintw(hw, ")");
     }
   }else{
@@ -3474,49 +3474,49 @@ update_details(struct ncplane* hw){
           d->roflag ? L'+' : L'-');
     if(d->layout == LAYOUT_MDADM){
       cwprintw(hw, " Stride: ");
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       if(d->mddev.stride == 0){
         cwaddstr(hw, "n/a");
       }else{
         cwprintw(hw, "%sB", bprefix(d->mddev.stride, 1, buf, 1));
       }
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
       cwprintw(hw, " SWidth: ");
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       if(d->mddev.swidth == 0){
         cwaddstr(hw, "n/a");
       }else{
         cwprintw(hw, "%u", d->mddev.swidth);
       }
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
     }
     assert(d->physsec <= 4096);
     cmvwprintw(hw, 4, START_COL, "Sectors: ");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%ju ", d->size / (d->logsec ? d->logsec : 1));
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "(");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%uB ", d->logsec);
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "logical / ");
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%uB ", d->physsec);
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "physical)");
   }
   cmvwprintw(hw, 5, START_COL, "Partitioning: ");
-  cwattroff(hw, CELL_STYLE_BOLD);
+  ncplane_styles_off(hw, CELL_STYLE_BOLD);
   pttype = (d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
       d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
       d->layout == LAYOUT_DM ? d->dmdev.pttable ? d->dmdev.pttable : "none" :
       "n/a");
   cwprintw(hw, "%s", pttype);
-  cwattron(hw, CELL_STYLE_BOLD);
+  ncplane_styles_on(hw, CELL_STYLE_BOLD);
   cwaddstr(hw, " I/O scheduler: ");
-  cwattroff(hw, CELL_STYLE_BOLD);
+  ncplane_styles_off(hw, CELL_STYLE_BOLD);
   cwaddstr(hw, d->sched ? d->sched : "custom");
-  cwattron(hw, CELL_STYLE_BOLD);
+  ncplane_styles_on(hw, CELL_STYLE_BOLD);
   if(blockobj_unloadedp(b)){
     cmvwprintw(hw, 6, START_COL, "Media is not loaded");
     return 0;
@@ -3524,10 +3524,10 @@ update_details(struct ncplane* hw){
   if(blockobj_unpartitionedp(b)){
     char ubuf[BPREFIXSTRLEN + 1];
 
-    cwattroff(hw, CELL_STYLE_BOLD);
+    ncplane_styles_off(hw, CELL_STYLE_BOLD);
     cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
         bprefix(d->size, 1, ubuf, 1));
-    cwattron(hw, CELL_STYLE_BOLD);
+    ncplane_styles_on(hw, CELL_STYLE_BOLD);
     cwprintw(hw, "%s", "unpartitioned media");
     detail_fs(hw, b->d, 7);
     return 0;
@@ -3540,27 +3540,27 @@ update_details(struct ncplane* hw){
       assert(b->zone->p->layout == LAYOUT_PARTITION);
       bprefix(b->zone->p->partdev.alignment, 1, align, 1);
       // FIXME limit length!
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
           bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1));
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
       cwprintw(hw, "P%lc%lc ", subscript((b->zone->p->partdev.pnumber % 100 / 10)),
           subscript((b->zone->p->partdev.pnumber % 10)));
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       cwprintw(hw, "%ju", b->zone->fsector);
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
       cwprintw(hw, "→");
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       cwprintw(hw, "%ju ", b->zone->lsector);
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
       cwaddstr(hw, b->zone->p->name);
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       if(b->zone->p->partdev.pname){
         cwprintw(hw, " “%ls” ", b->zone->p->partdev.pname);
       }else{
         cwprintw(hw, " (%s) ", "unnamed");
       }
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
                         if(curcol <= cols - 2 - 4){
         cwprintw(hw, "%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
       }
@@ -3572,17 +3572,17 @@ update_details(struct ncplane* hw){
       // FIXME print alignment for unpartitioned space as well,
       // but not until we implement zones in core (bug 252)
       // or we'll need recreate alignment() etc here
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
           bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1));
-      cwattron(hw, CELL_STYLE_BOLD);
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       cwprintw(hw, "%ju", b->zone->fsector);
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
       cwprintw(hw, "→");
-      cwattroff(hw, CELL_STYLE_BOLD);
+      ncplane_styles_off(hw, CELL_STYLE_BOLD);
       cwprintw(hw, "%ju ", b->zone->lsector);
-      cwattron(hw, CELL_STYLE_BOLD);
+      ncplane_styles_on(hw, CELL_STYLE_BOLD);
       cwprintw(hw, "%s ", b->zone->rep == REP_METADATA ?
           "partition table metadata" : "unpartitioned space");
     }
@@ -3656,9 +3656,9 @@ helpstrs(struct ncplane* n){
   }
   row += z;
   if(!get_selected_blockobj()){
-    cwattrset(n, SUBDISPLAY_INVAL_ATTR);
+    compat_set_fg_all(n, SUBDISPLAY_INVAL_ATTR);
   }else{
-    cwattrset(n, SUBDISPLAY_ATTR);
+    compat_set_fg_all(n, SUBDISPLAY_ATTR);
   }
   for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
     cmvwhline(n, row + z, START_COL, " ", cols - 2);
