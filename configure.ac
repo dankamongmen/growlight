@@ -80,9 +80,9 @@ PKG_CHECK_MODULES([notcurses], [notcurses >= 0.4.0])
 	notcurses_CFLAGS+=" $notcurses_CFLAGS"
 	notcurses_LIBS+=" $notcurses_LIBS"
 
-PKG_CHECK_MODULES([notcurses], [notcurses >= 0.0.7])
-	CURSES_CFLAGS+=" $notcurses_CFLAGS"
-	CURSES_LIBS+=" $notcurses_LIBS"
+PKG_CHECK_MODULES([outcurses], [outcurses >= 0.0.7])
+	CURSES_CFLAGS+=" $outcurses_CFLAGS"
+	CURSES_LIBS+=" $outcurses_LIBS"
 
 PKG_CHECK_MODULES([libatasmart], [libatasmart >= 0.19], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"

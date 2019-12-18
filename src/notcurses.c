@@ -728,12 +728,11 @@ bevel_top(struct ncplane* w){
   int rows, cols, z;
 
   ncplane_dim_yx(w, &rows, &cols);
-  assert(rows && cols);
-  assert(cmvwadd_wch(w, 0, 0, L"╭") != -1);
+  cmvwadd_wch(w, 0, 0, L"╭");
   for(z = 1 ; z < cols - 1 ; ++z){
-    assert(cmvwadd_wch(w, 0, z, L"─") != -1);
+    cmvwadd_wch(w, 0, z, L"─");
   }
-  assert(cmvwadd_wch(w, 0, cols - 1, L"╮") != -1);
+  cmvwadd_wch(w, 0, cols - 1, L"╮");
   for(z = 1 ; z < rows ; ++z){
     cmvwadd_wch(w, z, 0, L"│");
     cmvwadd_wch(w, z, cols - 1, L"│");
@@ -874,8 +873,8 @@ draw_main_window(struct ncplane* n){
   ncplane_yx(n, &y, &x);
   assert(y >= 0);
   cols -= x + 2;
-  assert(cwattron(n, CELL_STYLE_BOLD | STATUS_COLOR) != -1);
-  assert(cwprintw(n, " %-*.*s", cols, cols, statusmsg) != -1);
+  cwattron(n, CELL_STYLE_BOLD | STATUS_COLOR);
+  cwprintw(n, " %-*.*s", cols, cols, statusmsg);
 }
 
 static void
