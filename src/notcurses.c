@@ -525,10 +525,6 @@ form_colors(void){
 
 static int update_diags(struct panel_state *);
 
-struct adapterstate;
-
-struct partobj;
-
 // See below (blockobj) for description of zones.
 typedef struct zobj {
   int zoneno;      // in-order, starting at 0
@@ -5732,7 +5728,7 @@ adapter_callback(controller *a, void *state){
   if((as = state) == NULL){
     if(a->blockdevs){
       if( (state = as = create_adapter_state(a)) ){
-        int newrb, rows, cols;
+        int rows, cols;
 
 // fprintf(stderr, "NEW ADAPTER STATE ASSIGNED %s %p\n", as->c->name, as);
         notcurses_term_dim_yx(NC, &rows, &cols);
@@ -5945,21 +5941,17 @@ block_callback(device* d, void* v){
 
 static void
 block_free(void *cv, void *bv){
-  /*
   adapterstate *as = cv;
   blockobj *bo = bv;
-  reelbox *rb;
 
   lock_ncurses_growlight();
-  if( (rb = as->rb) ){
-    if(bo == rb->selected){
-      if(bo->prev){
-        select_adapter_dev(rb, bo->prev);
-      }else if(bo->next){
-        select_adapter_dev(rb, bo->next);
-      }else{
-        select_adapter_dev(rb, NULL);
-      }
+  if(bo == as->selected){
+    if(bo->prev){
+      select_adapter_dev(as, bo->prev);
+    }else if(bo->next){
+      select_adapter_dev(as, bo->next);
+    }else{
+      select_adapter_dev(as, NULL);
     }
   }
   free_zchain(&bo->zchain);
@@ -5974,78 +5966,24 @@ block_free(void *cv, void *bv){
   }
   --as->devs;
   free(bo);
-  if(as->rb){
-    int old, oldrows;
-
-    old = as->rb->selline;
-    oldrows = getmaxy(rb->win);
-    recompute_selection(as, old, oldrows, getmaxy(rb->win));
-  }
   unlock_ncurses_growlight();
-  */
 }
 
 static void
 adapter_free(void *cv){
-  /*
   adapterstate *as = cv;
-  reelbox *rb = rb;
-
   lock_ncurses_growlight();
   as->prev->next = as->next;
   as->next->prev = as->prev;
-  if( (rb = as->rb) ){
-    int delta = getmaxy(rb->win) + 1, scrrows, scrcols;
-
-// fprintf(stderr, "Removing iface at %d\n", rb->scrline);
-    assert(werase(rb->win) == 0);
-    assert(hide_panel(rb->panel) == 0);
-    getmaxyx(stdscr, scrrows, scrcols);
-    if(rb->next){
-      rb->next->prev = rb->prev;
-    }else{
-      last_reelbox = rb->prev;
-    }
-    if(rb->prev){
-      rb->prev->next = rb->next;
-    }else{
-      top_reelbox = rb->next;
-    }
-    as->next->prev = as->prev;
-    as->prev->next = as->next;
-    if(rb == current_adapter){
-      // FIXME need do all the stuff we do in _next_/_prev_
-      if((current_adapter = rb->next) == NULL){
-        current_adapter = rb->prev;
-      }
-      pull_adapters_up(rb, scrrows, scrcols, delta);
-      // give the details window to new current_iface
-      if(details.p){
-        if(current_adapter == NULL){
-          hide_panel_locked(&details);
-          active = NULL;
-        }
-      }
-    }else if(rb->scrline > current_adapter->scrline){
-      pull_adapters_up(rb, scrrows, scrcols, delta);
-    }else{ // pull them down; removed is above current_adapter
-      int ts;
-
-      pull_adapters_down(rb, scrrows, scrcols, delta);
-      if( (ts = top_space_p(scrrows)) ){
-        pull_adapters_up(NULL, scrrows, scrcols, ts);
-      }
-    }
-    free_reelbox(rb);
-  }else{
-    as->next->prev = as->prev;
-    as->prev->next = as->next;
+  if(as->rb){
+    panelreel_del(PR, as->rb);
   }
+  as->next->prev = as->prev;
+  as->prev->next = as->next;
   free_adapter_state(as); // clears subentries
   --count_adapters;
   draw_main_window(notcurses_stdplane(NC)); // Update the device count
   unlock_ncurses_growlight();
-  */
 }
 
 static void
