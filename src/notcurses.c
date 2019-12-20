@@ -2122,13 +2122,12 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
 // -------------------------------------------------------------------------
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
-void raise_form(const char *str, void (*fxn)(const char *), struct form_option *opstrs,
-      int ops, int defidx, const char *text){
-  /*
+void raise_form(const char* str, void (*fxn)(const char*),
+                struct form_option* opstrs, int ops, int defidx,
+                const char* text){
   size_t longop, longdesc;
   struct form_state *fs;
   int cols, rows;
-  WINDOW *fsw;
   int x, y;
 
   if(opstrs == NULL || !ops){
@@ -2150,7 +2149,7 @@ void raise_form(const char *str, void (*fxn)(const char *), struct form_option *
   }
   cols = longdesc + longop + 1;
   rows = ops + 4;
-  getmaxyx(stdscr, y, x);
+  notcurses_term_dim_yx(NC, &y, &x);
   if(x < cols + 4){
     locked_diag("Window too thin for form, uh-oh");
     return;
@@ -2165,39 +2164,32 @@ void raise_form(const char *str, void (*fxn)(const char *), struct form_option *
   if((fs = create_form(str, fxn, FORM_SELECT, 0)) == NULL){
     return;
   }
-  if((fsw = newwin(rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4)) == NULL){
-    locked_diag("Couldn't create form window, uh-oh");
-    free_form(fs);
-    return;
-  }
-  if((fs->p = new_panel(fsw)) == NULL){
+  fs->p = notcurses_newplane(NC, rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4, NULL);
+  if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
-    delwin(fsw);
     free_form(fs);
     return;
   }
-  cwbkgd(fsw);
+  cwbkgd(fs->p);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
   }
   fs->opcount = ops;
-  cwattroff(fsw, CELL_STYLE_BOLD);
-  compat_set_fg(fsw, FORMBORDER_COLOR);
-  bevel_all(fsw);
-  cwattron(fsw, CELL_STYLE_BOLD);
-  cmvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
-  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
-  cwattroff(fsw, CELL_STYLE_BOLD);
+  cwattroff(fs->p, CELL_STYLE_BOLD);
+  compat_set_fg(fs->p, FORMBORDER_COLOR);
+  bevel_all(fs->p);
+  cwattron(fs->p, CELL_STYLE_BOLD);
+  cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
+  cmvwaddwstr(fs->p, rows - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
+  cwattroff(fs->p, CELL_STYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   form_options(fs);
   actform = fs;
-  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   form_colors();
-  top_panel(fs->p);
   screen_update();
-  */
 }
 
 // -------------------------------------------------------------------------
@@ -2221,11 +2213,9 @@ form_string_options(struct form_state *fs){
   ncplane_styles_off(n, CELL_STYLE_BOLD);
 }
 
-void raise_str_form(const char *str, void (*fxn)(const char *),
-      const char *def, const char *text){
-  /*
+void raise_str_form(const char* str, void (*fxn)(const char*),
+                    const char* def, const char* text){
   struct form_state *fs;
-  WINDOW *fsw;
   int cols;
   int x, y;
 
@@ -2239,37 +2229,30 @@ void raise_str_form(const char *str, void (*fxn)(const char *),
   }
   fs->longop = strlen(str);
   cols = fs->longop + 40 + 1; // FIXME? 40 for input currently
-  getmaxyx(stdscr, y, x);
+  notcurses_term_dim_yx(NC, &y, &x);
   assert(x >= cols + 3);
   assert(y >= 3);
-  if((fsw = newwin(3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3)) == NULL){
-    locked_diag("Couldn't create form window, uh-oh");
-    free_form(fs);
-    return;
-  }
-  if((fs->p = new_panel(fsw)) == NULL){
+  fs->p = notcurses_newplane(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3, NULL);
+  if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
-    delwin(fsw);
     free_form(fs);
     return;
   }
-  top_panel(fs->p);
-  cwattroff(fsw, CELL_STYLE_BOLD);
-  compat_set_fg(fsw, FORMBORDER_COLOR);
-  bevel_all(fsw);
-  cwattron(fsw, CELL_STYLE_BOLD);
-  cmvwprintw(fsw, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
-  cmvwaddwstr(fsw, getmaxy(fsw) - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
+  cwattroff(fs->p, CELL_STYLE_BOLD);
+  compat_set_fg(fs->p, FORMBORDER_COLOR);
+  bevel_all(fs->p);
+  cwattron(fs->p, CELL_STYLE_BOLD);
+  cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
+  cmvwaddwstr(fs->p, 2, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
   fs->inp.prompt = fs->boxstr;
   def = def ? def : "";
   fs->inp.buffer = strdup(def);
   form_string_options(fs);
   actform = fs;
-  fs->extext = raise_form_explication(stdscr, text, FORM_Y_OFFSET);
+  fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   notcurses_cursor_enable(NC);
   form_colors();
   screen_update();
-  */
 }
 
 static const struct form_option common_fsops[] = {
@@ -4937,7 +4920,6 @@ nmount_target(void){
 static void
 umount_filesystem(void){
   blockobj *b;
-  int r;
 
   if((b = get_selected_blockobj()) == NULL){
     locked_diag("Must select a filesystem to unmount");
@@ -4953,15 +4935,15 @@ umount_filesystem(void){
       return;
     }
     if(fstype_swap_p(b->zone->p->mnttype)){
-      r = swapoffdev(b->zone->p);
+      swapoffdev(b->zone->p);
     }else{
-      r = unmount(b->zone->p, NULL);
+      unmount(b->zone->p, NULL);
     }
   }else{
     if(fstype_swap_p(b->d->mnttype)){
-      r = swapoffdev(b->d);
+      swapoffdev(b->d);
     }else{
-      r = unmount(b->d, NULL);
+      unmount(b->d, NULL);
     }
   }
 }
