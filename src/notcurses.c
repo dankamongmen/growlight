@@ -985,7 +985,7 @@ hide_panel_locked(struct panel_state* ps){
 }
 
 // Print the contents of the block device in a horizontal bar of arbitrary size
-static void
+/*static void
 print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int selected){
   char pre[BPREFIXSTRLEN + 1];
   const char *selstr = NULL;
@@ -1029,7 +1029,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
           d->mnttype,
           zs ? "(" : "", zs ? pre : "", zs ? ")" : ""
           ) >= wchars){
-          assert(swprintf(wbuf, wchars, L"%s", d->mnttype) < wchars);
+          swprintf(wbuf, wchars, L"%s", d->mnttype);
         }
       }
     }
@@ -1195,7 +1195,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     }
     selstr = NULL;
   }while((z = z->next) != bo->zchain);
-}
+}*/
 
 static void
 print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
@@ -1460,8 +1460,8 @@ case LAYOUT_ZPOOL:
 
   if(line + !!topp >= 1){
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"│");
-    print_blockbar(n, bo, line, START_COL + 10 + 2,
-          cols - START_COL - 1, selected);
+    /*print_blockbar(n, bo, line, START_COL + 10 + 2,
+          cols - START_COL - 1, selected);*/
   }
   attr = CELL_STYLE_BOLD | DBORDER_COLOR;
   cwattrset(n, attr);
