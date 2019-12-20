@@ -762,7 +762,7 @@ cwattrset(struct ncplane* n, int style){
 static int
 cwattroff(struct ncplane* n, int style){
   ncplane_styles_off(n, style);
-  //compat_set_fg(n, style & ~CELL_STYLE_MASK);
+  compat_set_fg(n, style & ~CELL_STYLE_MASK);
   return 0;
 }
 
@@ -858,8 +858,8 @@ draw_main_window(struct ncplane* n){
   ncplane_dim_yx(n, &rows, &cols);
   cwattrset(n, HEADER_COLOR);
   cmvwaddstr(n, rows - 1, 0, buf);
-  ncplane_yx(n, &y, &x);
-  assert(y >= 0);
+  ncplane_cursor_yx(n, &y, &x);
+  assert(x >= 0);
   cols -= x + 2;
   cwattron(n, CELL_STYLE_BOLD | STATUS_COLOR);
   cwprintw(n, " %-*.*s", cols, cols, statusmsg);
@@ -987,7 +987,6 @@ hide_panel_locked(struct panel_state* ps){
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
 print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int selected){
-/*
   char pre[BPREFIXSTRLEN + 1];
   const char *selstr = NULL;
   wchar_t wbuf[ex - sx + 2];
@@ -1068,6 +1067,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   partco = PART_COLOR0;
   targco = TARGET_COLOR0;
   mountco = MOUNT_COLOR0;
+  /*
   do{
     unsigned ch, och;
     wchar_t rep;
@@ -1154,7 +1154,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
       }else{
         rep = L'0' + rep;  // FIXME lame
       }
-    }
+    //}
     ch = (((z->lsector - z->fsector) * 1000) / ((d->size * 1000 / d->logsec) / (ex - sx)));
     if(ch == 0){
       ch = 1;
@@ -1196,7 +1196,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     }
     selstr = NULL;
   }while((z = z->next) != bo->zchain);
-*/
+  */
 }
 
 // returns number of lines printed
@@ -1208,6 +1208,7 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   char rolestr[12]; // taken from %-11.11s below
 
 // fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
+  ncplane_set_bg_rgb(n, 0, 0, 0);
   if(line >= rows - !endp){
     return 0;
   }
@@ -1642,10 +1643,6 @@ static int
 redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
                bool cliptop, void* vas){
   const adapterstate *as = vas;
-  cell c = CELL_TRIVIAL_INITIALIZER;
-  cell_set_bg_rgb(&c, 0, 0, 0);
-  ncplane_set_default(n, &c);
-  cell_release(n, &c);
   ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
   int lines = print_adapter_devs(n, as, maxy - begy, maxx - begx, cliptop);
