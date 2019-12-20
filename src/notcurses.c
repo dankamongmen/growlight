@@ -1452,7 +1452,7 @@ case LAYOUT_ZPOOL:
   if(line + !!topp >= 1){
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
-    cmvwadd_wch(n, line, cols - START_COL * 2, L"╮");
+    cmvwadd_wch(n, line, cols - START_COL, L"╮");
   }
   if(++line >= rows - !endp){
     return;
@@ -1469,7 +1469,7 @@ case LAYOUT_ZPOOL:
     cwattron(n, CELL_STYLE_REVERSE);
   }
   if(line + !!topp >= 1){
-    cmvwadd_wch(n, line, cols - START_COL * 2, L"│");
+    cmvwadd_wch(n, line, cols - START_COL, L"│");
   }
   if(++line >= rows - !endp){
     return;
@@ -1481,9 +1481,8 @@ case LAYOUT_ZPOOL:
     cmvwadd_wch(n, line, cols - 3 - c, L"├");
     if(c > 0){
       cmvwhline(n, line, cols - 3 - c + 1, "─", c);
-      ncplane_cursor_move_yx(n, line, cols - 2);
     }
-    cmvwadd_wch(n, line, cols - 2, L"╯");
+   cmvwadd_wch(n, line, cols - START_COL, L"╯");
   }
   ++line;
 }
