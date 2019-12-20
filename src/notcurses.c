@@ -985,8 +985,9 @@ hide_panel_locked(struct panel_state* ps){
 }
 
 // Print the contents of the block device in a horizontal bar of arbitrary size
-/*static void
+static void
 print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int selected){
+/*
   char pre[BPREFIXSTRLEN + 1];
   const char *selstr = NULL;
   wchar_t wbuf[ex - sx + 2];
@@ -1195,18 +1196,20 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     }
     selstr = NULL;
   }while((z = z->next) != bo->zchain);
-}*/
+*/
+}
 
-static void
+// returns number of lines printed
+static int
 print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
           int line, int rows, unsigned cols, int topp, unsigned endp){
   char buf[BPREFIXSTRLEN + 1];
   int selected, co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
-// fprintf(stderr, "HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
+fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
   if(line >= rows - !endp){
-    return;
+    return 0;
   }
   strcpy(rolestr, "");
   selected = line >= 1 && line == as->selline;
@@ -1354,7 +1357,7 @@ case LAYOUT_ZPOOL:
     break;
   }
   if(bo->d->size == 0){
-    return;
+    return 1;
   }
   cwattroff(n, CELL_STYLE_REVERSE);
   cwattrset(n, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
@@ -1455,13 +1458,13 @@ case LAYOUT_ZPOOL:
     cmvwadd_wch(n, line, cols - START_COL, L"╮");
   }
   if(++line >= rows - !endp){
-    return;
+    return 1;
   }
 
   if(line + !!topp >= 1){
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"│");
-    /*print_blockbar(n, bo, line, START_COL + 10 + 2,
-          cols - START_COL - 1, selected);*/
+    print_blockbar(n, bo, line, START_COL + 10 + 2,
+          cols - START_COL - 1, selected);
   }
   attr = CELL_STYLE_BOLD | DBORDER_COLOR;
   cwattrset(n, attr);
@@ -1472,7 +1475,7 @@ case LAYOUT_ZPOOL:
     cmvwadd_wch(n, line, cols - START_COL, L"│");
   }
   if(++line >= rows - !endp){
-    return;
+    return 2;
   }
   if(line + !!topp >= 1){
     int c = cols - 80;
@@ -1485,54 +1488,14 @@ case LAYOUT_ZPOOL:
    cmvwadd_wch(n, line, cols - START_COL, L"╯");
   }
   ++line;
-}
-
-// returns the number of lines printed, plus borders
-static int
-print_adapter_devs(struct ncplane* n, const adapterstate *as,
-                   int rows, int cols, unsigned topp, unsigned endp){
-  // If the interface is down, we don't lead with the summary line
-  const blockobj *cur;
-  int printed = 0;
-  long line;
-  int p;
-
-  if(as->expansion == EXPANSION_NONE){
-    return 0;
-  }
-  // First, print the selected device (if there is one), and those above
-  cur = as->selected;
-  line = as->selline;
-  while(cur && line + (long)device_lines(as->expansion, cur) >= !!topp){
-    print_dev(n, as, cur, line, rows, cols, topp, endp);
-    // here we traverse, then account...
-    if( (cur = cur->prev) ){
-      p = device_lines(as->expansion, cur);
-      line -= p;
-      printed += p;
-    }
-  }
-  line = as->selected ? (as->selline +
-    (long)device_lines(as->expansion, as->selected)) : -(long)topp + 1;
-  cur = (as->selected ? as->selected->next : as->bobjs);
-  while(cur && line < rows){
-    print_dev(n, as, cur, line, rows, cols, topp, endp);
-    // here, we account before we traverse. this is correct.
-    p = device_lines(as->expansion, cur);
-    line += p;
-    printed += p;
-    cur = cur->next;
-  }
-  printed += 2; // top+bottom borders
-// fprintf(stderr, "PRINTED %d for %s\n", printed, as->c->name);
-  return printed;
+  return 3;
 }
 
 // Abovetop: lines hidden at the top of the screen
 // Belowend: lines hidden at the bottom of the screen
 static void
-adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsigned belowend,
-            int rows){
+adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
+            int belowend, int rows){
   int current = as == get_current_adapter();
   int bcolor, hcolor, cols;
   int attrs;
@@ -1551,6 +1514,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
   if(current){
     ncplane_set_bg_rgb(nc, 100, 100, 100);
   }
+fprintf(stderr, "ABOVETOP: %d BELOWEND: %d name: %s\n", abovetop, belowend, as->c->name);
   if(abovetop == 0){
     if(belowend == 0){
       bevel(nc, rows, cols);
@@ -1625,17 +1589,66 @@ adapter_box(const adapterstate* as, struct ncplane* nc, unsigned abovetop, unsig
   }
 }
 
+// returns the number of lines printed, plus borders
+// cliptop: if we have too few lines, which side gets clipped?
+static int
+print_adapter_devs(struct ncplane* n, const adapterstate *as,
+                   int rows, int cols, bool cliptop){
+  // If the interface is down, we don't lead with the summary line
+  const blockobj *cur;
+  int printed = 0;
+  long line;
+  int p;
+
+//fprintf(stderr, "%s [%d/%d] sel: %p selline: %d\n", as->c->name, rows, cols, as->selected, as->selline);
+  if(as->expansion == EXPANSION_NONE){
+    return 0;
+  }
+  // First, print the selected device (if there is one), and those above
+  cur = as->selected;
+  line = as->selline;
+  while(cur && line + (long)device_lines(as->expansion, cur) >= cliptop){
+    print_dev(n, as, cur, line, rows, cols, cliptop, !cliptop);
+    p = device_lines(as->expansion, cur);
+    line -= p;
+    printed += p;
+    cur = cur->prev;
+//fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, topp, line, rows);
+  }
+  line = as->selected ? (as->selline +
+    (long)device_lines(as->expansion, as->selected)) : -(long)cliptop + 1;
+  cur = (as->selected ? as->selected->next : as->bobjs);
+  while(cur && line < rows){
+//fprintf(stderr, "ITERATING %p (%ld < %d)\n", cur, line, rows);
+    print_dev(n, as, cur, line, rows, cols, cliptop, !cliptop);
+    // here, we account before we traverse. this is correct.
+    p = device_lines(as->expansion, cur);
+    line += p;
+    printed += p;
+    cur = cur->next;
+  }
+  printed += 2; // top+bottom borders
+//fprintf(stderr, "PRINTED %d for %s\n", printed, as->c->name);
+  int belowend = 0;
+  if(line > rows){
+    belowend = line - rows;
+    line = rows;
+  }
+  adapter_box(as, n, cliptop, belowend, printed);
+  return printed;
+}
+
 static int
 redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
                bool cliptop, void* vas){
   const adapterstate *as = vas;
-  // FIXME express in terms of begx/begy/maxx/maxy
-// fprintf(stderr, "begx/y %d/%d -> maxx/y %d/%d ASS %p\n", begx, begy, maxx, maxy, as);
-  int lines = print_adapter_devs(n, as, maxy - begy, maxx - begx, cliptop, !cliptop);
+  ncplane_erase(n); // FIXME shouldn't need this
+//fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
+  int lines = print_adapter_devs(n, as, maxy - begy, maxx - begx, cliptop);
   if(lines < 0){
     return -1;
   }
-  adapter_box(as, n, 0, 0, lines);
+//fprintf(stderr, "[%s] drew %d/%d\n", as->c->name, lines, maxy - begy);
   return lines;
 }
 
@@ -3087,7 +3100,7 @@ select_adapter_dev(adapterstate* as, blockobj* bo){
   if((as->selected = bo) == NULL){
     as->selline = -1;
   }else{
-    // FIXME as->selline += delta;
+    as->selline = 0; // FIXME relative to previous
   }
   return 0;
 }
@@ -5699,7 +5712,7 @@ adapter_callback(controller *a, void *state){
       if( (state = as = create_adapter_state(a)) ){
         int rows, cols;
 
-// fprintf(stderr, "NEW ADAPTER STATE ASSIGNED %s %p\n", as->c->name, as);
+//fprintf(stderr, "NEW ADAPTER STATE ASSIGNED %s %p\n", as->c->name, as);
         notcurses_term_dim_yx(NC, &rows, &cols);
         if((as->rb = panelreel_add(PR, NULL, NULL, redraw_adapter, as)) == NULL){
           free_adapter_state(as);
@@ -5864,25 +5877,28 @@ block_callback(device* d, void* v){
     return NULL; // FIXME ought be an assert; this shouldn't happen
   }
   lock_ncurses_growlight();
-// fprintf(stderr, "---------begin block event on %s\n", d->name);
+//fprintf(stderr, "---------begin block event on %s\n", d->name);
   if((as = d->c->uistate) == NULL){
-// fprintf(stderr, "MAKE THAT INVISIBLE block event on %s\n!", d->name);
+//fprintf(stderr, "MAKE THAT INVISIBLE block event on %s\n!", d->name);
     if((as = d->c->uistate = adapter_callback(d->c, NULL)) == NULL){
       return NULL;
     }
   }
-// if(as->rb){ fprintf(stderr, "we're on line %d\n", as->rb->scrline); }
+//if(as->rb){ fprintf(stderr, "we're on line %d\n", as->scrline); }
   if((b = v) == NULL){
     if( (b = create_blockobj(d)) ){
-// fprintf(stderr, "ASSIGNED %p to %p on %p\n", d, b->d, as);
+//fprintf(stderr, "ASSIGNED %p to %p on %p\n", d, b->d, as);
       if(as->devs == 0){
         b->prev = b->next = NULL;
         as->bobjs = b;
-      }else{
-        b->next = as->bobjs;
-        b->prev = NULL;
-        as->bobjs->prev = b;
-        as->bobjs = b;
+      }else{ // append at end, necessary due to how adapters are drawn
+        blockobj* prev = as->bobjs;
+        while(prev->next){
+          prev = prev->next;
+        }
+        b->next = NULL;
+        b->prev = prev;
+        prev->next = b;
       }
       ++as->devs;
     }
@@ -5890,20 +5906,13 @@ block_callback(device* d, void* v){
     update_blockobj(b, d);
   }
   if(as->rb){
-    //FIXME
-    /*int old, oldrows;
-
-    old = as->selline;
-    oldrows = getmaxy(as->rb->win);
-// fprintf(stderr, "into recompute_selection line %d hidden %d\n", as->rb->scrline, panel_hidden(as->rb->panel));
-    recompute_selection(as, old, oldrows, getmaxy(as->rb->win));*/
     if(get_current_adapter() == as){
       if(b->prev == NULL && b->next == NULL){
         select_adapter();
       }
     }
   }
-// fprintf(stderr, "---------end block event on %s\n", d->name);
+//fprintf(stderr, "---------end block event on %s\n", d->name);
   unlock_ncurses_growlight();
   return b;
 }
@@ -6077,6 +6086,7 @@ int main(int argc, char * const *argv){
                      | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
   popts.tabletmask = NCBOXMASK_TOP | NCBOXMASK_BOTTOM
                      | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
+  popts.boff = 1;
   PR = panelreel_create(n, &popts, -1);
   if(PR == NULL){
     kill_splash(ps);
