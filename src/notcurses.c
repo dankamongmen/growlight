@@ -800,14 +800,6 @@ cwaddwstr(struct ncplane* n, const wchar_t* ws){
 }
 
 static int
-cmvwaddnstr(struct ncplane* nc, int y, int x, const char* s, size_t n){
-  if(ncplane_cursor_move_yx(nc, y, x)){
-    return -1;
-  }
-  return ncplane_putstr(nc, s); // FIXME
-}
-
-static int
 cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   if(ncplane_cursor_move_yx(nc, y, x)){
     return -1;
@@ -1638,13 +1630,9 @@ static int
 redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
                bool cliptop, void* vas){
   const adapterstate *as = vas;
-  int rows, cols;
-
-  ncplane_dim_yx(n, &rows, &cols);
-  assert(cols); // FIXME
   // FIXME express in terms of begx/begy/maxx/maxy
 // fprintf(stderr, "begx/y %d/%d -> maxx/y %d/%d ASS %p\n", begx, begy, maxx, maxy, as);
-  int lines = print_adapter_devs(n, as, rows, cols, cliptop, !cliptop);
+  int lines = print_adapter_devs(n, as, maxy - begy, maxx - begx, cliptop, !cliptop);
   if(lines < 0){
     return -1;
   }
@@ -1953,7 +1941,7 @@ raise_form_explication(const struct ncplane* n, const char* text, int linesz){
   bevel_all(ps->p);
   compat_set_fg(ps->p, FORMTEXT_COLOR);
   do{
-    cmvwaddnstr(ps->p, y + 1, 1, text + linepre[y], linelen[y]);
+    ncplane_printf_yx(ps->p, y + 1, 1, "%.*s", linelen[y], text + linepre[y]);
   }while(y--);
   screen_update();
   return ps;
@@ -2196,7 +2184,7 @@ void raise_form(const char* str, void (*fxn)(const char*),
 // - string type form, for generic input
 // -------------------------------------------------------------------------
 static void
-form_string_options(struct form_state *fs){
+form_string_options(struct form_state* fs){
   struct ncplane* n = fs->p;
   int cols;
 
@@ -2215,7 +2203,7 @@ form_string_options(struct form_state *fs){
 
 void raise_str_form(const char* str, void (*fxn)(const char*),
                     const char* def, const char* text){
-  struct form_state *fs;
+  struct form_state* fs;
   int cols;
   int x, y;
 
