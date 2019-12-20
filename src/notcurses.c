@@ -1642,7 +1642,11 @@ static int
 redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
                bool cliptop, void* vas){
   const adapterstate *as = vas;
-  ncplane_erase(n); // FIXME shouldn't need this
+  cell c = CELL_TRIVIAL_INITIALIZER;
+  cell_set_bg_rgb(&c, 0, 0, 0);
+  ncplane_set_default(n, &c);
+  cell_release(n, &c);
+  ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
   int lines = print_adapter_devs(n, as, maxy - begy, maxx - begx, cliptop);
   if(lines < 0){
