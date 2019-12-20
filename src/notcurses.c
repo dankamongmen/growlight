@@ -1207,7 +1207,7 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   int selected, co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
-fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
+// fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
   if(line >= rows - !endp){
     return 0;
   }
@@ -1514,7 +1514,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
   if(current){
     ncplane_set_bg_rgb(nc, 100, 100, 100);
   }
-fprintf(stderr, "ABOVETOP: %d BELOWEND: %d name: %s\n", abovetop, belowend, as->c->name);
+//fprintf(stderr, "ABOVETOP: %d BELOWEND: %d name: %s\n", abovetop, belowend, as->c->name);
   if(abovetop == 0){
     if(belowend == 0){
       bevel(nc, rows, cols);
@@ -3100,7 +3100,7 @@ select_adapter_dev(adapterstate* as, blockobj* bo){
   if((as->selected = bo) == NULL){
     as->selline = -1;
   }else{
-    as->selline = 0; // FIXME relative to previous
+    as->selline = 1; // FIXME relative to previous
   }
   return 0;
 }
