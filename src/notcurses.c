@@ -1067,7 +1067,6 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   partco = PART_COLOR0;
   targco = TARGET_COLOR0;
   mountco = MOUNT_COLOR0;
-  /*
   do{
     unsigned ch, och;
     wchar_t rep;
@@ -1154,12 +1153,13 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
       }else{
         rep = L'0' + rep;  // FIXME lame
       }
-    //}
+    }
     ch = (((z->lsector - z->fsector) * 1000) / ((d->size * 1000 / d->logsec) / (ex - sx)));
     if(ch == 0){
       ch = 1;
     }
     och = off;
+    /*
     while(ch--){
       cmvwadd_wch(n, y, off, &rep);
       if(++off > ex - z->following){
@@ -1194,9 +1194,9 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
       cmvwadd_wch(n, y, start - 1, L" ");
       cmvwadd_wch(n, y, start + wcslen(wbuf), L" ");
     }
+    */
     selstr = NULL;
   }while((z = z->next) != bo->zchain);
-  */
 }
 
 // returns number of lines printed
