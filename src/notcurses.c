@@ -1069,7 +1069,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   mountco = MOUNT_COLOR0;
   do{
     unsigned ch, och;
-    wchar_t rep;
+    wchar_t rep[2] = {L'\0', L'\0'};
 
     wbuf[0] = L'\0';
     zs = (z->lsector - z->fsector + 1) * bo->d->logsec;
@@ -1091,7 +1091,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
           wbuf[0] = L'\0';
         }
       }
-      rep = z->rep;
+      rep[0] = z->rep;
     }else{ // dedicated partition
       if(selected && z == bo->zone){ // partition and device are selected
         if(targeted_p(z->p)){
@@ -1147,11 +1147,11 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
           }
         }
       }
-      rep = z->p->partdev.pnumber % 16;
-      if(rep >= 10){
-        rep = L'a' + (rep - 10); // FIXME lame
+      rep[0] = z->p->partdev.pnumber % 16;
+      if(rep[0] >= 10){
+        rep[0] = L'a' + (rep[0] - 10); // FIXME lame
       }else{
-        rep = L'0' + rep;  // FIXME lame
+        rep[0] = L'0' + rep[0];  // FIXME lame
       }
     }
     ch = (((z->lsector - z->fsector) * 1000) / ((d->size * 1000 / d->logsec) / (ex - sx)));
@@ -1159,9 +1159,8 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
       ch = 1;
     }
     och = off;
-    /*
     while(ch--){
-      cmvwadd_wch(n, y, off, &rep);
+      cmvwadd_wch(n, y, off, rep);
       if(++off > ex - z->following){
         off = ex - z->following;
         break;
@@ -1194,7 +1193,6 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
       cmvwadd_wch(n, y, start - 1, L" ");
       cmvwadd_wch(n, y, start + wcslen(wbuf), L" ");
     }
-    */
     selstr = NULL;
   }while((z = z->next) != bo->zchain);
 }
