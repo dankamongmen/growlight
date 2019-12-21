@@ -564,7 +564,7 @@ typedef struct adapterstate {
     EXPANSION_NONE,
     EXPANSION_FULL,
   } expansion;
-  int scrline, selline;
+  int selline;
   blockobj* selected;
   struct adapterstate* next;
   struct adapterstate* prev;
@@ -1205,7 +1205,7 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   int selected, co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
-// fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
+//fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
   ncplane_set_bg_rgb(n, 0, 0, 0);
   if(line >= rows - !endp){
     return 0;
@@ -1277,7 +1277,7 @@ case LAYOUT_MDADM:
     }
     cwattrset(n, co);
     if(line + !!topp >= 1){
-      if(!bo->d->size || line + 2 < rows - !endp){
+      if(!bo->d->size || line + 2 <= rows - !endp){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1392,7 +1392,7 @@ case LAYOUT_ZPOOL:
     }
   }
   // ...and finally the temperature/vfailure status, and utilization...
-  if((line + 2 < rows - !endp) && (line + !!topp + 2 >= 1)){
+  if((line + 2 <= rows - !endp) && (line + !!topp + 2 >= 1)){
     int sumline = line + 2;
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
@@ -1612,13 +1612,13 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
     line -= p;
     printed += p;
     cur = cur->prev;
-//fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, topp, line, rows);
+//fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, cliptop, line, rows);
   }
   line = as->selected ? (as->selline +
-    (long)device_lines(as->expansion, as->selected)) : -(long)cliptop + 1;
+    (long)device_lines(as->expansion, as->selected)) : 1/*-(long)cliptop + 2*/;
   cur = (as->selected ? as->selected->next : as->bobjs);
   while(cur && line < rows){
-//fprintf(stderr, "ITERATING %p (%ld < %d)\n", cur, line, rows);
+//fprintf(stderr, "ITERATING %p (%ld < %d) %d\n", cur, line, rows, cliptop);
     print_dev(n, as, cur, line, rows, cols, cliptop, !cliptop);
     // here, we account before we traverse. this is correct.
     p = device_lines(as->expansion, cur);
@@ -1626,21 +1626,24 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
     printed += p;
     cur = cur->next;
   }
-  printed += 2; // top+bottom borders
+  printed += 1; // top+bottom borders
+  if(!cur){
+    ++printed;
+  }
 //fprintf(stderr, "PRINTED %d for %s\n", printed, as->c->name);
   int belowend = 0;
   if(line > rows){
     belowend = line - rows;
     line = rows;
   }
-  adapter_box(as, n, cliptop, belowend, printed);
+  adapter_box(as, n, cliptop * belowend, !cliptop * belowend, printed);
   return printed;
 }
 
 static int
-redraw_adapter(struct ncplane* n, int begx, int begy, int maxx, int maxy,
-               bool cliptop, void* vas){
-  const adapterstate *as = vas;
+redraw_adapter(struct tablet* t, int begx, int begy, int maxx, int maxy, bool cliptop){
+  struct ncplane* n = tablet_ncplane(t);
+  const adapterstate *as = tablet_userptr(t);
   ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
   int lines = print_adapter_devs(n, as, maxy - begy, maxx - begx, cliptop);
@@ -3097,19 +3100,11 @@ static int
 select_adapter_dev(adapterstate* as, blockobj* bo){
   assert(bo != as->selected);
   if((as->selected = bo) == NULL){
-    as->selline = -1;
+    as->selline = 1; // FIXME
   }else{
     as->selline = 1; // FIXME relative to previous
   }
   return 0;
-}
-
-static void
-select_adapter_node(adapterstate* as, struct blockobj* bo){
-  assert(bo != as->selected);
-  if((as->selected = bo) == NULL){
-    as->selline = -1;
-  }
 }
 
 static void
@@ -3122,7 +3117,7 @@ deselect_adapter_locked(void){
   if(as->selected == NULL){
     return;
   }
-  select_adapter_node(as, NULL);
+  select_adapter_dev(as, NULL);
 }
 
 static void
@@ -4049,7 +4044,7 @@ select_adapter(void){
   if(as->bobjs == NULL){
     return -1;
   }
-  assert(as->selline == -1);
+  assert(as->selline == 1);
   return select_adapter_dev(as, as->bobjs);
 }
 
@@ -5680,9 +5675,8 @@ create_adapter_state(controller *a){
     memset(as, 0, sizeof(*as));
     as->c = a;
     as->expansion = EXPANSION_MAX;
-    as->scrline = 0; // FIXME used to be set based on position
     as->selected = NULL;
-    as->selline = -1;
+    as->selline = 1;
     as->rb = NULL;
   }
   return as;
@@ -5883,7 +5877,6 @@ block_callback(device* d, void* v){
       return NULL;
     }
   }
-//if(as->rb){ fprintf(stderr, "we're on line %d\n", as->scrline); }
   if((b = v) == NULL){
     if( (b = create_blockobj(d)) ){
 //fprintf(stderr, "ASSIGNED %p to %p on %p\n", d, b->d, as);
