@@ -77,9 +77,10 @@
 		for using the devices to boot or in a chroot, and is fully
 		aware of variable sector sizes, GPT, and UEFI. <emphasis>&dhpackage;</emphasis>
 		facilitates use of UUID/WWN- and HBA-based identification of block devices.</para>
-<para>This page describes the fullscreen <emphasis role="bold">notcurses(3notcurses)</emphasis> implementation.
+<para>This page describes the fullscreen <emphasis role="bold">ncurses(3ncurses)</emphasis> implementation.
 Consult <emphasis role="bold">growlight-readline(8)</emphasis> for a line-oriented <emphasis role="bold">readline(3)</emphasis>
-variant.</para>
+  variant, or <emphasis role="bold">growlight(8)</emphasis> for the flagship
+    notcurses-based tool.</para>
 	</refsect1>
 	<refsect1 id="options">
 		<title>OPTIONS</title>
@@ -194,8 +195,8 @@ ought be fixed.</para>
 			<refentrytitle>mount</refentrytitle>
 			<manvolnum>8</manvolnum>
 		</citerefentry>, <citerefentry>
-			<refentrytitle>notcurses</refentrytitle>
-			<manvolnum>3notcurses</manvolnum>
+			<refentrytitle>ncurses</refentrytitle>
+			<manvolnum>3ncurses</manvolnum>
 		</citerefentry>, <citerefentry>
 			<refentrytitle>parted</refentrytitle>
 			<manvolnum>8</manvolnum>

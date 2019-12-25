@@ -45,7 +45,7 @@
 			</author>
 		</authorgroup>
 		<copyright>
-			<year>2012-2019</year>
+			<year>2012-2020</year>
 			<holder>&dhusername;</holder>
 		</copyright>
 	</refentryinfo>
@@ -78,7 +78,8 @@
 		facilitates use of UUID/WWN- and HBA-based identification of block devices.</para>
 <para>This page describes the <emphasis role="bold">readline(3)</emphasis> implementation.
   Consult <emphasis role="bold">growlight(8)</emphasis> for a fullscreen
-    <emphasis role="bold">notcurses(3notcurses)</emphasis> variant.</para>
+    <emphasis role="bold">notcurses(3notcurses)</emphasis> variant, or <emphasis role="bold">growlight(8)</emphasis> for the flagship
+    notcurses-based tool.</para>
 	</refsect1>
 	<refsect1 id="options">
 		<title>OPTIONS</title>
