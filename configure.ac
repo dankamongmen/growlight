@@ -76,7 +76,7 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
-PKG_CHECK_MODULES([notcurses], [notcurses >= 0.4.0])
+PKG_CHECK_MODULES([notcurses], [notcurses >= 0.9.2])
 	notcurses_CFLAGS+=" $notcurses_CFLAGS"
 	notcurses_LIBS+=" $notcurses_LIBS"
 

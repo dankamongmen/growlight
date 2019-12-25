@@ -1198,16 +1198,18 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
 }
 
 // returns number of lines printed
+// cliptop: if true, we are cut off at the top (printing up), otherwise we'd be
+// cut off at the bottom (printing down).
 static int
 print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
-          int line, int rows, unsigned cols, int topp, unsigned endp){
+          int line, int rows, unsigned cols, bool cliptop){
   char buf[BPREFIXSTRLEN + 1];
   int selected, co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
 //fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
   ncplane_set_bg_rgb(n, 0, 0, 0);
-  if(line >= rows - !endp){
+  if(line >= rows - !cliptop){
     return 0;
   }
   strcpy(rolestr, "");
@@ -1242,8 +1244,8 @@ case LAYOUT_NONE:
       cwattrset(n, VIRTUAL_COLOR);
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
-    if(line + !!topp >= 1){
-      if(!bo->d->size || line + 2 < rows - !endp){
+    if(line + !!cliptop >= 1){
+      if(!bo->d->size || line + 2 < rows - !cliptop){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1276,8 +1278,8 @@ case LAYOUT_MDADM:
       co = MDADM_COLOR;
     }
     cwattrset(n, co);
-    if(line + !!topp >= 1){
-      if(!bo->d->size || line + 2 <= rows - !endp){
+    if(line + !!cliptop >= 1){
+      if(!bo->d->size || line + 2 <= rows - !cliptop){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1303,8 +1305,8 @@ case LAYOUT_MDADM:
 case LAYOUT_DM:
     strncpy(rolestr, "dm", sizeof(rolestr));
     cwattrset(n, MDADM_COLOR);
-    if(line + !!topp >= 1){
-      if(!bo->d->size || line + 2 < rows - !endp){
+    if(line + !!cliptop >= 1){
+      if(!bo->d->size || line + 2 < rows - !cliptop){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1331,8 +1333,8 @@ case LAYOUT_PARTITION:
 case LAYOUT_ZPOOL:
     strncpy(rolestr, "zpool", sizeof(rolestr));
     cwattrset(n, ZPOOL_COLOR);
-    if(line + !!topp >= 1){
-      if(!bo->d->size || line + 2 < rows - !endp){
+    if(line + !!cliptop >= 1){
+      if(!bo->d->size || line + 2 < rows - !cliptop){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1362,13 +1364,13 @@ case LAYOUT_ZPOOL:
   cwattrset(n, CELL_STYLE_BOLD|SUBDISPLAY_COLOR);
 
   // Box-diagram (3-line) mode. Print the name on the first line.
-  if(line + !!topp >= 1){
+  if(line + !!cliptop >= 1){
     cmvwprintw(n, line, START_COL, "%11.11s", bo->d->name);
   }
 
   // Print summary below device name, in the same color, but prefix it
   // with the single-character SMART status when applicable.
-  if(line + 1 < rows - !endp && line + !!topp + 1 >= 1){
+  if(line + 1 < rows - !cliptop && line + !!cliptop + 1 >= 1){
     wchar_t rep = L' ';
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
@@ -1392,7 +1394,7 @@ case LAYOUT_ZPOOL:
     }
   }
   // ...and finally the temperature/vfailure status, and utilization...
-  if((line + 2 <= rows - !endp) && (line + !!topp + 2 >= 1)){
+  if((line + 2 <= rows - !cliptop) && (line + !!cliptop + 2 >= 1)){
     int sumline = line + 2;
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
@@ -1451,16 +1453,16 @@ case LAYOUT_ZPOOL:
   if(selected){
     cwattron(n, CELL_STYLE_REVERSE);
   }
-  if(line + !!topp >= 1){
+  if(line + !!cliptop >= 1){
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
     cmvwadd_wch(n, line, cols - START_COL, L"╮");
   }
-  if(++line >= rows - !endp){
+  if(++line >= rows - !cliptop){
     return 1;
   }
 
-  if(line + !!topp >= 1){
+  if(line + !!cliptop >= 1){
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"│");
     print_blockbar(n, bo, line, START_COL + 10 + 2,
           cols - START_COL - 1, selected);
@@ -1470,13 +1472,13 @@ case LAYOUT_ZPOOL:
   if(selected){
     cwattron(n, CELL_STYLE_REVERSE);
   }
-  if(line + !!topp >= 1){
+  if(line + !!cliptop >= 1){
     cmvwadd_wch(n, line, cols - START_COL, L"│");
   }
-  if(++line >= rows - !endp){
+  if(++line >= rows - !cliptop){
     return 2;
   }
-  if(line + !!topp >= 1){
+  if(line + !!cliptop >= 1){
     int c = cols - 80;
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"╰");
     cmvwadd_wch(n, line, START_COL + 12, L"┤");
@@ -1607,8 +1609,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
   cur = as->selected;
   line = as->selline;
   while(cur && line + (long)device_lines(as->expansion, cur) >= cliptop){
-    print_dev(n, as, cur, line, rows, cols, cliptop, !cliptop);
-    p = device_lines(as->expansion, cur);
+    p = print_dev(n, as, cur, line, rows, cols, cliptop);
     line -= p;
     printed += p;
     cur = cur->prev;
@@ -1619,24 +1620,24 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as,
   cur = (as->selected ? as->selected->next : as->bobjs);
   while(cur && line < rows){
 //fprintf(stderr, "ITERATING %p (%ld < %d) %d\n", cur, line, rows, cliptop);
-    print_dev(n, as, cur, line, rows, cols, cliptop, !cliptop);
-    // here, we account before we traverse. this is correct.
-    p = device_lines(as->expansion, cur);
+    p = print_dev(n, as, cur, line, rows, cols, cliptop);
     line += p;
     printed += p;
     cur = cur->next;
   }
+//fprintf(stderr, "BASEPRINTED %d/%d through %ld for %s\n", printed, rows, line, as->c->name);
   printed += 1; // top+bottom borders
-  if(!cur){
+  if(!cur && printed < rows){
     ++printed;
   }
-//fprintf(stderr, "PRINTED %d for %s\n", printed, as->c->name);
+//fprintf(stderr, "PRINTED %d/%d through %ld for %s\n", printed, rows, line, as->c->name);
   int belowend = 0;
   if(line > rows){
     belowend = line - rows;
     line = rows;
   }
   adapter_box(as, n, cliptop * belowend, !cliptop * belowend, printed);
+  assert(printed <= rows);
   return printed;
 }
 
@@ -1646,7 +1647,7 @@ redraw_adapter(struct tablet* t, int begx, int begy, int maxx, int maxy, bool cl
   const adapterstate *as = tablet_userptr(t);
   ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
-  int lines = print_adapter_devs(n, as, maxy - begy, maxx - begx, cliptop);
+  int lines = print_adapter_devs(n, as, maxy - begy + 1, maxx - begx + 1, cliptop);
   if(lines < 0){
     return -1;
   }
@@ -3097,12 +3098,12 @@ get_current_controller(void){
 }
 
 static int
-select_adapter_dev(adapterstate* as, blockobj* bo){
+select_adapter_dev(adapterstate* as, blockobj* bo, int delta){
   assert(bo != as->selected);
   if((as->selected = bo) == NULL){
     as->selline = 1; // FIXME
   }else{
-    as->selline = 1; // FIXME relative to previous
+    as->selline += delta;
   }
   return 0;
 }
@@ -3117,7 +3118,7 @@ deselect_adapter_locked(void){
   if(as->selected == NULL){
     return;
   }
-  select_adapter_dev(as, NULL);
+  select_adapter_dev(as, NULL, 0);
 }
 
 static void
@@ -3509,7 +3510,7 @@ use_prev_device(void){
     }
     return;
   }
-  select_adapter_dev(as, as->selected->prev);
+  select_adapter_dev(as, as->selected->prev, -device_lines(as->expansion, as->selected));
 }
 
 static void
@@ -3525,7 +3526,7 @@ use_next_device(void){
     }
     return;
   }
-  select_adapter_dev(as, as->selected->next);
+  select_adapter_dev(as, as->selected->next, device_lines(as->expansion, as->selected));
 }
 
 static const int DIAGROWS = 14;
@@ -4045,7 +4046,7 @@ select_adapter(void){
     return -1;
   }
   assert(as->selline == 1);
-  return select_adapter_dev(as, as->bobjs);
+  return select_adapter_dev(as, as->bobjs, 0);
 }
 
 static void
@@ -5025,8 +5026,8 @@ handle_actform_string_input(int ch){
 // typical UI, and handle it according to the subwindow. If we are not
 // interested in the input, return it for further use. Otherwise, return 0 to
 // indicate intercept.
-static int
-handle_subwindow_input(int ch){
+static char32_t
+handle_subwindow_input(char32_t ch){
   switch(ch){
     default:
       // locked_diag("FIXME handle subwindow input");
@@ -5047,8 +5048,8 @@ handle_actform_splash_input(void){
 // We received input while a modal form was active. Divert it from the typical
 // UI, and handle it according to the form. Returning non-zero quits the
 // program, and should pretty much only indicate that 'q' was pressed.
-static wchar_t
-handle_actform_input(wchar_t ch){
+static char32_t
+handle_actform_input(char32_t ch){
   struct form_state *fs = actform;
   void (*mcb)(const char *, char **, int, int);
   void (*cb)(const char *);
@@ -5347,10 +5348,11 @@ unset_target(void){
 
 static void
 handle_ncurses_input(struct ncplane* w){
-  wchar_t ch;
+  char32_t ch;
+  ncinput ni;
   int r;
 
-  while((ch = notcurses_getc_blocking(NC)) != (wchar_t)-1){
+  while((ch = notcurses_getc_blocking(NC, &ni)) != (char32_t)-1){
     if(ch == 12){ // CTRL+L FIXME
       lock_ncurses();
       notcurses_refresh(NC);
@@ -5358,7 +5360,7 @@ handle_ncurses_input(struct ncplane* w){
       continue;
     }
     if(actform){
-      if((ch = handle_actform_input(ch)) == -1){
+      if((ch = handle_actform_input(ch)) == (char32_t)-1){
         break;
       }
       if(ch == 0){
@@ -5366,7 +5368,7 @@ handle_ncurses_input(struct ncplane* w){
       }
     }
     if(active){
-      if((ch = handle_subwindow_input(ch)) == -1){
+      if((ch = handle_subwindow_input(ch)) == (char32_t)-1){
         return;
       }
       if(ch == 0){ // intercepted
@@ -5917,11 +5919,11 @@ block_free(void *cv, void *bv){
   lock_ncurses_growlight();
   if(bo == as->selected){
     if(bo->prev){
-      select_adapter_dev(as, bo->prev);
+      select_adapter_dev(as, bo->prev, -device_lines(as->expansion, bo));
     }else if(bo->next){
-      select_adapter_dev(as, bo->next);
+      select_adapter_dev(as, bo->next, device_lines(as->expansion, bo));
     }else{
-      select_adapter_dev(as, NULL);
+      select_adapter_dev(as, NULL, 0);
     }
   }
   free_zchain(&bo->zchain);
