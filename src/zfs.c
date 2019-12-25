@@ -10,6 +10,7 @@
 #include "growlight.h"
 
 #ifdef HAVE_ZFS
+#include <libzfs.h>
 
 // FIXME hacks around the libspl/libzfs autotools-dominated jank
 #define ulong_t unsigned long

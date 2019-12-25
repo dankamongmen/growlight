@@ -1427,49 +1427,49 @@ typedef void *(*eventfxn)(void *);
 // hidden bugs. We need address some things before that can happen, though.
 // FIXME
 static inline int
-watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
+watch_dir(int fd, const char *dfp, eventfxn fxn, int *wd, int timeout){
 	pthread_attr_t attr;
 	struct dirent *d;
-	int r,dfd;
+	int r, dfd;
 	DIR *dir;
 
 	pthread_mutex_lock(&barrier);
 	assert(thrcount == 0);
 	pthread_mutex_unlock(&barrier);
 	if(fd >= 0){
-		*wd = inotify_add_watch(fd,dfp,IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
+		*wd = inotify_add_watch(fd, dfp, IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 		if(*wd < 0){
-			diag("Couldn't inotify on %s (%s)\n",dfp,strerror(errno));
+			diag("Couldn't inotify on %s (%s)\n", dfp, strerror(errno));
 			return -1;
 		}else{
-			verbf("Watching %s on fd %d\n",dfp,*wd);
+			verbf("Watching %s on fd %d\n", dfp, *wd);
 		}
 	}
 	r = 0;
 	if((dir = opendir(dfp)) == NULL){
-		diag("Couldn't open %s (%s)\n",dfp,strerror(errno));
-		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
+		diag("Couldn't open %s (%s)\n", dfp, strerror(errno));
+		if(fd >= 0){ inotify_rm_watch(fd, *wd); }
 		return -1;
 	}
 	if((dfd = dirfd(dir)) < 0){
-		diag("Couldn't get fd on %s (%s)\n",dfp,strerror(errno));
-		if(fd >= 0){ inotify_rm_watch(fd,*wd); }
+		diag("Couldn't get fd on %s (%s)\n", dfp, strerror(errno));
+		if(fd >= 0){ inotify_rm_watch(fd, *wd); }
 		closedir(dir);
 		return -1;
 	}
 	if( (r = pthread_attr_init(&attr)) ||
-		(r = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED))){
-		diag("Couldn't set threads detachable (%s)\n",strerror(errno));
+		(r = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED))){
+		diag("Couldn't set threads detachable (%s)\n", strerror(errno));
 	}
-	verbf("scanning %s on %d...\n",dfp,dfd);
+	verbf("scanning %s on %d...\n", dfp, dfd);
 	while(d = NULL, errno = 0, (d = readdir(dir)) != NULL){
 		pthread_t tid;
 		if(d->d_type == DT_LNK){
 			pthread_mutex_lock(&barrier);
 			++thrcount;
 			pthread_mutex_unlock(&barrier);
-			if( (r = pthread_create(&tid,&attr,fxn,strdup(d->d_name))) ){
-				diag("Couldn't create thread (%s)\n",strerror(r));
+			if( (r = pthread_create(&tid, &attr, fxn, strdup(d->d_name))) ){
+				diag("Couldn't create thread (%s)\n", strerror(r));
 				pthread_mutex_lock(&barrier);
 				--thrcount;
 				pthread_mutex_unlock(&barrier);
@@ -1478,7 +1478,7 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 		}
 	}
 	if(errno && !d){
-		diag("Error processing %s (%s)\n",dfp,strerror(errno));
+		diag("Error processing %s (%s)\n", dfp, strerror(errno));
 		r = -1;
 	}
 	closedir(dir);
@@ -1488,15 +1488,15 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 		struct timespec ts;
 
 		if(timeout){
-			verbf("%s blocks on %u devices for up to 1s\n",dfp,thrcount);
+			verbf("%s blocks on %u devices for up to 1s\n", dfp, thrcount);
 			ts.tv_sec = 0;
 			ts.tv_nsec = 100000000;
-			pthread_cond_timedwait(&discovery_cond,&lock,&ts);
-			pthread_cond_wait(&barrier_cond,&barrier);
+			pthread_cond_timedwait(&discovery_cond, &lock, &ts);
+			pthread_cond_wait(&barrier_cond, &barrier);
 			break;
 		}else{
-			verbf("%s blocks on %u devices\n",dfp,thrcount);
-			pthread_cond_wait(&barrier_cond,&barrier);
+			verbf("%s blocks on %u devices\n", dfp, thrcount);
+			pthread_cond_wait(&barrier_cond, &barrier);
 		}
 	}
 	pthread_mutex_unlock(&barrier);
@@ -1505,14 +1505,14 @@ watch_dir(int fd,const char *dfp,eventfxn fxn,int *wd,int timeout){
 
 static void
 version(const char *name){
-	diag("%s version %s\n",basename(name),VERSION);
+	diag("%s version %s\n", basename(name), VERSION);
 }
 
 static void
-usage(const char *name,int disphelp){
+usage(const char *name, int disphelp){
 	diag("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
 		"\t[ -t|--target=path ] [ -i|--import ]%s\n",
-		basename(name),disphelp ? " [ --disphelp ]" : "");
+		basename(name), disphelp ? " [ --disphelp ]" : "");
 }
 
 static int
@@ -1708,7 +1708,7 @@ event_posix_thread(void *unsafe){
 }
 
 static int
-event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
+event_thread(int ifd, int ufd, int syswd, int bypathwd, int byidwd, int mdwd){
 	struct itimerspec stattimer = {
 		.it_interval = { .tv_sec = 1, .tv_nsec = 0, },
 	};
@@ -1719,7 +1719,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 	memset(&ev, 0, sizeof(ev));
 	ev.events = EPOLLIN | EPOLLRDHUP;
 	if((em = malloc(sizeof(*em))) == NULL){
-		diag("Couldn't create event marshal (%s)\n",strerror(errno));
+		diag("Couldn't create event marshal (%s)\n", strerror(errno));
 		return -1;
 	}
 #ifdef HAVE_EPOLL_CREATE1
@@ -1727,20 +1727,20 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 #else
 	if((em->efd = epoll_create(5)) < 0){
 #endif
-		diag("Couldn't create epoll (%s)\n",strerror(errno));
+		diag("Couldn't create epoll (%s)\n", strerror(errno));
 		free(em);
 		return -1;
 	}
 	ev.data.fd = ifd;
-	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,ifd,&ev)){
-		diag("Couldn't add %d to epoll (%s)\n",ifd,strerror(errno));
+	if(epoll_ctl(em->efd, EPOLL_CTL_ADD, ifd, &ev)){
+		diag("Couldn't add %d to epoll (%s)\n", ifd, strerror(errno));
 		close(em->efd);
 		free(em);
 		return -1;
 	}
 	ev.data.fd = ufd;
-	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,ufd,&ev)){
-		diag("Couldn't add %d to epoll (%s)\n",ufd,strerror(errno));
+	if(epoll_ctl(em->efd, EPOLL_CTL_ADD, ufd, &ev)){
+		diag("Couldn't add %d to epoll (%s)\n", ufd, strerror(errno));
 		close(em->efd);
 		free(em);
 		return -1;
@@ -1765,20 +1765,20 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 		free(em);
 		return -1;
 	}
-	if((em->mfd = open(MOUNTS,O_RDONLY|O_CLOEXEC)) < 0){
+	if((em->mfd = open(MOUNTS, O_RDONLY|O_CLOEXEC)) < 0){
 		close(em->stats_timerfd);
 		close(em->efd);
 		free(em);
 		return -1;
 	}
-	if((em->sfd = open(SWAPS,O_RDONLY|O_CLOEXEC)) < 0){
+	if((em->sfd = open(SWAPS, O_RDONLY|O_CLOEXEC)) < 0){
 		close(em->stats_timerfd);
 		close(em->mfd);
 		close(em->efd);
 		free(em);
 		return -1;
 	}
-	if((em->ffd = open(FILESYSTEMS,O_RDONLY|O_CLOEXEC)) < 0){
+	if((em->ffd = open(FILESYSTEMS, O_RDONLY|O_CLOEXEC)) < 0){
 		close(em->stats_timerfd);
 		close(em->sfd);
 		close(em->mfd);
@@ -1801,7 +1801,7 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 	ev.events = EPOLLRDHUP;
 	ev.data.fd = em->ffd;
 	if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->ffd, &ev)){
-		diag("Couldn't add %d to epoll (%s)\n",em->ffd,strerror(errno));
+		diag("Couldn't add %d to epoll (%s)\n", em->ffd, strerror(errno));
 		close(em->stats_timerfd);
 		close(em->ffd);
 		close(em->sfd);
@@ -1811,8 +1811,8 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 		return -1;
 	}
 	ev.data.fd = em->sfd;
-	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->sfd,&ev)){
-		diag("Couldn't add %d to epoll (%s)\n",em->sfd,strerror(errno));
+	if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->sfd, &ev)){
+		diag("Couldn't add %d to epoll (%s)\n", em->sfd, strerror(errno));
 		close(em->stats_timerfd);
 		close(em->ffd);
 		close(em->sfd);
@@ -1822,8 +1822,8 @@ event_thread(int ifd,int ufd,int syswd,int bypathwd,int byidwd,int mdwd){
 		return -1;
 	}
 	ev.data.fd = em->mfd;
-	if(epoll_ctl(em->efd,EPOLL_CTL_ADD,em->mfd,&ev)){
-		diag("Couldn't add %d to epoll (%s)\n",em->mfd,strerror(errno));
+	if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->mfd, &ev)){
+		diag("Couldn't add %d to epoll (%s)\n", em->mfd, strerror(errno));
 		close(em->stats_timerfd);
 		close(em->ffd);
 		close(em->sfd);
@@ -1866,56 +1866,56 @@ init_special_adapters(void){
 	controller *c;
 
 	for(c = controllers ; c ; c = c->next){
-		c->uistate = gui->adapter_event(c,NULL);
+		c->uistate = gui->adapter_event(c, NULL);
 	}
 }
 
-int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp){
+int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphelp){
 	static const struct option ops[] = {
 		{
 			.name = "help",
 			.has_arg = 0,
 			.flag = NULL,
 			.val = 'h',
-		},{
+		}, {
 			.name = "import",
 			.has_arg = 0,
 			.flag = NULL,
 			.val = 'i',
-		},{
+		}, {
 			.name = "target",
 			.has_arg = 2,
 			.flag = NULL,
 			.val = 't',
-		},{
+		}, {
 			.name = "verbose",
 			.has_arg = 0,
 			.flag = NULL,
 			.val = 'v',
-		},{
+		}, {
 			.name = "version",
 			.has_arg = 0,
 			.flag = NULL,
 			.val = 'V',
-		},{
+		}, {
 			.name = "disphelp",
 			.has_arg = 0,
 			.flag = NULL,
 			.val = 'D',
-		},{
+		}, {
 			.name = NULL,
 			.has_arg = 0,
 			.flag = NULL,
 			.val = 0,
 		},
 	};
-	int fd,opt,longidx,udevfd,syswd,mdwd,bypathwd,byidwd;
-	int import,detcopy;
+	int fd, opt, longidx, udevfd, syswd, mdwd, bypathwd, byidwd;
+	int import, detcopy;
 	char buf[BUFSIZ];
 
 	gui = ui;
-	if(setlocale(LC_ALL,"") == NULL){
-		diag("Couldn't set locale (%s)\n",strerror(errno));
+	if(setlocale(LC_ALL, "") == NULL){
+		diag("Couldn't set locale (%s)\n", strerror(errno));
 		goto err;
 	}
 	SSL_library_init();
@@ -1927,15 +1927,15 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 	}
 	import = 0;
 	opterr = 0; // disallow getopt(3) diagnostics to stderr
-	while((opt = getopt_long(argc,argv,":hit:vV",ops,&longidx)) >= 0){
+	while((opt = getopt_long(argc, argv, ":hit:vV", ops, &longidx)) >= 0){
 		switch(opt){
 		case 'h':{
-			usage(argv[0],detcopy);
+			usage(argv[0], detcopy);
 			return -1;
 		}case 'i':{
 			if(import){
 				diag("Error: provided -i/--import twice\n");
-				usage(argv[0],detcopy);
+				usage(argv[0], detcopy);
 				return -1;
 			}
 			import = 1;
@@ -1943,16 +1943,16 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 		}case 't':{
 			if(growlight_target){
 				diag("Error: defined -t/--target twice (%s, %s)\n",
-						growlight_target,optarg);
-				usage(argv[0],detcopy);
+						growlight_target, optarg);
+				usage(argv[0], detcopy);
 				return -1;
 			}else if(optarg == NULL){
 				diag("-t|--target requires an argument\n");
-				usage(argv[0],detcopy);
+				usage(argv[0], detcopy);
 				return -1;
 			}else{
 				if(set_target(optarg)){
-					usage(argv[0],detcopy);
+					usage(argv[0], detcopy);
 					return -1;
 				}
 			}
@@ -1966,45 +1966,45 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 		}case 'D':{
 			if(!detcopy){
 				diag("Error: unknown option --disphelp\n");
-				usage(argv[0],detcopy);
+				usage(argv[0], detcopy);
 				return -1;
 			}
 			if(*disphelp){
 				diag("Error: provided --disphelp twice\n");
-				usage(argv[0],detcopy);
+				usage(argv[0], detcopy);
 				return -1;
 			}
 			*disphelp = 1;
 			break;
 		}case ':':{
-			diag("Option requires argument: '%c'\n",optopt);
-			usage(argv[0],detcopy);
+			diag("Option requires argument: '%c'\n", optopt);
+			usage(argv[0], detcopy);
 			return -1;
 		}case '?':{
 			if(isgraph(optopt)){
-				diag("Unknown option: '%c'\n",optopt);
+				diag("Unknown option: '%c'\n", optopt);
 			}else{
-				diag("Unknown option: '%s'\n",argv[optind - 1]);
+				diag("Unknown option: '%s'\n", argv[optind - 1]);
 			}
-			usage(argv[0],detcopy);
+			usage(argv[0], detcopy);
 			return -1;
 		}default:{
-			diag("Misuse of option: '%c'\n",optopt);
-			usage(argv[0],detcopy);
+			diag("Misuse of option: '%c'\n", optopt);
+			usage(argv[0], detcopy);
 			return -1;
 		} }
 	}
-	dm_get_library_version(buf,sizeof(buf));
-	verbf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n",PACKAGE,
-			PACKAGE_VERSION,BLKID_VERSION,PCI_LIB_VERSION,buf,
-			gnu_get_libc_version(),gnu_get_libc_release());
+	dm_get_library_version(buf, sizeof(buf));
+	verbf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n", PACKAGE,
+			PACKAGE_VERSION, BLKID_VERSION, PCI_LIB_VERSION, buf,
+			gnu_get_libc_version(), gnu_get_libc_release());
 	if(glight_pci_init()){
-		diag("Couldn't init libpciaccess (%s)\n",strerror(errno));
+		diag("Couldn't init libpciaccess (%s)\n", strerror(errno));
 	}else{
 		usepci = 1;
 	}
 	if(chdir(SYSROOT)){
-		diag("Couldn't cd to %s (%s)\n",SYSROOT,strerror(errno));
+		diag("Couldn't cd to %s (%s)\n", SYSROOT, strerror(errno));
 		goto err;
 	}
 	dmi_init();
@@ -2029,30 +2029,30 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 			goto err;
 		}
 	}
-	if(watch_dir(fd,SYSROOT,scan_device,&syswd,1)){
+	if(watch_dir(fd, SYSROOT, scan_device, &syswd, 1)){
 		goto err;
 	}
-	if(watch_dir(fd,DEVMD,scan_mdalias,&mdwd,0)){
+	if(watch_dir(fd, DEVMD, scan_mdalias, &mdwd, 0)){
 		// They won't necessarily have a /dev/md, especially if they
 		// have no md devices. Unfortunately, if we then create one,
 		// they'll have one and it'll need monitoring. FIXME
 	}
-	if(watch_dir(fd,DEVBYPATH,scan_devbypath,&bypathwd,0)){
+	if(watch_dir(fd, DEVBYPATH, scan_devbypath, &bypathwd, 0)){
 		// This is OK. Older udevd didn't have /dev/disk/by-path.
 	}
-	if(watch_dir(fd,DEVBYID,scan_devbyid,&byidwd,0)){
+	if(watch_dir(fd, DEVBYID, scan_devbyid, &byidwd, 0)){
 		// This is OK. Older udevd didn't have /dev/disk/by-id.
 	}
 	lock_growlight();
-	if(parse_filesystems(gui,FILESYSTEMS)){
+	if(parse_filesystems(gui, FILESYSTEMS)){
 		unlock_growlight();
 		goto err;
 	}
-	if(parse_mounts(gui,MOUNTS)){
+	if(parse_mounts(gui, MOUNTS)){
 		unlock_growlight();
 		goto err;
 	}
-	if(parse_swaps(gui,SWAPS)){
+	if(parse_swaps(gui, SWAPS)){
 		unlock_growlight();
 		goto err;
 	}
@@ -2060,7 +2060,7 @@ int growlight_init(int argc,char * const *argv,const glightui *ui,int *disphelp)
 	if((udevfd = monitor_udev()) < 0){
 		goto err;
 	}
-	if(event_thread(fd,udevfd,syswd,bypathwd,byidwd,mdwd)){
+	if(event_thread(fd, udevfd, syswd, bypathwd, byidwd, mdwd)){
 		goto err;
 	}
 	return 0;
@@ -2094,7 +2094,7 @@ int growlight_stop(void){
 			return -1;
 		}
 	}
-	diag("Returning %d...\n",r);
+	diag("Returning %d...\n", r);
 	if(r){
 		return -1;
 	}
@@ -2108,11 +2108,11 @@ int rescan_controller(controller *c){
 		diag("Can't rescan unknown/virtual controllers\n");
 		return -1;
 	}
-	if(snprintf(buf,sizeof(buf),"%s/device/rescan",c->sysfs) >= (int)sizeof(buf)){
-		diag("Name too long: %s\n",c->sysfs);
+	if(snprintf(buf, sizeof(buf), "%s/device/rescan", c->sysfs) >= (int)sizeof(buf)){
+		diag("Name too long: %s\n", c->sysfs);
 		return -1;
 	}
-	if(write_sysfs(buf,"1\n")){
+	if(write_sysfs(buf, "1\n")){
 		return -1;
 	}
 	return 0;
@@ -2125,11 +2125,11 @@ int reset_controller(controller *c){
 		diag("Can't reset unknown/virtual controllers\n");
 		return -1;
 	}
-	if(snprintf(buf,sizeof(buf),"%s/device/reset",c->sysfs) >= (int)sizeof(buf)){
-		diag("Name too long: %s\n",c->sysfs);
+	if(snprintf(buf, sizeof(buf), "%s/device/reset", c->sysfs) >= (int)sizeof(buf)){
+		diag("Name too long: %s\n", c->sysfs);
 		return -1;
 	}
-	if(write_sysfs(buf,"1\n")){
+	if(write_sysfs(buf, "1\n")){
 		return -1;
 	}
 	return 0;
@@ -2138,8 +2138,8 @@ int reset_controller(controller *c){
 int benchmark_blockdev(const device *d){
 	char buf[PATH_MAX];
 
-	if(snprintf(buf,sizeof(buf),"hdparm -t /dev/%s",d->name) >= (int)sizeof(buf)){
-		diag("Name too long: %s\n",d->name);
+	if(snprintf(buf, sizeof(buf), "hdparm -t /dev/%s", d->name) >= (int)sizeof(buf)){
+		diag("Name too long: %s\n", d->name);
 		return -1;
 	}
 	if(popen_drain(buf)){
@@ -2155,30 +2155,30 @@ int benchmark_blockdev(const device *d){
 // out the partition table, pass 1 as killedpart (since we didn't step through
 // and remove each partition by hand using BLKPG).
 static int
-rescan_blockdev_internal(const device *d,int killedpart){
+rescan_blockdev_internal(const device *d, int killedpart){
 	char buf[PATH_MAX];
 	int fd;
 
-	if(snprintf(buf,sizeof(buf),SYSROOT"/%s/device/rescan",d->name) >= (int)sizeof(buf)){
-		diag("Name too long: %s\n",d->name);
+	if(snprintf(buf, sizeof(buf), SYSROOT"/%s/device/rescan", d->name) >= (int)sizeof(buf)){
+		diag("Name too long: %s\n", d->name);
 		return -1;
 	}
-	if(write_sysfs(buf,"1\n")){
-		diag("Failed writing to %s/rescan (%s?)\n",d->name,strerror(errno));
+	if(write_sysfs(buf, "1\n")){
+		diag("Failed writing to %s/rescan (%s?)\n", d->name, strerror(errno));
 		return -1;
 	}
-	diag("Wrote '1' to %s\n",buf);
-	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC)) < 0){
-		diag("Couldn't open /dev/%s (%s?)\n",d->name,strerror(errno));
+	diag("Wrote '1' to %s\n", buf);
+	if((fd = openat(devfd, d->name, O_RDWR|O_CLOEXEC)) < 0){
+		diag("Couldn't open /dev/%s (%s?)\n", d->name, strerror(errno));
 		return -1;
 	}
-	diag("Syncing %s via %d...\n",d->name,fd);
+	diag("Syncing %s via %d...\n", d->name, fd);
 	if(fsync(fd)){
-		diag("Couldn't sync %d for %s (%s)\n",fd,d->name,strerror(errno));
+		diag("Couldn't sync %d for %s (%s)\n", fd, d->name, strerror(errno));
 	}
 	if(killedpart){
-		if(ioctl(fd,BLKRRPART)){
-			diag("BLKRRPART failed on %s (%s)\n",d->name,strerror(errno));
+		if(ioctl(fd, BLKRRPART)){
+			diag("BLKRRPART failed on %s (%s)\n", d->name, strerror(errno));
 		}
 	}
 	close(fd);
@@ -2187,11 +2187,11 @@ rescan_blockdev_internal(const device *d,int killedpart){
 }
 
 int rescan_blockdev(const device *d){
-	return rescan_blockdev_internal(d,0);
+	return rescan_blockdev_internal(d, 0);
 }
 
 int rescan_blockdev_blkrrpart(const device *d){
-	return rescan_blockdev_internal(d,1);
+	return rescan_blockdev_internal(d, 1);
 }
 
 void lock_growlight(void){
@@ -2209,13 +2209,13 @@ int rescan_device(const char *name){
 
 	lock_growlight();
 	do{
-		if(strncmp(name,"/",1) == 0){
+		if(strncmp(name, "/", 1) == 0){
 			s = 1;
-		}else if(strncmp(name,"./",2) == 0){
+		}else if(strncmp(name, "./", 2) == 0){
 			s = 2;
-		}else if(strncmp(name,"../",3) == 0){
+		}else if(strncmp(name, "../", 3) == 0){
 			s = 3;
-		}else if(strncmp(name,"dev/",4) == 0){
+		}else if(strncmp(name, "dev/", 4) == 0){
 			s = 4;
 		}else{
 			s = 0;
@@ -2226,12 +2226,12 @@ int rescan_device(const char *name){
 		for(lnk = &c->blockdevs ; *lnk ; lnk = &(*lnk)->next){
 			device *d;
 
-			if(strcmp(name,(*lnk)->name)){
+			if(strcmp(name, (*lnk)->name)){
 				if((*lnk)->layout == LAYOUT_NONE){
 					const device *p;
 
 					for(p = (*lnk)->parts ; p ; p = p->next){
-						if(strcmp(name,p->name) == 0){
+						if(strcmp(name, p->name) == 0){
 							break;
 						}
 					}
@@ -2246,12 +2246,12 @@ int rescan_device(const char *name){
 			*lnk = (*lnk)->next;
 			internal_device_reset(d);
 			// a successful rescan() reinserts the device
-			if(rescan(d->name,d) == NULL){
+			if(rescan(d->name, d) == NULL){
 				unlock_growlight();
 				return -1;
 			}
 			clear_mounts(controllers);
-			parse_mounts(gui,MOUNTS);
+			parse_mounts(gui, MOUNTS);
 			unlock_growlight();
 			return 0;
 		}
@@ -2265,16 +2265,16 @@ int rescan_device(const char *name){
 }
 
 static int
-devices_match_p(const device *d,const device *dd){
-	unsigned mismatch = 0,match = 0;
+devices_match_p(const device *d, const device *dd){
+	unsigned mismatch = 0, match = 0;
 
-	strcmp(d->name,dd->name) ? ++mismatch : ++match;
+	strcmp(d->name, dd->name) ? ++mismatch : ++match;
 	(!d->uuid && !dd->uuid) ? ++match :
 		((d->uuid && !dd->uuid) || (!d->uuid && dd->uuid) ||
-			strcmp(d->uuid,dd->uuid)) ? ++mismatch : ++match;
+			strcmp(d->uuid, dd->uuid)) ? ++mismatch : ++match;
 	(!d->label && !dd->label) ? ++match :
 		((d->label && !dd->label) || (!d->label && dd->label) ||
-			strcmp(d->label,dd->label)) ? ++mismatch : ++match;
+			strcmp(d->label, dd->label)) ? ++mismatch : ++match;
 	return (mismatch && !match) ? 0 : (mismatch && match) ? -1 : 1;
 }
 
@@ -2293,12 +2293,12 @@ device *match_device(const device *d){
 				device *dp;
 
 				for(dp = cd->parts ; dp ; dp = dp->next){
-					if((r = devices_match_p(d,dp)) > 0){
+					if((r = devices_match_p(d, dp)) > 0){
 						return dp;
 					}
 				}
 			}else{
-				if((r = devices_match_p(d,cd)) > 0){
+				if((r = devices_match_p(d, cd)) > 0){
 					return cd;
 				}
 			}
@@ -2312,31 +2312,31 @@ device *match_device(const device *d){
 
 #define GROWLIGHT_SCRIPT "/usr/lib/post-base-installer.d/growlight"
 static int
-write_postbase_hook(const char *fmt,...) __attribute__ ((format (printf,1,2)));
+write_postbase_hook(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 
 static int
-write_postbase_hook(const char *fmt,...){
+write_postbase_hook(const char *fmt, ...){
 	va_list va;
 	FILE *fp;
 
-	if((fp = fopen(GROWLIGHT_SCRIPT,"w")) == NULL){
-		diag("Error opening %s (%s)\n",GROWLIGHT_SCRIPT,strerror(errno));
+	if((fp = fopen(GROWLIGHT_SCRIPT, "w")) == NULL){
+		diag("Error opening %s (%s)\n", GROWLIGHT_SCRIPT, strerror(errno));
 		return -1;
 	}
-	va_start(va,fmt);
-	if(vfprintf(fp,fmt,va) < 0){
+	va_start(va, fmt);
+	if(vfprintf(fp, fmt, va) < 0){
 		va_end(va);
-		diag("Error writing %s (%s)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		diag("Error writing %s (%s)\n", GROWLIGHT_SCRIPT, strerror(errno));
 		fclose(fp);
 		return -1;
 	}
 	va_end(va);
 	if(fclose(fp)){
-		diag("Error closing %s (%s)\n",GROWLIGHT_SCRIPT,strerror(errno));
+		diag("Error closing %s (%s)\n", GROWLIGHT_SCRIPT, strerror(errno));
 		return -1;
 	}
-	if(chmod(GROWLIGHT_SCRIPT,S_IRUSR|S_IWUSR|S_IXUSR)){
-		diag("Error chmodding %s (%s)\n",GROWLIGHT_SCRIPT,strerror(errno));
+	if(chmod(GROWLIGHT_SCRIPT, S_IRUSR|S_IWUSR|S_IXUSR)){
+		diag("Error chmodding %s (%s)\n", GROWLIGHT_SCRIPT, strerror(errno));
 		return -1;
 	}
 	return 0;

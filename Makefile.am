@@ -1,7 +1,7 @@
 LANG=C
 LC_ALL=c
 
-AM_CFLAGS=-std=gnu11 -Wall -O2 -W -Wshadow -Wextra -fvisibility=hidden \
+AM_CFLAGS=-std=gnu11 -Wall -g -ggdb -W -Wshadow -Wextra -fvisibility=hidden \
     -D_FORTIFY_SOURCE=2 \
 	  $(PTHREAD_CFLAGS) $(OPENSSL_INCLUDES) $(ZFS_CFLAGS)
 AM_LDFLAGS=-Wl,-O2,--no-undefined-version,--enable-new-dtags,--as-needed,--warn-common
@@ -10,8 +10,8 @@ AM_CC=$(PTHREAD_CC)
 LIBS+=$(PTHREAD_LIBS) $(OPENSSL_LIBS) $(ZFS_LIBS)
 
 # FIXME can we not define these with addsuffix or something
-dist_man_MANS = growlight-readline.8 growlight-curses.8
-dist_xhtml_XHTML = growlight-readline.xhtml growlight-curses.xhtml
+dist_man_MANS = growlight-readline.8 growlight.8
+dist_xhtml_XHTML = growlight-readline.xhtml growlight.xhtml
 
 doc_DIR=doc
 doc_DATA=
@@ -20,11 +20,12 @@ doc_DATA+=README.md
 EXTRA_DIST=zfs
 
 dist_doc_DATA=
-dist_doc_DATA+=COPYING growlight-readline.xhtml growlight-curses.xhtml
+dist_doc_DATA+=COPYING growlight-readline.xhtml growlight.xhtml
 
 AM_CPPFLAGS=-D_GNU_SOURCE
 
 bin_PROGRAMS=growlight-readline
+bin_PROGRAMS+=growlight
 bin_PROGRAMS+=growlight-curses
 bin_PROGRAMS+=growlight-test
 
@@ -45,11 +46,15 @@ common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 
 growlight_readline_SOURCES=$(common_SOURCES)
 growlight_readline_SOURCES+=src/readline.c
-growlight_readline_LDADD=@outcurses_LIBS@ @PANEL_LIBS@ @CURSES_LIBS@
+growlight_readline_LDADD=@notcurses_LIBS@ @CURSES_LIBS@
+
+growlight_SOURCES=$(common_SOURCES)
+growlight_SOURCES+=src/notcurses.c src/notcurses.h src/notui-aggregate.h src/notui-aggregate.c
+growlight_LDADD=@notcurses_LIBS@
 
 growlight_curses_SOURCES=$(common_SOURCES)
 growlight_curses_SOURCES+=src/ncurses.c src/ncurses.h src/ui-aggregate.h src/ui-aggregate.c
-growlight_curses_LDADD=@outcurses_LIBS@ @PANEL_LIBS@ @CURSES_LIBS@
+growlight_curses_LDADD=@notcurses_LIBS@ @PANEL_LIBS@ @CURSES_LIBS@
 
 growlight_test_SOURCES=$(common_SOURCES)
 growlight_test_SOURCES+=test/growlight.c

@@ -45,8 +45,8 @@ PKG_PROG_PKG_CONFIG
 
 if test "x$zfs" = "xtrue" ; then
   PKG_CHECK_MODULES([ZFS], [libzfs], [AC_DEFINE([HAVE_ZFS], [1], [Use libzfs from ZoL])])
-	#CFLAGS+=" $ZFS_CFLAGS"
-	LFLAGS+=" $ZFS_LIBS"
+  ZFS_CFLAGS+=" $ZFS_CFLAGS"
+	ZFS_LFLAGS+=" $ZFS_LIBS"
 fi
 
 # FIXME what about the --without-ncurses/--without-ncursesw cases?
@@ -76,9 +76,9 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
-PKG_CHECK_MODULES([outcurses], [outcurses >= 0.0.7], [have_outcurses=yes])
-	CFLAGS+=" $outcurses_CFLAGS"
-  LIBS+= " -loutcurses"
+PKG_CHECK_MODULES([notcurses], [notcurses >= 0.9.3])
+	notcurses_CFLAGS+=" $notcurses_CFLAGS"
+	notcurses_LIBS+=" $notcurses_LIBS"
 
 PKG_CHECK_MODULES([libatasmart], [libatasmart >= 0.19], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"

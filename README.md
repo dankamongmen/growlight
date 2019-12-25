@@ -8,7 +8,7 @@ https://nick-black.com/dankwiki/index.php/Growlight
 
 Dependencies:
 
- - outcurses 0.0.7+
+ - notcurses 0.9.3+
  - libudev 175+
  - libblkid 2.20.1+
  - libpci 3.1.9+
@@ -36,7 +36,6 @@ Build-only dependencies:
  - pkg-config (tested with 0.29)
  - cunit (tested with 2.1)
  - autoconf-archive (tested with 2018+)
- - liboutcurses 0.0.5+
 
 Building from a git checkout:
 
@@ -49,8 +48,8 @@ Building from a tarball:
 
 ## Using it
 
-Terse help is available from the `growlight-curses` and `growlight-readline`
-man pages, or by pressing 'H' in curses mode, or type "help" in readline mode.
+Terse help is available from the `growlight` and `growlight-readline` man
+pages, or by pressing 'H' in fullscreeen mode, or type "help" in readline mode.
 
 ### User's guide
 
@@ -69,7 +68,7 @@ of an adapter from which all devices are removed while it's running).
 The highest level of structure in growlight is the controller ("controller" and
 "adapter" are used interchangeably in growlight). A virtual controller is also
 defined, to collect various virtual devices (especially aggregates). In the
-curses view, controllers are boxes labeled by their type, bus path, and
+fullscreen view, controllers are boxes labeled by their type, bus path, and
 bandwidth. Below, we see a machine with one SATA SSD, a dmcrypt device mapper
 block built atop that, and an unloaded SD card reader hanging off USB 3.0:
 

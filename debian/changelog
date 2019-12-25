@@ -1,3 +1,9 @@
+growlight (2.0.0) UNRELEASED; urgency=medium
+
+  * Swap out GUI for notcurses, add dep on notcurses
+
+ -- Nick Black <dankamongmen@gmail.com>  Thu, 12 Dec 2019 11:51:45 -0500
+
 growlight (1.1.3.3-1) unstable; urgency=medium
 
   * Reenable ZFS support; build-dep on libzfslinux-dev

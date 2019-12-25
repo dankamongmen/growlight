@@ -45,7 +45,7 @@
 			</author>
 		</authorgroup>
 		<copyright>
-			<year>2012-2019</year>
+			<year>2012-2020</year>
 			<holder>&dhusername;</holder>
 		</copyright>
 	</refentryinfo>
@@ -77,8 +77,9 @@
 		aware of variable sector sizes, GPT, and UEFI. <emphasis>&dhpackage;</emphasis>
 		facilitates use of UUID/WWN- and HBA-based identification of block devices.</para>
 <para>This page describes the <emphasis role="bold">readline(3)</emphasis> implementation.
-Consult <emphasis role="bold">growlight-curses(8)</emphasis> for an <emphasis role="bold">ncurses(3ncurses)</emphasis>
-variant.</para>
+  Consult <emphasis role="bold">growlight(8)</emphasis> for a fullscreen
+    <emphasis role="bold">notcurses(3notcurses)</emphasis> variant, or <emphasis role="bold">growlight(8)</emphasis> for the flagship
+    notcurses-based tool.</para>
 	</refsect1>
 	<refsect1 id="options">
 		<title>OPTIONS</title>

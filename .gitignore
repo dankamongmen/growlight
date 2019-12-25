@@ -12,9 +12,12 @@ configure.scan
 depcomp
 .deps/
 doc/growlight.ent
+growlight
 growlight-curses
 growlight-readline
 growlight-test
+growlight.8
+growlight.xhtml
 growlight-curses.8
 growlight-curses.xhtml
 growlight-readline.8
