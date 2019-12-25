@@ -1456,7 +1456,7 @@ case LAYOUT_ZPOOL:
   if(line + !!cliptop >= 1){
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
-    cmvwadd_wch(n, line, cols - START_COL, L"╮");
+    cmvwadd_wch(n, line, cols - START_COL * 2, L"╮");
   }
   if(++line >= rows - !cliptop){
     return 1;
@@ -1473,7 +1473,7 @@ case LAYOUT_ZPOOL:
     cwattron(n, CELL_STYLE_REVERSE);
   }
   if(line + !!cliptop >= 1){
-    cmvwadd_wch(n, line, cols - START_COL, L"│");
+    cmvwadd_wch(n, line, cols - START_COL * 2, L"│");
   }
   if(++line >= rows - !cliptop){
     return 2;
@@ -1486,7 +1486,7 @@ case LAYOUT_ZPOOL:
     if(c > 0){
       cmvwhline(n, line, cols - 3 - c + 1, "─", c);
     }
-   cmvwadd_wch(n, line, cols - START_COL, L"╯");
+   cmvwadd_wch(n, line, cols - START_COL * 2, L"╯");
   }
   ++line;
   return 3;
@@ -5049,7 +5049,7 @@ handle_actform_splash_input(void){
 // UI, and handle it according to the form. Returning non-zero quits the
 // program, and should pretty much only indicate that 'q' was pressed.
 static char32_t
-handle_actform_input(char32_t ch){
+handle_actform_input(wchar_t ch){
   struct form_state *fs = actform;
   void (*mcb)(const char *, char **, int, int);
   void (*cb)(const char *);
