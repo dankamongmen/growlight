@@ -1208,7 +1208,7 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   char rolestr[12]; // taken from %-11.11s below
 
 //fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
-  ncplane_set_bg_rgb(n, 0, 0, 0);
+  ncplane_set_bg_default(n);
   if(line >= rows - !cliptop){
     return 0;
   }
@@ -1527,7 +1527,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
       bevel_bottom(nc);
     } // otherwise it has no top or bottom visible
   }
-  ncplane_set_bg_rgb(nc, 0, 0, 0);
+  ncplane_set_bg_default(nc);
   if(abovetop == 0){
     if(current){
       cwattron(nc, CELL_STYLE_BOLD);
