@@ -1456,7 +1456,7 @@ case LAYOUT_ZPOOL:
   if(line + !!cliptop >= 1){
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
-    cmvwadd_wch(n, line, cols - START_COL * 2, L"╮");
+    cmvwadd_wch(n, line, cols - START_COL, L"╮");
   }
   if(++line >= rows - !cliptop){
     return 1;
@@ -1473,7 +1473,7 @@ case LAYOUT_ZPOOL:
     cwattron(n, CELL_STYLE_REVERSE);
   }
   if(line + !!cliptop >= 1){
-    cmvwadd_wch(n, line, cols - START_COL * 2, L"│");
+    cmvwadd_wch(n, line, cols - START_COL, L"│");
   }
   if(++line >= rows - !cliptop){
     return 2;
@@ -1486,7 +1486,7 @@ case LAYOUT_ZPOOL:
     if(c > 0){
       cmvwhline(n, line, cols - 3 - c + 1, "─", c);
     }
-   cmvwadd_wch(n, line, cols - START_COL * 2, L"╯");
+   cmvwadd_wch(n, line, cols - START_COL, L"╯");
   }
   ++line;
   return 3;
@@ -1593,8 +1593,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
 // returns the number of lines printed, plus borders
 // cliptop: if we have too few lines, which side gets clipped?
 static int
-print_adapter_devs(struct ncplane* n, const adapterstate *as,
-                   int rows, int cols, bool cliptop){
+print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols, bool cliptop){
   // If the interface is down, we don't lead with the summary line
   const blockobj *cur;
   int printed = 0;
@@ -1647,11 +1646,15 @@ redraw_adapter(struct tablet* t, int begx, int begy, int maxx, int maxy, bool cl
   const adapterstate *as = tablet_userptr(t);
   ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
-  int lines = print_adapter_devs(n, as, maxy - begy + 1, maxx - begx + 1, cliptop);
+  int lines = print_adapter_devs(n, as, maxy - begy + 1, maxx - begx, cliptop);
   if(lines < 0){
     return -1;
   }
-//fprintf(stderr, "[%s] drew %d/%d\n", as->c->name, lines, maxy - begy);
+  // FIXME shouldn't need this, but we're blasting past the bottom see notcurses #222
+  /*if(lines > maxy - begy){
+    lines = maxy - begy;
+  }*/
+//fprintf(stderr, "[%s] drew %d/%d cliptop: %d\n", as->c->name, lines, maxy - begy, cliptop);
   return lines;
 }
 
