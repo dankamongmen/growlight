@@ -246,6 +246,7 @@ enum {
 
 static void
 compat_set_fg(struct ncplane* nc, int pair){
+      ncplane_set_fg_rgb(nc, 255, 255, 255);
   switch(pair){
     case 0:
       ncplane_set_fg_rgb(nc, 64, 64, 64);
@@ -269,46 +270,57 @@ compat_set_fg(struct ncplane* nc, int pair){
       ncplane_set_fg_rgb(nc, 0, 255, 215);
       break;
     case DBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 135, 175, 255);
-      break;
+      ncplane_set_fg_rgb(nc, 135, 175, 255); break;
     case PBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 215, 255, 0);
-      break;
+      ncplane_set_fg_rgb(nc, 215, 255, 0); break;
     case PHEADING_COLOR:
-      ncplane_set_fg_rgb(nc, 197, 15, 31);
-      break;
+      ncplane_set_fg_rgb(nc, 197, 15, 31); break;
     case SELECTED_COLOR:
-      ncplane_set_fg_rgb(nc, 135, 95, 255);
-      break;
+      ncplane_set_fg_rgb(nc, 135, 95, 255); break;
     case VIRTUAL_COLOR:
     case SSD_COLOR:
     case FS_COLOR:
     case EMPTY_COLOR: // Empty sectors
+      ncplane_set_fg(nc, 0xffd700); break;
     case METADATA_COLOR: // Partition table metadata
+      ncplane_set_fg_rgb(nc, 249, 241, 165); break;
     case MDADM_COLOR:
+    case ORANGE_COLOR:
+      ncplane_set_fg_rgb(nc, 0xd7, 0x5f, 0x00); break;
     case ZPOOL_COLOR:
-      ncplane_set_fg_rgb(nc, 128, 192, 226);
-      break;
+      ncplane_set_fg_rgb(nc, 128, 192, 226); break;
     case FORMTEXT_COLOR:
-      ncplane_set_fg_rgb(nc, 97, 214, 214);
-      break;
+      ncplane_set_fg_rgb(nc, 97, 214, 214); break;
     case SUBDISPLAY_COLOR:
-      ncplane_set_fg_rgb(nc, 255, 255, 255);
-      break;
+      ncplane_set_fg_rgb(nc, 255, 255, 255); break;
     case OPTICAL_COLOR:
-      ncplane_set_fg_rgb(nc, 175, 215, 0);
-      break;
+      ncplane_set_fg_rgb(nc, 175, 215, 0); break;
     case ROTATE_COLOR:
-      ncplane_set_fg_rgb(nc, 175, 175, 135);
-      break;
-    case MOUNT_COLOR2: // FIXME
+      ncplane_set_fg_rgb(nc, 175, 175, 135); break;
+    case PART_COLOR0:
+      ncplane_set_fg_rgb(nc, 0x00, 0xd7, 0xaf); break;
+    case PART_COLOR1:
+      ncplane_set_fg_rgb(nc, 0x00, 0xff, 0xd7); break;
+    case PART_COLOR2:
+      ncplane_set_fg_rgb(nc, 0x00, 0xff, 0xff); break;
+    case PART_COLOR3:
+      ncplane_set_fg_rgb(nc, 0x00, 0xaf, 0x87); break;
+    case MOUNT_COLOR0:
+      ncplane_set_fg_rgb(nc, 0xd0, 0xd0, 0xd0); break;
+    case MOUNT_COLOR1:
+      ncplane_set_fg_rgb(nc, 0xbc, 0xbc, 0xbc); break;
+    case MOUNT_COLOR2:
+      ncplane_set_fg_rgb(nc, 0xa8, 0xa8, 0xa8); break;
     case MOUNT_COLOR3:
+      ncplane_set_fg_rgb(nc, 0x94, 0x94, 0x94); break;
     case TARGET_COLOR0:      // Targeted filesystems
+      ncplane_set_fg_rgb(nc, 0xaf, 0xff, 0x87); break;
     case TARGET_COLOR1:
+      ncplane_set_fg_rgb(nc, 0x5f, 0xd7, 0xf5); break;
     case TARGET_COLOR2:
+      ncplane_set_fg_rgb(nc, 0x87, 0xd7, 0x87); break;
     case TARGET_COLOR3:
-      ncplane_set_fg_rgb(nc, 175, 95, 135);
-      break;
+      ncplane_set_fg_rgb(nc, 0x87, 0xff, 0xaf); break;
     case FUCKED_COLOR:      // Things that warrant attention
       ncplane_set_fg_rgb(nc, 95, 0, 0);
       break;
@@ -319,13 +331,13 @@ compat_set_fg(struct ncplane* nc, int pair){
       ncplane_set_fg_rgb(nc, 95, 95, 255);
       break;
     case BLACK_COLOR:
-      ncplane_set_fg_rgb(nc, 0, 0, 0);
+      ncplane_set_fg_rgb(nc, 254, 0, 255);
       break;
     case GREEN_COLOR:
       ncplane_set_fg_rgb(nc, 95, 255, 215);
       break;
     default:
-      ncplane_set_fg_rgb(nc, 0, 215, 215);
+      assert(0);
       break;
   }
 }
@@ -401,126 +413,11 @@ screen_update(void){
   if(splash){
     ncplane_move_top(splash->p);
   }
-  panelreel_redraw(PR);
+  if(PR){
+    panelreel_redraw(PR);
+  }
   int r = notcurses_render(NC);
   assert(0 == r);
-}
-
-static int
-setup_colors(void){
-/*
-  int z;
-
-  assert(init_pair(PBORDER_COLOR,COLOR_YELLOW,COLOR_BLACK) == 0);
-  if(init_pair(DBORDER_COLOR,COLOR_CRAP,-1) == -1){
-    assert(init_pair(DBORDER_COLOR,COLOR_RED,-1) != -1);
-  }
-  assert(init_pair(PHEADING_COLOR,COLOR_RED,COLOR_BLACK) == 0);
-  assert(init_pair(VIRTUAL_COLOR,COLOR_WHITE,-1) == 0);
-  if(init_pair(SSD_COLOR,COLOR_LIGHTWHITE,-1) == -1){
-    assert(init_pair(SSD_COLOR,COLOR_WHITE,-1) != -1);
-  }
-  assert(init_pair(FS_COLOR,COLOR_GREEN,-1) == 0);
-  if(init_pair(EMPTY_COLOR,COLOR_MAIZE,-1) == -1){
-    assert(init_pair(EMPTY_COLOR,COLOR_GREEN,-1) == 0);
-  }
-  if(init_pair(METADATA_COLOR,COLOR_LIGHTYELLOW,-1) == -1){
-    assert(init_pair(METADATA_COLOR,COLOR_YELLOW,-1) == 0);
-  }
-  if(init_pair(MDADM_COLOR,COLOR_LIGHTBLUE,-1) == -1){
-    assert(init_pair(MDADM_COLOR,COLOR_BLUE,-1) != -1);
-  }
-  if(init_pair(PART_COLOR0,COLOR_CYAN0,-1) == -1){
-    assert(init_pair(PART_COLOR0,COLOR_CYAN,-1) == 0);
-  }
-  if(init_pair(PART_COLOR1,COLOR_CYAN1,-1) == -1){
-    assert(init_pair(PART_COLOR1,COLOR_CYAN,-1) == 0);
-  }
-  if(init_pair(PART_COLOR2,COLOR_CYAN2,-1) == -1){
-    assert(init_pair(PART_COLOR2,COLOR_CYAN,-1) == 0);
-  }
-  if(init_pair(PART_COLOR3,COLOR_CYAN3,-1) == -1){
-    assert(init_pair(PART_COLOR3,COLOR_CYAN,-1) == 0);
-  }
-  assert(init_pair(FORMBORDER_COLOR,COLOR_MAGENTA,COLOR_BLACK) == 0);
-  if(init_pair(FORMTEXT_COLOR,COLOR_LIGHTCYAN,COLOR_BLACK) == -1){
-    assert(init_pair(FORMTEXT_COLOR,COLOR_CYAN,COLOR_BLACK) != -1);
-  }
-  if(init_pair(INPUT_COLOR,COLOR_LIGHTGREEN,COLOR_BLACK) == -1){
-    assert(init_pair(INPUT_COLOR,COLOR_GREEN,COLOR_BLACK) != -1);
-  }
-  if(init_pair(SELECTED_COLOR,COLOR_LIGHTCYAN,-1) == -1){
-    assert(init_pair(SELECTED_COLOR,COLOR_CYAN,-1) != -1);
-  }
-  if(init_pair(MOUNT_COLOR0,COLOR_WHITE0,-1) == -1){
-    assert(init_pair(MOUNT_COLOR0,COLOR_WHITE,-1) == 0);
-  }
-  if(init_pair(MOUNT_COLOR1,COLOR_WHITE1,-1) == -1){
-    assert(init_pair(MOUNT_COLOR1,COLOR_WHITE,-1) == 0);
-  }
-  if(init_pair(MOUNT_COLOR2,COLOR_WHITE2,-1) == -1){
-    assert(init_pair(MOUNT_COLOR2,COLOR_WHITE,-1) == 0);
-  }
-  if(init_pair(MOUNT_COLOR3,COLOR_WHITE3,-1) == -1){
-    assert(init_pair(MOUNT_COLOR3,COLOR_WHITE,-1) == 0);
-  }
-  if(init_pair(TARGET_COLOR0,COLOR_MAGENTA0,-1) == -1){
-    assert(init_pair(TARGET_COLOR0,COLOR_MAGENTA,-1) == 0);
-  }
-  if(init_pair(TARGET_COLOR1,COLOR_MAGENTA1,-1) == -1){
-    assert(init_pair(TARGET_COLOR1,COLOR_MAGENTA,-1) == 0);
-  }
-  if(init_pair(TARGET_COLOR2,COLOR_MAGENTA2,-1) == -1){
-    assert(init_pair(TARGET_COLOR2,COLOR_MAGENTA,-1) == 0);
-  }
-  if(init_pair(SPLASHBORDER_COLOR,COLOR_PURPLE,COLOR_BLACK) == -1){
-    assert(init_pair(SPLASHBORDER_COLOR,COLOR_GREEN,COLOR_BLACK) != -1);
-  }
-  assert(init_pair(ORANGE_COLOR,COLOR_YELLOW,-1) == 0);
-  assert(init_pair(GREEN_COLOR,COLOR_GREEN,-1) == 0);
-  assert(init_pair(BLACK_COLOR,COLOR_BLACK,COLOR_BLACK) == 0);
-  for(z = FIRST_FREE_COLOR ; z < COLORS ; ++z){
-    init_pair(z,z,-1);
-  }
-  */
-  return notcurses_render(NC);
-}
-
-static int
-form_colors(void){
-/* FIXME
-  // Don't reset the status color or header color, nor (obviously) the
-  // form nor splash colors.
-  locked_diag("%s",""); // Don't leave a highlit status up from long ago
-  init_pair(PBORDER_COLOR,-1,-1);
-  init_pair(DBORDER_COLOR,-1,-1);
-  init_pair(PHEADING_COLOR,-1,-1);
-  init_pair(SUBDISPLAY_COLOR,-1,-1);
-  init_pair(OPTICAL_COLOR,-1,-1);
-  init_pair(ROTATE_COLOR,-1,-1);
-  init_pair(VIRTUAL_COLOR,-1,-1);
-  init_pair(SSD_COLOR,-1,-1);
-  init_pair(FS_COLOR,-1,-1);
-  init_pair(EMPTY_COLOR,-1,-1);
-  init_pair(METADATA_COLOR,-1,-1);
-  init_pair(MDADM_COLOR,-1,-1);
-  init_pair(PART_COLOR0,-1,-1);
-  init_pair(PART_COLOR1,-1,-1);
-  init_pair(PART_COLOR2,-1,-1);
-  init_pair(PART_COLOR3,-1,-1);
-  init_pair(MOUNT_COLOR0,-1,-1);
-  init_pair(MOUNT_COLOR1,-1,-1);
-  init_pair(MOUNT_COLOR2,-1,-1);
-  init_pair(MOUNT_COLOR3,-1,-1);
-  init_pair(TARGET_COLOR0,-1,-1);
-  init_pair(TARGET_COLOR1,-1,-1);
-  init_pair(TARGET_COLOR2,-1,-1);
-  init_pair(TARGET_COLOR3,-1,-1);
-  init_pair(FUCKED_COLOR,-1,-1);
-  init_pair(ORANGE_COLOR,-1,-1);
-  init_pair(GREEN_COLOR,-1,-1);
-  */
-  return notcurses_render(NC);
 }
 
 static int update_diags(struct panel_state *);
@@ -1683,8 +1580,8 @@ struct panel_state* show_splash(const wchar_t* msg){
   cmvwhline(ps->p, 2, 1, " ", cols - 2);
   cmvwaddwstr(ps->p, 2, 2, msg);
   cmvwhline(ps->p, 3, 1, " ", cols - 2);
-  form_colors();
   ncplane_move_yx(ps->p, 3, 3);
+  screen_update();
   return splash = ps;
 }
 // -------------------------------------------------------------------------
@@ -1766,12 +1663,6 @@ free_form(struct form_state *fs){
     free(fs->boxstr);
     destroy_form_locked(fs);
     free(fs);
-    if(splash == NULL){
-      setup_colors();
-    }
-    /*if(current_adapter){
-      touchwin(current_adapter->win);
-    }*/
     screen_update();
   }
 }
@@ -2038,7 +1929,6 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   multiform_options(fs);
   fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   actform = fs;
-  form_colors();
   ncplane_move_top(fs->p);
   screen_update();
 }
@@ -2121,7 +2011,6 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
   check_options(fs);
   fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   actform = fs;
-  form_colors();
   screen_update();
 }
 
@@ -2194,7 +2083,6 @@ void raise_form(const char* str, void (*fxn)(const char*),
   form_options(fs);
   actform = fs;
   fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
-  form_colors();
   screen_update();
 }
 
@@ -2257,7 +2145,6 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
   actform = fs;
   fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   notcurses_cursor_enable(NC);
-  form_colors();
   screen_update();
 }
 
@@ -2542,14 +2429,13 @@ void kill_splash(struct panel_state *ps){
   }
   hide_panel_locked(ps);
   free(ps);
-  if(actform == NULL){
-    setup_colors();
-  }else{
+  if(actform){
     ncplane_move_top(actform->p);
     if(actform->extext){
       ncplane_move_top(actform->extext->p);
     }
   }
+  screen_update();
 }
 
 static int
@@ -3455,13 +3341,13 @@ helpstrs(struct ncplane* n){
 }
 
 static inline void
-lock_ncurses(void){
+lock_notcurses(void){
   lock_growlight();
   pthread_mutex_lock(&bfl);
 }
 
 static inline void
-unlock_ncurses(void){
+unlock_notcurses(void){
   update_details_cond(details.p);
   update_help_cond(help.p);
   update_map_cond(maps.p);
@@ -3473,12 +3359,12 @@ unlock_ncurses(void){
 // Used in growlight callbacks, since the growlight lock will already be held
 // in any such case.
 static inline void
-lock_ncurses_growlight(void){
+lock_notcurses_growlight(void){
   pthread_mutex_lock(&bfl);
 }
 
 static inline void
-unlock_ncurses_growlight(void){
+unlock_notcurses_growlight(void){
   update_details_cond(details.p);
   update_help_cond(help.p);
   update_map_cond(maps.p);
@@ -4973,15 +4859,15 @@ handle_actform_string_input(int ch){
   cb = actform->fxn;
   switch(ch){
   case 21: // CTRL+u, clear input line FIXME
-    lock_ncurses();
+    lock_notcurses();
     fs->inp.buffer[0] = '\0';
     form_string_options(fs);
-    unlock_ncurses();
+    unlock_notcurses();
     break;
   case '\r': case '\n': case NCKEY_ENTER:{
     char *str;
 
-    lock_ncurses();
+    lock_notcurses();
     str = strdup(actform->inp.buffer);
     assert(NULL != str);
     free_form(actform);
@@ -4989,21 +4875,21 @@ handle_actform_string_input(int ch){
     notcurses_cursor_disable(NC);
     cb(str);
     free(str);
-    unlock_ncurses();
+    unlock_notcurses();
     break;
   }case KEY_ESC:{
-    lock_ncurses();
+    lock_notcurses();
     free_form(actform);
     actform = NULL;
     notcurses_cursor_disable(NC);
     cb(NULL);
-    unlock_ncurses();
+    unlock_notcurses();
     break;
   }case NCKEY_BACKSPACE:{
-    lock_ncurses();
+    lock_notcurses();
     remove_last_bufchar(fs->inp.buffer);
     form_string_options(fs);
-    unlock_ncurses();
+    unlock_notcurses();
     break;
   }default:{
     char *tmp;
@@ -5011,17 +4897,17 @@ handle_actform_string_input(int ch){
     if(ch >= 256 || !isgraph(ch)){
       diag("please %s, or cancel", actform->boxstr);
     }
-    lock_ncurses();
+    lock_notcurses();
     if((tmp = realloc(fs->inp.buffer, strlen(fs->inp.buffer) + 2)) == NULL){
       locked_diag("Couldn't allocate input buffer (%s?)", strerror(errno));
-      unlock_ncurses();
+      unlock_notcurses();
       return;
     }
     fs->inp.buffer = tmp;
     fs->inp.buffer[strlen(fs->inp.buffer) + 1] = '\0';
     fs->inp.buffer[strlen(fs->inp.buffer)] = (unsigned char)ch;
     form_string_options(fs);
-    unlock_ncurses();
+    unlock_notcurses();
   } }
 }
 
@@ -5041,11 +4927,11 @@ handle_subwindow_input(char32_t ch){
 
 static void
 handle_actform_splash_input(void){
-  lock_ncurses();
+  lock_notcurses();
   free_form(actform);
   actform = NULL;
   notcurses_cursor_disable(NC);
-  unlock_ncurses();
+  unlock_notcurses();
 }
 
 // We received input while a modal form was active. Divert it from the typical
@@ -5072,16 +4958,16 @@ handle_actform_input(wchar_t ch){
   }
   switch(ch){
     case 12: // CTRL+L FIXME
-      lock_ncurses();
+      lock_notcurses();
       notcurses_refresh(NC);
-      unlock_ncurses();
+      unlock_notcurses();
       break;
     case ' ': case '\r': case '\n': case NCKEY_ENTER:{
       int op, selections, scrolloff;
       char **selarray;
       char *optstr;
 
-      lock_ncurses();
+      lock_notcurses();
         op = fs->idx;
         optstr = strdup(fs->ops[op].option);
         assert(NULL != optstr);
@@ -5091,17 +4977,17 @@ handle_actform_input(wchar_t ch){
         fs->selarray = NULL;
         free_form(actform);
         actform = NULL;
-        setup_colors();
+        screen_update();
         if(mcb){
           mcb(optstr, selarray, selections, scrolloff);
         }else{
           cb(optstr);
         }
         free(optstr);
-      unlock_ncurses();
+      unlock_notcurses();
       break;
     }case KEY_ESC:{
-      lock_ncurses();
+      lock_notcurses();
       if(fs->formtype == FORM_MULTISELECT || fs->formtype == FORM_CHECKBOXEN){
         int scrolloff = fs->scrolloff;
         free_form(actform);
@@ -5112,10 +4998,10 @@ handle_actform_input(wchar_t ch){
         actform = NULL;
         cb(NULL);
       }
-      unlock_ncurses();
+      unlock_notcurses();
       break;
     }case NCKEY_UP: case 'k':{
-      lock_ncurses();
+      lock_notcurses();
       if(fs->idx == fs->scrolloff){
         if(--fs->scrolloff < 0){
           fs->scrolloff = fs->opcount - 1;
@@ -5131,10 +5017,10 @@ handle_actform_input(wchar_t ch){
       }else{
         form_options(fs);
       }
-      unlock_ncurses();
+      unlock_notcurses();
       break;
     }case NCKEY_DOWN: case 'j':{
-      lock_ncurses();
+      lock_notcurses();
       int maxz;
       ncplane_dim_yx(fs->p, &maxz, NULL);
       maxz = maxz - 5 >= fs->opcount - 1 ? fs->opcount - 1 : maxz - 5;
@@ -5153,7 +5039,7 @@ handle_actform_input(wchar_t ch){
       }else{
         form_options(fs);
       }
-      unlock_ncurses();
+      unlock_notcurses();
       break;
     }case 'q':{
       return 'q';
@@ -5161,7 +5047,7 @@ handle_actform_input(wchar_t ch){
       int selections, scrolloff;
       char **selarray;
 
-      lock_ncurses();
+      lock_notcurses();
       if(fs->formtype == FORM_MULTISELECT || fs->formtype == FORM_CHECKBOXEN){
         selarray = fs->selarray;
         selections = fs->selections;
@@ -5170,10 +5056,10 @@ handle_actform_input(wchar_t ch){
         free_form(actform);
         actform = NULL;
         mcb("", selarray, selections, scrolloff);
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
-      unlock_ncurses();
+      unlock_notcurses();
     } // intentional fallthrough
     default:{
       diag("please %s, or cancel", actform->boxstr);
@@ -5357,9 +5243,9 @@ handle_ncurses_input(struct ncplane* w){
 
   while((ch = notcurses_getc_blocking(NC, &ni)) != (char32_t)-1){
     if(ch == 12){ // CTRL+L FIXME
-      lock_ncurses();
+      lock_notcurses();
       notcurses_refresh(NC);
-      unlock_ncurses();
+      unlock_notcurses();
       continue;
     }
     if(actform){
@@ -5380,82 +5266,82 @@ handle_ncurses_input(struct ncplane* w){
     }
     switch(ch){
       case 'H':{
-        lock_ncurses();
+        lock_notcurses();
         toggle_panel(w, &help, display_help);
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'D':{
-        lock_ncurses();
+        lock_notcurses();
         toggle_panel(w, &diags, display_diags);
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'v':{
-        lock_ncurses();
+        lock_notcurses();
         toggle_panel(w, &details, display_details);
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'E':{
-        lock_ncurses();
+        lock_notcurses();
         toggle_panel(w, &maps, display_maps);
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case '+':
-        lock_ncurses();
+        lock_notcurses();
         expand_adapter_locked();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       case '-':{
-        lock_ncurses();
+        lock_notcurses();
         collapse_adapter_locked();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case NCKEY_RIGHT: case 'l':{
-        lock_ncurses();
+        lock_notcurses();
         if(selection_active()){
           use_next_zone(get_selected_blockobj());
         }
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case NCKEY_LEFT: case 'h':{
-        lock_ncurses();
+        lock_notcurses();
         if(selection_active()){
           use_prev_zone(get_selected_blockobj());
         }
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case NCKEY_UP: case 'k':{
-        lock_ncurses();
+        lock_notcurses();
         use_prev_device();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case NCKEY_DOWN: case 'j':{
-        lock_ncurses();
+        lock_notcurses();
         use_next_device();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case NCKEY_PGUP:{
         int sel;
-        lock_ncurses();
+        lock_notcurses();
         sel = selection_active();
         panelreel_prev(PR);
         if(sel){
           select_adapter();
         }
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case NCKEY_PGDOWN:{
         int sel;
-        lock_ncurses();
+        lock_notcurses();
 // fprintf(stderr, "-------------- BEGIN PgDown ---------------\n");
         sel = selection_active();
         deselect_adapter_locked();
@@ -5464,187 +5350,187 @@ handle_ncurses_input(struct ncplane* w){
           select_adapter();
         }
 // fprintf(stderr, "--------------- END PgDown ----------------\n");
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'm':{
-        lock_ncurses();
+        lock_notcurses();
         make_ptable();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'r':{
-        lock_ncurses();
+        lock_notcurses();
         remove_ptable();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'W':{
-        lock_ncurses();
+        lock_notcurses();
         wipe_mbr();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'B':{
-        lock_ncurses();
+        lock_notcurses();
         badblock_check();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'n':{
-        lock_ncurses();
+        lock_notcurses();
         new_partition();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'd':{
-        lock_ncurses();
+        lock_notcurses();
         delete_partition();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'F':{
-        lock_ncurses();
+        lock_notcurses();
         fsck_partition();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'U':{
-        lock_ncurses();
+        lock_notcurses();
         set_uuid();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'L':{
-        lock_ncurses();
+        lock_notcurses();
         set_label();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 's':{
-        lock_ncurses();
+        lock_notcurses();
         set_partition_attrs();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'M':{
-        lock_ncurses();
+        lock_notcurses();
         new_filesystem();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'w':{
-        lock_ncurses();
+        lock_notcurses();
         kill_filesystem();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'o':{
-        lock_ncurses();
+        lock_notcurses();
         mount_filesystem();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'O':{
-        lock_ncurses();
+        lock_notcurses();
         umount_filesystem();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 't':{
-        lock_ncurses();
+        lock_notcurses();
         nmount_target();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'T':{
-        lock_ncurses();
+        lock_notcurses();
         numount_target();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'b':{
-        lock_ncurses();
+        lock_notcurses();
         enslave_disk();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'f':{
-        lock_ncurses();
+        lock_notcurses();
         liberate_disk();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'i':{
-        lock_ncurses();
+        lock_notcurses();
         setup_target();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case '/':{
-        lock_ncurses();
+        lock_notcurses();
         start_search();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'p':{
-        lock_ncurses();
+        lock_notcurses();
         configure_loop_dev();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'I':{
-        lock_ncurses();
+        lock_notcurses();
         unset_target();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       }
       case 'A':
-        lock_ncurses();
+        lock_notcurses();
         if(actform){
           locked_diag("An input dialog is already active");
         }else{
           raise_aggregate_form();
         }
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       case 'z':
-        lock_ncurses();
+        lock_notcurses();
         modify_aggregate();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
       case 'Z':
-        lock_ncurses();
+        lock_notcurses();
         destroy_aggregate();
-        unlock_ncurses();
+        unlock_notcurses();
         break;
 // Finalization commands
       case '*':
-        lock_ncurses();
+        lock_notcurses();
         if((r = uefiboot()) == 0){
           locked_diag("Successfully finalized target /etc/fstab");
         }
-        unlock_ncurses();
+        unlock_notcurses();
         if(r == 0){
           return;
         }
         break;
       case '#':
-        lock_ncurses();
+        lock_notcurses();
         if((r = biosboot()) == 0){
           locked_diag("Successfully finalized target /etc/fstab");
         }
-        unlock_ncurses();
+        unlock_notcurses();
         if(r == 0){
           return;
         }
         break;
       case '@':
-        lock_ncurses();
+        lock_notcurses();
         if((r = finalize_target()) == 0){
           locked_diag("Successfully finalized target /etc/fstab");
         }
-        unlock_ncurses();
+        unlock_notcurses();
         if(r == 0){
           return;
         }
@@ -5704,7 +5590,7 @@ static void *
 adapter_callback(controller *a, void *state){
   adapterstate *as;
 
-  lock_ncurses_growlight();
+  lock_notcurses_growlight();
   if((as = state) == NULL){
     if(a->blockdevs){
       if( (state = as = create_adapter_state(a)) ){
@@ -5714,7 +5600,7 @@ adapter_callback(controller *a, void *state){
         notcurses_term_dim_yx(NC, &rows, &cols);
         if((as->rb = panelreel_add(PR, NULL, NULL, redraw_adapter, as)) == NULL){
           free_adapter_state(as);
-          unlock_ncurses_growlight();
+          unlock_notcurses_growlight();
           return NULL;
         }
         ++count_adapters;
@@ -5723,7 +5609,7 @@ adapter_callback(controller *a, void *state){
       as = NULL;
     }
   }
-  unlock_ncurses_growlight();
+  unlock_notcurses_growlight();
   return as;
 }
 
@@ -5874,7 +5760,7 @@ block_callback(device* d, void* v){
   if(d->layout == LAYOUT_PARTITION){
     return NULL; // FIXME ought be an assert; this shouldn't happen
   }
-  lock_ncurses_growlight();
+  lock_notcurses_growlight();
 //fprintf(stderr, "---------begin block event on %s\n", d->name);
   if((as = d->c->uistate) == NULL){
 //fprintf(stderr, "MAKE THAT INVISIBLE block event on %s\n!", d->name);
@@ -5910,7 +5796,7 @@ block_callback(device* d, void* v){
     }
   }
 //fprintf(stderr, "---------end block event on %s\n", d->name);
-  unlock_ncurses_growlight();
+  unlock_notcurses_growlight();
   return b;
 }
 
@@ -5919,7 +5805,7 @@ block_free(void *cv, void *bv){
   adapterstate *as = cv;
   blockobj *bo = bv;
 
-  lock_ncurses_growlight();
+  lock_notcurses_growlight();
   if(bo == as->selected){
     if(bo->prev){
       select_adapter_dev(as, bo->prev, -device_lines(as->expansion, bo));
@@ -5941,13 +5827,13 @@ block_free(void *cv, void *bv){
   }
   --as->devs;
   free(bo);
-  unlock_ncurses_growlight();
+  unlock_notcurses_growlight();
 }
 
 static void
 adapter_free(void *cv){
   adapterstate *as = cv;
-  lock_ncurses_growlight();
+  lock_notcurses_growlight();
   as->prev->next = as->next;
   as->next->prev = as->prev;
   if(as->rb){
@@ -5958,14 +5844,14 @@ adapter_free(void *cv){
   free_adapter_state(as); // clears subentries
   --count_adapters;
   draw_main_window(notcurses_stdplane(NC)); // Update the device count
-  unlock_ncurses_growlight();
+  unlock_notcurses_growlight();
 }
 
 static void
 vdiag(const char *fmt, va_list v){
-  lock_ncurses_growlight();
+  lock_notcurses_growlight();
   locked_vdiag(fmt, v);
-  unlock_ncurses_growlight();
+  unlock_notcurses_growlight();
 }
 
 // FIXME destroy panelreel
@@ -6027,7 +5913,6 @@ static void raise_info_form(const char *str, const char *text){
   form_string_options(fs);
   actform = fs;
   fs->extext = raise_form_explication(notcurses_stdplane(NC), text, 20);
-  form_colors();
   screen_update();
 }
 
@@ -6039,18 +5924,18 @@ boxinfo(const char *text, ...){
 
   max = BUFSIZ;
   if((buf = malloc(max)) == NULL){
-    lock_ncurses_growlight();
+    lock_notcurses_growlight();
     locked_diag("Couldn't display boxinfo");
-    unlock_ncurses_growlight();
+    unlock_notcurses_growlight();
     return;
   }
   va_start(v, text);
   if(vsnprintf(buf, max, text, v) >= max){
     buf[max - 1] = '\0';
   }
-  lock_ncurses_growlight();
+  lock_notcurses_growlight();
   raise_info_form("Press any key to continue...", buf);
-  unlock_ncurses_growlight();
+  unlock_notcurses_growlight();
   va_end(v);
 }
 
