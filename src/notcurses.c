@@ -246,7 +246,6 @@ enum {
 
 static void
 compat_set_fg(struct ncplane* nc, int pair){
-      ncplane_set_fg_rgb(nc, 255, 255, 255);
   switch(pair){
     case 0:
       ncplane_set_fg_rgb(nc, 64, 64, 64);
@@ -278,19 +277,21 @@ compat_set_fg(struct ncplane* nc, int pair){
     case SELECTED_COLOR:
       ncplane_set_fg_rgb(nc, 135, 95, 255); break;
     case VIRTUAL_COLOR:
+      ncplane_set_fg_rgb(nc, 0xd7, 0xd7, 0xaf); break;
     case SSD_COLOR:
+      ncplane_set_fg_rgb(nc, 0xd7, 0xd7, 0xd7); break;
     case FS_COLOR:
+      ncplane_set_fg_rgb(nc, 0x5f, 0xff, 0x5f); break;
     case EMPTY_COLOR: // Empty sectors
       ncplane_set_fg(nc, 0xffd700); break;
     case METADATA_COLOR: // Partition table metadata
       ncplane_set_fg_rgb(nc, 249, 241, 165); break;
     case MDADM_COLOR:
+      ncplane_set_fg_rgb(nc, 0xaf, 0xaf, 0xff); break;
     case ORANGE_COLOR:
       ncplane_set_fg_rgb(nc, 0xd7, 0x5f, 0x00); break;
     case ZPOOL_COLOR:
       ncplane_set_fg_rgb(nc, 128, 192, 226); break;
-    case FORMTEXT_COLOR:
-      ncplane_set_fg_rgb(nc, 97, 214, 214); break;
     case SUBDISPLAY_COLOR:
       ncplane_set_fg_rgb(nc, 255, 255, 255); break;
     case OPTICAL_COLOR:
@@ -305,6 +306,12 @@ compat_set_fg(struct ncplane* nc, int pair){
       ncplane_set_fg_rgb(nc, 0x00, 0xff, 0xff); break;
     case PART_COLOR3:
       ncplane_set_fg_rgb(nc, 0x00, 0xaf, 0x87); break;
+    case FORMBORDER_COLOR:
+      ncplane_set_fg_rgb(nc, 0xaf, 0xaf, 0x87); break;
+    case FORMTEXT_COLOR:
+      ncplane_set_fg_rgb(nc, 0x00, 0xd7, 0xaf); break;
+    case INPUT_COLOR:
+      ncplane_set_fg_rgb(nc, 0x00, 0xd7, 0x5f); break;
     case MOUNT_COLOR0:
       ncplane_set_fg_rgb(nc, 0xd0, 0xd0, 0xd0); break;
     case MOUNT_COLOR1:
@@ -322,22 +329,18 @@ compat_set_fg(struct ncplane* nc, int pair){
     case TARGET_COLOR3:
       ncplane_set_fg_rgb(nc, 0x87, 0xff, 0xaf); break;
     case FUCKED_COLOR:      // Things that warrant attention
-      ncplane_set_fg_rgb(nc, 95, 0, 0);
-      break;
+      ncplane_set_fg_rgb(nc, 95, 0, 0); break;
     case SPLASHBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 95, 95, 215);
-      break;
+      ncplane_set_fg_rgb(nc, 95, 95, 215); break;
     case SPLASHTEXT_COLOR:
-      ncplane_set_fg_rgb(nc, 95, 95, 255);
-      break;
+      ncplane_set_fg_rgb(nc, 95, 95, 255); break;
     case BLACK_COLOR:
-      ncplane_set_fg_rgb(nc, 254, 0, 255);
-      break;
+      ncplane_set_fg_rgb(nc, 254, 0, 255); break;
     case GREEN_COLOR:
-      ncplane_set_fg_rgb(nc, 95, 255, 215);
-      break;
+      ncplane_set_fg_rgb(nc, 95, 255, 215); break;
     default:
-      assert(0);
+      ncplane_set_fg_rgb(nc, 255, 255, 255);
+      fprintf(stderr, "HANDLE COLOR %d\n", pair);
       break;
   }
 }
