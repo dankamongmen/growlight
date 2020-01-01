@@ -248,7 +248,7 @@ static void
 compat_set_fg(struct ncplane* nc, int pair){
   switch(pair){
     case 0:
-      ncplane_set_fg_rgb(nc, 64, 64, 64);
+      ncplane_set_fg_rgb(nc, 128, 192, 128);
       break;
     case HEADER_COLOR:
       ncplane_set_fg_rgb(nc, 95, 0, 175);
