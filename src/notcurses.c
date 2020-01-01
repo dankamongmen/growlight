@@ -639,7 +639,7 @@ bevel(struct ncplane* nc, int rows, int cols){
     return -1;
   }
   ncplane_cursor_move_yx(nc, 0, 0);
-  return ncplane_rounded_box_sized(nc, 0, ncplane_get_channels(nc), rows, cols, 0);
+  return ncplane_rounded_box_sized(nc, 0, ncplane_channels(nc), rows, cols, 0);
 }
 
 static int
@@ -705,7 +705,7 @@ cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   if(cell_load(nc, &c, ch) < 0){
     return -1;
   }
-  c.channels = ncplane_get_channels(nc);
+  c.channels = ncplane_channels(nc);
   if(ncplane_hline(nc, &c, n) != n){
     cell_release(nc, &c);
     return -1;
@@ -740,7 +740,7 @@ cwbkgd(struct ncplane* nc){
   cell cl = CELL_TRIVIAL_INITIALIZER;
   cell_load(nc, &cl, " ");
   cell_set_fg_rgb(&cl, 0, 0, 0);
-  ncplane_set_default(nc, &cl);
+  ncplane_set_base(nc, &cl);
   cell_release(nc, &cl);
   return 0;
 }
@@ -855,7 +855,7 @@ new_display_panel(struct ncplane* nc, struct panel_state* ps,
   }else{
     yabove += y - (rows + ybelow + yabove);
   }
-  if((ps->p = notcurses_newplane(NC, rows + 2, cols, yabove, 0, NULL)) == NULL){
+  if((ps->p = ncplane_new(NC, rows + 2, cols, yabove, 0, NULL)) == NULL){
     locked_diag("Couldn't create subpanel, uh-oh");
     return -1;
   }
@@ -1843,7 +1843,7 @@ raise_form_explication(const struct ncplane* n, const char* text, int linesz){
   assert(ps);
   int ncols;
   ncplane_dim_yx(n, NULL, &ncols);
-  ps->p = notcurses_newplane(NC, y + 3, cols, linesz - (y + 2), ncols - cols, NULL);
+  ps->p = ncplane_new(NC, y + 3, cols, linesz - (y + 2), ncols - cols, NULL);
   assert(ps->p);
   cwbkgd(ps->p);
   cwattrset(ps->p, FORMBORDER_COLOR);
@@ -1902,7 +1902,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
     return;
   }
   fs->mcb = fxn;
-  if((fs->p = notcurses_newplane(NC, rows, cols, FORM_Y_OFFSET, x - cols, NULL)) == NULL){
+  if((fs->p = ncplane_new(NC, rows, cols, FORM_Y_OFFSET, x - cols, NULL)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -1981,7 +1981,7 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
     return;
   }
   fs->mcb = fxn;
-  fs->p = notcurses_newplane(NC, rows, cols, FORM_Y_OFFSET, x - cols, NULL);
+  fs->p = ncplane_new(NC, rows, cols, FORM_Y_OFFSET, x - cols, NULL);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -2059,7 +2059,7 @@ void raise_form(const char* str, void (*fxn)(const char*),
   if((fs = create_form(str, fxn, FORM_SELECT, 0)) == NULL){
     return;
   }
-  fs->p = notcurses_newplane(NC, rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4, NULL);
+  fs->p = ncplane_new(NC, rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4, NULL);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -2126,7 +2126,7 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
   notcurses_term_dim_yx(NC, &y, &x);
   assert(x >= cols + 3);
   assert(y >= 3);
-  fs->p = notcurses_newplane(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3, NULL);
+  fs->p = ncplane_new(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3, NULL);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -5899,7 +5899,7 @@ static void raise_info_form(const char *str, const char *text){
   // factor of 2...FIXME
   lineguess = 2; // yuck
   lineguess += strlen(text) / (x - 2) + 1;
-  fs->p = notcurses_newplane(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET + lineguess, x - cols - 3, NULL);
+  fs->p = ncplane_new(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET + lineguess, x - cols - 3, NULL);
   if(fs->p == NULL){
     locked_diag("Couldn't create plane, uh-oh");
     free_form(fs);
