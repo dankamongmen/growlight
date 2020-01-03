@@ -404,6 +404,10 @@ static struct panelreel* PR;
 
 static inline void
 screen_update(void){
+  // must do the panelreel first, as it can create new ones at the top
+  if(PR){
+    panelreel_redraw(PR);
+  }
   if(active){
     ncplane_move_top(active->p);
   }
@@ -415,9 +419,6 @@ screen_update(void){
   }
   if(splash){
     ncplane_move_top(splash->p);
-  }
-  if(PR){
-    panelreel_redraw(PR);
   }
   int r = notcurses_render(NC);
   assert(0 == r);
