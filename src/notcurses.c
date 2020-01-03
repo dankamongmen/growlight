@@ -949,9 +949,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     cwattrset(n, CELL_STYLE_BOLD|EMPTY_COLOR);
     selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
         "unpartitionable space";
-    snprintf(buf, sizeof(buf), " %s %s ",
-        qprefix(d->size, 1, pre, 1),
-        selstr) < (int)sizeof(buf);
+    snprintf(buf, sizeof(buf), " %s %s ", qprefix(d->size, 1, pre, 1), selstr) < (int)sizeof(buf);
     cmvwhline(n, y, sx, "∾", ex - sx + 1);
     cmvwadd_wch(n, y, sx, L" ");
     cmvwaddstr(n, y, sx + (ex - sx + 1 - strlen(buf)) / 2, buf);
@@ -1105,7 +1103,7 @@ static int
 print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
           int line, int rows, unsigned cols, bool cliptop){
   char buf[BPREFIXSTRLEN + 1];
-  int selected, co, rx, attr;
+  int co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
 //fprintf(stderr, " HERE FOR %s: %s line %d rows %d cols %d lout %d\n", as->c->name, bo->d->name, line, rows, cols, bo->d->layout);
@@ -1114,7 +1112,10 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
     return 0;
   }
   strcpy(rolestr, "");
-  selected = line >= 1 && line == as->selline;
+  bool selected = false;
+  if(as == get_current_adapter()){
+    selected = line >= 1 && line == as->selline;
+  }
   rx = cols - 79;
   switch(bo->d->layout){
 case LAYOUT_NONE:
