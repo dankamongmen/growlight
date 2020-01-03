@@ -1509,16 +1509,19 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
   // First, print the selected device (if there is one), and those above
   cur = as->selected;
   line = as->selline;
+//fprintf(stderr, "START WITH %p at %ld of %d\n", cur, line, rows);
   while(cur && line + (long)device_lines(as->expansion, cur) >= cliptop){
     p = print_dev(n, as, cur, line, rows, cols, cliptop);
-    line -= p;
     printed += p;
-    cur = cur->prev;
+    if( (cur = cur->prev) ){
+      line -= device_lines(as->expansion, cur);
+    }
 //fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, cliptop, line, rows);
   }
   line = as->selected ? (as->selline +
     (long)device_lines(as->expansion, as->selected)) : 1/*-(long)cliptop + 2*/;
   cur = (as->selected ? as->selected->next : as->bobjs);
+//fprintf(stderr, "SELECTED CUR FORWARD %p %d (%ld/%d)\n", cur, cliptop, line, rows);
   while(cur && line < rows){
     p = print_dev(n, as, cur, line, rows, cols, cliptop);
 //fprintf(stderr, "ITERATING %d %p (%ld < %d) %d\n", p, cur, line, rows, cliptop);
@@ -2995,7 +2998,7 @@ static int
 select_adapter_dev(adapterstate* as, blockobj* bo, int delta){
   assert(bo != as->selected);
   if((as->selected = bo) == NULL){
-    as->selline = 1; // FIXME
+    as->selline = -1;
   }else{
     as->selline += delta;
   }
@@ -3404,7 +3407,8 @@ use_prev_device(void){
     }
     return;
   }
-  select_adapter_dev(as, as->selected->prev, -device_lines(as->expansion, as->selected));
+  int delta = -device_lines(as->expansion, as->selected->prev);
+  select_adapter_dev(as, as->selected->prev, delta);
 }
 
 static void
@@ -3420,7 +3424,8 @@ use_next_device(void){
     }
     return;
   }
-  select_adapter_dev(as, as->selected->next, device_lines(as->expansion, as->selected));
+  int delta = device_lines(as->expansion, as->selected);
+  select_adapter_dev(as, as->selected->next, delta);
 }
 
 static const int DIAGROWS = 14;
@@ -3939,8 +3944,8 @@ select_adapter(void){
   if(as->bobjs == NULL){
     return -1;
   }
-  assert(as->selline == 1);
-  return select_adapter_dev(as, as->bobjs, 0);
+  assert(as->selline == -1);
+  return select_adapter_dev(as, as->bobjs, 2);
 }
 
 static void
@@ -5572,7 +5577,7 @@ create_adapter_state(controller *a){
     as->c = a;
     as->expansion = EXPANSION_MAX;
     as->selected = NULL;
-    as->selline = 1;
+    as->selline = -1;
     as->rb = NULL;
   }
   return as;
