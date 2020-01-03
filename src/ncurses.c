@@ -1164,6 +1164,7 @@ print_dev(const reelbox *rb,const blockobj *bo,int line,int rows,
   int selected,co,rx,attr;
   char rolestr[12]; // taken from %-11.11s below
 
+//fprintf(stderr, " HERE FOR %s: %s line %d rows %d cols %d lout %d\n", rb->as->c->name, bo->d->name, line, rows, cols, bo->d->layout);
   if(line >= rows - !endp){
     return;
   }
@@ -6755,7 +6756,7 @@ update_blockobj(blockobj *b,device *d){
           goto err;
         }
         ++zones;
-        sector = last_usable_sector(d) + 1;
+        sector = last_usable_sector(d);
       }
       if(sector < d->size / d->logsec){
         if((z = create_zobj(z, zones, sector, d->size / d->logsec - 1, NULL, REP_METADATA)) == NULL){

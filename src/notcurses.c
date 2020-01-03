@@ -1108,7 +1108,7 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   int selected, co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
-//fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
+//fprintf(stderr, " HERE FOR %s: %s line %d rows %d cols %d lout %d\n", as->c->name, bo->d->name, line, rows, cols, bo->d->layout);
   ncplane_set_bg_default(n);
   if(line >= rows/* - !cliptop*/){
     return 0;
@@ -1357,7 +1357,7 @@ case LAYOUT_ZPOOL:
   if(line + !!cliptop >= 1){
     cmvwadd_wch(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
-    cmvwadd_wch(n, line, cols - START_COL, L"╮");
+    cmvwadd_wch(n, line, cols - START_COL * 2, L"╮");
   }
   if(++line >= rows/* - !cliptop*/){
     return 1;
@@ -1374,7 +1374,7 @@ case LAYOUT_ZPOOL:
     cwattron(n, CELL_STYLE_REVERSE);
   }
   if(line + !!cliptop >= 1){
-    cmvwadd_wch(n, line, cols - START_COL, L"│");
+    cmvwadd_wch(n, line, cols - START_COL * 2, L"│");
   }
   if(++line >= rows/* - !cliptop*/){
     return 2;
@@ -1387,7 +1387,7 @@ case LAYOUT_ZPOOL:
     if(c > 0){
       cmvwhline(n, line, cols - 3 - c + 1, "─", c);
     }
-   cmvwadd_wch(n, line, cols - START_COL, L"╯");
+   cmvwadd_wch(n, line, cols - START_COL * 2, L"╯");
   }
   ++line;
   return 3;
@@ -1414,9 +1414,6 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
     attrs = 0;
   }
   cwattrset(nc, attrs | bcolor);
-  if(current){
-    ncplane_set_bg_rgb(nc, 100, 100, 100);
-  }
 //fprintf(stderr, "ABOVETOP: %d BELOWEND: %d name: %s\n", abovetop, belowend, as->c->name);
   if(abovetop == 0){
     if(belowend == 0){
@@ -1551,7 +1548,7 @@ redraw_adapter(struct tablet* t, int begx, int begy, int maxx, int maxy, bool cl
   const adapterstate *as = tablet_userptr(t);
   ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
-  int lines = print_adapter_devs(n, as, maxy - begy + 1, maxx - begx, cliptop);
+  int lines = print_adapter_devs(n, as, maxy - begy + 1, maxx - begx + 1, cliptop);
   if(lines < 0){
     return -1;
   }
@@ -5697,7 +5694,7 @@ update_blockobj(blockobj* b,device* d){
           goto err;
         }
         ++zones;
-        sector = last_usable_sector(d) + 1;
+        sector = last_usable_sector(d);
       }
       if(sector < d->size / d->logsec){
         if((z = create_zobj(z, zones, sector, d->size / d->logsec - 1, NULL, REP_METADATA)) == NULL){
