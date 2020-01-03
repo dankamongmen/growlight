@@ -145,13 +145,13 @@ err:
 	return -1;
 }
 
-int parse_mounts(const glightui *gui,const char *fn){
-	char *mnt,*dev,*ops,*fs;
-	off_t len,idx;
+int parse_mounts(const glightui *gui, const char *fn){
+	char *mnt, *dev, *ops, *fs;
+	off_t len, idx;
 	char *map;
 	int fd;
 
-	if((map = map_virt_file(fn,&fd,&len)) == MAP_FAILED){
+	if((map = map_virt_file(fn, &fd, &len)) == MAP_FAILED){
 		return -1;
 	}
 	idx = 0;
@@ -165,19 +165,19 @@ int parse_mounts(const glightui *gui,const char *fn){
 		int r;
 
 		free(dev); free(mnt); free(fs); free(ops);
-		if((r = parse_mount(map + idx,len - idx,&dev,&mnt,&fs,&ops)) < 0){
+		if((r = parse_mount(map + idx, len - idx, &dev, &mnt, &fs, &ops)) < 0){
 			goto err;
 		}
 		idx += r;
-		if(statvfs(mnt,&vfs)){
+		if(statvfs(mnt, &vfs)){
 			int skip = 0;
 
 			// We might have mounted a new target atop or above an
-			// already existing one, in which case we'll need
+			// already existing one,  in which case we'll need
 			// possibly recreate the directory structure on the
 			// newly-mounted filesystem.
 			if(growlight_target){
-				if(strncmp(mnt,growlight_target,strlen(growlight_target)) == 0){
+				if(strncmp(mnt, growlight_target, strlen(growlight_target)) == 0){
 					if(make_parent_directories(mnt) == 0){
 						skip = 1;
 					} // FIXME else remount? otherwise writes
@@ -185,7 +185,7 @@ int parse_mounts(const glightui *gui,const char *fn){
 				}
 			}
 			if(!skip){
-				diag("Couldn't stat fs %s (%s?)\n",mnt,strerror(errno));
+				diag("Couldn't stat fs %s (%s?)\n", mnt, strerror(errno));
 				r = -1;
 				continue;
 			}
@@ -195,19 +195,19 @@ int parse_mounts(const glightui *gui,const char *fn){
 				continue;
 			}
 			if((d = lookup_device(dev)) == NULL){
-				verbf("virtfs %s at %s\n",fs,mnt);
+				verbf("virtfs %s at %s\n", fs, mnt);
 				continue;
 			}
 		}else{
 			rp = dev;
-			if(lstat(rp,&st) == 0){
+			if(lstat(rp, &st) == 0){
 				if(S_ISLNK(st.st_mode)){
-					if((r = readlink(dev,buf,sizeof(buf))) < 0){
-						diag("Couldn't deref %s (%s?)\n",dev,strerror(errno));
+					if((r = readlink(dev, buf, sizeof(buf))) < 0){
+						diag("Couldn't deref %s (%s?)\n", dev, strerror(errno));
 						continue;
 					}
 					if((size_t)r >= sizeof(buf)){
-						diag("Name too long for %s (%d?)\n",dev,r);
+						diag("Name too long for %s (%d?)\n", dev, r);
 						continue;
 					}
 					buf[r] = '\0';
@@ -220,9 +220,9 @@ int parse_mounts(const glightui *gui,const char *fn){
 		}
 		free(dev);
 		dev = NULL;
-		if(d->mnttype && strcmp(d->mnttype,fs)){
+		if(d->mnttype && strcmp(d->mnttype, fs)){
 			diag("Already had mounttype for %s: %s (got %s)\n",
-					d->name,d->mnttype,fs);
+					d->name, d->mnttype, fs);
 			free(d->mnttype);
 			d->mnttype = NULL;
 			free_stringlist(&d->mntops);
@@ -232,37 +232,37 @@ int parse_mounts(const glightui *gui,const char *fn){
 			free(fs);
 		}
 		fs = NULL;
-		if(add_string(&d->mnt,mnt)){
+		if(add_string(&d->mnt, mnt)){
 			goto err;
 		}
-		if(add_string(&d->mntops,ops)){
+		if(add_string(&d->mntops, ops)){
 			goto err;
 		}
 		d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
 		if(d->layout == LAYOUT_PARTITION){
 			d = d->partdev.parent;
 		}
-		d->uistate = gui->block_event(d,d->uistate);
+		d->uistate = gui->block_event(d, d->uistate);
 		if(growlight_target){
-			if(strcmp(mnt,growlight_target) == 0){
+			if(strcmp(mnt, growlight_target) == 0){
 				mount_target();
 			}
 		}
 	}
 	free(mnt); free(fs); free(ops);
 	mnt = fs = ops = NULL;
-	munmap_virt(map,len);
+	munmap_virt(map, len);
 	close(fd);
 	return 0;
 
 err:
 	free(dev); free(mnt); free(fs); free(ops);
-	munmap_virt(map,len);
+	munmap_virt(map, len);
 	close(fd);
 	return -1;
 }
 
-int mmount(device *d,const char *targ,unsigned mntops,const void *data){
+int mmount(device *d, const char *targ, unsigned mntops, const void *data){
 	char name[PATH_MAX + 1];
 	char *rname;
 
@@ -271,70 +271,72 @@ int mmount(device *d,const char *targ,unsigned mntops,const void *data){
 		return -1;
 	}
 	if(!d->mnttype){
-		diag("%s does not have a filesystem signature\n",d->name);
+		diag("%s does not have a filesystem signature\n", d->name);
 		return -1;
 	}
-	if(strcmp(d->mnttype,"zfs") == 0){
-		return mount_zfs(d,targ,mntops,data);
+	if(strcmp(d->mnttype, "zfs") == 0){
+		return mount_zfs(d, targ, mntops, data);
 	}
 	if(mnttype_aggregablep(d->mnttype)){
-		diag("not a mountable filesystem: %s \n",d->mnttype);
+		diag("not a mountable filesystem: %s \n", d->mnttype);
 		return -1;
 	}
 	if(growlight_target){
-		if(strncmp(targ,growlight_target,strlen(growlight_target)) == 0){
+		if(strncmp(targ, growlight_target, strlen(growlight_target)) == 0){
 			if(make_parent_directories(targ)){
-				diag("Couldn't make parents of %s\n",targ);
+				diag("Couldn't make parents of %s\n", targ);
 			}
 		}
 	}
-	if((rname = realpath(targ,NULL)) == NULL){
-		diag("Couldn't canonicalize %s (%s)\n",targ,strerror(errno));
+	if((rname = realpath(targ, NULL)) == NULL){
+		diag("Couldn't canonicalize %s (%s)\n", targ, strerror(errno));
 		return -1;
 	}
-	if(string_included_p(&d->mnt,rname)){
-		diag("%s is already mounted at %s\n",d->name,targ);
+	if(string_included_p(&d->mnt, rname)){
+		diag("%s is already mounted at %s\n", d->name, targ);
 		free(rname);
 		return -1;
 	}
 	if(growlight_target){
-		if(strncmp(rname,growlight_target,strlen(growlight_target)) == 0){
+		if(strncmp(rname, growlight_target, strlen(growlight_target)) == 0){
 			if(make_parent_directories(rname)){
-				diag("Couldn't make parents of %s\n",rname);
+				diag("Couldn't make parents of %s\n", rname);
 			}
 		}
 	}
-	snprintf(name,sizeof(name),"/dev/%s",d->name);
+	snprintf(name, sizeof(name), "/dev/%s", d->name);
 	// Use the original path for the actual mount
-	if(mount(name,targ,d->mnttype,mntops,data)){
+	if(mount(name, targ, d->mnttype, mntops, data)){
 		diag("Error mounting %s (%u) at %s (%s?)\n",
-				name,mntops,targ,strerror(errno));
+				name, mntops, targ, strerror(errno));
 		free(rname);
 		return -1;
 	}
-	diag("Mounted %s at %s\n",d->name,targ);
+	diag("Mounted %s at %s\n", d->name, targ);
 	free(rname);
 	return 0;
 }
 
-int unmount(device *d,const char *path){
+int unmount(device *d, const char *path){
 	unsigned z;
 
 	if(d->mnt.count == 0){
-		diag("%s is not mounted\n",d->name);
+		diag("%s is not mounted\n", d->name);
 		return -1;
 	}
 	for(z = 0 ; z < d->mnt.count ; ++z){
-		if(path && strcmp(d->mnt.list[z],path) == 0){
+		if(path && strcmp(d->mnt.list[z], path) == 0){
 			continue;
 		}
-		diag("Unmounting %s from %s\n",d->name,d->mnt.list[z]);
-		if(strcmp(d->mnt.list[z],growlight_target) == 0){
-			unmount_target();
-		}
-		if(umount2(d->mnt.list[z],UMOUNT_NOFOLLOW)){
+		diag("Unmounting %s from %s\n", d->name, d->mnt.list[z]);
+		if(growlight_target){
+      if(strcmp(d->mnt.list[z], growlight_target) == 0){
+			  unmount_target();
+		  }
+    }
+		if(umount2(d->mnt.list[z], UMOUNT_NOFOLLOW)){
 			diag("Error unmounting %s at %s (%s?)\n",
-					d->name,d->mnt.list[z],strerror(errno));
+					d->name, d->mnt.list[z], strerror(errno));
 			return -1;
 		}
 	}
