@@ -1110,7 +1110,7 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
 
 //fprintf(stderr, " HERE FOR %s: %s line %d rows %d lout %d\n", as->c->name, bo->d->name, line, rows, bo->d->layout);
   ncplane_set_bg_default(n);
-  if(line >= rows - !cliptop){
+  if(line >= rows/* - !cliptop*/){
     return 0;
   }
   strcpy(rolestr, "");
@@ -1146,7 +1146,7 @@ case LAYOUT_NONE:
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
     if(line + !!cliptop >= 1){
-      if(!bo->d->size || line + 2 < rows - !cliptop){
+      if(!bo->d->size || line + 2 < rows/* - !cliptop*/){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1180,7 +1180,7 @@ case LAYOUT_MDADM:
     }
     cwattrset(n, co);
     if(line + !!cliptop >= 1){
-      if(!bo->d->size || line + 2 <= rows - !cliptop){
+      if(!bo->d->size || line + 2 <= rows/* - !cliptop*/){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1207,7 +1207,7 @@ case LAYOUT_DM:
     strncpy(rolestr, "dm", sizeof(rolestr));
     cwattrset(n, MDADM_COLOR);
     if(line + !!cliptop >= 1){
-      if(!bo->d->size || line + 2 < rows - !cliptop){
+      if(!bo->d->size || line + 2 < rows/* - !cliptop*/){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1235,7 +1235,7 @@ case LAYOUT_ZPOOL:
     strncpy(rolestr, "zpool", sizeof(rolestr));
     cwattrset(n, ZPOOL_COLOR);
     if(line + !!cliptop >= 1){
-      if(!bo->d->size || line + 2 < rows - !cliptop){
+      if(!bo->d->size || line + 2 < rows/* - !cliptop*/){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1271,7 +1271,7 @@ case LAYOUT_ZPOOL:
 
   // Print summary below device name, in the same color, but prefix it
   // with the single-character SMART status when applicable.
-  if(line + 1 < rows - !cliptop && line + !!cliptop + 1 >= 1){
+  if(line + 1 < rows/* - !cliptop*/ && line + !!cliptop + 1 >= 1){
     wchar_t rep = L' ';
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
@@ -1295,7 +1295,7 @@ case LAYOUT_ZPOOL:
     }
   }
   // ...and finally the temperature/vfailure status, and utilization...
-  if((line + 2 <= rows - !cliptop) && (line + !!cliptop + 2 >= 1)){
+  if((line + 2 <= rows/* - !cliptop*/) && (line + !!cliptop + 2 >= 1)){
     int sumline = line + 2;
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
@@ -1344,9 +1344,9 @@ case LAYOUT_ZPOOL:
     if(io){
       char qbuf[BPREFIXSTRLEN + 1];
       bprefix(io, 1, qbuf, 1);
-      cwprintw(n, "%7.7s", qbuf); // might chop off 'i'
+      cmvwprintw(n, sumline, -1, "%7.7s", qbuf); // might chop off 'i'
     }else{
-      cwprintw(n, " no i/o");
+      cmvwprintw(n, sumline, -1, " no i/o");
     }
   }
 
@@ -1359,7 +1359,7 @@ case LAYOUT_ZPOOL:
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
     cmvwadd_wch(n, line, cols - START_COL, L"╮");
   }
-  if(++line >= rows - !cliptop){
+  if(++line >= rows/* - !cliptop*/){
     return 1;
   }
 
@@ -1376,7 +1376,7 @@ case LAYOUT_ZPOOL:
   if(line + !!cliptop >= 1){
     cmvwadd_wch(n, line, cols - START_COL, L"│");
   }
-  if(++line >= rows - !cliptop){
+  if(++line >= rows/* - !cliptop*/){
     return 2;
   }
   if(line + !!cliptop >= 1){
@@ -1398,6 +1398,7 @@ case LAYOUT_ZPOOL:
 static void
 adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
             int belowend, int rows){
+//fprintf(stderr, "above: %d below: %d rows: %d\n", abovetop, belowend, rows);
   int current = as == get_current_adapter();
   int bcolor, hcolor, cols;
   int attrs;
@@ -1519,8 +1520,8 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
     (long)device_lines(as->expansion, as->selected)) : 1/*-(long)cliptop + 2*/;
   cur = (as->selected ? as->selected->next : as->bobjs);
   while(cur && line < rows){
-//fprintf(stderr, "ITERATING %p (%ld < %d) %d\n", cur, line, rows, cliptop);
     p = print_dev(n, as, cur, line, rows, cols, cliptop);
+//fprintf(stderr, "ITERATING %d %p (%ld < %d) %d\n", p, cur, line, rows, cliptop);
     line += p;
     printed += p;
     cur = cur->next;
@@ -1532,8 +1533,8 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
   }
 //fprintf(stderr, "PRINTED %d/%d through %ld for %s\n", printed, rows, line, as->c->name);
   int belowend = 0;
-  if(line > rows){
-    belowend = line - rows;
+  if(line >= rows){
+    belowend = line - rows + 1;
     line = rows;
   }
   adapter_box(as, n, cliptop * belowend, !cliptop * belowend, printed);
