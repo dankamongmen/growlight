@@ -1801,7 +1801,7 @@ form_options(struct form_state *fs){
 #define FORM_Y_OFFSET 5
 
 static struct panel_state *
-raise_form_explication(const struct ncplane* n, const char* text, int linesz){
+raise_form_explication(struct ncplane* n, const char* text, int linesz){
   int cols, x, y, brk, tot;
   int linepre[linesz - 1];
   int linelen[linesz - 1];
