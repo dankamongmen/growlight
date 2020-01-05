@@ -37,6 +37,15 @@ AC_ARG_ENABLE([zfs],
    esac ],
  [zfs=true])
 
+AC_ARG_ENABLE([notcurses],
+ [  --enable-notcurses            Build support for notcurses ],
+ [ case "${enableval}" in
+  yes) notcurses=true ;;
+  no)  notcurses=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-notcurses]) ;;
+   esac ],
+ [notcurses=true])
+
 # Use pkg-config where we can, to pick up CFLAGS requirements.
 PKG_PROG_PKG_CONFIG
 
