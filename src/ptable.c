@@ -479,13 +479,12 @@ int partition_set_code(device *d,unsigned long long code){
 // both of these functions smell, and might be broken for partition tables with
 // empty space at the beginning or ending see #61 FIXME
 uintmax_t lookup_first_usable_sector(const device *d){
-	const struct ptable *pt;
-
 	if(d->logsec == 0){
 		return 0;
 	}
   return d->physsec / d->logsec;
-	/*if(d->layout != LAYOUT_NONE || d->blkdev.pttable == NULL){
+	/*const struct ptable *pt;
+	if(d->layout != LAYOUT_NONE || d->blkdev.pttable == NULL){
 		return d->physsec / d->logsec;
 	}
 	for(pt = ptables ; pt->name ; ++pt){
@@ -497,8 +496,6 @@ uintmax_t lookup_first_usable_sector(const device *d){
 }
 
 uintmax_t lookup_last_usable_sector(const device *d){
-	const struct ptable *pt;
-
 	if(d->logsec == 0){
 		return 0;
 	}
@@ -510,7 +507,8 @@ uintmax_t lookup_last_usable_sector(const device *d){
 		return d->size / d->logsec - 2;
   }
 	return d->size / d->logsec - 1;
-	/*for(pt = ptables ; pt->name ; ++pt){
+	/*const struct ptable *pt;
+	for(pt = ptables ; pt->name ; ++pt){
 		if(strcmp(pt->name,d->blkdev.pttable) == 0){
 			return pt->last(d);
 		}
