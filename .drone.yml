@@ -1,22 +1,40 @@
 ---
-pipeline:
-  build:
-    image: library/debian:unstable
-    commands: 
-      - sed -i -e 's/$/ contrib non-free/' /etc/apt/sources.list
-      - apt-get update
-      - apt-get -y dist-upgrade
-      - apt-get -y install devscripts git-buildpackage software-properties-common
-      - apt-add-repository 'deb https://www.dsscaw.com/repos/apt/debian unstable main'
-      - apt-key add debian/9EA957D484A4266A.asc
-      - apt-get update
-      - mk-build-deps --install -t'apt-get -y'
-      - autoreconf -fis
-      - ./configure
-      - make -j8
-      - make check
----
-kind: signature
-hmac: 29c7c99a404191b940d3a54a97e9f3d1454a6972bc00859147e6ac93fabeea9f
+kind: pipeline
+type: docker
+name: debian-unstable
 
-...
+steps:
+- name: debian-build
+  image: dankamongmen/unstable_builder:2020-01-05
+  commands:
+    - apt-get update
+    - apt-get -y dist-upgrade
+    - apt-get -y install devscripts git-buildpackage locales
+    - echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
+    - locale-gen
+    - export LANG=en_US.UTF-8
+    - mk-build-deps --install -t'apt-get -y'
+    - autoreconf -fis
+    - ./configure
+    - make
+    - make test
+---
+kind: pipeline
+type: docker
+name: ubuntu-focal
+
+steps:
+- name: ubuntu-build
+  image: dankamongmen/focal:2020-01-05
+  commands:
+    - apt-get update
+    - apt-get -y dist-upgrade
+    - env DEBIAN_FRONTEND=noninteractive apt-get -y install devscripts git-buildpackage equivs locales
+    - mk-build-deps --install -t'apt-get -y'
+    - echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
+    - locale-gen
+    - export LANG=en_US.UTF-8
+    - autoreconf -fis
+    - ./configure
+    - make
+    - make test
