@@ -38,7 +38,7 @@ AC_ARG_ENABLE([zfs],
  [zfs=true])
 
 AC_ARG_ENABLE([notcurses],
- [  --enable-notcurses            Build support for notcurses ],
+ [  --enable-notcurses      Build support for notcurses ],
  [ case "${enableval}" in
   yes) notcurses=true ;;
   no)  notcurses=false ;;
@@ -85,9 +85,11 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	[AC_MSG_ERROR([Cannot find libpci.])])
 	LIBS+=" -lpci"
 
-PKG_CHECK_MODULES([notcurses], [notcurses >= 1.0.0])
-	notcurses_CFLAGS+=" $notcurses_CFLAGS"
-	notcurses_LIBS+=" $notcurses_LIBS"
+if test "x$notcurses" = "xtrue" ; then
+  PKG_CHECK_MODULES([notcurses], [notcurses >= 1.0.0])
+  	notcurses_CFLAGS+=" $notcurses_CFLAGS"
+  	notcurses_LIBS+=" $notcurses_LIBS"
+fi
 
 PKG_CHECK_MODULES([libatasmart], [libatasmart >= 0.19], [AC_DEFINE([HAVE_ATASMART], [1], [Use libatasmart])])
 	CFLAGS+=" $libatasmart_CFLAGS"
