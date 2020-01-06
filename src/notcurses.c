@@ -1388,7 +1388,7 @@ case LAYOUT_ZPOOL:
     if(c > 0){
       cmvwhline(n, line, cols - 3 - c + 1, "─", c);
     }
-   cmvwadd_wch(n, line, cols - START_COL * 2, L"╯");
+    cmvwadd_wch(n, line, cols - START_COL * 2, L"╯");
   }
   ++line;
   return 3;
@@ -1516,15 +1516,47 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
     }
 //fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, cliptop, line, rows);
   }
-  line = as->selected ? (as->selline +
-    (long)device_lines(as->expansion, as->selected)) : 1/*-(long)cliptop + 2*/;
-  cur = (as->selected ? as->selected->next : as->bobjs);
+  int abovetop = 0;
+  if(as->selected){
+    line = as->selline + (long)device_lines(as->expansion, as->selected);
+    cur = as->selected->next;
+  }else{
+    cur = as->bobjs;
+    // if nothing was selected, we might have to clip at the top. check to see
+    // if we're moving up. if so, run through all devices to get a total length,
+    // and then move forward until we find the first visible one. begin
+    // printing, in this case, at line 0. you've been clipped!
+    line = 1;
+    if(cliptop){
+      int totallines = 0;
+      const blockobj* iter = cur;
+      line = rows - 1;
+      while(iter){
+        totallines += device_lines(as->expansion, iter);
+        line -= device_lines(as->expansion, iter);
+        iter = iter->next;
+      }
+//fprintf(stderr, "total lines: %d line: %ld rows: %d\n", totallines, line, rows);
+      if(line > 0){ // they'll all fit, huzzah
+        line = 1;
+      }else{
+        abovetop = -(line - 1);
+        while(line + device_lines(as->expansion, cur) < 0){
+          line += device_lines(as->expansion, cur);
+          cur = cur->next;
+        }
+      }
+    }
+  }
 //fprintf(stderr, "SELECTED CUR FORWARD %p %d (%ld/%d)\n", cur, cliptop, line, rows);
   while(cur && line < rows){
     p = print_dev(n, as, cur, line, rows, cols, cliptop);
 //fprintf(stderr, "ITERATING %d %p (%ld < %d) %d\n", p, cur, line, rows, cliptop);
-    line += p;
     printed += p;
+    if(line < 0){
+      printed += line < -p ? -p : line;
+    }
+    line += p;
     cur = cur->next;
   }
 //fprintf(stderr, "BASEPRINTED %d/%d through %ld for %s\n", printed, rows, line, as->c->name);
@@ -1538,7 +1570,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
     belowend = line - rows + 1;
     line = rows;
   }
-  adapter_box(as, n, cliptop * belowend, !cliptop * belowend, printed);
+  adapter_box(as, n, abovetop, !cliptop * belowend, printed);
   assert(printed <= rows);
   return printed;
 }
