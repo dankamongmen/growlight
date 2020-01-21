@@ -1,4 +1,4 @@
-growlight (2.0.0) UNRELEASED; urgency=medium
+growlight (1.2.0) unstable; urgency=medium
 
   * Swap out GUI for notcurses, add dep on notcurses
 
