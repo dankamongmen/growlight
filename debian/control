@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 12), libatasmart-dev, libblkid-dev,
  autoconf-archive, libncurses-dev, libreadline-dev, libcunit1-ncurses-dev,
  pkg-config, xsltproc, docbook-xsl, libssl-dev, libnotcurses-dev (>= 1.0.0),
  libzfslinux-dev (>= 0.8.0)
-Standards-Version: 4.4.1.1
+Standards-Version: 4.5.0.0
 Homepage: https://nick-black.com/dankwiki/index.php/Growlight
 Vcs-Browser: https://github.com/dankamongmen/growlight
 Vcs-Git: https://github.com/dankamongmen/growlight.git

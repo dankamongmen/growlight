@@ -3,11 +3,11 @@ Upstream-Name: growlight
 Source: https://github.com/dankamongmen/growlight
 
 Files: *
-Copyright: 2012--2019 nick black <dankamongmen@gmail.com>
+Copyright: 2012--2020 nick black <dankamongmen@gmail.com>
 License: GPL-3.0+
 
 Files: debian/*
-Copyright: 2019 nick black <dankamongmen@gmail.com>
+Copyright: 2019--2020 nick black <dankamongmen@gmail.com>
 License: GPL-3.0+
 
 License: GPL-3.0+
