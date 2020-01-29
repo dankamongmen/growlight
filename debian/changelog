@@ -1,6 +1,6 @@
 growlight (1.2.1) UNRELEASED; urgency=medium
 
-  * Debian policy 4.5.0.0
+  * Debian policy 4.5.0
   * Update copyrights
 
  -- Nick Black <dankamongmen@gmail.com>  Wed, 22 Jan 2020 22:40:15 -0500

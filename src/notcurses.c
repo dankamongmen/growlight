@@ -1579,7 +1579,7 @@ static int
 redraw_adapter(struct tablet* t, int begx, int begy, int maxx, int maxy, bool cliptop){
   struct ncplane* n = tablet_ncplane(t);
   const adapterstate *as = tablet_userptr(t);
-  ncplane_erase(n);
+  //ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
   int lines = print_adapter_devs(n, as, maxy - begy + 1, maxx - begx + 1, cliptop);
   if(lines < 0){
