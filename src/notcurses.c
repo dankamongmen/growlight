@@ -4822,21 +4822,14 @@ remove_last_bufchar(char *buf){
 // We received input while a modal freeform string input form was active.
 // Divert it from the typical UI, and handle it according to the form.
 static void
-handle_actform_string_input(int ch){
+handle_actform_string_input(const ncinput *ni){
   struct form_state *fs = actform;
   void (*cb)(const char *);
 
+  char32_t ch = ni->id;
   cb = actform->fxn;
-  switch(ch){
-  case 21: // CTRL+u, clear input line FIXME
-    lock_notcurses();
-    fs->inp.buffer[0] = '\0';
-    form_string_options(fs);
-    unlock_notcurses();
-    break;
-  case '\r': case '\n': case NCKEY_ENTER:{
+  if(ch == NCKEY_ENTER || (ni->ctrl && (ch == 'J' || ch == 'M'))){
     char *str;
-
     lock_notcurses();
     str = strdup(actform->inp.buffer);
     assert(NULL != str);
@@ -4846,8 +4839,16 @@ handle_actform_string_input(int ch){
     cb(str);
     free(str);
     unlock_notcurses();
+    return;
+  }
+  switch(ch){
+  case 21: // CTRL+u, clear input line FIXME
+    lock_notcurses();
+    fs->inp.buffer[0] = '\0';
+    form_string_options(fs);
+    unlock_notcurses();
     break;
-  }case KEY_ESC:{
+  case KEY_ESC:{
     lock_notcurses();
     free_form(actform);
     actform = NULL;
@@ -4908,13 +4909,14 @@ handle_actform_splash_input(void){
 // UI, and handle it according to the form. Returning non-zero quits the
 // program, and should pretty much only indicate that 'q' was pressed.
 static char32_t
-handle_actform_input(wchar_t ch){
+handle_actform_input(const ncinput *ni){
   struct form_state *fs = actform;
   void (*mcb)(const char *, char **, int, int);
   void (*cb)(const char *);
 
+  char32_t ch = ni->id;
   if(fs->formtype == FORM_STRING_INPUT){
-    handle_actform_string_input(ch);
+    handle_actform_string_input(ni);
     return 0;
   }else if(fs->formtype == FORM_SPLASH_PROMPT){
     handle_actform_splash_input();
@@ -4926,18 +4928,19 @@ handle_actform_input(wchar_t ch){
     mcb = NULL;
     cb = actform->fxn;
   }
-  switch(ch){
-    case 12: // CTRL+L FIXME
-      lock_notcurses();
-      notcurses_refresh(NC);
-      unlock_notcurses();
-      break;
-    case ' ': case '\r': case '\n': case NCKEY_ENTER:{
-      int op, selections, scrolloff;
-      char **selarray;
-      char *optstr;
+  cb = actform->fxn;
+  if(ch == NCKEY_ENTER || (ni->ctrl && (ch == 'J' || ch == 'M'))){
+    int op, selections, scrolloff;
+    char **selarray;
+    char *optstr;
 
-      lock_notcurses();
+    lock_notcurses();
+      if(fs->ns){
+        optstr = ncselector_selected(fs->ns);
+        selarray = NULL;
+        scrolloff = 0;
+        selections = 0;
+      }else{
         op = fs->idx;
         optstr = strdup(fs->ops[op].option);
         assert(NULL != optstr);
@@ -4945,18 +4948,26 @@ handle_actform_input(wchar_t ch){
         selections = fs->selections;
         scrolloff = fs->scrolloff;
         fs->selarray = NULL;
-        free_form(actform);
-        actform = NULL;
-        screen_update();
-        if(mcb){
-          mcb(optstr, selarray, selections, scrolloff);
-        }else{
-          cb(optstr);
-        }
-        free(optstr);
+      }
+      free_form(actform);
+      actform = NULL;
+      screen_update();
+      if(mcb){
+        mcb(optstr, selarray, selections, scrolloff);
+      }else{
+        cb(optstr);
+      }
+      free(optstr);
+    unlock_notcurses();
+    return 0;
+  }
+  switch(ch){
+    case 12: // CTRL+L FIXME
+      lock_notcurses();
+      notcurses_refresh(NC);
       unlock_notcurses();
       break;
-    }case KEY_ESC:{
+    case KEY_ESC:{
       lock_notcurses();
       if(fs->formtype == FORM_MULTISELECT || fs->formtype == FORM_CHECKBOXEN){
         int scrolloff = fs->scrolloff;
@@ -5223,7 +5234,7 @@ handle_ncurses_input(struct ncplane* w){
       continue;
     }
     if(actform){
-      if((ch = handle_actform_input(ch)) == (char32_t)-1){
+      if((ch = handle_actform_input(&ni)) == (char32_t)-1){
         break;
       }
       if(ch == 0){
