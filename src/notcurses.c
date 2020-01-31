@@ -150,7 +150,11 @@ typedef enum {
 // opcount - 1. All option selection windows scroll, even if they fit all their
 // options, to maintain continuity of UI.
 struct form_state {
+  // FIXME soon these will all be notcurses widgets, but for now, only
+  // FORM_SELECT is covered by ncselector. all form_states are one and only one
+  // of 'p' and 'ns'. if it is 'ns', none of the other content is meaningful.
   struct ncplane* p;
+  struct ncselector* ns;
   void (*fxn)(const char*);  // callback once form is done
   void (*mcb)(const char* ,char** ,int,int); // multiform callback
   int longop;      // length of prompt or longest op
@@ -402,15 +406,6 @@ screen_update(void){
   // must do the panelreel first, as it can create new ones at the top
   if(PR){
     panelreel_redraw(PR);
-  }
-  if(active){
-    ncplane_move_top(active->p);
-  }
-  if(actform){
-    if(actform->extext){
-      ncplane_move_top(actform->extext->p);
-    }
-    ncplane_move_top(actform->p);
   }
   if(splash){
     ncplane_move_top(splash->p);
@@ -1656,13 +1651,19 @@ destroy_form_locked(struct form_state* fs){
     int z;
 
     assert(fs == actform);
-    ncplane_destroy(fs->p);
-    fs->p = NULL;
+    if(fs->ns){
+      ncselector_destroy(fs->ns, NULL);
+      fs->ns = NULL;
+    }else{
+      ncplane_destroy(fs->p);
+      fs->p = NULL;
+    }
     hide_panel_locked(fs->extext);
     free(fs->extext);
     fs->extext = NULL;
     switch(fs->formtype){
       case FORM_SELECT:
+        break;
       case FORM_MULTISELECT:
       case FORM_CHECKBOXEN:
         for(z = 0 ; z < fs->opcount ; ++z){
@@ -1793,34 +1794,6 @@ check_options(struct form_state *fs){
     }
   }
   cwattrset(fs->p, FORMBORDER_COLOR);
-}
-
-static void
-selector_items(struct form_state *fs){
-  const struct selector_item *opstrs = fs->ops;
-  int z, cols, rows;
-
-  if(fs->formtype != FORM_SELECT){
-    return;
-  }
-  ncplane_dim_yx(fs->p, &rows, &cols);
-  cwattron(fs->p, CELL_STYLE_BOLD);
-  for(z = 1 ; z < rows - 3 ; ++z){
-    int op = ((z - 1) + fs->scrolloff) % fs->opcount;
-
-    assert(op >= 0);
-    assert(op < fs->opcount);
-    compat_set_fg(fs->p, FORMTEXT_COLOR);
-    cmvwprintw(fs->p, z + 1, START_COL * 2, "%-*.*s ",
-      fs->longop, fs->longop, opstrs[op].option);
-    if(op == fs->idx){
-      cwattron(fs->p, CELL_STYLE_REVERSE);
-    }
-    compat_set_fg(fs->p, INPUT_COLOR);
-    cwprintw(fs->p, "%-*.*s", cols - fs->longop - 1 - START_COL * 4,
-      cols - fs->longop - 1 - START_COL * 4, opstrs[op].desc);
-    cwattroff(fs->p, CELL_STYLE_REVERSE);
-  }
 }
 
 #define FORM_Y_OFFSET 5
@@ -2066,8 +2039,9 @@ void raise_form(const char* str, void (*fxn)(const char*),
   sopts.footer = "⎋esc returns";
   sopts.secondary = strdup(str);
   sopts.title = strdup(text);
+  sopts.defidx = defidx;
   // FIXME better location!
-  struct ncselector *ns = ncselector_create(notcurses_stdplane(NC), 0, 0, &sopts);
+  struct ncselector *ns = ncselector_create(notcurses_stdplane(NC), FORM_Y_OFFSET, 0, &sopts);
   free(sopts.title);
   free(sopts.secondary);
   if(!ns){
@@ -2077,15 +2051,7 @@ void raise_form(const char* str, void (*fxn)(const char*),
   if((fs = create_form(str, fxn, FORM_SELECT, 0)) == NULL){
     return;
   }
-  fs->p = ncselector_plane(ns);
-  cwbkgd(fs->p);
-  // FIXME adapt for scrolling (default might be off-window at beginning)
-  if((fs->idx = defidx) < 0){
-    fs->idx = defidx = 0;
-  }
-  fs->opcount = ops;
-  fs->ops = opstrs;
-  selector_items(fs);
+  fs->ns = ns;
   actform = fs;
   screen_update();
 }
@@ -2433,12 +2399,6 @@ void kill_splash(struct panel_state *ps){
   }
   hide_panel_locked(ps);
   free(ps);
-  if(actform){
-    ncplane_move_top(actform->p);
-    if(actform->extext){
-      ncplane_move_top(actform->extext->p);
-    }
-  }
   screen_update();
 }
 
@@ -5008,42 +4968,46 @@ handle_actform_input(wchar_t ch){
       break;
     }case NCKEY_UP: case 'k':{
       lock_notcurses();
-      if(fs->idx == fs->scrolloff){
-        if(--fs->scrolloff < 0){
-          fs->scrolloff = fs->opcount - 1;
-        }
-      }
-      if(--fs->idx < 0){
-        fs->idx = fs->opcount - 1;
-      }
-      if(fs->formtype == FORM_MULTISELECT){
-        multiselector_items(fs);
-      }else if(fs->formtype == FORM_CHECKBOXEN){
-        check_options(fs);
+      if(fs->ns){
+        ncselector_previtem(fs->ns, NULL);
       }else{
-        selector_items(fs);
+        if(fs->idx == fs->scrolloff){
+          if(--fs->scrolloff < 0){
+            fs->scrolloff = fs->opcount - 1;
+          }
+        }
+        if(--fs->idx < 0){
+          fs->idx = fs->opcount - 1;
+        }
+        if(fs->formtype == FORM_MULTISELECT){
+          multiselector_items(fs);
+        }else if(fs->formtype == FORM_CHECKBOXEN){
+          check_options(fs);
+        }
       }
       unlock_notcurses();
       break;
     }case NCKEY_DOWN: case 'j':{
       lock_notcurses();
-      int maxz;
-      ncplane_dim_yx(fs->p, &maxz, NULL);
-      maxz = maxz - 5 >= fs->opcount - 1 ? fs->opcount - 1 : maxz - 5;
-      if(fs->idx == (fs->scrolloff + maxz) % fs->opcount){
-        if(++fs->scrolloff >= fs->opcount){
-          fs->scrolloff = 0;
-        }
-      }
-      if(++fs->idx >= fs->opcount){
-        fs->idx = 0;
-      }
-      if(fs->formtype == FORM_MULTISELECT){
-        multiselector_items(fs);
-      }else if(fs->formtype == FORM_CHECKBOXEN){
-        check_options(fs);
+      if(fs->ns){
+        ncselector_nextitem(fs->ns, NULL);
       }else{
-        selector_items(fs);
+        int maxz;
+        ncplane_dim_yx(fs->p, &maxz, NULL);
+        maxz = maxz - 5 >= fs->opcount - 1 ? fs->opcount - 1 : maxz - 5;
+        if(fs->idx == (fs->scrolloff + maxz) % fs->opcount){
+          if(++fs->scrolloff >= fs->opcount){
+            fs->scrolloff = 0;
+          }
+        }
+        if(++fs->idx >= fs->opcount){
+          fs->idx = 0;
+        }
+        if(fs->formtype == FORM_MULTISELECT){
+          multiselector_items(fs);
+        }else if(fs->formtype == FORM_CHECKBOXEN){
+          check_options(fs);
+        }
       }
       unlock_notcurses();
       break;
