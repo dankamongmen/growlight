@@ -129,11 +129,6 @@ update_map_cond(struct ncplane* p){
   }
 }
 
-struct form_option {
-  char *option;      // option key (the string passed to cb)
-  char *desc;      // longer description
-};
-
 struct form_input {
   const char *prompt;    // short prompt. currently aliases boxstr
   char *longprompt;    // longer prompt, not currently used
@@ -141,10 +136,10 @@ struct form_input {
 };
 
 typedef enum {
-  FORM_SELECT,      // form_option[]
+  FORM_SELECT,      // selector_item[]
   FORM_STRING_INPUT,    // form_input
-  FORM_MULTISELECT,    // form_options[]
-  FORM_CHECKBOXEN,    // form_options[]
+  FORM_MULTISELECT,    // selector_items[]
+  FORM_CHECKBOXEN,    // selector_items[]
   FORM_SPLASH_PROMPT,    // form_input
 } form_enum;
 
@@ -178,7 +173,7 @@ struct form_state {
       //
       int idx;    // selection index
       int scrolloff;    // scroll offset
-      struct form_option *ops;// form_option array for *this instance*
+      struct selector_item *ops;// selector_item array for *this instance*
       int opcount;    // total number of ops
       int selectno;    // number of selections, total
       int selections;    // number of active selections
@@ -741,11 +736,9 @@ cwprintw(struct ncplane* n, const char* fmt, ...){
 
 static int
 cwbkgd(struct ncplane* nc){
-  cell cl = CELL_TRIVIAL_INITIALIZER;
-  cell_load(nc, &cl, " ");
-  cell_set_fg_rgb(&cl, 0, 0, 0);
-  ncplane_set_base(nc, &cl);
-  cell_release(nc, &cl);
+  uint64_t channels = 0;
+  channels_set_fg_rgb(&channels, 0, 0, 0);
+  ncplane_set_base(nc, channels, 0, " ");
   return 0;
 }
 
@@ -1706,8 +1699,8 @@ free_form(struct form_state *fs){
 }
 
 static void
-multiform_options(struct form_state *fs){
-  const struct form_option *opstrs = fs->ops;
+multiselector_items(struct form_state *fs){
+  const struct selector_item *opstrs = fs->ops;
   struct ncplane* fsw = fs->p;
   int z, cols, selidx, maxz;
 
@@ -1761,7 +1754,7 @@ multiform_options(struct form_state *fs){
 
 static void
 check_options(struct form_state *fs){
-  const struct form_option *opstrs = fs->ops;
+  const struct selector_item *opstrs = fs->ops;
   int z, cols, selidx, maxz;
 
   assert(fs->formtype == FORM_CHECKBOXEN);
@@ -1803,8 +1796,8 @@ check_options(struct form_state *fs){
 }
 
 static void
-form_options(struct form_state *fs){
-  const struct form_option *opstrs = fs->ops;
+selector_items(struct form_state *fs){
+  const struct selector_item *opstrs = fs->ops;
   int z, cols, rows;
 
   if(fs->formtype != FORM_SELECT){
@@ -1895,7 +1888,7 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
 }
 
 void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, int),
-    struct form_option *opstrs, int ops, int defidx,
+    struct selector_item *opstrs, int ops, int defidx,
     int selectno, char **selarray, int selections, const char *text,
     int scrollidx){
   size_t longop, longdesc;
@@ -1964,7 +1957,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   fs->longop = longop;
   fs->ops = opstrs;
   fs->selectno = selectno;
-  multiform_options(fs);
+  multiselector_items(fs);
   fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   actform = fs;
   ncplane_move_top(fs->p);
@@ -1974,7 +1967,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
 // A collection of checkboxes
 static void
 raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
-                struct form_option* opstrs, int ops, int defidx,
+                struct selector_item* opstrs, int ops, int defidx,
                 char** selarray, int selections, const char* text,
                 int scrollidx){
   size_t longop, longdesc;
@@ -2056,13 +2049,8 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
 void raise_form(const char* str, void (*fxn)(const char*),
-                struct form_option* opstrs, int ops, int defidx,
+                struct selector_item* opstrs, int ops, int defidx,
                 const char* text){
-  size_t longop, longdesc;
-  struct form_state *fs;
-  int cols, rows;
-  int x, y;
-
   if(opstrs == NULL || !ops){
     locked_diag("Passed empty %u-option string table", ops);
     return;
@@ -2071,56 +2059,34 @@ void raise_form(const char* str, void (*fxn)(const char*),
     locked_diag("An input dialog is already active");
     return;
   }
-  longdesc = longop = 0;
-  for(x = 0 ; x < ops ; ++x){
-    if(strlen(opstrs[x].option) > longop){
-      longop = strlen(opstrs[x].option);
-    }
-    if(strlen(opstrs[x].desc) > longdesc){
-      longdesc = strlen(opstrs[x].desc);
-    }
-  }
-  cols = longdesc + longop + 1;
-  rows = ops + 4;
-  notcurses_term_dim_yx(NC, &y, &x);
-  if(x < cols + 4){
-    locked_diag("Window too thin for form, uh-oh");
+  selector_options sopts;
+  memset(&sopts, 0, sizeof(sopts));
+  sopts.items = opstrs;
+  sopts.itemcount = ops;
+  sopts.footer = "⎋esc returns";
+  sopts.secondary = strdup(str);
+  sopts.title = strdup(text);
+  // FIXME better location!
+  struct ncselector *ns = ncselector_create(notcurses_stdplane(NC), 0, 0, &sopts);
+  free(sopts.title);
+  free(sopts.secondary);
+  if(!ns){
     return;
   }
-  if(y <= rows + FORM_Y_OFFSET){
-    rows = y - FORM_Y_OFFSET - 1;
-    if(y < FORM_Y_OFFSET + 4 + 1){ // two boundaries + empties, at least 1 selection
-      locked_diag("Window too short for form, uh-oh");
-      return;
-    }
-  }
+  struct form_state *fs;
   if((fs = create_form(str, fxn, FORM_SELECT, 0)) == NULL){
     return;
   }
-  fs->p = ncplane_new(NC, rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4, NULL);
-  if(fs->p == NULL){
-    locked_diag("Couldn't create form panel, uh-oh");
-    free_form(fs);
-    return;
-  }
+  fs->p = ncselector_plane(ns);
   cwbkgd(fs->p);
   // FIXME adapt for scrolling (default might be off-window at beginning)
   if((fs->idx = defidx) < 0){
     fs->idx = defidx = 0;
   }
   fs->opcount = ops;
-  cwattroff(fs->p, CELL_STYLE_BOLD);
-  compat_set_fg(fs->p, FORMBORDER_COLOR);
-  bevel_all(fs->p);
-  cwattron(fs->p, CELL_STYLE_BOLD);
-  cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
-  cmvwaddwstr(fs->p, rows - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
-  cwattroff(fs->p, CELL_STYLE_BOLD);
-  fs->longop = longop;
   fs->ops = opstrs;
-  form_options(fs);
+  selector_items(fs);
   actform = fs;
-  fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
   screen_update();
 }
 
@@ -2186,7 +2152,7 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
   screen_update();
 }
 
-static const struct form_option common_fsops[] = {
+static const struct selector_item common_fsops[] = {
   {
     .option = "ro",
     .desc = "Read-only",
@@ -2229,10 +2195,10 @@ static const struct form_option common_fsops[] = {
   },
 };
 
-static struct form_option *
+static struct selector_item *
 ops_table(int *count, const char *match, int *defidx, char ***selarray, int *selections,
-    const struct form_option *flags, unsigned fcount){
-  struct form_option *fo = NULL;
+    const struct selector_item *flags, unsigned fcount){
+  struct selector_item *fo = NULL;
   int z = 0;
 
   *count = 0;
@@ -2300,7 +2266,7 @@ static char forming_targ[PATH_MAX + 1];
 
 static void
 mountop_callback(const char *op, char **selarray, int selections, int scrollidx){
-  struct form_option *ops_agg;
+  struct selector_item *ops_agg;
   int opcount, defidx;
   blockobj *b;
 
@@ -2352,7 +2318,7 @@ mountop_callback(const char *op, char **selarray, int selections, int scrollidx)
 // -------------------------------------------------------------------------
 static void
 targpoint_callback(const char *path){
-  struct form_option *ops_agg;
+  struct selector_item *ops_agg;
   int scrollidx = 0;
   blockobj *b;
 
@@ -2400,10 +2366,10 @@ targpoint_callback(const char *path){
 // -------------------------------------------------------------------------
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
-static struct form_option *
+static struct selector_item *
 fs_table(int *count, const char *match, int *defidx){
-  struct form_option* fo = NULL;
-  struct form_option* tmp;
+  struct selector_item* fo = NULL;
+  struct selector_item* tmp;
   pttable_type* types;
   int z;
 
@@ -2524,7 +2490,7 @@ fs_do(const char *name){
 static void
 fs_named_callback(const char *name){
   if(name == NULL){
-    struct form_option *ops_fs;
+    struct selector_item *ops_fs;
     int opcount, defidx;
 
     if((ops_fs = fs_table(&opcount, pending_fstype, &defidx)) == NULL){
@@ -2564,9 +2530,9 @@ fs_callback(const char *fs){
 
 // A NULL return is only an error if *count is set to -1. If *count is set to
 // 0, it simply means this partition table type doesn't have type tags.
-static struct form_option *
+static struct selector_item *
 ptype_table(const device *d, int *count, int match, int *defidx){
-  struct form_option *fo = NULL, *tmp;
+  struct selector_item *fo = NULL, *tmp;
   const char *pttable;
   const ptype *pt;
 
@@ -2852,7 +2818,7 @@ psectors_callback(const char *psects){
     return;
   }
   if(psects == NULL){ // go back to partition type
-    struct form_option *ops_ptype;
+    struct selector_item *ops_ptype;
     int opcount, defidx;
 
     if((ops_ptype = ptype_table(b->d, &opcount, pending_ptype, &defidx)) == NULL){
@@ -2919,7 +2885,7 @@ ptype_callback(const char *pty){
 
 static void
 new_partition(void){
-  struct form_option *ops_ptype;
+  struct selector_item *ops_ptype;
   blockobj *b;
   int opcount;
   int defidx;
@@ -2997,7 +2963,7 @@ pttype_callback(const char *pttype){
 // -------------------------------------------------------------------------
 static int
 confirm_operation(const char *op,void (*confirmcb)(const char *)){
-  struct form_option *ops_confirm;
+  struct selector_item *ops_confirm;
 
   if((ops_confirm = malloc(sizeof(*ops_confirm) * 2)) == NULL){
     return -1;
@@ -4050,9 +4016,9 @@ remove_ptable(void){
   confirm_operation("remove the partition table", remove_ptable_confirm);
 }
 
-static struct form_option *
+static struct selector_item *
 pttype_table(int *count){
-  struct form_option *fo = NULL, *tmp;
+  struct selector_item *fo = NULL, *tmp;
   pttable_type *types;
   int z;
 
@@ -4092,7 +4058,7 @@ err:
 
 static void
 make_ptable(void){
-  struct form_option *ops_ptype;
+  struct selector_item *ops_ptype;
   int opcount;
   blockobj *b;
 
@@ -4113,7 +4079,7 @@ make_ptable(void){
 static void
 new_filesystem(void){
   blockobj *b = get_selected_blockobj();
-  struct form_option *ops_fs;
+  struct selector_item *ops_fs;
   int opcount, defidx;
 
   if(b == NULL){
@@ -4210,14 +4176,14 @@ kill_filesystem(void){
   }
 }
 
-static const struct form_option dos_flags[] = {
+static const struct selector_item dos_flags[] = {
   {
     .option = "0x80",
     .desc = "Bootable",
   },
 };
 
-static const struct form_option gpt_flags[] = {
+static const struct selector_item gpt_flags[] = {
   { // protects OEM partitions from being overwritten by windows
     .option = "0x0000000000000001", // 2^0, 1
     .desc = "System partition",
@@ -4242,10 +4208,10 @@ static const struct form_option gpt_flags[] = {
   },
 };
 
-static struct form_option *
+static struct selector_item *
 flag_table(int *count, const char *match, int *defidx, char ***selarray, int *selections,
-    const struct form_option *flags, unsigned fcount){
-  struct form_option *fo = NULL;
+    const struct selector_item *flags, unsigned fcount){
+  struct selector_item *fo = NULL;
   int z = 0;
 
   *count = 0;
@@ -4337,7 +4303,7 @@ do_partflag(char **selarray, int selections){
 
 static void
 partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
-  struct form_option *flags_agg;
+  struct selector_item *flags_agg;
   int opcount, defidx;
 
   if(fn == NULL){
@@ -4360,7 +4326,7 @@ partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
 
 static void
 dos_partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
-  struct form_option *flags_agg;
+  struct selector_item *flags_agg;
   int opcount, defidx;
 
   if(fn == NULL){
@@ -4383,7 +4349,7 @@ dos_partflag_callback(const char *fn, char **selarray, int selections, int scrol
 
 static int
 flag_to_selections(uint64_t flags, char ***selarray, int *selections,
-      const struct form_option *ops, unsigned opcount){
+      const struct selector_item *ops, unsigned opcount){
   assert(selarray && selections);
   assert(!*selarray && !*selections);
   while(opcount--){
@@ -4409,7 +4375,7 @@ flag_to_selections(uint64_t flags, char ***selarray, int *selections,
 
 static void
 set_partition_attrs(void){
-  struct form_option *flags_agg;
+  struct selector_item *flags_agg;
   char **selarray = NULL;
   int selections = 0;
   int opcount, defidx;
@@ -5051,11 +5017,11 @@ handle_actform_input(wchar_t ch){
         fs->idx = fs->opcount - 1;
       }
       if(fs->formtype == FORM_MULTISELECT){
-        multiform_options(fs);
+        multiselector_items(fs);
       }else if(fs->formtype == FORM_CHECKBOXEN){
         check_options(fs);
       }else{
-        form_options(fs);
+        selector_items(fs);
       }
       unlock_notcurses();
       break;
@@ -5073,11 +5039,11 @@ handle_actform_input(wchar_t ch){
         fs->idx = 0;
       }
       if(fs->formtype == FORM_MULTISELECT){
-        multiform_options(fs);
+        multiselector_items(fs);
       }else if(fs->formtype == FORM_CHECKBOXEN){
         check_options(fs);
       }else{
-        form_options(fs);
+        selector_items(fs);
       }
       unlock_notcurses();
       break;

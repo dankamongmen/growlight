@@ -86,7 +86,7 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	LIBS+=" -lpci"
 
 if test "x$notcurses" = "xtrue" ; then
-  PKG_CHECK_MODULES([notcurses], [notcurses >= 1.1.2])
+  PKG_CHECK_MODULES([notcurses], [notcurses >= 1.1.3])
   	notcurses_CFLAGS+=" $notcurses_CFLAGS"
   	notcurses_LIBS+=" $notcurses_LIBS"
 fi
