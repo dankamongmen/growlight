@@ -2040,8 +2040,12 @@ void raise_form(const char* str, void (*fxn)(const char*),
   sopts.secondary = strdup(str);
   sopts.title = strdup(text);
   sopts.defidx = defidx;
-  // FIXME better location!
-  struct ncselector *ns = ncselector_create(notcurses_stdplane(NC), FORM_Y_OFFSET, 0, &sopts);
+  sopts.base_egc = strdup(" ");
+  channels_set_fg(&sopts.boxchannels, 0x87ceeb);
+  channels_set_fg(&sopts.titlechannels, 0x87ceeb);
+  channels_set_fg(&sopts.opchannels, 0x00d7af);
+  channels_set_fg(&sopts.descchannels, 0x00d75f);
+  struct ncselector *ns = ncselector_create(notcurses_stdplane(NC), FORM_Y_OFFSET, FORM_Y_OFFSET, &sopts);
   free(sopts.title);
   free(sopts.secondary);
   if(!ns){
