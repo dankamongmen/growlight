@@ -2044,6 +2044,7 @@ void raise_form(const char* str, void (*fxn)(const char*),
   channels_set_fg(&sopts.titlechannels, 0x87ceeb);
   channels_set_fg(&sopts.opchannels, 0x00d7af);
   channels_set_fg(&sopts.descchannels, 0x00d75f);
+  channels_set_fg(&sopts.footchannels, 0xf4cf57);
   struct ncselector *ns = ncselector_create(notcurses_stdplane(NC), FORM_Y_OFFSET, FORM_Y_OFFSET, &sopts);
   free(sopts.title);
   free(sopts.secondary);
