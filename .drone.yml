@@ -8,7 +8,7 @@ steps:
   image: dankamongmen/unstable_builder:2020-01-18a
   commands:
     - apt-get update
-    - apt-get -y install devscripts git-buildpackage
+    - apt-get -y install git-buildpackage
     - export LANG=en_US.UTF-8
     - mk-build-deps --install -t'apt-get -y'
     - autoreconf -fis
@@ -22,12 +22,12 @@ name: ubuntu-focal
 
 steps:
 - name: ubuntu-build
-  image: dankamongmen/focal:2020-01-18a
+  image: dankamongmen/focal:2020-02-01a
   commands:
     - apt-get update
-    - apt-get -y install devscripts git-buildpackage equivs
-    - mk-build-deps --install -t'apt-get -y'
+    - apt-get -y install git-buildpackage
     - export LANG=en_US.UTF-8
+    - mk-build-deps --install -t'apt-get -y'
     - autoreconf -fis
     - ./configure
     - make
