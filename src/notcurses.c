@@ -2040,7 +2040,6 @@ void raise_form(const char* str, void (*fxn)(const char*),
   sopts.secondary = strdup(str);
   sopts.title = strdup(text);
   sopts.defidx = defidx;
-  sopts.base_egc = strdup(" ");
   channels_set_fg(&sopts.boxchannels, 0x87ceeb);
   channels_set_fg(&sopts.titlechannels, 0x87ceeb);
   channels_set_fg(&sopts.opchannels, 0x00d7af);
