@@ -26,30 +26,14 @@
 #include "health.h"
 #include "growlight.h"
 
-#ifdef HAVE_CURSES_H
-#include <term.h>
-#include <curses.h>
-#else
-#ifdef HAVE_NCURSES_H
-#include <term.h>
-#include <ncurses.h>
-#else
-#ifdef HAVE_NCURSESW_H
-#include <term.h>
-#include <ncursesw.h>
-#else
-#ifdef HAVE_NCURSES_CURSES_H
-#include <ncurses/term.h>
-#include <ncurses/curses.h>
-#else
-#ifdef HAVE_NCURSESW_CURSES_H
-#include <ncursesw/term.h>
-#include <ncursesw/curses.h>
-#endif
-#endif
-#endif
-#endif
-#endif
+#define COLOR_BLACK 0
+#define COLOR_RED 0xe74656
+#define COLOR_GREEN 0x13a10d
+#define COLOR_YELLOW 0xc19a00
+#define COLOR_BLUE  0x3a78ff
+#define COLOR_MAGENTA 0xf935f8
+#define COLOR_CYAN  0x61d6d6
+#define COLOR_WHITE 0xf2f2f2
 
 #define U64STRLEN 20    // Does not include a '\0' (18,446,744,073,709,551,616)
 #define U64FMT "%-20ju"
@@ -58,32 +42,18 @@
 
 // Used by quit() to communicate back to the main readline loop
 static unsigned lights_off;
-static unsigned use_terminfo;
+static struct ncdirect* ncdirect;
 
 static int
-use_terminfo_color(int ansicolor,int boldp){
-  if(use_terminfo){
-#ifdef HAVE_CURSES
-    const char *attrstr = boldp ? "bold" : "sgr0";
-    const char *color,*attr;
-    char *setaf;
-
-    if((attr = tigetstr(attrstr)) == NULL){
-      fprintf(stderr,"Couldn't get terminfo %s\n",attrstr);
+use_ncdirect_color(unsigned ansicolor, int boldp){
+  if(ncdirect){
+    if(ncdirect_styles_set(ncdirect, boldp ? NCSTYLE_BOLD : 0)){
       return -1;
     }
-    putp(attr);
-    if((setaf = tigetstr("setaf")) == NULL){
-      fprintf(stderr,"Couldn't get terminfo setaf\n");
+    if(ncdirect_fg(ncdirect, ansicolor)){
       return -1;
     }
-    if((color = tparm(setaf,ansicolor)) == NULL){
-      fprintf(stderr,"Couldn't get terminfo color %d\n",ansicolor);
-      return -1;
-    }
-    putp(color);
   }
-#endif
   return 0;
 }
 
@@ -319,7 +289,7 @@ static int
 print_fs(const device *p,int descend){
   int r = 0,rr;
 
-  use_terminfo_color(COLOR_GREEN,1);
+  use_ncdirect_color(COLOR_GREEN,1);
   if(p->mnttype == NULL){
     return 0;
   }
@@ -348,7 +318,7 @@ print_empty(uint64_t fsect, uint64_t lsect, size_t sectsize){
   if(sectsize == 0){
     sectsize = 1;
   }
-  use_terminfo_color(COLOR_GREEN, 0);
+  use_ncdirect_color(COLOR_GREEN, 0);
   r += rr = printf("Unused sectors %ju:%ju (%s)\n",
       (uintmax_t)fsect, (uintmax_t)lsect,
       bprefix((lsect - fsect) * sectsize, 1, buf, 1));
@@ -363,7 +333,7 @@ print_partition(const device *p, int descend){
   char buf[PREFIXSTRLEN + 1];
   int r = 0, rr;
 
-  use_terminfo_color(COLOR_BLUE, 1);
+  use_ncdirect_color(COLOR_BLUE, 1);
   r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %-3.3s %ls\n",
       p->name,
       p->partdev.uuid ? p->partdev.uuid : "n/a",
@@ -421,15 +391,15 @@ print_drive(const device *d,int descend){
   switch(d->layout){
   case LAYOUT_NONE:{
     if(d->blkdev.removable){
-      use_terminfo_color(COLOR_WHITE,0); // optical/usb
+      use_ncdirect_color(COLOR_WHITE,0); // optical/usb
     }else if(d->blkdev.realdev){
       if(d->blkdev.rotation >= 0){
-        use_terminfo_color(COLOR_YELLOW,0); // disk
+        use_ncdirect_color(COLOR_YELLOW,0); // disk
       }else{
-        use_terminfo_color(COLOR_CYAN,1); // ssd
+        use_ncdirect_color(COLOR_CYAN,1); // ssd
       }
     }else{
-      use_terminfo_color(COLOR_MAGENTA,1); // virtual
+      use_ncdirect_color(COLOR_MAGENTA,1); // virtual
     }
     r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
       d->name,
@@ -456,7 +426,7 @@ print_drive(const device *d,int descend){
       );
     break;
   }case LAYOUT_MDADM:{
-    use_terminfo_color(COLOR_YELLOW,1);
+    use_ncdirect_color(COLOR_YELLOW,1);
     r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
@@ -470,7 +440,7 @@ print_drive(const device *d,int descend){
       );
     break;
   }case LAYOUT_DM:{
-    use_terminfo_color(COLOR_YELLOW,1);
+    use_ncdirect_color(COLOR_YELLOW,1);
     r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
@@ -484,7 +454,7 @@ print_drive(const device *d,int descend){
       );
     break;
   }case LAYOUT_ZPOOL:{
-    use_terminfo_color(COLOR_RED,1);
+    use_ncdirect_color(COLOR_RED,1);
     r += rr = printf("%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
@@ -573,7 +543,7 @@ print_dm(const device *d,int prefix,int descend){
   if(d->layout != LAYOUT_DM){
     return 0;
   }
-  use_terminfo_color(COLOR_YELLOW,1);
+  use_ncdirect_color(COLOR_YELLOW,1);
   r += rr = printf("%-*.*s%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
       prefix,prefix,"",
       d->name,
@@ -624,7 +594,7 @@ print_mdadm(const device *d,int prefix,int descend){
   if(d->layout != LAYOUT_MDADM){
     return 0;
   }
-  use_terminfo_color(COLOR_YELLOW,1);
+  use_ncdirect_color(COLOR_YELLOW,1);
   r += rr = printf("%-*.*s%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
       prefix,prefix,"",
       d->name,
@@ -688,7 +658,7 @@ print_controller(const controller *c,int descend){
   int r = 0,rr;
   device *d;
 
-  use_terminfo_color(COLOR_WHITE,1);
+  use_ncdirect_color(COLOR_WHITE,1);
   switch(c->bus){
     case BUS_PCIe:
       if(c->pcie.lanes_neg == 0){
@@ -973,7 +943,7 @@ blockdev_dump(int descend){
       }
     }
   }
-  use_terminfo_color(COLOR_WHITE,1);
+  use_ncdirect_color(COLOR_WHITE,1);
   printf("\n\tFlags:\t(R)emovable, (U)nloaded, (V)irtual, (M)dadm, (Z)pool,\n"
     "\t\t(D)M, r(O)tational, (r)ead-only, (W)ritecache enabled,\n"
     "\t\t(B)IOS bootable, v/⚠: Read-Write-Verify, ✓/✗/☠: SMART status\n");
@@ -989,9 +959,9 @@ blockdev_details(const device *d){
     return -1;
   }
   printf("\n");
-  use_terminfo_color(COLOR_YELLOW,1);
+  use_ncdirect_color(COLOR_YELLOW,1);
   print_drive_stats_identified(d);
-  use_terminfo_color(COLOR_WHITE,1);
+  use_ncdirect_color(COLOR_WHITE,1);
   printf("Logical sector size: %u Physical: %u\n",d->logsec,d->physsec);
   printf("I/O scheduler: %s\n",d->sched ? d->sched : "N/A");
   if(d->layout == LAYOUT_NONE){
@@ -1804,7 +1774,7 @@ version(wchar_t * const *args,const char *arghelp){
   int ret = 0;
 
   ZERO_ARG_CHECK(args,arghelp);
-  use_terminfo_color(COLOR_RED,1);
+  use_ncdirect_color(COLOR_RED,1);
   printf("+++++++++++++++++++++++++++++++++++++++++++++++++############+++++++++++++++++++"
 "++++++++++++++++++++++++++++++++++++++++++++++++++###########+++++++++++++++++++"
 "++++++++++++++++++++++++++++++++++++++++++++++++++###########+++++++++++++++++++"
@@ -1827,7 +1797,7 @@ version(wchar_t * const *args,const char *arghelp){
 "+''++''++++++++++++++++++++++++++++++++''++'''+++++++++##########++++'''''''''''"
 "++'''''#++++++++++++++++++++++++++++++++'''''++++++++++##########++++''++++++'''"
 "++#++++++++++++++++++++++++++++++++++++++++#++++++++++++#########++++'+''''''+++\n");
-  use_terminfo_color(COLOR_WHITE,1);
+  use_ncdirect_color(COLOR_WHITE,1);
   ret |= popen_drain("mkswap --version");
   printf("\n");
   ret |= popen_drain("grub-mkdevicemap --version");
@@ -1835,7 +1805,7 @@ version(wchar_t * const *args,const char *arghelp){
     ret |= -1;
   }
   printf("\n");
-  use_terminfo_color(COLOR_RED,1);
+  use_ncdirect_color(COLOR_RED,1);
   printf("%s %s\n",PACKAGE,VERSION);
   return ret;
 }
@@ -1943,9 +1913,9 @@ stats(wchar_t * const *args, const char *arghelp){
   const controller *c;
 
   ZERO_ARG_CHECK(args, arghelp);
-  use_terminfo_color(COLOR_WHITE, 1);
+  use_ncdirect_color(COLOR_WHITE, 1);
   printf("Device         Sectors read          SRead Δ  Sectors written       SWritten Δ\n");
-  use_terminfo_color(COLOR_BLUE,1);
+  use_ncdirect_color(COLOR_BLUE,1);
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -2042,7 +2012,7 @@ help(wchar_t * const *args,const char *arghelp){
   const struct fxn *fxn;
 
   if(args[1] == NULL){
-    use_terminfo_color(COLOR_WHITE,1);
+    use_ncdirect_color(COLOR_WHITE,1);
     printf("%-15.15s %s\n","Command","Arguments");
     for(fxn = fxns ; fxn->cmd ; ++fxn){
       printf("%-15.15ls %s\n",fxn->cmd,fxn->arghelp);
@@ -2050,7 +2020,7 @@ help(wchar_t * const *args,const char *arghelp){
   }else if(args[2] == NULL){
     for(fxn = fxns ; fxn->cmd ; ++fxn){
       if(wcscmp(fxn->cmd,args[1]) == 0){
-        use_terminfo_color(COLOR_WHITE,1);
+        use_ncdirect_color(COLOR_WHITE,1);
         printf("%15.15ls %s\n",args[1],fxn->arghelp);
         return 0;
       }
@@ -2095,14 +2065,14 @@ tty_ui(void){
       break;
     }
     if(fxn->fxn){
-      use_terminfo_color(COLOR_WHITE,1);
+      use_ncdirect_color(COLOR_WHITE,1);
       lock_growlight();
       z = fxn->fxn(tokes,fxn->arghelp);
       unlock_growlight();
       if(z < 0){
         printf("\n");
       }
-      use_terminfo_color(COLOR_WHITE,0);
+      use_ncdirect_color(COLOR_WHITE,0);
     }else{
       fprintf(stderr,"Unknown command: %ls\n",tokes[0]);
       z = -1;
@@ -2209,36 +2179,31 @@ int main(int argc,char * const *argv){
     .adapter_free = adapter_free,
     .block_free = block_free,
   };
-
-  if(setlocale(LC_ALL,"") == NULL){
-    fprintf(stderr,"Warning: couldn't load locale\n");
+  if(setlocale(LC_ALL, "") == NULL){
+    fprintf(stderr, "Warning: couldn't load locale\n");
     //return EXIT_FAILURE;
   }
-  if(growlight_init(argc,argv,&ui,NULL)){
+  if(growlight_init(argc, argv, &ui, NULL)){
     return EXIT_FAILURE;
   }
   rl_readline_name = PACKAGE;
   rl_attempted_completion_function = growlight_completion;
   rl_prep_terminal(1); // 1 == read 8-bit input
   if(isatty(STDOUT_FILENO)){
-#ifdef HAVE_CURSES
     int errret;
 
-    if(setupterm(NULL,STDOUT_FILENO,&errret) != OK){
-      fprintf(stderr,"Couldn't set up terminfo db (errret %d)\n",errret);
-    }else{
-      use_terminfo = 1;
+    if((ncdirect = notcurses_directmode(NULL,  stdout)) == NULL){
+      fprintf(stderr, "Couldn't set up terminfo db (errret %d)\n", errret);
     }
   }
-#endif
   if(tty_ui()){
     growlight_stop();
     return EXIT_FAILURE;
   }
-// "default foreground color" according to http://bash-hackers.org/wiki/doku.php/scripting/terminalcodes
-// but not defined in ncurses.h -- likely not fully portable :( FIXME
-  use_terminfo_color(9,0);
   if(growlight_stop()){
+    return EXIT_FAILURE;
+  }
+  if(ncdirect && ncdirect_stop(ncdirect)){
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

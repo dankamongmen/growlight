@@ -58,17 +58,6 @@ if test "x$zfs" = "xtrue" ; then
 	ZFS_LFLAGS+=" $ZFS_LIBS"
 fi
 
-# FIXME what about the --without-ncurses/--without-ncursesw cases?
-# latter shouldn't be supported. former should preempt this, disable build...
-AX_WITH_CURSES
-if test "x$ax_cv_ncursesw" != xyes; then
-  AC_MSG_ERROR([Requires NcursesW (ncurses with wide-character support)])
-else
-	CFLAGS+=" $CURSES_CFLAGS"
-  PKG_CHECK_MODULES([PANEL], [panelw], [AC_DEFINE([HAVE_PANEL], [1], [Use panelw from ncursesw])])
-  CFLAGS+=" $PANEL_CFLAGS"
-fi
-
 AX_LIB_READLINE
 AC_CHECK_LIB([readline], [main], [have_readline=yes],
 	[AC_MSG_ERROR([Cannot find libreadline.])])
