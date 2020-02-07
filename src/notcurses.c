@@ -399,13 +399,13 @@ subscript(int in){
 }
 
 static struct notcurses* NC;
-static struct panelreel* PR;
+static struct ncreel* PR;
 
 static inline void
 screen_update(void){
-  // must do the panelreel first, as it can create new ones at the top
+  // must do the ncreel first, as it can create new ones at the top
   if(PR){
-    panelreel_redraw(PR);
+    ncreel_redraw(PR);
   }
   if(splash){
     ncplane_move_top(splash->p);
@@ -460,7 +460,7 @@ typedef struct adapterstate {
   struct adapterstate* next;
   struct adapterstate* prev;
   blockobj* bobjs;
-  struct tablet* rb;   // FIXME name is an anachronism
+  struct nctablet* rb;   // FIXME name is an anachronism
 } adapterstate;
 
 #define EXPANSION_MAX EXPANSION_FULL
@@ -473,8 +473,8 @@ static unsigned count_adapters;
 
 static adapterstate *
 get_current_adapter(void){
-  struct tablet* t = panelreel_focused(PR);
-  adapterstate* as = tablet_userptr(t);
+  struct nctablet* t = ncreel_focused(PR);
+  adapterstate* as = nctablet_userptr(t);
   return as;
 }
 
@@ -1564,9 +1564,9 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
 }
 
 static int
-redraw_adapter(struct tablet* t, int begx, int begy, int maxx, int maxy, bool cliptop){
-  struct ncplane* n = tablet_ncplane(t);
-  const adapterstate *as = tablet_userptr(t);
+redraw_adapter(struct nctablet* t, int begx, int begy, int maxx, int maxy, bool cliptop){
+  struct ncplane* n = nctablet_ncplane(t);
+  const adapterstate *as = nctablet_userptr(t);
   //ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
   int lines = print_adapter_devs(n, as, maxy - begy + 1, maxx - begx + 1, cliptop);
@@ -5317,7 +5317,7 @@ handle_ncurses_input(struct ncplane* w){
         int sel;
         lock_notcurses();
         sel = selection_active();
-        panelreel_prev(PR);
+        ncreel_prev(PR);
         if(sel){
           select_adapter();
         }
@@ -5330,7 +5330,7 @@ handle_ncurses_input(struct ncplane* w){
 // fprintf(stderr, "-------------- BEGIN PgDown ---------------\n");
         sel = selection_active();
         deselect_adapter_locked();
-        panelreel_next(PR);
+        ncreel_next(PR);
         if(sel){
           select_adapter();
         }
@@ -5583,7 +5583,7 @@ adapter_callback(controller *a, void *state){
 
 //fprintf(stderr, "NEW ADAPTER STATE ASSIGNED %s %p\n", as->c->name, as);
         notcurses_term_dim_yx(NC, &rows, &cols);
-        if((as->rb = panelreel_add(PR, NULL, NULL, redraw_adapter, as)) == NULL){
+        if((as->rb = ncreel_add(PR, NULL, NULL, redraw_adapter, as)) == NULL){
           free_adapter_state(as);
           unlock_notcurses_growlight();
           return NULL;
@@ -5822,7 +5822,7 @@ adapter_free(void *cv){
   as->prev->next = as->next;
   as->next->prev = as->prev;
   if(as->rb){
-    panelreel_del(PR, as->rb);
+    ncreel_del(PR, as->rb);
   }
   as->next->prev = as->prev;
   as->prev->next = as->next;
@@ -5839,7 +5839,7 @@ vdiag(const char *fmt, va_list v){
   unlock_notcurses_growlight();
 }
 
-// FIXME destroy panelreel
+// FIXME destroy ncreel
 static void
 shutdown_cycle(void){
   struct panel_state *ps;
@@ -5947,14 +5947,14 @@ int main(int argc, char * const *argv){
   }
   struct ncplane* n = notcurses_stdplane(NC);
   ps = show_splash(L"Initializing...");
-  panelreel_options popts;
+  ncreel_options popts;
   memset(&popts, 0, sizeof(popts));
   popts.bordermask = NCBOXMASK_TOP | NCBOXMASK_BOTTOM
                      | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
   popts.tabletmask = NCBOXMASK_TOP | NCBOXMASK_BOTTOM
                      | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
   popts.boff = 1;
-  PR = panelreel_create(n, &popts, -1);
+  PR = ncreel_create(n, &popts, -1);
   if(PR == NULL){
     kill_splash(ps);
     notcurses_stop(NC);
@@ -5963,7 +5963,7 @@ int main(int argc, char * const *argv){
   }
   locked_diag("by nick black <nickblack@linux.com>");
   if(growlight_init(argc, argv, &ui, &showhelp)){
-    panelreel_destroy(PR);
+    ncreel_destroy(PR);
     kill_splash(ps);
     notcurses_stop(NC);
     dump_diags();
