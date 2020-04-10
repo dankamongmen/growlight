@@ -10,7 +10,7 @@ Build-Depends:
  libcryptsetup-dev,
  libcunit1-ncurses-dev,
  libdevmapper-dev,
- libnotcurses-dev (>= 1.2.1),
+ libnotcurses-dev (>= 1.2.7),
  libpci-dev,
  libpciaccess-dev,
  libreadline-dev,
