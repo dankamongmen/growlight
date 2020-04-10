@@ -385,13 +385,12 @@ agg_callback(const char *fn){
 
 int raise_aggregate_form(void){
 	struct form_option *ops_agg;
-	int opcount,defidx;
+	int opcount, defidx;
 
-	if((ops_agg = agg_table(&opcount,pending_aggtype,&defidx)) == NULL){
+	if((ops_agg = agg_table(&opcount, pending_aggtype, &defidx)) == NULL){
 		destroy_agg_forms();
 		return -1;
 	}
-	raise_form("select an aggregate type",agg_callback,ops_agg,opcount,
-			defidx,AGGTYPE_TEXT);
+	raise_form("select an aggregate type", agg_callback, ops_agg, opcount, defidx, AGGTYPE_TEXT);
 	return 0;
 }

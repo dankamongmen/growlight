@@ -4994,7 +4994,7 @@ handle_actform_input(wchar_t ch){
   switch(ch){
     case 12: // CTRL+L FIXME
       lock_notcurses();
-      notcurses_refresh(NC);
+      notcurses_refresh(NC, NULL, NULL);
       unlock_notcurses();
       break;
     case ' ': case '\r': case '\n': case NCKEY_ENTER:{
@@ -5279,7 +5279,7 @@ handle_ncurses_input(struct ncplane* w){
   while((ch = notcurses_getc_blocking(NC, &ni)) != (char32_t)-1){
     if(ch == 12){ // CTRL+L FIXME
       lock_notcurses();
-      notcurses_refresh(NC);
+      notcurses_refresh(NC, NULL, NULL);
       unlock_notcurses();
       continue;
     }
