@@ -5,9 +5,8 @@ name: debian-unstable
 
 steps:
 - name: debian-build
-  image: dankamongmen/unstable_builder:2020-04-18c
+  image: dankamongmen/unstable_builder:2020-04-18e
   commands:
-    - apt-get update
     - export LANG=en_US.UTF-8
     - autoreconf -fis
     - ./configure
@@ -20,10 +19,10 @@ name: ubuntu-focal
 
 steps:
 - name: ubuntu-build
-  image: dankamongmen/focal:2020-04-18b
+  image: dankamongmen/focal:2020-04-18c
   commands:
-    - apt-get update
     - export LANG=en_US.UTF-8
+    - DEBIAN_FRONTEND=noninteractive apt-get --yes install autoconf-archive xsltproc
     - autoreconf -fis
     - ./configure
     - make
