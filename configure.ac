@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([growlight], [1.2.3], [dankamongmen@gmail.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
+AC_INIT([growlight], [1.2.4], [dankamongmen@gmail.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([-Wall foreign dist-xz no-dist-gzip std-options subdir-objects nostdinc])
 AC_CONFIG_HEADER([src/config.h])
@@ -83,7 +83,7 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	LIBS+=" -lpci"
 
 if test "x$notcurses" = "xtrue" ; then
-  PKG_CHECK_MODULES([notcurses], [notcurses >= 1.2.7])
+  PKG_CHECK_MODULES([notcurses], [notcurses >= 1.3.2])
   	notcurses_CFLAGS+=" $notcurses_CFLAGS"
   	notcurses_LIBS+=" $notcurses_LIBS"
 fi

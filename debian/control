@@ -9,7 +9,7 @@ Build-Depends:
  libblkid-dev,
  libcryptsetup-dev,
  libdevmapper-dev,
- libnotcurses-dev (>= 1.2.7),
+ libnotcurses-dev (>= 1.3.2),
  libpci-dev,
  libpciaccess-dev,
  libreadline-dev,

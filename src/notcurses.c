@@ -741,7 +741,7 @@ cwprintw(struct ncplane* n, const char* fmt, ...){
 
 static int
 cwbkgd(struct ncplane* nc){
-  return ncplane_set_base(nc, 0, 0, " ");
+  return ncplane_set_base(nc, " ", 0, 0);
 }
 
 static void
