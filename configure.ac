@@ -73,9 +73,6 @@ AX_LIB_READLINE
 AC_CHECK_LIB([readline], [main], [have_readline=yes],
 	[AC_MSG_ERROR([Cannot find libreadline.])])
 
-# CUnit (unit testing)
-PKG_CHECK_MODULES([CUNIT], [cunit >= 2.1], [have_cunit=yes])
-
 # Remaining dependencies are needed by all binaries.
 AC_CHECK_LIB(pciaccess, pci_system_init, [have_pciaccess=yes],
              [AC_MSG_ERROR([Cannot find libpciaccess.])])

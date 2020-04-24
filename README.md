@@ -35,7 +35,6 @@ Build-only dependencies:
  - docbook-xsl (tested with 4.5)
  - autotools (tested with 1.11)
  - pkg-config (tested with 0.29)
- - cunit (tested with 2.1)
  - autoconf-archive (tested with 2018+)
 
 Building from a git checkout:

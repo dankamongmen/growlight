@@ -8,7 +8,6 @@ Build-Depends:
  libatasmart-dev,
  libblkid-dev,
  libcryptsetup-dev,
- libcunit1-ncurses-dev,
  libdevmapper-dev,
  libnotcurses-dev (>= 1.2.7),
  libpci-dev,
