@@ -3627,8 +3627,8 @@ detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
         qprefix(d->mntsize, 1, buf, 0),
-        cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-        cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
+        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
         d->name);
     if(++*row == maxy){
       return;
@@ -3664,8 +3664,8 @@ detail_targets(struct ncplane* w, int* row, int both, const device* d){
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
         qprefix(d->mntsize, 1, buf, 0),
-        cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-        cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
+        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
         d->name);
     ++*row;
     if(!both){
