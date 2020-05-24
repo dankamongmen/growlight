@@ -18,7 +18,7 @@ name: ubuntu-focal
 
 steps:
 - name: ubuntu-build
-  image: dankamongmen/focal:2020-05-23a
+  image: dankamongmen/focal:2020-05-23b
   commands:
     - export LANG=en_US.UTF-8
     - autoreconf -fis
