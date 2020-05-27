@@ -123,7 +123,7 @@ prefix_desc_with_size(const device *d,char *desc){
 	if((uni = malloc(sz)) == NULL){
 		return NULL;
 	}
-	if((unsigned)snprintf(uni,sz,"("BPREFIXFMT"B) %s",s,desc) >= sz){
+	if((unsigned)snprintf(uni,sz,"(%*sB) %s", BPREFIXFMT(s), desc) >= sz){
 		free(uni);
 		return NULL;
 	}

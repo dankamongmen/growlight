@@ -718,7 +718,7 @@ cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   return 0;
 }
 
-static int
+static int __attribute__ ((format (printf, 4, 5)))
 cmvwprintw(struct ncplane* n, int y, int x, const char* fmt, ...){
   if(ncplane_cursor_move_yx(n, y, x)){
     return -1;
@@ -730,7 +730,7 @@ cmvwprintw(struct ncplane* n, int y, int x, const char* fmt, ...){
   return ret;
 }
 
-static int
+static int __attribute__ ((format (printf, 2, 3)))
 cwprintw(struct ncplane* n, const char* fmt, ...){
   va_list va;
   va_start(va, fmt);
@@ -1148,11 +1148,12 @@ case LAYOUT_NONE:
         }else if(selected){
           cwattron(n, NCSTYLE_REVERSE);
         }
-    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        qprefix(bo->d->size, 1, buf, 0);
+        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size, 1, buf, 0),
+          PREFIXFMT(buf),
           bo->d->physsec,
           bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
           bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
@@ -1182,11 +1183,12 @@ case LAYOUT_MDADM:
         }else if(selected){
           cwattron(n, NCSTYLE_REVERSE);
         }
-    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        qprefix(bo->d->size, 1, buf, 0);
+        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size, 1, buf, 0),
+          PREFIXFMT(buf),
           bo->d->physsec,
           bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
           bo->d->mddev.mdname ? bo->d->mddev.mdname : "n/a",
@@ -1209,11 +1211,12 @@ case LAYOUT_DM:
         }else if(selected){
           cwattron(n, NCSTYLE_REVERSE);
         }
-    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        qprefix(bo->d->size, 1, buf, 0);
+        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size, 1, buf, 0),
+          PREFIXFMT(buf),
           bo->d->physsec,
           bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
           bo->d->dmdev.dmname ? bo->d->dmdev.dmname : "n/a",
@@ -1237,11 +1240,12 @@ case LAYOUT_ZPOOL:
         }else if(selected){
           cwattron(n, NCSTYLE_REVERSE);
         }
-    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        qprefix(bo->d->size, 1, buf, 0);
+        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           (uintmax_t)bo->d->zpool.zpoolver,
-          qprefix(bo->d->size, 1, buf, 0),
+          PREFIXFMT(buf),
           bo->d->physsec,
           "spa",
           "n/a",  // FIXME
@@ -3049,9 +3053,9 @@ detail_fs(struct ncplane* hw, const device* d, int row){
     char buf[BPREFIXSTRLEN + 1];
 
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cmvwprintw(hw, row, START_COL, BPREFIXFMT "%c ",
-        d->mntsize ? bprefix(d->mntsize, 1, buf, 1) : "",
-        d->mntsize ? 'B' : ' ');
+    const char *size = d->mntsize ? bprefix(d->mntsize, 1, buf, 1) : "";
+    cmvwprintw(hw, row, START_COL, "%*s%c ",
+        BPREFIXFMT(size), d->mntsize ? 'B' : ' ');
     ncplane_styles_on(hw, NCSTYLE_BOLD);
     cwprintw(hw, "%s%s", d->label ? "" : "unlabeled ", d->mnttype);
     if(d->label){
@@ -3220,9 +3224,9 @@ update_details(struct ncplane* hw){
   if(blockobj_unpartitionedp(b)){
     char ubuf[BPREFIXSTRLEN + 1];
 
+    bprefix(d->size, 1, ubuf, 1);
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
-        bprefix(d->size, 1, ubuf, 1));
+    cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(ubuf));
     ncplane_styles_on(hw, NCSTYLE_BOLD);
     cwprintw(hw, "%s", "unpartitioned media");
     detail_fs(hw, b->d, 7);
@@ -3236,9 +3240,9 @@ update_details(struct ncplane* hw){
       assert(b->zone->p->layout == LAYOUT_PARTITION);
       bprefix(b->zone->p->partdev.alignment, 1, align, 1);
       // FIXME limit length!
+      bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1, zbuf, 1);
       ncplane_styles_off(hw, NCSTYLE_BOLD);
-      cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
-          bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1));
+      cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
       ncplane_styles_on(hw, NCSTYLE_BOLD);
       cwprintw(hw, "P%lc%lc ", subscript((b->zone->p->partdev.pnumber % 100 / 10)),
           subscript((b->zone->p->partdev.pnumber % 10)));
@@ -3269,8 +3273,8 @@ update_details(struct ncplane* hw){
       // but not until we implement zones in core (bug 252)
       // or we'll need recreate alignment() etc here
       ncplane_styles_off(hw, NCSTYLE_BOLD);
-      cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
-          bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1));
+      bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1);
+      cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
       ncplane_styles_on(hw, NCSTYLE_BOLD);
       ncplane_styles_off(hw, NCSTYLE_BOLD);
       cwprintw(hw, "%ju", b->zone->fsector);
@@ -3622,11 +3626,12 @@ detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
       continue;
     }
     cmvwhline(w, *row, START_COL, " ", cols - 2);
-    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+    qprefix(d->mntsize, 1, buf, 0);
+    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s %*s %-*.*s",
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
-        qprefix(d->mntsize, 1, buf, 0),
+        PREFIXFMT(buf),
         cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
         cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
         d->name);
@@ -3659,11 +3664,12 @@ detail_targets(struct ncplane* w, int* row, int both, const device* d){
       continue;
     }
     cmvwhline(w, *row, START_COL, " ", cols - 2);
-    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+    qprefix(d->mntsize, 1, buf, 0);
+    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s %*s %-*.*s",
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
-        qprefix(d->mntsize, 1, buf, 0),
+        PREFIXFMT(buf),
         cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
         cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
         d->name);
@@ -3736,9 +3742,9 @@ map_details(struct ncplane *hw){
   }
   cwattrset(hw, NCSTYLE_BOLD|SUBDISPLAY_COLOR);
   cmvwhline(hw, y, 1, " ", cols - 2);
-  cmvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
+  cmvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s %*s %s",
       FSLABELSIZ, FSLABELSIZ, "Label",
-      "Type", "UUID", "Bytes", "Device");
+      "Type", "UUID", PREFIXFMT("Bytes"), "Device");
   if(++y >= rows){
     return 0;
   }
