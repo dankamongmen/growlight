@@ -48,8 +48,8 @@ growlight_SOURCES=$(common_SOURCES)
 growlight_SOURCES+=src/notcurses.c src/notcurses.h src/notui-aggregate.h src/notui-aggregate.c
 growlight_LDADD=@notcurses_LIBS@
 
-#XSLTARGS=--nonet /usr/share/xml/docbook/stylesheet/docbook-xsl
-XSLTARGS=http://docbook.sourceforge.net/release/xsl/current
+XSLTARGS=--nonet /usr/share/xml/docbook/stylesheet/docbook-xsl
+#XSLTARGS=http://docbook.sourceforge.net/release/xsl/current
 
 $(dist_man_MANS): %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ $(XSLTARGS)/manpages/docbook.xsl $<
