@@ -26,9 +26,6 @@ AM_CPPFLAGS=-D_GNU_SOURCE
 
 bin_PROGRAMS=growlight-readline
 bin_PROGRAMS+=growlight
-bin_PROGRAMS+=growlight-test
-
-TESTS=growlight-test
 
 common_SOURCES=src/growlight.c src/growlight.h src/mbr.c src/mbr.h \
 	src/libblkid.c src/libblkid.h src/apm.c src/apm.h src/ssd.h src/ssd.c \
@@ -51,12 +48,8 @@ growlight_SOURCES=$(common_SOURCES)
 growlight_SOURCES+=src/notcurses.c src/notcurses.h src/notui-aggregate.h src/notui-aggregate.c
 growlight_LDADD=@notcurses_LIBS@
 
-growlight_test_SOURCES=$(common_SOURCES)
-growlight_test_SOURCES+=test/growlight.c
-growlight_test_LDADD=$(CUNIT_LIBS)
-
-#XSLTARGS=--nonet /usr/share/xml/docbook/stylesheet/docbook-xsl
-XSLTARGS=http://docbook.sourceforge.net/release/xsl/current
+XSLTARGS=--nonet /usr/share/xml/docbook/stylesheet/docbook-xsl
+#XSLTARGS=http://docbook.sourceforge.net/release/xsl/current
 
 $(dist_man_MANS): %.8: $(doc_DIR)/man/man8/%.xml $(doc_DIR)/@PACKAGE_NAME@.ent
 	$(XSLTPROC) --path $(doc_DIR) -o $@ $(XSLTARGS)/manpages/docbook.xsl $<

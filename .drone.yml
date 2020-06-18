@@ -5,16 +5,12 @@ name: debian-unstable
 
 steps:
 - name: debian-build
-  image: dankamongmen/unstable_builder:2020-02-05a
+  image: dankamongmen/unstable_builder:2020-05-27a
   commands:
-    - apt-get update
-    - apt-get -y install git-buildpackage
     - export LANG=en_US.UTF-8
-    - mk-build-deps --install -t'apt-get -y'
     - autoreconf -fis
     - ./configure
     - make
-    - make test
 ---
 kind: pipeline
 type: docker
@@ -22,13 +18,10 @@ name: ubuntu-focal
 
 steps:
 - name: ubuntu-build
-  image: dankamongmen/focal:2020-02-05a
+  image: dankamongmen/focal:2020-05-27a
   commands:
-    - apt-get update
-    - apt-get -y install git-buildpackage
     - export LANG=en_US.UTF-8
     - mk-build-deps --install -t'apt-get -y'
     - autoreconf -fis
     - ./configure
     - make
-    - make test

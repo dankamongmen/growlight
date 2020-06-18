@@ -40,7 +40,7 @@ struct form_state {
   form_enum formtype;    // type of form
   union {
     struct {
-      struct selector_item *ops; // selector_item array for *this instance*
+      struct ncselector_item *ops; // selector_item array for *this instance*
       int scrolloff;    // scroll offset
       int opcount;    // total number of ops
     };
@@ -59,10 +59,10 @@ destroy_agg_forms(void){
   pending_aggname = NULL;
 }
 
-static struct selector_item *
+static struct ncselector_item *
 agg_table(int *count, const char *match, int *defidx){
   const aggregate_type *types;
-  struct selector_item *fo;
+  struct ncselector_item *fo;
   int z;
 
   *defidx = -1;
@@ -118,7 +118,7 @@ prefix_desc_with_size(const device *d, char *desc){
   if((uni = malloc(sz)) == NULL){
     return NULL;
   }
-  if((unsigned)snprintf(uni, sz, "("BPREFIXFMT"B) %s", s, desc) >= sz){
+  if((unsigned)snprintf(uni, sz, "(%*sB) %s", BPREFIXFMT(s), desc) >= sz){
     free(uni);
     return NULL;
   }
@@ -126,10 +126,10 @@ prefix_desc_with_size(const device *d, char *desc){
   return uni;
 }
 
-static struct selector_item *
+static struct ncselector_item *
 grow_component_table(const device *d, int *count, const char *match, int *defidx,
-      char ***selarray, int *selections, struct selector_item *fo){
-  struct selector_item *tmp;
+      char ***selarray, int *selections, struct ncselector_item *fo){
+  struct ncselector_item *tmp;
   char *key, *desc;
   int z;
 
@@ -195,10 +195,10 @@ grow_component_table(const device *d, int *count, const char *match, int *defidx
   return fo;
 }
 
-static struct selector_item *
+static struct ncselector_item *
 component_table(const aggregate_type *at, int *count, const char *match, int *defidx,
     char ***selarray, int *selections){
-  struct selector_item *fo = NULL, *tmp;
+  struct ncselector_item *fo = NULL, *tmp;
   const controller *c;
 
   *count = 0;
@@ -274,7 +274,7 @@ do_agg(const aggregate_type *at, char * const *selarray, int selections){
 
 static void
 aggcomp_callback(const char *fn, char **selarray, int selections, int scrollp){
-  struct selector_item *comps_agg;
+  struct ncselector_item *comps_agg;
   const aggregate_type *at;
   int opcount, defidx;
 
@@ -296,7 +296,7 @@ aggcomp_callback(const char *fn, char **selarray, int selections, int scrollp){
     }
   }
   if((comps_agg = component_table(at, &opcount, fn, &defidx, &selarray, &selections)) == NULL){
-    struct selector_item *ops_agg;
+    struct ncselector_item *ops_agg;
 
     if( (ops_agg = agg_table(&opcount, pending_aggtype, &defidx)) ){
       raise_form("select an aggregate type", agg_callback, ops_agg,
@@ -319,14 +319,14 @@ aggcomp_callback(const char *fn, char **selarray, int selections, int scrollp){
 
 static void
 aggname_callback(const char *fn){
-  struct selector_item *comps_agg;
+  struct ncselector_item *comps_agg;
   const aggregate_type *at;
   int selections = 0;
   int opcount, defidx;
   char **selarray;
 
   if(fn == NULL){
-    struct selector_item *ops_agg;
+    struct ncselector_item *ops_agg;
 
     if( (ops_agg = agg_table(&opcount, pending_aggtype, &defidx)) ){
       raise_form("select an aggregate type", agg_callback, ops_agg,
@@ -344,7 +344,7 @@ aggname_callback(const char *fn){
   }
   selarray = NULL;
   if((comps_agg = component_table(at, &opcount, NULL, &defidx, &selarray, &selections)) == NULL){
-    struct selector_item *ops_agg;
+    struct ncselector_item *ops_agg;
 
     if( (ops_agg = agg_table(&opcount, pending_aggtype, &defidx)) ){
       raise_form("select an aggregate type", agg_callback, ops_agg,
@@ -381,7 +381,7 @@ agg_callback(const char *fn){
 }
 
 int raise_aggregate_form(void){
-  struct selector_item *ops_agg;
+  struct ncselector_item *ops_agg;
   int opcount, defidx;
 
   if((ops_agg = agg_table(&opcount, pending_aggtype, &defidx)) == NULL){

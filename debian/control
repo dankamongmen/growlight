@@ -1,32 +1,32 @@
 Source: growlight
-Section: utils
 Priority: optional
 Maintainer: Nick Black <dankamongmen@gmail.com>
-Build-Depends:
- autoconf-archive,
- debhelper (>= 12),
- docbook-xsl,
- libatasmart-dev,
- libblkid-dev,
- libcryptsetup-dev,
- libcunit1-ncurses-dev,
- libdevmapper-dev,
- libnotcurses-dev (>= 1.1.6),
- libpci-dev,
- libpciaccess-dev,
- libreadline-dev,
- libssl-dev,
- libudev-dev,
- libzfslinux-dev (>= 0.8.0),
- pkg-config,
- xsltproc,
-Standards-Version: 4.5.0
+Build-Depends: autoconf-archive,
+               debhelper (>= 13),
+               docbook-xsl,
+               libatasmart-dev,
+               libblkid-dev,
+               libcryptsetup-dev,
+               libdevmapper-dev,
+               libnotcurses-dev (>= 1.4.3),
+               libpci-dev,
+               libpciaccess-dev,
+               libreadline-dev,
+               libssl-dev,
+               libudev-dev,
+               libzfslinux-dev (>= 0.8.0),
+               pkg-config,
+               xsltproc
+Section: utils
+Standards-Version: 4.5.0.2
+Rules-Requires-Root: no
 Homepage: https://nick-black.com/dankwiki/index.php/Growlight
 Vcs-Browser: https://github.com/dankamongmen/growlight
 Vcs-Git: https://github.com/dankamongmen/growlight.git
 
 Package: growlight
 Architecture: any
+Multi-Arch: foreign
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Disk manipulation and system preparation tool
  Growlight can manipulate both real and virtual (mdadm, device-mapper, and ZFS)

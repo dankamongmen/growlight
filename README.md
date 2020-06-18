@@ -8,9 +8,10 @@ https://nick-black.com/dankwiki/index.php/Growlight
 
 Dependencies:
 
- - notcurses 1.1.6+
+ - notcurses 1.4.2+
  - libudev 175+
- - libblkid 2.20.1+
+ - libblkid 2.20.1
+
  - libpci 3.1.9+
  - libpciaccess 0.13.1+
  - libdevmapper 1.02.74+
@@ -34,7 +35,6 @@ Build-only dependencies:
  - docbook-xsl (tested with 4.5)
  - autotools (tested with 1.11)
  - pkg-config (tested with 0.29)
- - cunit (tested with 2.1)
  - autoconf-archive (tested with 2018+)
 
 Building from a git checkout:

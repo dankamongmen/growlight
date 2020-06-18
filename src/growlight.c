@@ -2108,10 +2108,17 @@ int rescan_controller(controller *c){
 		diag("Can't rescan unknown/virtual controllers\n");
 		return -1;
 	}
-	if(snprintf(buf, sizeof(buf), "%s/device/rescan", c->sysfs) >= (int)sizeof(buf)){
-		diag("Name too long: %s\n", c->sysfs);
-		return -1;
-	}
+  if(c->transport == TRANSPORT_NVME){
+    if(snprintf(buf, sizeof(buf), "%s/device/rescan_controller", c->sysfs) >= (int)sizeof(buf)){
+      diag("Name too long: %s\n", c->sysfs);
+      return -1;
+    }
+  }else{
+    if(snprintf(buf, sizeof(buf), "%s/device/rescan", c->sysfs) >= (int)sizeof(buf)){
+      diag("Name too long: %s\n", c->sysfs);
+      return -1;
+    }
+  }
 	if(write_sysfs(buf, "1\n")){
 		return -1;
 	}
@@ -2159,12 +2166,19 @@ rescan_blockdev_internal(const device *d, int killedpart){
 	char buf[PATH_MAX];
 	int fd;
 
-	if(snprintf(buf, sizeof(buf), SYSROOT"/%s/device/rescan", d->name) >= (int)sizeof(buf)){
-		diag("Name too long: %s\n", d->name);
-		return -1;
-	}
+  if(d->c->transport == TRANSPORT_NVME){
+    if(snprintf(buf, sizeof(buf), "%s/rescan", d->c->sysfs) >= (int)sizeof(buf)){
+      diag("Name too long: %s\n", d->c->sysfs);
+      return -1;
+    }
+  }else{
+    if(snprintf(buf, sizeof(buf), SYSROOT"/%s/device/rescan", d->name) >= (int)sizeof(buf)){
+      diag("Name too long: %s\n", d->name);
+      return -1;
+    }
+  }
 	if(write_sysfs(buf, "1\n")){
-		diag("Failed writing to %s/rescan (%s?)\n", d->name, strerror(errno));
+		diag("Failed writing to %s (%s?)\n", buf, strerror(errno));
 		return -1;
 	}
 	diag("Wrote '1' to %s\n", buf);

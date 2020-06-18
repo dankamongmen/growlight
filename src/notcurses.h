@@ -6,14 +6,14 @@ extern "C" {
 #endif
 
 #include "config.h"
-#include <notcurses.h>
+#include <notcurses/notcurses.h>
 
 struct panel_state;
 
 void locked_diag(const char *, ...);
 
 // Scrolling single select form
-void raise_form(const char *, void (*)(const char *), struct selector_item *, 
+void raise_form(const char *, void (*)(const char *), struct ncselector_item *, 
 			          int, int, const char *);
 
 // Single-entry string entry form with command-line editing
@@ -21,7 +21,7 @@ void raise_str_form(const char *, void (*)(const char *), const char *, const ch
 
 // Multiselect form with side panel
 void raise_multiform(const char *, void (*)(const char *, char **, int, int), 
-	                   struct selector_item *, int, int, int, char **, int,
+	                   struct ncselector_item *, int, int, int, char **, int,
                      const char *, int);
 
 struct panel_state *show_splash(const wchar_t *);

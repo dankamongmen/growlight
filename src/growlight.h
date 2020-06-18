@@ -15,7 +15,7 @@ extern "C" {
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <notcurses.h>
+#include <notcurses/notcurses.h>
 
 #include "gpt.h"
 #include "stats.h"

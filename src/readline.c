@@ -242,16 +242,15 @@ static int print_dev_mplex(const device *,int,int);
 static int
 print_mounts(const device *d){
   char buf[PREFIXSTRLEN + 1];
-  int r = 0,rr;
+  int r = 0, rr;
   unsigned z;
 
   for(z = 0 ; z < d->mnt.count ; ++z){
-    r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s " PREFIXFMT "\n %s %s\n",
+    const char *size = d->mntsize ? qprefix(d->mntsize, 1, buf, 0) : "";
+    r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s %*s\n %s %s\n",
         FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
-        d->mnttype,
-        d->uuid ? d->uuid : "n/a", d->name,
-        d->mntsize ? qprefix(d->mntsize,1,buf,0) : "",
-        d->mnt.list[z],d->mntops.list[z]);
+        d->mnttype, d->uuid ? d->uuid : "n/a", d->name,
+        PREFIXFMT(size), d->mnt.list[z], d->mntops.list[z]);
     if(rr < 0){
       return -1;
     }
@@ -262,15 +261,14 @@ print_mounts(const device *d){
 static int
 print_swap(const device *p){
   char buf[PREFIXSTRLEN + 1];
-  int r = 0,rr;
+  int r = 0, rr;
 
   assert(p->mnttype);
-  r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s " PREFIXFMT,
+  qprefix(p->mntsize, 1, buf, 0),
+  r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s %*s",
       FSLABELSIZ,FSLABELSIZ,p->label ? p->label : "n/a",
-      p->mnttype,
-      p->uuid ? p->uuid : "n/a",
-      qprefix(p->mntsize,1,buf,0),
-      p->name);
+      p->mnttype, p->uuid ? p->uuid : "n/a",
+      p->name, PREFIXFMT(buf));
   if(rr < 0){
     return -1;
   }
@@ -334,10 +332,11 @@ print_partition(const device *p, int descend){
   int r = 0, rr;
 
   use_ncdirect_color(COLOR_BLUE, 1);
-  r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %-3.3s %ls\n",
+  qprefix(p->size, 1, buf, 0);
+  r += rr = printf("%-10.10s %-36.36s %*s %-3.3s %ls\n",
       p->name,
       p->partdev.uuid ? p->partdev.uuid : "n/a",
-      qprefix(p->size, 1, buf, 0),
+      PREFIXFMT(buf),
       partrole_str(p->partdev.ptype, p->partdev.flags),
       p->partdev.pname ? p->partdev.pname : L"n/a");
   if(rr < 0){
@@ -401,11 +400,12 @@ print_drive(const device *d,int descend){
     }else{
       use_ncdirect_color(COLOR_MAGENTA,1); // virtual
     }
-    r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
+    qprefix(d->size, 1, buf, 0);
+    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
-      qprefix(d->size,1,buf,0),
+      PREFIXFMT(buf),
       d->physsec,
       d->blkdev.unloaded ? L'U' :
        d->blkdev.removable ? L'R' :
@@ -426,12 +426,13 @@ print_drive(const device *d,int descend){
       );
     break;
   }case LAYOUT_MDADM:{
-    use_ncdirect_color(COLOR_YELLOW,1);
-    r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
+    use_ncdirect_color(COLOR_YELLOW, 1);
+    qprefix(d->size, 1, buf, 0);
+    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
-      qprefix(d->size,1,buf,0),
+      PREFIXFMT(buf),
       d->physsec, L'V', L'M', L'.',
       d->roflag ? L'r' : L'.', L'.',
       d->mddev.pttable ? d->mddev.pttable : "none",
@@ -440,12 +441,13 @@ print_drive(const device *d,int descend){
       );
     break;
   }case LAYOUT_DM:{
-    use_ncdirect_color(COLOR_YELLOW,1);
-    r += rr = printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
+    use_ncdirect_color(COLOR_YELLOW, 1);
+    qprefix(d->size, 1, buf, 0);
+    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
-      qprefix(d->size,1,buf,0),
+      PREFIXFMT(buf),
       d->physsec, L'V', L'D', L'.',
       d->roflag ? L'r' : L'.', L'.',
       "n/a",
@@ -454,12 +456,13 @@ print_drive(const device *d,int descend){
       );
     break;
   }case LAYOUT_ZPOOL:{
-    use_ncdirect_color(COLOR_RED,1);
-    r += rr = printf("%-10.10s %-16.16s %4ju " PREFIXFMT " %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
+    use_ncdirect_color(COLOR_RED, 1);
+    qprefix(d->size, 1, buf, 0);
+    r += rr = printf("%-10.10s %-16.16s %4ju %*s %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       (uintmax_t)d->zpool.zpoolver,
-      qprefix(d->size,1,buf,0),
+      PREFIXFMT(buf),
       d->physsec, L'V', L'Z', L'.',
       d->roflag ? L'r' : L'.', L'.',
       "spa",
@@ -518,11 +521,11 @@ print_zpool(const device *d,int descend){
   if(d->layout != LAYOUT_ZPOOL){
     return 0;
   }
-  r += rr = printf("%-10.10s %-36.36s " PREFIXFMT " %4uB ZFS%2ju %5lu %-6.6s\n",
+  qprefix(d->size, 1, buf, 0);
+  r += rr = printf("%-10.10s %-36.36s %*s %4uB ZFS%2ju %5lu %-6.6s\n",
       d->name,
       d->uuid ? d->uuid : "n/a",
-      qprefix(d->size,1,buf,0),
-      d->physsec, d->zpool.zpoolver,
+      PREFIXFMT(buf), d->physsec, d->zpool.zpoolver,
       d->zpool.disks,d->zpool.level ? d->zpool.level : "n/a"
       );
   if(rr < 0){
@@ -544,12 +547,12 @@ print_dm(const device *d,int prefix,int descend){
     return 0;
   }
   use_ncdirect_color(COLOR_YELLOW,1);
-  r += rr = printf("%-*.*s%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
+  qprefix(d->size, 1, buf, 0);
+  r += rr = printf("%-*.*s%-10.10s %-36.36s %*s %4uB %-6.6s%5lu %-6.6s\n",
       prefix,prefix,"",
       d->name,
       d->uuid ? d->uuid : "n/a",
-      qprefix(d->size,1,buf,0),
-      d->physsec, "n/a",
+      PREFIXFMT(buf), d->physsec, "n/a",
       d->dmdev.disks,d->dmdev.level ? d->dmdev.level : "n/a"
       );
   if(rr < 0){
@@ -594,14 +597,15 @@ print_mdadm(const device *d,int prefix,int descend){
   if(d->layout != LAYOUT_MDADM){
     return 0;
   }
-  use_ncdirect_color(COLOR_YELLOW,1);
-  r += rr = printf("%-*.*s%-10.10s %-36.36s " PREFIXFMT " %4uB %-6.6s%5lu %-6.6s\n",
+  use_ncdirect_color(COLOR_YELLOW, 1);
+  qprefix(d->size, 1, buf, 0);
+  r += rr = printf("%-*.*s%-10.10s %-36.36s %*s %4uB %-6.6s%5lu %-6.6s\n",
       prefix,prefix,"",
       d->name,
       d->uuid ? d->uuid : "n/a",
-      qprefix(d->size,1,buf,0),
+      PREFIXFMT(buf),
       d->physsec, "n/a",
-      d->mddev.disks,d->mddev.level ? d->mddev.level : "n/a");
+      d->mddev.disks, d->mddev.level ? d->mddev.level : "n/a");
   if(rr < 0){
     return -1;
   }
@@ -806,8 +810,8 @@ zpool(wchar_t * const *args,const char *arghelp){
     }
     return 0;
   }
-  printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
-      "Device","UUID","Bytes","AShft","Fmt","Disks","Level");
+  printf("%-10.10s %-36.36s %*s %5.5s %-6.6s%-6.6s%-6.6s\n",
+         "Device", "UUID", PREFIXFMT("Bytes"), "AShft", "Fmt", "Disks", "Level");
   if(walk_devices(print_zpool,descend)){
     return -1;
   }
@@ -842,7 +846,7 @@ dm(wchar_t * const *args,const char *arghelp){
     return 0;
   }
   /*
-  printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
+  printf("%-10.10s %-36.36s %*s %5.5s %-6.6s%-6.6s%-6.6s\n",
       "Device","UUID","Bytes","PSect","Table","Disks","Level");
   if(walk_devices(print_zpool,descend)){
     return -1;
@@ -869,8 +873,8 @@ mdadm(wchar_t * const *args,const char *arghelp){
     usage(args,arghelp);
     return -1;
   }
-  printf("%-10.10s %-36.36s " PREFIXFMT " %5.5s %-6.6s%-6.6s%-6.6s\n",
-      "Device","UUID","Bytes","PSect","Table","Disks","Level");
+  printf("%-10.10s %-36.36s %*s %5.5s %-6.6s%-6.6s%-6.6s\n",
+      "Device","UUID", PREFIXFMT("Bytes"), "PSect","Table","Disks","Level");
   for(c = get_controllers() ; c ; c = c->next){
     device *d;
 
@@ -932,8 +936,8 @@ static inline int
 blockdev_dump(int descend){
   const controller *c;
 
-  printf("%-10.10s %-16.16s %4.4s " PREFIXFMT " %5.5s Flags %-6.6s%-16.16s %-4.4s\n",
-      "Device","Model","Rev","Bytes","PSect","Table","WWN","PHY");
+  printf("%-10.10s %-16.16s %4.4s %*s %5.5s Flags %-6.6s%-16.16s %-4.4s\n",
+      "Device","Model","Rev", PREFIXFMT("Bytes"),"PSect","Table","WWN","PHY");
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -1115,7 +1119,7 @@ print_partition_types(void){
   const ptype *pt;
 
   for(pt = ptypes ; pt->name ; ++pt){
-    if(printf("%04x %-37.37s",pt->code,pt->name) < 0){
+    if(printf("%04x %-37.37s", pt->code, pt->name) < 0){
       return -1;
     }
     // FIXME if all zeros, don't print gpt guid
@@ -1320,8 +1324,8 @@ partition(wchar_t * const *args,const char *arghelp){
     usage(args,arghelp);
     return -1;
   }
-  printf("%-10.10s %-36.36s " PREFIXFMT " %-4.4s %s\n",
-      "Partition","UUID","Bytes","Role","Name");
+  printf("%-10.10s %-36.36s %*s %-4.4s %s\n",
+      "Partition","UUID", PREFIXFMT("Bytes"), "Role", "Name");
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -1343,9 +1347,9 @@ mounts(wchar_t * const *args,const char *arghelp){
   const controller *c;
 
   ZERO_ARG_CHECK(args,arghelp);
-  printf("%-*.*s %-5.5s %-36.36s %s " PREFIXFMT "\n",
+  printf("%-*.*s %-5.5s %-36.36s %s %*s\n",
       FSLABELSIZ,FSLABELSIZ,"Label",
-      "Type","UUID","Device","Bytes");
+      "Type","UUID","Device", PREFIXFMT("Bytes"));
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -1428,11 +1432,11 @@ print_swaps(const device *d,int descend){
   if(d->swapprio == SWAP_INVALID){
     return 0;
   }
-  r += rr = printf("%-*.*s %-5d %-36.36s %s " PREFIXFMT "\n",
+  qprefix(d->mntsize,1,buf,0);
+  r += rr = printf("%-*.*s %-5d %-36.36s %s %*s\n",
       FSLABELSIZ,FSLABELSIZ,d->label ? d->label : "n/a",
       d->swapprio,d->uuid ? d->uuid : "n/a",
-      d->name,
-      qprefix(d->mntsize,1,buf,0));
+      d->name, PREFIXFMT(buf));
   if(rr < 0){
     return -1;
   }
@@ -1441,9 +1445,9 @@ print_swaps(const device *d,int descend){
 
 static inline int
 fs_dump(int descend){
-  printf("%-*.*s %-5.5s %-36.36s %s " PREFIXFMT "\n",
-      FSLABELSIZ,FSLABELSIZ,"Label",
-      "Type","UUID","Device","Bytes");
+  printf("%-*.*s %-5.5s %-36.36s %s %*s\n",
+         FSLABELSIZ, FSLABELSIZ, "Label",
+         "Type", "UUID", "Device", PREFIXFMT("Bytes"));
   if(walk_devices(print_fs,descend)){
     return -1;
   }
@@ -1544,11 +1548,11 @@ static int
 swap(wchar_t * const *args,const char *arghelp){
   device *d;
   if(!args[1]){
-    if(printf("%-*.*s %-5.5s %-36.36s %s " PREFIXFMT "\n",FSLABELSIZ,FSLABELSIZ,
-          "Label","Prio","UUID","Device","Bytes") < 0){
+    if(printf("%-*.*s %-5.5s %-36.36s %s %*s\n", FSLABELSIZ, FSLABELSIZ,
+          "Label", "Prio", "UUID", "Device", PREFIXFMT("Bytes")) < 0){
       return -1;
     }
-    if(walk_devices(print_swaps,0)){
+    if(walk_devices(print_swaps, 0)){
       return -1;
     }
     return 0;
@@ -1557,16 +1561,16 @@ swap(wchar_t * const *args,const char *arghelp){
   if((d = lookup_wdevice(args[2])) == NULL){
     return -1;
   }
-  if(wcscmp(args[1],L"on") == 0){
+  if(wcscmp(args[1], L"on") == 0){
     if(swapondev(d)){
       return -1;
     }
-  }else if(wcscmp(args[1],L"off") == 0){
+  }else if(wcscmp(args[1], L"off") == 0){
     if(swapoffdev(d)){
       return -1;
     }
   }else{
-    usage(args,arghelp);
+    usage(args, arghelp);
     return -1;
   }
   return 0;
@@ -2192,7 +2196,7 @@ int main(int argc,char * const *argv){
   if(isatty(STDOUT_FILENO)){
     int errret;
 
-    if((ncdirect = notcurses_directmode(NULL,  stdout)) == NULL){
+    if((ncdirect = ncdirect_init(NULL,  stdout)) == NULL){
       fprintf(stderr, "Couldn't set up terminfo db (errret %d)\n", errret);
     }
   }

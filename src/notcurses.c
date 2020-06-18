@@ -177,7 +177,7 @@ struct form_state {
       //
       int idx;    // selection index
       int scrolloff;    // scroll offset
-      struct selector_item *ops;// selector_item array for *this instance*
+      struct ncselector_item *ops;// selector_item array for *this instance*
       int opcount;    // total number of ops
       int selectno;    // number of selections, total
       int selections;    // number of active selections
@@ -407,6 +407,15 @@ screen_update(void){
   if(PR){
     ncreel_redraw(PR);
   }
+  if(active){
+    ncplane_move_top(active->p);
+  }
+  if(actform){
+    if(actform->extext){
+      ncplane_move_top(actform->extext->p);
+    }
+    ncplane_move_top(actform->p);
+  }
   if(splash){
     ncplane_move_top(splash->p);
   }
@@ -446,8 +455,8 @@ typedef struct blockobj {
   zobj* zone;
 } blockobj;
 
-// An adapter, which might be invisible (in which case the tablet is NULL). If a
-// tablet exists for this adapter, its userptr is the adapterstate.
+// An adapter, which might be invisible (in which case the nctablet is NULL). If a
+// nctablet exists for this adapter, its userptr is the adapterstate.
 typedef struct adapterstate {
   controller* c;
   unsigned devs;
@@ -708,7 +717,7 @@ cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   return 0;
 }
 
-static int
+static int __attribute__ ((format (printf, 4, 5)))
 cmvwprintw(struct ncplane* n, int y, int x, const char* fmt, ...){
   if(ncplane_cursor_move_yx(n, y, x)){
     return -1;
@@ -720,7 +729,7 @@ cmvwprintw(struct ncplane* n, int y, int x, const char* fmt, ...){
   return ret;
 }
 
-static int
+static int __attribute__ ((format (printf, 2, 3)))
 cwprintw(struct ncplane* n, const char* fmt, ...){
   va_list va;
   va_start(va, fmt);
@@ -731,10 +740,7 @@ cwprintw(struct ncplane* n, const char* fmt, ...){
 
 static int
 cwbkgd(struct ncplane* nc){
-  uint64_t channels = 0;
-  channels_set_fg_rgb(&channels, 0, 0, 0);
-  ncplane_set_base(nc, channels, 0, " ");
-  return 0;
+  return ncplane_set_base(nc, " ", 0, 0);
 }
 
 static void
@@ -1141,11 +1147,12 @@ case LAYOUT_NONE:
         }else if(selected){
           cwattron(n, NCSTYLE_REVERSE);
         }
-    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        qprefix(bo->d->size, 1, buf, 0);
+        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size, 1, buf, 0),
+          PREFIXFMT(buf),
           bo->d->physsec,
           bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
           bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
@@ -1175,11 +1182,12 @@ case LAYOUT_MDADM:
         }else if(selected){
           cwattron(n, NCSTYLE_REVERSE);
         }
-    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        qprefix(bo->d->size, 1, buf, 0);
+        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size, 1, buf, 0),
+          PREFIXFMT(buf),
           bo->d->physsec,
           bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
           bo->d->mddev.mdname ? bo->d->mddev.mdname : "n/a",
@@ -1202,11 +1210,12 @@ case LAYOUT_DM:
         }else if(selected){
           cwattron(n, NCSTYLE_REVERSE);
         }
-    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        qprefix(bo->d->size, 1, buf, 0);
+        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          qprefix(bo->d->size, 1, buf, 0),
+          PREFIXFMT(buf),
           bo->d->physsec,
           bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
           bo->d->dmdev.dmname ? bo->d->dmdev.dmname : "n/a",
@@ -1230,11 +1239,12 @@ case LAYOUT_ZPOOL:
         }else if(selected){
           cwattron(n, NCSTYLE_REVERSE);
         }
-    cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju " PREFIXFMT " %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        qprefix(bo->d->size, 1, buf, 0);
+        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           (uintmax_t)bo->d->zpool.zpoolver,
-          qprefix(bo->d->size, 1, buf, 0),
+          PREFIXFMT(buf),
           bo->d->physsec,
           "spa",
           "n/a",  // FIXME
@@ -1701,7 +1711,7 @@ free_form(struct form_state *fs){
 
 static void
 multiselector_items(struct form_state *fs){
-  const struct selector_item *opstrs = fs->ops;
+  const struct ncselector_item *opstrs = fs->ops;
   struct ncplane* fsw = fs->p;
   int z, cols, selidx, maxz;
 
@@ -1755,7 +1765,7 @@ multiselector_items(struct form_state *fs){
 
 static void
 check_options(struct form_state *fs){
-  const struct selector_item *opstrs = fs->ops;
+  const struct ncselector_item *opstrs = fs->ops;
   int z, cols, selidx, maxz;
 
   assert(fs->formtype == FORM_CHECKBOXEN);
@@ -1861,7 +1871,7 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
 }
 
 void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, int),
-    struct selector_item *opstrs, int ops, int defidx,
+    struct ncselector_item *opstrs, int ops, int defidx,
     int selectno, char **selarray, int selections, const char *text,
     int scrollidx){
   size_t longop, longdesc;
@@ -1940,7 +1950,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
 // A collection of checkboxes
 static void
 raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
-                struct selector_item* opstrs, int ops, int defidx,
+                struct ncselector_item* opstrs, int ops, int defidx,
                 char** selarray, int selections, const char* text,
                 int scrollidx){
   size_t longop, longdesc;
@@ -2022,7 +2032,7 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
 void raise_form(const char* str, void (*fxn)(const char*),
-                struct selector_item* opstrs, int ops, int defidx,
+                struct ncselector_item* opstrs, int ops, int defidx,
                 const char* text){
   if(opstrs == NULL || !ops){
     locked_diag("Passed empty %u-option string table", ops);
@@ -2032,7 +2042,7 @@ void raise_form(const char* str, void (*fxn)(const char*),
     locked_diag("An input dialog is already active");
     return;
   }
-  selector_options sopts;
+  ncselector_options sopts;
   memset(&sopts, 0, sizeof(sopts));
   sopts.items = opstrs;
   sopts.itemcount = ops;
@@ -2122,7 +2132,7 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
   screen_update();
 }
 
-static const struct selector_item common_fsops[] = {
+static const struct ncselector_item common_fsops[] = {
   {
     .option = "ro",
     .desc = "Read-only",
@@ -2165,10 +2175,10 @@ static const struct selector_item common_fsops[] = {
   },
 };
 
-static struct selector_item *
+static struct ncselector_item *
 ops_table(int *count, const char *match, int *defidx, char ***selarray, int *selections,
-    const struct selector_item *flags, unsigned fcount){
-  struct selector_item *fo = NULL;
+    const struct ncselector_item *flags, unsigned fcount){
+  struct ncselector_item *fo = NULL;
   int z = 0;
 
   *count = 0;
@@ -2236,7 +2246,7 @@ static char forming_targ[PATH_MAX + 1];
 
 static void
 mountop_callback(const char *op, char **selarray, int selections, int scrollidx){
-  struct selector_item *ops_agg;
+  struct ncselector_item *ops_agg;
   int opcount, defidx;
   blockobj *b;
 
@@ -2288,7 +2298,7 @@ mountop_callback(const char *op, char **selarray, int selections, int scrollidx)
 // -------------------------------------------------------------------------
 static void
 targpoint_callback(const char *path){
-  struct selector_item *ops_agg;
+  struct ncselector_item *ops_agg;
   int scrollidx = 0;
   blockobj *b;
 
@@ -2336,10 +2346,10 @@ targpoint_callback(const char *path){
 // -------------------------------------------------------------------------
 // - filesystem type form, for new filesystem creation
 // -------------------------------------------------------------------------
-static struct selector_item *
+static struct ncselector_item *
 fs_table(int *count, const char *match, int *defidx){
-  struct selector_item* fo = NULL;
-  struct selector_item* tmp;
+  struct ncselector_item* fo = NULL;
+  struct ncselector_item* tmp;
   pttable_type* types;
   int z;
 
@@ -2454,7 +2464,7 @@ fs_do(const char *name){
 static void
 fs_named_callback(const char *name){
   if(name == NULL){
-    struct selector_item *ops_fs;
+    struct ncselector_item *ops_fs;
     int opcount, defidx;
 
     if((ops_fs = fs_table(&opcount, pending_fstype, &defidx)) == NULL){
@@ -2494,9 +2504,9 @@ fs_callback(const char *fs){
 
 // A NULL return is only an error if *count is set to -1. If *count is set to
 // 0, it simply means this partition table type doesn't have type tags.
-static struct selector_item *
+static struct ncselector_item *
 ptype_table(const device *d, int *count, int match, int *defidx){
-  struct selector_item *fo = NULL, *tmp;
+  struct ncselector_item *fo = NULL, *tmp;
   const char *pttable;
   const ptype *pt;
 
@@ -2782,7 +2792,7 @@ psectors_callback(const char *psects){
     return;
   }
   if(psects == NULL){ // go back to partition type
-    struct selector_item *ops_ptype;
+    struct ncselector_item *ops_ptype;
     int opcount, defidx;
 
     if((ops_ptype = ptype_table(b->d, &opcount, pending_ptype, &defidx)) == NULL){
@@ -2849,7 +2859,7 @@ ptype_callback(const char *pty){
 
 static void
 new_partition(void){
-  struct selector_item *ops_ptype;
+  struct ncselector_item *ops_ptype;
   blockobj *b;
   int opcount;
   int defidx;
@@ -2874,7 +2884,7 @@ new_partition(void){
 // -------------------------------------------------------------------------
 
 // -------------------------------------------------------------------------
-// - partition tabletype form, for new partition table creation
+// - partition nctabletype form, for new partition table creation
 // -------------------------------------------------------------------------
 static inline int
 partition_table_makeablep(const blockobj *b){
@@ -2927,7 +2937,7 @@ pttype_callback(const char *pttype){
 // -------------------------------------------------------------------------
 static int
 confirm_operation(const char *op,void (*confirmcb)(const char *)){
-  struct selector_item *ops_confirm;
+  struct ncselector_item *ops_confirm;
 
   if((ops_confirm = malloc(sizeof(*ops_confirm) * 2)) == NULL){
     return -1;
@@ -2984,9 +2994,9 @@ detail_fs(struct ncplane* hw, const device* d, int row){
     char buf[BPREFIXSTRLEN + 1];
 
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cmvwprintw(hw, row, START_COL, BPREFIXFMT "%c ",
-        d->mntsize ? bprefix(d->mntsize, 1, buf, 1) : "",
-        d->mntsize ? 'B' : ' ');
+    const char *size = d->mntsize ? bprefix(d->mntsize, 1, buf, 1) : "";
+    cmvwprintw(hw, row, START_COL, "%*s%c ",
+        BPREFIXFMT(size), d->mntsize ? 'B' : ' ');
     ncplane_styles_on(hw, NCSTYLE_BOLD);
     cwprintw(hw, "%s%s", d->label ? "" : "unlabeled ", d->mnttype);
     if(d->label){
@@ -3155,9 +3165,9 @@ update_details(struct ncplane* hw){
   if(blockobj_unpartitionedp(b)){
     char ubuf[BPREFIXSTRLEN + 1];
 
+    bprefix(d->size, 1, ubuf, 1);
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
-        bprefix(d->size, 1, ubuf, 1));
+    cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(ubuf));
     ncplane_styles_on(hw, NCSTYLE_BOLD);
     cwprintw(hw, "%s", "unpartitioned media");
     detail_fs(hw, b->d, 7);
@@ -3171,9 +3181,9 @@ update_details(struct ncplane* hw){
       assert(b->zone->p->layout == LAYOUT_PARTITION);
       bprefix(b->zone->p->partdev.alignment, 1, align, 1);
       // FIXME limit length!
+      bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1, zbuf, 1);
       ncplane_styles_off(hw, NCSTYLE_BOLD);
-      cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
-          bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1));
+      cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
       ncplane_styles_on(hw, NCSTYLE_BOLD);
       cwprintw(hw, "P%lc%lc ", subscript((b->zone->p->partdev.pnumber % 100 / 10)),
           subscript((b->zone->p->partdev.pnumber % 10)));
@@ -3204,8 +3214,8 @@ update_details(struct ncplane* hw){
       // but not until we implement zones in core (bug 252)
       // or we'll need recreate alignment() etc here
       ncplane_styles_off(hw, NCSTYLE_BOLD);
-      cmvwprintw(hw, 6, START_COL, BPREFIXFMT "B ",
-          bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1));
+      bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1);
+      cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
       ncplane_styles_on(hw, NCSTYLE_BOLD);
       ncplane_styles_off(hw, NCSTYLE_BOLD);
       cwprintw(hw, "%ju", b->zone->fsector);
@@ -3557,13 +3567,14 @@ detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
       continue;
     }
     cmvwhline(w, *row, START_COL, " ", cols - 2);
-    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+    qprefix(d->mntsize, 1, buf, 0);
+    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s %*s %-*.*s",
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
-        qprefix(d->mntsize, 1, buf, 0),
-        cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-        cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+        PREFIXFMT(buf),
+        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
+        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
         d->name);
     if(++*row == maxy){
       return;
@@ -3594,13 +3605,14 @@ detail_targets(struct ncplane* w, int* row, int both, const device* d){
       continue;
     }
     cmvwhline(w, *row, START_COL, " ", cols - 2);
-    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %-*.*s",
+    qprefix(d->mntsize, 1, buf, 0);
+    cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s %*s %-*.*s",
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
-        qprefix(d->mntsize, 1, buf, 0),
-        cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
-        cols - (FSLABELSIZ + 47 + PREFIXSTRLEN),
+        PREFIXFMT(buf),
+        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
+        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
         d->name);
     ++*row;
     if(!both){
@@ -3671,9 +3683,9 @@ map_details(struct ncplane *hw){
   }
   cwattrset(hw, NCSTYLE_BOLD|SUBDISPLAY_COLOR);
   cmvwhline(hw, y, 1, " ", cols - 2);
-  cmvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s " PREFIXFMT " %s",
+  cmvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s %*s %s",
       FSLABELSIZ, FSLABELSIZ, "Label",
-      "Type", "UUID", "Bytes", "Device");
+      "Type", "UUID", PREFIXFMT("Bytes"), "Device");
   if(++y >= rows){
     return 0;
   }
@@ -3980,9 +3992,9 @@ remove_ptable(void){
   confirm_operation("remove the partition table", remove_ptable_confirm);
 }
 
-static struct selector_item *
+static struct ncselector_item *
 pttype_table(int *count){
-  struct selector_item *fo = NULL, *tmp;
+  struct ncselector_item *fo = NULL, *tmp;
   pttable_type *types;
   int z;
 
@@ -4022,7 +4034,7 @@ err:
 
 static void
 make_ptable(void){
-  struct selector_item *ops_ptype;
+  struct ncselector_item *ops_ptype;
   int opcount;
   blockobj *b;
 
@@ -4043,7 +4055,7 @@ make_ptable(void){
 static void
 new_filesystem(void){
   blockobj *b = get_selected_blockobj();
-  struct selector_item *ops_fs;
+  struct ncselector_item *ops_fs;
   int opcount, defidx;
 
   if(b == NULL){
@@ -4140,14 +4152,14 @@ kill_filesystem(void){
   }
 }
 
-static const struct selector_item dos_flags[] = {
+static const struct ncselector_item dos_flags[] = {
   {
     .option = "0x80",
     .desc = "Bootable",
   },
 };
 
-static const struct selector_item gpt_flags[] = {
+static const struct ncselector_item gpt_flags[] = {
   { // protects OEM partitions from being overwritten by windows
     .option = "0x0000000000000001", // 2^0, 1
     .desc = "System partition",
@@ -4172,10 +4184,10 @@ static const struct selector_item gpt_flags[] = {
   },
 };
 
-static struct selector_item *
+static struct ncselector_item *
 flag_table(int *count, const char *match, int *defidx, char ***selarray, int *selections,
-    const struct selector_item *flags, unsigned fcount){
-  struct selector_item *fo = NULL;
+    const struct ncselector_item *flags, unsigned fcount){
+  struct ncselector_item *fo = NULL;
   int z = 0;
 
   *count = 0;
@@ -4267,7 +4279,7 @@ do_partflag(char **selarray, int selections){
 
 static void
 partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
-  struct selector_item *flags_agg;
+  struct ncselector_item *flags_agg;
   int opcount, defidx;
 
   if(fn == NULL){
@@ -4290,7 +4302,7 @@ partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
 
 static void
 dos_partflag_callback(const char *fn, char **selarray, int selections, int scrollp){
-  struct selector_item *flags_agg;
+  struct ncselector_item *flags_agg;
   int opcount, defidx;
 
   if(fn == NULL){
@@ -4313,7 +4325,7 @@ dos_partflag_callback(const char *fn, char **selarray, int selections, int scrol
 
 static int
 flag_to_selections(uint64_t flags, char ***selarray, int *selections,
-      const struct selector_item *ops, unsigned opcount){
+      const struct ncselector_item *ops, unsigned opcount){
   assert(selarray && selections);
   assert(!*selarray && !*selections);
   while(opcount--){
@@ -4339,7 +4351,7 @@ flag_to_selections(uint64_t flags, char ***selarray, int *selections,
 
 static void
 set_partition_attrs(void){
-  struct selector_item *flags_agg;
+  struct ncselector_item *flags_agg;
   char **selarray = NULL;
   int selections = 0;
   int opcount, defidx;
@@ -4932,7 +4944,7 @@ handle_actform_input(const ncinput *ni){
   if(ch == NCKEY_ENTER || (ni->ctrl && (ch == 'J' || ch == 'M'))){
     int op, selections, scrolloff;
     char **selarray;
-    char *optstr;
+    const char *optstr;
 
     lock_notcurses();
       if(fs->ns){
@@ -4957,14 +4969,13 @@ handle_actform_input(const ncinput *ni){
       }else{
         cb(optstr);
       }
-      free(optstr);
     unlock_notcurses();
     return 0;
   }
   switch(ch){
     case 12: // CTRL+L FIXME
       lock_notcurses();
-      notcurses_refresh(NC);
+      notcurses_refresh(NC, NULL, NULL);
       unlock_notcurses();
       break;
     case KEY_ESC:{
@@ -4984,7 +4995,7 @@ handle_actform_input(const ncinput *ni){
     }case NCKEY_UP: case 'k':{
       lock_notcurses();
       if(fs->ns){
-        ncselector_previtem(fs->ns, NULL);
+        ncselector_previtem(fs->ns);
       }else{
         if(fs->idx == fs->scrolloff){
           if(--fs->scrolloff < 0){
@@ -5005,7 +5016,7 @@ handle_actform_input(const ncinput *ni){
     }case NCKEY_DOWN: case 'j':{
       lock_notcurses();
       if(fs->ns){
-        ncselector_nextitem(fs->ns, NULL);
+        ncselector_nextitem(fs->ns);
       }else{
         int maxz;
         ncplane_dim_yx(fs->p, &maxz, NULL);
@@ -5229,7 +5240,7 @@ handle_ncurses_input(struct ncplane* w){
   while((ch = notcurses_getc_blocking(NC, &ni)) != (char32_t)-1){
     if(ch == 12){ // CTRL+L FIXME
       lock_notcurses();
-      notcurses_refresh(NC);
+      notcurses_refresh(NC, NULL, NULL);
       unlock_notcurses();
       continue;
     }

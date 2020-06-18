@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([growlight], [1.2.0], [dankamongmen@gmail.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
+AC_INIT([growlight], [1.2.5], [dankamongmen@gmail.com], [growlight], [https://nick-black.com/dankwiki/index.php/Growlight])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([-Wall foreign dist-xz no-dist-gzip std-options subdir-objects nostdinc])
 AC_CONFIG_HEADER([src/config.h])
@@ -62,9 +62,6 @@ AX_LIB_READLINE
 AC_CHECK_LIB([readline], [main], [have_readline=yes],
 	[AC_MSG_ERROR([Cannot find libreadline.])])
 
-# CUnit (unit testing)
-PKG_CHECK_MODULES([CUNIT], [cunit >= 2.1], [have_cunit=yes])
-
 # Remaining dependencies are needed by all binaries.
 AC_CHECK_LIB(pciaccess, pci_system_init, [have_pciaccess=yes],
              [AC_MSG_ERROR([Cannot find libpciaccess.])])
@@ -75,7 +72,7 @@ AC_CHECK_LIB(pci, pci_get_dev, [have_libpci=yes],
 	LIBS+=" -lpci"
 
 if test "x$notcurses" = "xtrue" ; then
-  PKG_CHECK_MODULES([notcurses], [notcurses >= 1.1.6])
+  PKG_CHECK_MODULES([notcurses], [notcurses >= 1.4.3])
   	notcurses_CFLAGS+=" $notcurses_CFLAGS"
   	notcurses_LIBS+=" $notcurses_LIBS"
 fi
