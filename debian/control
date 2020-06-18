@@ -1,23 +1,22 @@
 Source: growlight
 Priority: optional
 Maintainer: Nick Black <dankamongmen@gmail.com>
-Build-Depends:
- autoconf-archive,
- debhelper (>= 12),
- docbook-xsl,
- libatasmart-dev,
- libblkid-dev,
- libcryptsetup-dev,
- libdevmapper-dev,
- libnotcurses-dev (>= 1.4.3),
- libpci-dev,
- libpciaccess-dev,
- libreadline-dev,
- libssl-dev,
- libudev-dev,
- libzfslinux-dev (>= 0.8.0),
- pkg-config,
- xsltproc,
+Build-Depends: autoconf-archive,
+               debhelper (>= 13),
+               docbook-xsl,
+               libatasmart-dev,
+               libblkid-dev,
+               libcryptsetup-dev,
+               libdevmapper-dev,
+               libnotcurses-dev (>= 1.4.3),
+               libpci-dev,
+               libpciaccess-dev,
+               libreadline-dev,
+               libssl-dev,
+               libudev-dev,
+               libzfslinux-dev (>= 0.8.0),
+               pkg-config,
+               xsltproc
 Section: utils
 Standards-Version: 4.5.0.2
 Rules-Requires-Root: no
