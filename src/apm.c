@@ -5,8 +5,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
 
 #include "apm.h"
 #include "ptypes.h"
