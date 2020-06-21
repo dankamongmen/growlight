@@ -139,12 +139,17 @@ target_link_directories(growlight-readline
     "${notcurses_INCLUDE_DIRS}"
 )
 
-
 if(USE_DOCBOOK)
   file(GLOB MANSOURCE CONFIGURE_DEPENDS doc/man/man8/*.xml)
   find_program(XSLTPROC xsltproc)
   if(NOT XSLTPROC)
     message(FATAL_ERROR "xsltproc not found. USE_DOCBOOK=OFF to disable.")
+    find_file(DOCBOOKXSL
+      NAMES
+        /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl
+        /usr/share/sgml/docbook/xsl-stylesheets/manpages/docbook.xsl
+      REQUIRED
+    )
   else()
     foreach(m ${MANSOURCE})
       get_filename_component(me ${m} NAME_WLE)
@@ -152,9 +157,7 @@ if(USE_DOCBOOK)
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${me}
         DEPENDS ${m}
         COMMAND ${XSLTPROC}
-        # FIXME fedora and debian have it in different places =[
-        # ARGS --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl ${m}
-        ARGS --nonet /usr/share/sgml/docbook/xsl-stylesheets/manpages/docbook.xsl ${m}
+        ARGS --nonet ${DOCBOOKXSL} ${m}
         COMMENT "Building man page ${me}"
       )
       add_custom_target(${me}.man
