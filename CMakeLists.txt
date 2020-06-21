@@ -8,7 +8,9 @@ set(CMAKE_C_STANDARD 11)
 include(GNUInstallDirs)
 
 ###################### USER-SELECTABLE OPTIONS ###########################
+option(USE_DOCBOOK "Use docbook to write man pages" ON)
 option(USE_LIBZFS "Use libzfs to manage zpools/ZFS" ON)
+#################### END USER-SELECTABLE OPTIONS #########################
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the build mode." FORCE)
@@ -135,7 +137,34 @@ target_link_directories(growlight-readline
     "${notcurses_INCLUDE_DIRS}"
 )
 
-install(FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1)
+if(USE_DOCBOOK)
+  file(GLOB MANSOURCE CONFIGURE_DEPENDS doc/man/man8/*.xml)
+  find_program(XSLTPROC xsltproc)
+  if(NOT XSLTPROC)
+    message(FATAL_ERROR "xsltproc not found. USE_DOCBOOK=OFF to disable.")
+  else()
+    foreach(m ${MANSOURCE})
+      get_filename_component(me ${m} NAME_WLE)
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${me}
+        DEPENDS ${m}
+        COMMAND ${XSLTPROC}
+        ARGS --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl ${m}
+        COMMENT "Building man page ${me}"
+      )
+      add_custom_target(${me}.man
+        ALL
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${me}
+      )
+    endforeach()
+    foreach(m ${MANSOURCE})
+      get_filename_component(me, ${m} NAME_WLE)
+      LIST(APPEND MANPAGES ${CMAKE_CURRENT_BINARY_DIR}/${me})
+    endforeach()
+  endif()
+endif()
+
+install(FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man8)
 
 install(TARGETS growlight DESTINATION bin)
 install(TARGETS growlight-readline DESTINATION bin)
