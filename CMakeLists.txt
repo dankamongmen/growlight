@@ -139,6 +139,7 @@ target_link_directories(growlight-readline
     "${notcurses_INCLUDE_DIRS}"
 )
 
+
 if(USE_DOCBOOK)
   file(GLOB MANSOURCE CONFIGURE_DEPENDS doc/man/man8/*.xml)
   find_program(XSLTPROC xsltproc)
@@ -151,7 +152,9 @@ if(USE_DOCBOOK)
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${me}
         DEPENDS ${m}
         COMMAND ${XSLTPROC}
-        ARGS --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl ${m}
+        # FIXME fedora and debian have it in different places =[
+        # ARGS --nonet /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl ${m}
+        ARGS --nonet /usr/share/sgml/docbook/xsl-stylesheets/manpages/docbook.xsl ${m}
         COMMENT "Building man page ${me}"
       )
       add_custom_target(${me}.man
