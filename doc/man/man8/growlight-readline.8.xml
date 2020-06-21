@@ -77,9 +77,11 @@
 		aware of variable sector sizes, GPT, and UEFI. <emphasis>&dhpackage;</emphasis>
 		facilitates use of UUID/WWN- and HBA-based identification of block devices.</para>
 <para>This page describes the <emphasis role="bold">readline(3)</emphasis> implementation.
-  Consult <emphasis role="bold">growlight(8)</emphasis> for a fullscreen
-    <emphasis role="bold">notcurses(3notcurses)</emphasis> variant, or <emphasis role="bold">growlight(8)</emphasis> for the flagship
-    notcurses-based tool.</para>
+  Consult <emphasis role="bold">growlight(8)</emphasis> for the flagship
+  <emphasis role="bold">
+    notcurses(3notcurses)
+  </emphasis>
+  variant.</para>
 	</refsect1>
 	<refsect1 id="options">
 		<title>OPTIONS</title>
