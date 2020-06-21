@@ -17,7 +17,7 @@ Dependencies:
  - libdevmapper 1.02.74+
  - libatasmart 0.19+
  - libcryptsetup 2.0.2+
- - OpenSSL 1.0.1+
+ - libnettle 3.5.1+
  - mkswap(8) from util-linux
  - badblocks(8), mkfs.ext4(8), mkfs.ext3(8), mkfs.ext2(8) from e2fsprogs
 
@@ -33,18 +33,14 @@ Build-only dependencies:
 
  - xsltproc (tested with 20800/10126/815)
  - docbook-xsl (tested with 4.5)
- - autotools (tested with 1.11)
  - pkg-config (tested with 0.29)
- - autoconf-archive (tested with 2018+)
+ - cmake (tested with 3.14)
 
-Building from a git checkout:
+Building:
 
- - autoreconf -sfi -Wall,error
- - continue from "Building from a tarball"
-
-Building from a tarball:
-
- - ./configure && make check && sudo make install
+ - mkdir build && cd build
+ - cmake ..
+ - make
 
 ## Using it
 

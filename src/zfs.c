@@ -6,10 +6,9 @@
 
 #include "zfs.h"
 #include "popen.h"
-#include "config.h"
 #include "growlight.h"
 
-#ifdef HAVE_ZFS
+#ifdef USE_LIBZFS
 #include <libzfs.h>
 
 // FIXME hacks around the libspl/libzfs autotools-dominated jank

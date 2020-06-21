@@ -19,7 +19,6 @@
 #include "sysfs.h"
 #include "popen.h"
 #include "ptypes.h"
-#include "config.h"
 #include "mounts.h"
 #include "target.h"
 #include "secure.h"

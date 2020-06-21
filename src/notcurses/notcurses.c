@@ -14,7 +14,6 @@
 #include "zfs.h"
 #include "swap.h"
 #include "mdadm.h"
-#include "config.h"
 #include "health.h"
 #include "ptable.h"
 #include "ptypes.h"

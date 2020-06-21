@@ -45,9 +45,9 @@
 #include "sysfs.h"
 #include "stats.h"
 #include "ptable.h"
-#include "config.h"
 #include "mounts.h"
 #include "target.h"
+#include "version.h"
 #include "libblkid.h"
 #include "growlight.h"
 #include "aggregate.h"
@@ -1994,7 +1994,7 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
 	}
 	dm_get_library_version(buf, sizeof(buf));
 	verbf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n", PACKAGE,
-			PACKAGE_VERSION, BLKID_VERSION, PCI_LIB_VERSION, buf,
+			VERSION, BLKID_VERSION, PCI_LIB_VERSION, buf,
 			gnu_get_libc_version(), gnu_get_libc_release());
 	if(glight_pci_init()){
 		diag("Couldn't init libpciaccess (%s)\n", strerror(errno));

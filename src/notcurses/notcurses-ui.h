@@ -5,8 +5,6 @@
 extern "C" {
 #endif
 
-#include "config.h"
-
 struct form_option;
 struct panel_state;
 

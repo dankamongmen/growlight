@@ -1,4 +1,6 @@
 #define growlight_VERSION_MAJOR "@growlight_VERSION_MAJOR@"
 #define growlight_VERSION_MINOR "@growlight_VERSION_MINOR@"
 #define growlight_VERSION_PATCH "@growlight_VERSION_PATCH@"
+#define VERSION growlight_VERSION_MAJOR  "."  growlight_VERSION_MINOR  "."  growlight_VERSION_PATCH
+#define PACKAGE "growlight"
 #cmakedefine USE_LIBZFS
