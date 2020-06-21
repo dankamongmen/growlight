@@ -164,7 +164,6 @@ if(USE_DOCBOOK)
   endif()
 endif()
 
-install(FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man8)
-
 install(TARGETS growlight DESTINATION bin)
 install(TARGETS growlight-readline DESTINATION bin)
+install(FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man8)
