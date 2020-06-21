@@ -8,8 +8,9 @@ steps:
   image: dankamongmen/unstable_builder:2020-06-19a
   commands:
     - export LANG=en_US.UTF-8
-    - autoreconf -fis
-    - ./configure
+    - mkdir build
+    - cd build
+    - cmake -DUSE_LIBZFS=off ..
     - make
 ---
 kind: pipeline
@@ -21,6 +22,7 @@ steps:
   image: dankamongmen/focal:2020-06-19a
   commands:
     - export LANG=en_US.UTF-8
-    - autoreconf -fis
-    - ./configure
+    - mkdir build
+    - cd build
+    - cmake -DUSE_LIBZFS=off ..
     - make
