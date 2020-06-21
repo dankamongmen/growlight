@@ -8,10 +8,10 @@
 #include <string.h>
 #include <sys/swap.h>
 #include <sys/mman.h>
-#include <openssl/sha.h>
-#include <openssl/err.h>
+#include <nettle/sha1.h>
 
 #include "mbr.h"
+#include "sha.h"
 #include "growlight.h"
 
 #define MBR_SIZE 512
@@ -39,10 +39,7 @@ int mbrsha1(device *d, int fd, void *buf){
 		diag("Short read %zd/%zu from %s\n", r, sizeof(mbr), d->name);
 		return -1;
 	}
-	if(SHA1(mbr, MBR_CODE_SIZE, buf) == NULL){
-		diag("Couldn't perform SHA1 for %s (%s)\n", d->name, ERR_lib_error_string(ERR_get_error()));
-		return -1;
-	}
+  sha1(mbr, MBR_CODE_SIZE, buf);
 	return 0;
 }
 

@@ -14,6 +14,8 @@ extern "C" {
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <notcurses/notcurses.h>
 
@@ -22,7 +24,7 @@ extern "C" {
 #include "mounts.h"
 #include "ptypes.h"
 #include "target.h"
-#include "config.h"
+#include "version.h"
 
 extern unsigned verbose;
 extern unsigned finalized;
@@ -557,7 +559,7 @@ free_stringlist(stringlist *sl){
 	sl->count = 0;
 }
 
-#ifdef HAVE_ZFS
+#ifdef USE_LIBZFS
 #include <libzfs.h>
 #else
 #define POOL_STATE_ACTIVE 0

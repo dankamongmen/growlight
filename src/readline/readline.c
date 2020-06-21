@@ -9,6 +9,7 @@
 #include <atasmart.h>
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <notcurses/notcurses.h>
 
 #include "fs.h"
 #include "mbr.h"
@@ -26,31 +27,6 @@
 #include "health.h"
 #include "growlight.h"
 
-#ifdef HAVE_CURSES_H
-#include <term.h>
-#include <curses.h>
-#else
-#ifdef HAVE_NCURSES_H
-#include <term.h>
-#include <ncurses.h>
-#else
-#ifdef HAVE_NCURSESW_H
-#include <term.h>
-#include <ncursesw.h>
-#else
-#ifdef HAVE_NCURSES_CURSES_H
-#include <ncurses/term.h>
-#include <ncurses/curses.h>
-#else
-#ifdef HAVE_NCURSESW_CURSES_H
-#include <ncursesw/term.h>
-#include <ncursesw/curses.h>
-#endif
-#endif
-#endif
-#endif
-#endif
-
 #define U64STRLEN 20    // Does not include a '\0' (18,446,744,073,709,551,616)
 #define U64FMT "%-20ju"
 #define U32FMT "%-10ju"
@@ -58,32 +34,26 @@
 
 // Used by quit() to communicate back to the main readline loop
 static unsigned lights_off;
-static unsigned use_terminfo;
+struct ncdirect* ncd;
+
+#define COLOR_WHITE  0xffffff
+#define COLOR_YELLOW 0xf9f1a5
+#define COLOR_RED    0xe74856
+#define COLOR_GREEN  0x13a10e
+#define COLOR_MAGENTA 0xa4009e
+#define COLOR_BLUE   0x3b78ff
+#define COLOR_CYAN   0x61d6d6
 
 static int
-use_terminfo_color(int ansicolor,int boldp){
-  if(use_terminfo){
-#ifdef HAVE_CURSES
-    const char *attrstr = boldp ? "bold" : "sgr0";
-    const char *color,*attr;
-    char *setaf;
-
-    if((attr = tigetstr(attrstr)) == NULL){
-      fprintf(stderr,"Couldn't get terminfo %s\n",attrstr);
-      return -1;
+use_terminfo_color(unsigned rgb, int boldp){
+  if(ncd){
+    if(!boldp){
+      ncdirect_styles_set(ncd, 0);
+    }else{
+      ncdirect_styles_set(ncd, NCSTYLE_BOLD);
     }
-    putp(attr);
-    if((setaf = tigetstr("setaf")) == NULL){
-      fprintf(stderr,"Couldn't get terminfo setaf\n");
-      return -1;
-    }
-    if((color = tparm(setaf,ansicolor)) == NULL){
-      fprintf(stderr,"Couldn't get terminfo color %d\n",ansicolor);
-      return -1;
-    }
-    putp(color);
+    ncdirect_fg(ncd, rgb);
   }
-#endif
   return 0;
 }
 
@@ -2184,14 +2154,15 @@ diag(const char *fmt,...){
 }*/
 
 static void *
-block_event(device *d,void *v){
+block_event(device *d, void *v){
   assert(d);
+  (void)d;
   return v;
 }
 
-static void *new_adapter(controller *c,void *v){ assert(c); return v; }
-static void adapter_free(void *cv){ assert(cv); }
-static void block_free(void *cv,void *bv){ assert(cv && bv); }
+static void *new_adapter(controller *c, void *v){ (void)c; return v; }
+static void adapter_free(void *cv){ (void)cv; }
+static void block_free(void *cv,void *bv){ (void)cv; (void)bv; }
 
 static void
 vinfo(const char *text,...){
@@ -2225,16 +2196,10 @@ int main(int argc,char * const *argv){
   rl_attempted_completion_function = growlight_completion;
   rl_prep_terminal(1); // 1 == read 8-bit input
   if(isatty(STDOUT_FILENO)){
-#ifdef HAVE_CURSES
-    int errret;
-
-    if(setupterm(NULL,STDOUT_FILENO,&errret) != OK){
-      fprintf(stderr,"Couldn't set up terminfo db (errret %d)\n",errret);
-    }else{
-      use_terminfo = 1;
+    if((ncd = ncdirect_init(NULL, NULL)) == NULL){
+      fprintf(stderr, "Couldn't set up notcurses\n");
     }
   }
-#endif
   if(tty_ui()){
     growlight_stop();
     return EXIT_FAILURE;

@@ -5,8 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
+#include <sys/random.h>
 
 #include "gpt.h"
 #include "crc32.h"
@@ -119,12 +118,12 @@ update_backup(int fd,const gpt_header *ghead,unsigned gptlbas,uint64_t lbas,
 		memset(map + mapoff,0,gptlbas * lbasize);
 	}
 	if(msync(map,mapsize,MS_SYNC|MS_INVALIDATE)){
-		diag("Error syncing %d (%s?)\n",fd,strerror(errno));
+		diag("Error syncing %d (%s)\n",fd,strerror(errno));
 		munmap(map,mapsize);
 		return -1;
 	}
 	if(munmap(map,mapsize)){
-		diag("Error unmapping %d (%s?)\n",fd,strerror(errno));
+		diag("Error unmapping %d (%s)\n",fd,strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -142,10 +141,10 @@ initialize_gpt(gpt_header *gh,size_t lbasize,uint64_t backuplba,uint64_t firstus
 	gh->first_usable = firstusable;
 	assert(gh->first_usable);
 	gh->last_usable = backuplba - (firstusable - 1);
-	if(RAND_bytes(gh->disk_guid,GUIDSIZE) != 1){
-		diag("%s",ERR_error_string(ERR_get_error(),NULL));
+  if(getrandom(gh->disk_guid, GUIDSIZE, GRND_NONBLOCK) != GUIDSIZE){
+    diag("Couldn't get %d random bytes (%s)\n", GUIDSIZE, strerror(errno));
 		return -1;
-	}
+  }
 	gh->partlba = gh->lba + 1;
 	gh->partcount = MINIMUM_GPT_ENTRIES;
 	gh->partsize = sizeof(gpt_entry);
@@ -546,13 +545,13 @@ int add_gpt(device *d,const wchar_t *name,uintmax_t fsec,uintmax_t lsec,unsigned
 		close(fd);
 		return -1;
 	}
-	if(RAND_bytes(gpe[z].part_guid,GUIDSIZE) != 1){
-		diag("%s",ERR_error_string(ERR_get_error(),NULL));
+  if(getrandom(gpe[z].part_guid, GUIDSIZE, GRND_NONBLOCK) != GUIDSIZE){
+    diag("Couldn't get %d random bytes (%s)\n", GUIDSIZE, strerror(errno));
 		memset(gpe + z,0,sizeof(*gpe));
 		munmap(map,mapsize);
 		close(fd);
 		return -1;
-	}
+  }
 	gpe[z].flags = 0;
 	gpe[z].first_lba = fsec;
 	gpe[z].last_lba = lsec;

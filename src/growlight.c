@@ -26,7 +26,6 @@
 #include <pci/header.h>
 #include <sys/timerfd.h>
 #include <sys/inotify.h>
-#include <openssl/ssl.h>
 #include <libdevmapper.h>
 #include <gnu/libc-version.h>
 
@@ -107,7 +106,7 @@ add_log(const char *fmt,va_list vac){
 	int len;
 
 	va_copy(vacc,vac);
-	assert(pthread_mutex_lock(&loglock) == 0);
+	pthread_mutex_lock(&loglock);
 	if(++rblast == sizeof(logs) / sizeof(*logs)){
 		rblast = 0;
 	}
@@ -121,7 +120,7 @@ add_log(const char *fmt,va_list vac){
 		logs[rblast].msg = b;
 		vsnprintf(b,len + 1,fmt,vacc);
 	}
-	assert(pthread_mutex_unlock(&loglock) == 0);
+	pthread_mutex_unlock(&loglock);
 	va_end(vacc);
 }
 
@@ -132,7 +131,7 @@ int get_logs(unsigned n,logent *cplogs){
 	if(n == 0 || n > MAXIMUM_LOG_ENTRIES){
 		return -1;
 	}
-	assert(pthread_mutex_lock(&loglock) == 0);
+	pthread_mutex_lock(&loglock);
 	rb = rblast;
 	while(logs[rb].msg){
 		if((cplogs[idx].msg = strdup(logs[rb].msg)) == NULL){
@@ -149,7 +148,7 @@ int get_logs(unsigned n,logent *cplogs){
 			break; // got all requested
 		}
 	}
-	assert(pthread_mutex_unlock(&loglock) == 0);
+	pthread_mutex_unlock(&loglock);
 	if(idx < n){
 		cplogs[idx].msg = NULL;
 	}
@@ -1165,8 +1164,8 @@ static void
 add_to_discovery_list(const char *name){
 	struct dlist *d;
 
-	assert( (d = malloc(sizeof(*d))) );
-	assert( (d->name = strdup(name)) );
+	d = malloc(sizeof(*d));
+	d->name = strdup(name);
 	d->next = discovery_active;
 	discovery_active = d;
 }
@@ -1304,11 +1303,11 @@ scan_mdalias(void *vname){
 	free(name); // name was set to NULL on success
 
 done:
-	assert(pthread_mutex_lock(&barrier) == 0);
+	pthread_mutex_lock(&barrier);
 	if(--thrcount == 0){
 		pthread_cond_signal(&barrier_cond);
 	}
-	assert(pthread_mutex_unlock(&barrier) == 0);
+	pthread_mutex_unlock(&barrier);
 	return NULL;
 }
 
@@ -1343,11 +1342,11 @@ scan_devbypath(void *vname){
 	free(name); // name was set to NULL on success
 
 done:
-	assert(pthread_mutex_lock(&barrier) == 0);
+	pthread_mutex_lock(&barrier);
 	if(--thrcount == 0){
 		pthread_cond_signal(&barrier_cond);
 	}
-	assert(pthread_mutex_unlock(&barrier) == 0);
+	pthread_mutex_unlock(&barrier);
 	return NULL;
 }
 
@@ -1382,11 +1381,11 @@ scan_devbyid(void *vname){
 	free(name); // name was set to NULL on success
 
 done:
-	assert(pthread_mutex_lock(&barrier) == 0);
+	pthread_mutex_lock(&barrier);
 	if(--thrcount == 0){
 		pthread_cond_signal(&barrier_cond);
 	}
-	assert(pthread_mutex_unlock(&barrier) == 0);
+	pthread_mutex_unlock(&barrier);
 	return NULL;
 }
 
@@ -1397,11 +1396,11 @@ scan_device(void *name){
 	lock_growlight();
 	d = name ? lookup_device(name) : NULL;
 	unlock_growlight();
-	assert(pthread_mutex_lock(&barrier) == 0);
+	pthread_mutex_lock(&barrier);
 	if(--thrcount == 0){
 		pthread_cond_signal(&barrier_cond);
 	}
-	assert(pthread_mutex_unlock(&barrier) == 0);
+	pthread_mutex_unlock(&barrier);
 	free(name);
 	return d;
 }
@@ -1625,9 +1624,9 @@ event_posix_thread(void *unsafe){
 							if(in->len == 0){
 								diag("Nil-file event on unknown watch desc %d\n",in->wd);
 							}else{
-								assert(pthread_mutex_lock(&barrier) == 0);
+								pthread_mutex_lock(&barrier);
 								++thrcount;
-								assert(pthread_mutex_unlock(&barrier) == 0);
+								pthread_mutex_unlock(&barrier);
 								if(in->wd == em->syswd){
 									char *name = strdup(in->name);
 									assert(name);
@@ -1645,9 +1644,9 @@ event_posix_thread(void *unsafe){
 									assert(name);
 									scan_devbyid(name);
 								}else{
-									assert(pthread_mutex_lock(&barrier) == 0);
+									pthread_mutex_lock(&barrier);
 									--thrcount;
-									assert(pthread_mutex_unlock(&barrier) == 0);
+									pthread_mutex_unlock(&barrier);
 									diag("Event on unknown watch desc %d (%s)\n",in->wd,in->name);
 								}
 							}
@@ -1918,7 +1917,6 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
 		diag("Couldn't set locale (%s)\n", strerror(errno));
 		goto err;
 	}
-	SSL_library_init();
 	if(disphelp){
 		detcopy = *disphelp;
 		*disphelp = 0;
@@ -2195,11 +2193,11 @@ int rescan_blockdev_blkrrpart(const device *d){
 }
 
 void lock_growlight(void){
-	assert(pthread_mutex_lock(&lock) == 0);
+	pthread_mutex_lock(&lock);
 }
 
 void unlock_growlight(void){
-	assert(pthread_mutex_unlock(&lock) == 0);
+	pthread_mutex_unlock(&lock);
 }
 
 int rescan_device(const char *name){

@@ -5,8 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
+#include <sys/random.h>
 
 #include "mbr.h"
 #include "msdos.h"
@@ -44,13 +43,13 @@ typedef struct __attribute__ ((packed)) msdos_header {
 
 static int
 initialize_msdos(msdos_header *mh){
-	if(RAND_bytes(mh->disksig,sizeof(mh->disksig)) != 1){
-		diag("%s",ERR_error_string(ERR_get_error(),NULL));
+  if(getrandom(mh->disksig, sizeof(mh->disksig), GRND_NONBLOCK) != sizeof(mh->disksig)){
+		diag("Couldn't get %zu random bytes (%s)\n", sizeof(mh->disksig), strerror(errno));
 		return -1;
 	}
-	memset(&mh->reserved,0,sizeof(mh->reserved));
-	memset(&mh->table,0,sizeof(mh->table));
-	memcpy(&mh->bootsig,MBR_SIG,sizeof(mh->bootsig));
+	memset(&mh->reserved, 0, sizeof(mh->reserved));
+	memset(&mh->table, 0, sizeof(mh->table));
+	memcpy(&mh->bootsig, MBR_SIG, sizeof(mh->bootsig));
 	return 0;
 }
 

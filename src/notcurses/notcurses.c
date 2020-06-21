@@ -420,8 +420,7 @@ screen_update(void){
   if(splash){
     ncplane_move_top(splash->p);
   }
-  int r = notcurses_render(NC);
-  assert(0 == r);
+  notcurses_render(NC);
 }
 
 static int update_diags(struct panel_state *);
@@ -608,11 +607,11 @@ bevel_bottom(struct ncplane* w){
   int rows, cols, z;
 
   ncplane_dim_yx(w, &rows, &cols);
-  assert(cmvwadd_wch(w, rows - 1, 0, L"╰") != -1);
+  cmvwadd_wch(w, rows - 1, 0, L"╰");
   for(z = 1 ; z < cols - 1 ; ++z){
-    assert(cmvwadd_wch(w, rows - 1, z, L"─") != -1);
+    cmvwadd_wch(w, rows - 1, z, L"─");
   }
-  assert(cmvwadd_wch(w, rows - 1, cols - 1, L"╯") != -1);
+  cmvwadd_wch(w, rows - 1, cols - 1, L"╯");
   for(z = 0 ; z < rows - 1 ; ++z){
     cmvwadd_wch(w, z, 0, L"│");
     cmvwadd_wch(w, z, cols - 1, L"│");
@@ -746,11 +745,10 @@ cwbkgd(struct ncplane* nc){
 
 static void
 draw_main_window(struct ncplane* n){
-  int rows, cols, scol, x, y;
+  int rows, cols, x, y;
   char buf[BUFSIZ];
 
-  scol = snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE, VERSION, count_adapters - 1);
-  assert(scol > 0 && (unsigned)scol < sizeof(buf));
+  snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE, VERSION, count_adapters - 1);
   ncplane_dim_yx(n, &rows, &cols);
   cwattrset(n, HEADER_COLOR);
   cmvwaddstr(n, rows - 1, 0, buf);

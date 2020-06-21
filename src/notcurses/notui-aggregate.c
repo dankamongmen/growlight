@@ -2,9 +2,9 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "notcurses.h"
 #include "growlight.h"
 #include "aggregate.h"
+#include "notcurses-ui.h"
 #include "notui-aggregate.h"
 
 static const char AGGCOMP_TEXT[] =
