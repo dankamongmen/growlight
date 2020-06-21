@@ -12,9 +12,9 @@ Build-Depends: autoconf-archive,
                libpci-dev,
                libpciaccess-dev,
                libreadline-dev,
-               libssl-dev,
                libudev-dev,
                libzfslinux-dev (>= 0.8.0),
+               nettle-dev,
                pkg-config,
                xsltproc
 Section: utils
