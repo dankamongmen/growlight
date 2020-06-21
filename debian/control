@@ -2,6 +2,7 @@ Source: growlight
 Priority: optional
 Maintainer: Nick Black <dankamongmen@gmail.com>
 Build-Depends: autoconf-archive,
+               cmake (>= 3.16),
                debhelper (>= 13),
                docbook-xsl,
                libatasmart-dev,
