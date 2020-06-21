@@ -13,46 +13,46 @@
 #include "growlight.h"
 
 static int
-create_btrfs(const char *dev,const struct mkfsmarshal *mkm){
+create_btrfs(const char *dev, const struct mkfsmarshal *mkm){
 	const char *name = mkm->name;
 
 	if(name == NULL){
 		name = "SprezzaBTRFS";
 	}
-	if(vspopen_drain("mkfs.btrfs -L \"%s\" %s", mkm->name, dev)){
+	if(vspopen_drain("mkfs.btrfs -L \"%s\" %s", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-hfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+hfs_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	const char *name = mkm->name;
 
 	if(name == NULL){
 		name = "SprezzaHFS";
 	}
-	if(vspopen_drain("mkfs.hfs -h -v \"%s\" %s", mkm->name, dev)){
+	if(vspopen_drain("mkfs.hfs -h -v \"%s\" %s", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-hfsplus_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+hfsplus_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	const char *name = mkm->name;
 
 	if(name == NULL){
 		name = "SprezzaHFS+";
 	}
-	if(vspopen_drain("mkfs.hfsplus -s -J -v \"%s\" %s",mkm->name,dev)){
+	if(vspopen_drain("mkfs.hfsplus -s -J -v \"%s\" %s", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-jfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+jfs_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	// allow -c (badblock check) FIXME
 	const char *name = mkm->name;
 
@@ -60,14 +60,14 @@ jfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 		name = "SprezzaJFS";
 	}
 	// FIXME what about external journals?
-	if(vspopen_drain("mkfs.jfs -q -L \"%s\" %s",mkm->name,dev)){
+	if(vspopen_drain("mkfs.jfs -q -L \"%s\" %s", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-xfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+xfs_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	// allow -c (badblock check) FIXME
 	const char *name = mkm->name;
 
@@ -76,54 +76,54 @@ xfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	}
 	// FIXME set -s to the physical sector size
 	if(vspopen_drain("mkfs.xfs %s-L \"%s\" %s",
-			mkm->force ? "-f ": "",mkm->name,dev)){
+			mkm->force ? "-f ": "", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-create_ntfs(const char *dev,const struct mkfsmarshal *mkm){
+create_ntfs(const char *dev, const struct mkfsmarshal *mkm){
 	const char *name = mkm->name;
 
 	if(name == NULL){
 		name = "SprezzaNTFS";
 	}
 	if(vspopen_drain("mkfs.ntfs -v %s-U -L \"%s\" %s",
-			mkm->force ? "-F " : "",mkm->name,dev)){
+			mkm->force ? "-F " : "", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-f2fs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+f2fs_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	const char *name = mkm->name;
 
 	if(name == NULL){
 		name = "SprezzaF2FS";
 	}
-	if(vspopen_drain("mkfs.f2fs -l \"%s\" %s",mkm->name,dev)){
+	if(vspopen_drain("mkfs.f2fs -l \"%s\" %s", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-cramfs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+cramfs_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	const char *name = mkm->name;
 
 	if(name == NULL){
 		name = "SprezzaCram";
 	}
-	if(vspopen_drain("mkcramfs -v -E -n \"%s\" %s",mkm->name,dev)){
+	if(vspopen_drain("mkcramfs -v -E -n \"%s\" %s", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-vfat_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+vfat_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	// allow -c (badblock check) FIXME
 	const char *name = mkm->name;
 
@@ -131,14 +131,14 @@ vfat_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 		name = "SprezzaVFAT";
 	}
 	if(vspopen_drain("mkfs.vfat %s-F 32 -n \"%s\" %s",
-				mkm->force ? "-I " : "",mkm->name,dev)){
+				mkm->force ? "-I " : "", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-ufs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+ufs_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	// allow -E (erase content for SSD)
 	// allow -J (journaling)
 	// allow -O1 (UFS1)
@@ -148,14 +148,14 @@ ufs_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	if(name == NULL){
 		name = "SprezzaUFS";
 	}
-	if(vspopen_drain("mkfs.ufs -L \"%s\" %s",mkm->name,dev)){
+	if(vspopen_drain("mkfs.ufs -L \"%s\" %s", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-ext4_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+ext4_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
 	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
@@ -169,18 +169,17 @@ ext4_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	// -E lazy_itable_init=0,lazy_journal_init=0 -O ^uninit_bg" or something
 	if(mkm->stride && mkm->swidth){
 		if(vspopen_drain("mkfs.ext4 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent %s",
-			mkm->stride,mkm->swidth,
-			mkm->force ? "-F " : "",mkm->name,dev)){
+			mkm->stride, mkm->swidth, mkm->force ? "-F " : "", name, dev)){
 		}
 	}else if(vspopen_drain("mkfs.ext4 %s-b -2048 -L \"%s\" -O dir_index,extent %s",
-			mkm->force ? "-F " : "",mkm->name,dev)){
+			mkm->force ? "-F " : "", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-ext3_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+ext3_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
 	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
@@ -193,18 +192,17 @@ ext3_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	//if(vspopen_drain("mkfs.ext3 %s-b -2048 -E lazy_itable_init=0,lazy_journal_init=0 -L \"%s\" -O dir_index,extent %s",
 	if(mkm->stride && mkm->swidth){
 		if(vspopen_drain("mkfs.ext3 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent %s",
-			mkm->stride,mkm->swidth,
-			mkm->force ? "-F ": "",mkm->name,dev)){
+			mkm->stride, mkm->swidth, mkm->force ? "-F ": "", name, dev)){
 		}
 	}else if(vspopen_drain("mkfs.ext3 %s-b -2048 -L \"%s\" -O dir_index,extent %s",
-			mkm->force ? "-F ": "",mkm->name,dev)){
+			mkm->force ? "-F ": "", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-ext2_mkfs(const char *dev,const struct mkfsmarshal *mkm){
+ext2_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 	// pass -M with mount point FIXME
 	// allow a UUID to be supplied FIXME
 	// provide -o SprezzOS (and get it recognized rather than rejected) FIXME
@@ -216,26 +214,25 @@ ext2_mkfs(const char *dev,const struct mkfsmarshal *mkm){
 	}
 	if(mkm->stride && mkm->swidth){
 		if(vspopen_drain("mkfs.ext2 -Estride=%ju,stripe_width=%ju %s-b -2048 -L \"%s\" -O dir_index,extent %s",
-			mkm->stride,mkm->swidth,
-			mkm->force ? "-F " : "",mkm->name,dev)){
+			mkm->stride, mkm->swidth, mkm->force ? "-F " : "", name, dev)){
 		}
 	}else if(vspopen_drain("mkfs.ext2 %s-b -2048 -L \"%s\" -O dir_index,extent %s",
-			mkm->force ? "-F " : "",mkm->name,dev)){
+			mkm->force ? "-F " : "", name, dev)){
 		return -1;
 	}
 	return 0;
 }
 
 static int
-mkswap(const char *dev,const struct mkfsmarshal *mfm){
+mkswap(const char *dev, const struct mkfsmarshal *mfm){
 	const char *name;
 
 	name = mfm->name ? mfm->name : "SprezzaSwap";
-	if(vspopen_drain("mkswap -L %s %s",name,dev)){
+	if(vspopen_drain("mkswap -L %s %s", name, dev)){
 		return -1;
 	}
 	if(swapon(dev,0)){
-		diag("Couldn't swap on %s (%s?)\n",dev,strerror(errno));
+		diag("Couldn't swap on %s (%s?)\n", dev, strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -245,8 +242,8 @@ mkswap(const char *dev,const struct mkfsmarshal *mfm){
 static const struct fs {
 	const char *name;
 	const char *desc;
-	int (*mkfs)(const char *,const struct mkfsmarshal *);
-	int (*uuidset)(const char *,const unsigned char *);
+	int (*mkfs)(const char *, const struct mkfsmarshal *);
+	int (*uuidset)(const char *, const unsigned char *);
 	char nameparam;			// parameter on cmdline to name
 	int namemax;			// max length of name, if known
 } fss[] = {
@@ -598,7 +595,7 @@ err:
 	return NULL;
 }
 
-int make_filesystem(device *d,const char *pty,const char *name){
+int make_filesystem(device *d, const char *pty, const char *name){
 	const struct fs *pt;
 	int force = 0;
 
@@ -664,7 +661,7 @@ int make_filesystem(device *d,const char *pty,const char *name){
 	return -1;
 }
 
-int parse_filesystems(const glightui *gui __attribute__ ((unused)),const char *fn){
+int parse_filesystems(const glightui *gui __attribute__ ((unused)), const char *fn){
 	off_t len,idx;
 	char *map;
 	int fd;

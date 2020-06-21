@@ -123,7 +123,6 @@ parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops
 	if((*ops = strndup(t,r - (t - map))) == NULL){
 		goto err;
 	}
-	t = map + ++r;
 	while(r < len){
 		if(map[r] == '\n'){
 			break;
@@ -165,6 +164,7 @@ int parse_mounts(const glightui *gui, const char *fn){
 		int r;
 
 		free(dev); free(mnt); free(fs); free(ops);
+    dev = mnt = fs = ops = NULL; // don't goto double-free()
 		if((r = parse_mount(map + idx, len - idx, &dev, &mnt, &fs, &ops)) < 0){
 			goto err;
 		}
@@ -186,7 +186,6 @@ int parse_mounts(const glightui *gui, const char *fn){
 			}
 			if(!skip){
 				diag("Couldn't stat fs %s (%s?)\n", mnt, strerror(errno));
-				r = -1;
 				continue;
 			}
 		}
@@ -249,14 +248,13 @@ int parse_mounts(const glightui *gui, const char *fn){
 			}
 		}
 	}
-	free(mnt); free(fs); free(ops);
-	mnt = fs = ops = NULL;
+	free(dev); free(mnt); free(fs); free(ops);
+	dev = mnt = fs = ops = NULL;
 	munmap_virt(map, len);
 	close(fd);
 	return 0;
 
 err:
-	free(dev); free(mnt); free(fs); free(ops);
 	munmap_virt(map, len);
 	close(fd);
 	return -1;

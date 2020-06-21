@@ -310,7 +310,6 @@ char *dump_targets(void){
 	}
 	out = tmp;
 	sprintf(out + off,"%s",PROCLINE);
-	off += strlen(PROCLINE);
 #undef PROCLINE
 	return out;
 

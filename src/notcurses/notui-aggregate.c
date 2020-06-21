@@ -177,11 +177,14 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 		free(key);
 		return NULL;
 	}
-	if((desc = prefix_desc_with_size(d,desc)) == NULL){ // free()s old desc
+  char* tmpdesc;
+  // free()s old desc on success
+	if((tmpdesc = prefix_desc_with_size(d,desc)) == NULL){
+    free(desc);
 		free(key);
-		free(desc);
 		return NULL;
 	}
+  desc = tmpdesc;
 	if((tmp = realloc(fo,sizeof(*fo) * (*count + 1))) == NULL){
 		free(key);
 		free(desc);
@@ -202,7 +205,7 @@ grow_component_table(const device *d,int *count,const char *match,int *defidx,
 
 static struct form_option *
 component_table(const aggregate_type *at,int *count,const char *match,int *defidx,
-		char ***selarray,int *selections){
+		            char ***selarray,int *selections){
 	struct form_option *fo = NULL,*tmp;
 	const controller *c;
 
