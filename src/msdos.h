@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include <wchar.h>
 #include <stdint.h>
 
 struct device;
