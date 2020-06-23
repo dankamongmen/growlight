@@ -492,7 +492,7 @@ static const struct fs {
 	},
 	{
 		.name = "exfat",
-		.desc = "Microsoft's Extented File Allocation Table",
+		.desc = "Microsoft's Extended File Allocation Table",
 		.uuidset = NULL, // FIXME
 	},
 	{ .name = NULL, }
@@ -534,7 +534,7 @@ static struct fs virtfss[] = {
 		.desc = "Network filesystem daemon management",
 	},{
 		.name = "rpc_pipefs",
-		.desc = "Remote Procedure Call pipe filesytem",
+		.desc = "Remote Procedure Call pipe filesystem",
 	},{
 		.name = "fusectl",
 		.desc = "Filesystem in UserSpacE management",
