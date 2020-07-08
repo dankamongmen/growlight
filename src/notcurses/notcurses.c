@@ -5998,7 +5998,13 @@ int main(int argc, char * const *argv){
   if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
-  struct ncplane* n = notcurses_stdplane(NC);
+  int ydim, xdim;
+  notcurses_stddim_yx(NC, &ydim, &xdim);
+  struct ncplane* n = ncplane_new(NC, ydim - 1, xdim, 0, 0, NULL);
+  if(n == NULL){
+    notcurses_stop(NC);
+    return EXIT_FAILURE;
+  }
   ps = show_splash(L"Initializing...");
   ncreel_options popts;
   memset(&popts, 0, sizeof(popts));
@@ -6006,8 +6012,7 @@ int main(int argc, char * const *argv){
                      | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
   popts.tabletmask = NCBOXMASK_TOP | NCBOXMASK_BOTTOM
                      | NCBOXMASK_LEFT | NCBOXMASK_RIGHT;
-  popts.boff = 1;
-  PR = ncreel_create(n, &popts, -1);
+  PR = ncreel_create(n, &popts);
   if(PR == NULL){
     kill_splash(ps);
     notcurses_stop(NC);
