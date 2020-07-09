@@ -5977,6 +5977,19 @@ boxinfo(const char *text, ...){
   va_end(v);
 }
 
+// ensure the version of notcurses we loaded is viable
+static bool
+notcurses_version_check(void){
+  int major, minor, patch, tweak;
+  notcurses_version_components(&major, &minor, &patch, &tweak);
+  if(major < 1 || minor < 6 || patch < 1){
+    fprintf(stderr, "Needed notcurses 1.6.1+, got %d.%d.%d.%d\n",
+            major, minor, patch, tweak);
+    return false;
+  }
+  return true;
+}
+
 int main(int argc, char * const *argv){
   const glightui ui = {
     .vdiag = vdiag,
@@ -5991,6 +6004,9 @@ int main(int argc, char * const *argv){
 
   if(setlocale(LC_ALL, "") == NULL){
     fprintf(stderr,"Warning: couldn't load locale\n");
+    return EXIT_FAILURE;
+  }
+  if(!notcurses_version_check()){
     return EXIT_FAILURE;
   }
   notcurses_options opts;
