@@ -21,7 +21,7 @@ add_compile_options(-Wall -Wextra -W -Wshadow -Wformat -fexceptions)
 
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
-find_package(notcurses REQUIRED notcurses>=1.6.1)
+find_package(notcurses 1.6.1 REQUIRED)
 pkg_check_modules(LIBATASMART REQUIRED libatasmart>=0.19)
 pkg_check_modules(LIBBLKID REQUIRED blkid>=2.20.1)
 pkg_check_modules(LIBCRYPTSETUP REQUIRED libcryptsetup>=2.0.2)
