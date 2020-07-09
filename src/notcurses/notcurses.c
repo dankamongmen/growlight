@@ -747,13 +747,15 @@ draw_main_window(struct ncplane* n){
   int rows, cols, x, y;
   char buf[BUFSIZ];
 
+  ncplane_set_bg_rgb(n, 0xa0, 0xa0, 0xa0);
+  ncplane_set_fg_rgb(n, 95, 0, 175);
   snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE, VERSION, count_adapters - 1);
   ncplane_dim_yx(n, &rows, &cols);
   cwattrset(n, HEADER_COLOR);
   cmvwaddstr(n, rows - 1, 0, buf);
   ncplane_cursor_yx(n, &y, &x);
   assert(x >= 0);
-  cols -= x + 2;
+  cols -= x + 1;
   cwattron(n, NCSTYLE_BOLD | STATUS_COLOR);
   cwprintw(n, " %-*.*s", cols, cols, statusmsg);
 }
