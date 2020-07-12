@@ -24,6 +24,7 @@ find_package(Threads REQUIRED)
 find_package(notcurses 1.6.1 REQUIRED)
 pkg_check_modules(LIBATASMART REQUIRED libatasmart>=0.19)
 pkg_check_modules(LIBBLKID REQUIRED blkid>=2.20.1)
+pkg_check_modules(LIBCAP REQUIRED libcap>=2.24)
 pkg_check_modules(LIBCRYPTSETUP REQUIRED libcryptsetup>=2.0.2)
 pkg_check_modules(LIBDEVMAPPER REQUIRED devmapper>=1.02.74)
 pkg_check_modules(LIBNETTLE REQUIRED nettle>=3.5.1)
@@ -38,6 +39,50 @@ endif()
 include(CMakePackageConfigHelpers)
 configure_file(src/version.h.in include/version.h)
 
+set(COMMON_INCLUDE_DIRS
+  "${LIBATASMART_INCLUDE_DIRS}"
+  "${LIBBLKID_INCLUDE_DIRS}"
+  "${LIBCAP_INCLUDE_DIRS}"
+  "${LIBCRYPTSETUP_INCLUDE_DIRS}"
+  "${LIBDEVMAPPER_INCLUDE_DIRS}"
+  "${LIBNETTLE_INCLUDE_DIRS}"
+  "${LIBPCI_INCLUDE_DIRS}"
+  "${LIBPCIACCESS_INCLUDE_DIRS}"
+  "${LIBUDEV_INCLUDE_DIRS}"
+  "${LIBZFS_INCLUDE_DIRS}"
+  "${notcurses_INCLUDE_DIRS}"
+)
+
+set(COMMON_LIBRARY_DIRS
+  "${LIBATASMART_LIBRARY_DIRS}"
+  "${LIBBLKID_LIBRARY_DIRS}"
+  "${LIBCAP_LIBRARY_DIRS}"
+  "${LIBCRYPTSETUP_LIBRARY_DIRS}"
+  "${LIBDEVMAPPER_LIBRARY_DIRS}"
+  "${LIBNETTLE_LIBRARY_DIRS}"
+  "${LIBPCI_LIBRARY_DIRS}"
+  "${LIBPCIACCESS_LIBRARY_DIRS}"
+  "${LIBUDEV_LIBRARY_DIRS}"
+  "${LIBZFS_LIBRARY_DIRS}"
+  "${notcurses_LIBRARY_DIRS}"
+)
+
+set(COMMON_LIBRARIES
+  "${LIBATASMART_LIBRARIES}"
+  "${LIBBLKID_LIBRARIES}"
+  "${LIBCAP_LIBRARIES}"
+  "${LIBCRYPTSETUP_LIBRARIES}"
+  "${LIBDEVMAPPER_LIBRARIES}"
+  "${LIBNETTLE_LIBRARIES}"
+  "${LIBPCI_LIBRARIES}"
+  "${LIBPCIACCESS_LIBRARIES}"
+  "${LIBREADLINE_LIBRARIES}"
+  "${LIBUDEV_LIBRARIES}"
+  "${LIBZFS_LIBRARIES}"
+  "${notcurses_LIBRARIES}"
+  Threads::Threads
+)
+
 file(GLOB SRCS CONFIGURE_DEPENDS src/*.c)
 file(GLOB NCSRCS CONFIGURE_DEPENDS src/notcurses/*.c)
 add_executable(growlight ${SRCS} ${NCSRCS})
@@ -45,16 +90,7 @@ target_include_directories(growlight
   PRIVATE
     src
     "${PROJECT_BINARY_DIR}/include"
-    "${LIBATASMART_INCLUDE_DIRS}"
-    "${LIBBLKID_INCLUDE_DIRS}"
-    "${LIBCRYPTSETUP_INCLUDE_DIRS}"
-    "${LIBDEVMAPPER_INCLUDE_DIRS}"
-    "${LIBNETTLE_INCLUDE_DIRS}"
-    "${LIBPCI_INCLUDE_DIRS}"
-    "${LIBPCIACCESS_INCLUDE_DIRS}"
-    "${LIBUDEV_INCLUDE_DIRS}"
-    "${LIBZFS_INCLUDE_DIRS}"
-    "${notcurses_INCLUDE_DIRS}"
+    "${COMMON_INCLUDE_DIRS}"
 )
 target_compile_definitions(growlight
   PRIVATE
@@ -62,30 +98,11 @@ target_compile_definitions(growlight
 )
 target_link_libraries(growlight
   PRIVATE
-    "${LIBATASMART_LIBRARIES}"
-    "${LIBBLKID_LIBRARIES}"
-    "${LIBCRYPTSETUP_LIBRARIES}"
-    "${LIBDEVMAPPER_LIBRARIES}"
-    "${LIBNETTLE_LIBRARIES}"
-    "${LIBPCI_LIBRARIES}"
-    "${LIBPCIACCESS_LIBRARIES}"
-    "${LIBUDEV_LIBRARIES}"
-    "${LIBZFS_LIBRARIES}"
-    "${notcurses_LIBRARIES}"
-    Threads::Threads
+    "${COMMON_LIBRARIES}"
 )
 target_link_directories(growlight
   PRIVATE
-    "${LIBATASMART_LIBRARY_DIRS}"
-    "${LIBBLKID_LIBRARY_DIRS}"
-    "${LIBCRYPTSETUP_LIBRARY_DIRS}"
-    "${LIBDEVMAPPER_LIBRARY_DIRS}"
-    "${LIBNETTLE_LIBRARY_DIRS}"
-    "${LIBPCI_LIBRARY_DIRS}"
-    "${LIBPCIACCESS_LIBRARY_DIRS}"
-    "${LIBUDEV_LIBRARY_DIRS}"
-    "${LIBZFS_LIBRARY_DIRS}"
-    "${notcurses_LIBRARY_DIRS}"
+    "${COMMON_LIBRARY_DIRS}"
 )
 file(GLOB RLSRCS CONFIGURE_DEPENDS src/readline/*.c)
 add_executable(growlight-readline ${SRCS} ${RLSRCS})
@@ -93,17 +110,7 @@ target_include_directories(growlight-readline
   PRIVATE
     src
     "${PROJECT_BINARY_DIR}/include"
-    "${LIBATASMART_INCLUDE_DIRS}"
-    "${LIBBLKID_INCLUDE_DIRS}"
-    "${LIBCRYPTSETUP_INCLUDE_DIRS}"
-    "${LIBDEVMAPPER_INCLUDE_DIRS}"
-    "${LIBNETTLE_INCLUDE_DIRS}"
-    "${LIBPCI_INCLUDE_DIRS}"
-    "${LIBPCIACCESS_INCLUDE_DIRS}"
-    "${LIBREADLINE_INCLUDE_DIRS}"
-    "${LIBUDEV_INCLUDE_DIRS}"
-    "${LIBZFS_INCLUDE_DIRS}"
-    "${notcurses_INCLUDE_DIRS}"
+    "${COMMON_INCLUDE_DIRS}"
 )
 target_compile_definitions(growlight-readline
   PRIVATE
@@ -111,32 +118,11 @@ target_compile_definitions(growlight-readline
 )
 target_link_libraries(growlight-readline
   PRIVATE
-    "${LIBATASMART_LIBRARIES}"
-    "${LIBBLKID_LIBRARIES}"
-    "${LIBCRYPTSETUP_LIBRARIES}"
-    "${LIBDEVMAPPER_LIBRARIES}"
-    "${LIBNETTLE_LIBRARIES}"
-    "${LIBPCI_LIBRARIES}"
-    "${LIBPCIACCESS_LIBRARIES}"
-    "${LIBREADLINE_LIBRARIES}"
-    "${LIBUDEV_LIBRARIES}"
-    "${LIBZFS_LIBRARIES}"
-    "${notcurses_LIBRARIES}"
-    Threads::Threads
+    "${COMMON_LIBRARIES}"
 )
 target_link_directories(growlight-readline
   PRIVATE
-    "${LIBATASMART_LIBRARY_DIRS}"
-    "${LIBBLKID_LIBRARY_DIRS}"
-    "${LIBCRYPTSETUP_LIBRARY_DIRS}"
-    "${LIBDEVMAPPER_LIBRARY_DIRS}"
-    "${LIBNETTLE_LIBRARY_DIRS}"
-    "${LIBPCI_LIBRARY_DIRS}"
-    "${LIBPCIACCESS_LIBRARY_DIRS}"
-    "${LIBREADLINE_LIBRARY_DIRS}"
-    "${LIBUDEV_LIBRARY_DIRS}"
-    "${LIBZFS_LIBRARY_DIRS}"
-    "${notcurses_INCLUDE_DIRS}"
+    "${COMMON_LIBRARY_DIRS}"
 )
 
 if(USE_DOCBOOK)
