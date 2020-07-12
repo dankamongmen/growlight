@@ -7,9 +7,9 @@
 #include <signal.h>
 #include <locale.h>
 #include <atasmart.h>
+#include <notcurses/direct.h>
 #include <readline/history.h>
 #include <readline/readline.h>
-#include <notcurses/notcurses.h>
 
 #include "fs.h"
 #include "mbr.h"

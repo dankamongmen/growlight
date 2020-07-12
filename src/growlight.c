@@ -27,6 +27,7 @@
 #include <sys/timerfd.h>
 #include <sys/inotify.h>
 #include <libdevmapper.h>
+#include <sys/capability.h>
 #include <gnu/libc-version.h>
 
 #include "fs.h"
@@ -1510,7 +1511,7 @@ version(const char *name){
 static void
 usage(const char *name, int disphelp){
 	diag("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
-		"\t[ -t|--target=path ] [ -i|--import ]%s\n",
+		"\t[ -t|--target=path ] [ --notroot ] [ -i|--import ]%s\n",
 		basename(name), disphelp ? " [ --disphelp ]" : "");
 }
 
@@ -1869,6 +1870,34 @@ init_special_adapters(void){
 	}
 }
 
+// check to ensure we're root or at least CAP_SYS_ADMIN, unless notroot is set
+static void
+check_privileges(unsigned notroot){
+  bool have_privs = false;
+  if(getuid() == 0){
+    have_privs = true;
+  }else{
+    cap_t caps = cap_get_proc();
+    if(caps){
+      cap_flag_value_t val = CAP_CLEAR;
+      if(cap_get_flag(caps, CAP_SYS_ADMIN, CAP_EFFECTIVE, &val) == 0){
+        if(val == CAP_SET){
+          have_privs = true;
+        }
+      }
+      cap_free(caps);
+    }
+  }
+  if(!have_privs){
+    if(notroot){
+      diag("Not root, but running anyway...\n");
+    }else{
+      fprintf(stderr, "Refusing to run without privileges. Use --notroot to force.\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+}
+
 int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphelp){
 	static const struct option ops[] = {
 		{
@@ -1876,6 +1905,11 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
 			.has_arg = 0,
 			.flag = NULL,
 			.val = 'h',
+		}, {
+			.name = "notroot",
+			.has_arg = 0,
+			.flag = NULL,
+			.val = 'R',
 		}, {
 			.name = "import",
 			.has_arg = 0,
@@ -1909,6 +1943,7 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
 		},
 	};
 	int fd, opt, longidx, udevfd, syswd, mdwd, bypathwd, byidwd;
+  bool notroot = false; // allow operation even if we're not root?
 	int import, detcopy;
 	char buf[BUFSIZ];
 
@@ -1961,6 +1996,9 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
 		}case 'V':{
 			version(argv[0]);
 			return -1;
+    }case 'R':{
+      notroot = 1;
+      break;
 		}case 'D':{
 			if(!detcopy){
 				diag("Error: unknown option --disphelp\n");
@@ -1992,6 +2030,7 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
 			return -1;
 		} }
 	}
+  check_privileges(notroot);
 	dm_get_library_version(buf, sizeof(buf));
 	verbf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n", PACKAGE,
 			VERSION, BLKID_VERSION, PCI_LIB_VERSION, buf,
