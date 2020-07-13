@@ -6040,6 +6040,7 @@ int main(int argc, char * const *argv){
   locked_diag("by nick black <nickblack@linux.com>");
   if(growlight_init(argc, argv, &ui, &showhelp)){
     ncreel_destroy(PR);
+    PR = NULL;
     kill_splash(ps);
     notcurses_stop(NC);
     dump_diags();
