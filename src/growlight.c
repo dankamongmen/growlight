@@ -1871,7 +1871,7 @@ init_special_adapters(void){
 }
 
 // check to ensure we're root or at least CAP_SYS_ADMIN, unless notroot is set
-static void
+static int
 check_privileges(unsigned notroot){
   bool have_privs = false;
   if(getuid() == 0){
@@ -1893,9 +1893,10 @@ check_privileges(unsigned notroot){
       diag("Not root, but running anyway...\n");
     }else{
       fprintf(stderr, "Refusing to run without privileges. Use --notroot to force.\n");
-      exit(EXIT_FAILURE);
+      return -1;
     }
   }
+  return 0;
 }
 
 int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphelp){
@@ -2030,7 +2031,9 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
 			return -1;
 		} }
 	}
-  check_privileges(notroot);
+  if(check_privileges(notroot)){
+    return -1;
+  }
 	dm_get_library_version(buf, sizeof(buf));
 	verbf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n", PACKAGE,
 			VERSION, BLKID_VERSION, PCI_LIB_VERSION, buf,
