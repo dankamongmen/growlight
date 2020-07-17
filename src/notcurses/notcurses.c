@@ -597,23 +597,18 @@ selected_mkfs_safe_p(void){
 }
 
 static int
-cmvwadd_wch(struct ncplane* n, int y, int x, wchar_t* w){
-  return ncplane_putwstr_yx(n, y, x, w);
-}
-
-static int
 bevel_bottom(struct ncplane* w){
   int rows, cols, z;
 
   ncplane_dim_yx(w, &rows, &cols);
-  cmvwadd_wch(w, rows - 1, 0, L"╰");
+  ncplane_putwstr_yx(w, rows - 1, 0, L"╰");
   for(z = 1 ; z < cols - 1 ; ++z){
-    cmvwadd_wch(w, rows - 1, z, L"─");
+    ncplane_putwstr_yx(w, rows - 1, z, L"─");
   }
-  cmvwadd_wch(w, rows - 1, cols - 1, L"╯");
+  ncplane_putwstr_yx(w, rows - 1, cols - 1, L"╯");
   for(z = 0 ; z < rows - 1 ; ++z){
-    cmvwadd_wch(w, z, 0, L"│");
-    cmvwadd_wch(w, z, cols - 1, L"│");
+    ncplane_putwstr_yx(w, z, 0, L"│");
+    ncplane_putwstr_yx(w, z, cols - 1, L"│");
   }
   return 0;
 }
@@ -623,14 +618,14 @@ bevel_top(struct ncplane* w){
   int rows, cols, z;
 
   ncplane_dim_yx(w, &rows, &cols);
-  cmvwadd_wch(w, 0, 0, L"╭");
+  ncplane_putwstr_yx(w, 0, 0, L"╭");
   for(z = 1 ; z < cols - 1 ; ++z){
-    cmvwadd_wch(w, 0, z, L"─");
+    ncplane_putwstr_yx(w, 0, z, L"─");
   }
-  cmvwadd_wch(w, 0, cols - 1, L"╮");
+  ncplane_putwstr_yx(w, 0, cols - 1, L"╮");
   for(z = 1 ; z < rows ; ++z){
-    cmvwadd_wch(w, z, 0, L"│");
-    cmvwadd_wch(w, z, cols - 1, L"│");
+    ncplane_putwstr_yx(w, z, 0, L"│");
+    ncplane_putwstr_yx(w, z, cols - 1, L"│");
   }
   return 0;
 }
@@ -670,32 +665,6 @@ cwattron(struct ncplane* n, int style){
   ncplane_styles_on(n, style);
   compat_set_fg(n, style & ~NCSTYLE_MASK);
   return 0;
-}
-
-static int
-cmvwaddstr(struct ncplane* n, int y, int x, const char* s){
-  if(ncplane_cursor_move_yx(n, y, x)){
-    return -1;
-  }
-  return ncplane_putstr(n, s);
-}
-
-static int
-cmvwaddwstr(struct ncplane* n, int y, int x, const wchar_t* ws){
-  if(ncplane_cursor_move_yx(n, y, x)){
-    return -1;
-  }
-  return ncplane_putwstr(n, ws);
-}
-
-static int
-cwaddstr(struct ncplane* n, const char* s){
-  return ncplane_putstr(n, s);
-}
-
-static int
-cwaddwstr(struct ncplane* n, const wchar_t* ws){
-  return ncplane_putwstr(n, ws);
 }
 
 static int
@@ -752,7 +721,7 @@ draw_main_window(struct ncplane* n){
   snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE, VERSION, count_adapters - 1);
   ncplane_dim_yx(n, &rows, &cols);
   cwattrset(n, HEADER_COLOR);
-  cmvwaddstr(n, rows - 1, 0, buf);
+  ncplane_putstr_yx(n, rows - 1, 0, buf);
   ncplane_cursor_yx(n, &y, &x);
   assert(x >= 0);
   cols -= x + 1;
@@ -863,10 +832,10 @@ new_display_panel(struct ncplane* nc, struct panel_state* ps,
   cwattroff(ps->p, NCSTYLE_BOLD);
   compat_set_fg(ps->p, PHEADING_COLOR);
   if(hstr){
-    cmvwaddwstr(ps->p, 0, START_COL * 2, hstr);
+    ncplane_putwstr_yx(ps->p, 0, START_COL * 2, hstr);
   }
   if(bstr){
-    cmvwaddwstr(ps->p, rows + 1, cols - (crightlen + START_COL * 2), bstr);
+    ncplane_putwstr_yx(ps->p, rows + 1, cols - (crightlen + START_COL * 2), bstr);
   }
   return 0;
 }
@@ -929,9 +898,9 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
       }
     }
     cmvwhline(n, y, sx, "∾", ex - sx + 1);
-    cmvwadd_wch(n, y, sx, L" ");
-    cmvwaddwstr(n, y, sx + (ex - sx + 1 - wcslen(wbuf)) / 2, wbuf);
-    cmvwadd_wch(n, y, ex - 1, L" ");
+    ncplane_putwstr_yx(n, y, sx, L" ");
+    ncplane_putwstr_yx(n, y, sx + (ex - sx + 1 - wcslen(wbuf)) / 2, wbuf);
+    ncplane_putwstr_yx(n, y, ex - 1, L" ");
     selstr = d->name;
   }else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
     cwattrset(n, NCSTYLE_BOLD|OPTICAL_COLOR);
@@ -945,9 +914,9 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
         "unpartitionable space";
     snprintf(buf, sizeof(buf), " %s %s ", qprefix(d->size, 1, pre, 1), selstr) < (int)sizeof(buf);
     cmvwhline(n, y, sx, "∾", ex - sx + 1);
-    cmvwadd_wch(n, y, sx, L" ");
-    cmvwaddstr(n, y, sx + (ex - sx + 1 - strlen(buf)) / 2, buf);
-    cmvwadd_wch(n, y, ex - 1, L" ");
+    ncplane_putwstr_yx(n, y, sx, L" ");
+    ncplane_putstr_yx(n, y, sx + (ex - sx + 1 - strlen(buf)) / 2, buf);
+    ncplane_putwstr_yx(n, y, ex - 1, L" ");
   }
   if((z = bo->zchain) == NULL){
     if(selected){
@@ -1053,7 +1022,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     }
     och = off;
     while(ch--){
-      cmvwadd_wch(n, y, off, rep);
+      ncplane_putwstr_yx(n, y, off, rep);
       if(++off > ex - z->following){
         off = ex - z->following;
         break;
@@ -1082,9 +1051,9 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
       size_t start = och + ((off - och + 1) - wcslen(wbuf)) / 2;
 
       cwattron(n, NCSTYLE_BOLD);
-      cmvwaddwstr(n, y, start, wbuf);
-      cmvwadd_wch(n, y, start - 1, L" ");
-      cmvwadd_wch(n, y, start + wcslen(wbuf), L" ");
+      ncplane_putwstr_yx(n, y, start, wbuf);
+      ncplane_putwstr_yx(n, y, start - 1, L" ");
+      ncplane_putwstr_yx(n, y, start + wcslen(wbuf), L" ");
     }
     selstr = NULL;
   }while((z = z->next) != bo->zchain);
@@ -1354,16 +1323,16 @@ case LAYOUT_ZPOOL:
     cwattron(n, NCSTYLE_REVERSE);
   }
   if(line + !!cliptop >= 1){
-    cmvwadd_wch(n, line, START_COL + 10 + 1, L"╭");
+    ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
-    cmvwadd_wch(n, line, cols - START_COL * 2, L"╮");
+    ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"╮");
   }
   if(++line >= rows/* - !cliptop*/){
     return 1;
   }
 
   if(line + !!cliptop >= 1){
-    cmvwadd_wch(n, line, START_COL + 10 + 1, L"│");
+    ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"│");
     print_blockbar(n, bo, line, START_COL + 10 + 2,
           cols - START_COL - 1, selected);
   }
@@ -1373,20 +1342,20 @@ case LAYOUT_ZPOOL:
     cwattron(n, NCSTYLE_REVERSE);
   }
   if(line + !!cliptop >= 1){
-    cmvwadd_wch(n, line, cols - START_COL * 2, L"│");
+    ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"│");
   }
   if(++line >= rows/* - !cliptop*/){
     return 2;
   }
   if(line + !!cliptop >= 1){
     int c = cols - 80;
-    cmvwadd_wch(n, line, START_COL + 10 + 1, L"╰");
-    cmvwadd_wch(n, line, START_COL + 12, L"┤");
-    cmvwadd_wch(n, line, cols - 3 - c, L"├");
+    ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╰");
+    ncplane_putwstr_yx(n, line, START_COL + 12, L"┤");
+    ncplane_putwstr_yx(n, line, cols - 3 - c, L"├");
     if(c > 0){
       cmvwhline(n, line, cols - 3 - c + 1, "─", c);
     }
-    cmvwadd_wch(n, line, cols - START_COL * 2, L"╯");
+    ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"╯");
   }
   ++line;
   return 3;
@@ -1434,7 +1403,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
     }
     cmvwprintw(nc, 0, 7, "%ls", L"[");
     compat_set_fg(nc, hcolor);
-    cwaddstr(nc, as->c->ident);
+    ncplane_putstr(nc, as->c->ident);
     if(as->c->numa_node >= 0){
       cwprintw(nc, " [%d]", as->c->numa_node);
     }
@@ -1459,7 +1428,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
     cwprintw(nc, "]");
     cwattron(nc, NCSTYLE_BOLD);
     ncplane_cursor_move_yx(nc, 0, cols - 5);
-    cwaddwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
+    ncplane_putwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
     cwattron(nc, attrs);
   }
   if(belowend == 0){
@@ -1614,7 +1583,7 @@ struct panel_state* show_splash(const wchar_t* msg){
   cwattrset(ps->p, NCSTYLE_BOLD|SPLASHTEXT_COLOR);
   cmvwhline(ps->p, 1, 1, " ", cols - 2);
   cmvwhline(ps->p, 2, 1, " ", cols - 2);
-  cmvwaddwstr(ps->p, 2, 2, msg);
+  ncplane_putwstr_yx(ps->p, 2, 2, msg);
   cmvwhline(ps->p, 3, 1, " ", cols - 2);
   ncplane_move_yx(ps->p, 3, 3);
   screen_update();
@@ -1713,8 +1682,8 @@ multiform_options(struct form_state *fs){
   ncplane_dim_yx(fsw, &maxz, &cols);
   cwattrset(fsw, FORMBORDER_COLOR);
   cwattron(fsw, NCSTYLE_BOLD);
-  cmvwadd_wch(fsw, 1, 1, L"╭");
-  cmvwadd_wch(fsw, 1, fs->longop + 4, L"╮");
+  ncplane_putwstr_yx(fsw, 1, 1, L"╭");
+  ncplane_putwstr_yx(fsw, 1, fs->longop + 4, L"╮");
   maxz -= 3;
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
@@ -1751,10 +1720,10 @@ multiform_options(struct form_state *fs){
   cwattrset(fsw, FORMBORDER_COLOR);
   cwattron(fsw, NCSTYLE_BOLD);
   for(z = 0 ; z < fs->selections ; ++z){
-    cmvwaddstr(fsw, z >= fs->selectno ? 3 + z : 2 + z, 4, fs->selarray[z]);
+    ncplane_putstr_yx(fsw, z >= fs->selectno ? 3 + z : 2 + z, 4, fs->selarray[z]);
   }
-  cmvwadd_wch(fsw, fs->selectno + 2, 1, L"╰");
-  cmvwadd_wch(fsw, fs->selectno + 2, fs->longop + 4, L"╯");
+  ncplane_putwstr_yx(fsw, fs->selectno + 2, 1, L"╰");
+  ncplane_putwstr_yx(fsw, fs->selectno + 2, fs->longop + 4, L"╯");
 }
 
 static void
@@ -1956,7 +1925,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   bevel_all(fs->p);
   cwattron(fs->p, NCSTYLE_BOLD);
   cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr) - 4, "%s", fs->boxstr);
-  cmvwaddwstr(fs->p, rows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
+  ncplane_putwstr_yx(fs->p, rows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
   cwattroff(fs->p, NCSTYLE_BOLD);
   fs->longop = longop;
@@ -2039,7 +2008,7 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
   cmvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 2, "%s", fs->boxstr);
   int nrows;
   ncplane_dim_yx(fsw, &nrows, NULL);
-  cmvwaddwstr(fsw, nrows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
+  ncplane_putwstr_yx(fsw, nrows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
   cwattroff(fsw, NCSTYLE_BOLD);
   fs->longop = longop;
@@ -2112,7 +2081,7 @@ void raise_form(const char* str, void (*fxn)(const char*),
   bevel_all(fs->p);
   cwattron(fs->p, NCSTYLE_BOLD);
   cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
-  cmvwaddwstr(fs->p, rows - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
+  ncplane_putwstr_yx(fs->p, rows - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
   cwattroff(fs->p, NCSTYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
@@ -2173,7 +2142,7 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
   bevel_all(fs->p);
   cwattron(fs->p, NCSTYLE_BOLD);
   cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
-  cmvwaddwstr(fs->p, 2, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
+  ncplane_putwstr_yx(fs->p, 2, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
   fs->inp.prompt = fs->boxstr;
   def = def ? def : "";
   fs->inp.buffer = strdup(def);
@@ -3104,17 +3073,17 @@ update_details(struct ncplane* hw){
   }else{
     cmvwprintw(hw, 2, START_COL, "Firmware: ");
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cwaddstr(hw, c->fwver ? c->fwver : "Unknown");
+    ncplane_putstr(hw, c->fwver ? c->fwver : "Unknown");
     ncplane_styles_on(hw, NCSTYLE_BOLD);
-    cwaddstr(hw, " BIOS: ");
+    ncplane_putstr(hw, " BIOS: ");
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cwaddstr(hw, c->biosver ? c->biosver : "Unknown");
+    ncplane_putstr(hw, c->biosver ? c->biosver : "Unknown");
     ncplane_styles_on(hw, NCSTYLE_BOLD);
-    cwaddstr(hw, " Load: ");
+    ncplane_putstr(hw, " Load: ");
     qprefix(c->demand, 1, buf, 1);
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cwaddstr(hw, buf);
-    cwaddstr(hw, "bps");
+    ncplane_putstr(hw, buf);
+    ncplane_putstr(hw, "bps");
     ncplane_styles_on(hw, NCSTYLE_BOLD);
   }
   if((b = get_selected_blockobj()) == NULL){
@@ -3127,12 +3096,12 @@ update_details(struct ncplane* hw){
 
     cmvwprintw(hw, 3, START_COL, "%s: ", d->name);
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cwaddstr(hw, d->model ? d->model : "n/a");
-    cwaddstr(hw, d->revision ? d->revision : "");
+    ncplane_putstr(hw, d->model ? d->model : "n/a");
+    ncplane_putstr(hw, d->revision ? d->revision : "");
     ncplane_styles_on(hw, NCSTYLE_BOLD);
     cwprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf, 1));
     ncplane_styles_off(hw, NCSTYLE_BOLD);
-    cwaddstr(hw, sn ? sn : "n/a");
+    ncplane_putstr(hw, sn ? sn : "n/a");
     ncplane_styles_on(hw, NCSTYLE_BOLD);
     if(cols - curcol > 13){
       cwprintw(hw, " WC%lc WRV%lc RO%lc",
@@ -3175,7 +3144,7 @@ update_details(struct ncplane* hw){
       cwprintw(hw, " Stride: ");
       ncplane_styles_off(hw, NCSTYLE_BOLD);
       if(d->mddev.stride == 0){
-        cwaddstr(hw, "n/a");
+        ncplane_putstr(hw, "n/a");
       }else{
         cwprintw(hw, "%sB", bprefix(d->mddev.stride, 1, buf, 1));
       }
@@ -3183,7 +3152,7 @@ update_details(struct ncplane* hw){
       cwprintw(hw, " SWidth: ");
       ncplane_styles_off(hw, NCSTYLE_BOLD);
       if(d->mddev.swidth == 0){
-        cwaddstr(hw, "n/a");
+        ncplane_putstr(hw, "n/a");
       }else{
         cwprintw(hw, "%u", d->mddev.swidth);
       }
@@ -3212,9 +3181,9 @@ update_details(struct ncplane* hw){
       "n/a");
   cwprintw(hw, "%s", pttype);
   ncplane_styles_on(hw, NCSTYLE_BOLD);
-  cwaddstr(hw, " I/O scheduler: ");
+  ncplane_putstr(hw, " I/O scheduler: ");
   ncplane_styles_off(hw, NCSTYLE_BOLD);
-  cwaddstr(hw, d->sched ? d->sched : "custom");
+  ncplane_putstr(hw, d->sched ? d->sched : "custom");
   ncplane_styles_on(hw, NCSTYLE_BOLD);
   if(blockobj_unloadedp(b)){
     cmvwprintw(hw, 6, START_COL, "Media is not loaded");
@@ -3252,7 +3221,7 @@ update_details(struct ncplane* hw){
       ncplane_styles_off(hw, NCSTYLE_BOLD);
       cwprintw(hw, "%ju ", b->zone->lsector);
       ncplane_styles_on(hw, NCSTYLE_BOLD);
-      cwaddstr(hw, b->zone->p->name);
+      ncplane_putstr(hw, b->zone->p->name);
       ncplane_styles_off(hw, NCSTYLE_BOLD);
       if(b->zone->p->partdev.pname){
         cwprintw(hw, " “%ls” ", b->zone->p->partdev.pname);
@@ -3351,7 +3320,7 @@ helpstrs(struct ncplane* n){
   compat_set_fg_all(n, SUBDISPLAY_ATTR);
   for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
     cmvwhline(n, row + z, START_COL, " ", cols - 2);
-    cmvwaddwstr(n, row + z, START_COL, hs);
+    ncplane_putwstr_yx(n, row + z, START_COL, hs);
   }
   row += z;
   if(!get_selected_blockobj()){
@@ -3361,7 +3330,7 @@ helpstrs(struct ncplane* n){
   }
   for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
     cmvwhline(n, row + z, START_COL, " ", cols - 2);
-    cmvwaddwstr(n, row + z, START_COL, hs);
+    ncplane_putwstr_yx(n, row + z, START_COL, hs);
   }
   row += z;
   if(!target_mode_p()){
@@ -3371,7 +3340,7 @@ helpstrs(struct ncplane* n){
   }
   for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
     cmvwhline(n, row + z, START_COL, " ", cols - 2);
-    cmvwaddwstr(n, row + z, START_COL, hs);
+    ncplane_putwstr_yx(n, row + z, START_COL, hs);
   }
   return 0;
 }
