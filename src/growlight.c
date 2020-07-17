@@ -302,9 +302,9 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 				free(c);
 				return NULL;
 			}
-			assert(pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
+			pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
 							PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
-							PCI_FILL_SIZES|PCI_FILL_RESCAN));
+							PCI_FILL_SIZES|PCI_FILL_RESCAN);
 			vend = pci_device_get_vendor_name(pci);
 			model = pci_device_get_device_name(pci);
 			snprintf(buf,sizeof(buf),"%s %s",
@@ -490,16 +490,16 @@ alignment(uintmax_t val){
 }
 
 static device *
-add_partition_inner(device *d,const char *name,dev_t devno,unsigned pnum,
-				uint64_t fsect,uintmax_t sz){
+add_partition_inner(device *d, const char *name, dev_t devno, unsigned pnum,
+				            uint64_t fsect, uintmax_t sz){
 	device *p;
 
 	if(strlen(name) >= sizeof(p->name)){
-		diag("Bad name: %s\n",name);
+		diag("Bad name: %s\n", name);
 		return NULL;
 	}
 	if(!pnum){
-		diag("Can't work with partition number %u\n",pnum);
+		diag("Can't work with partition number %u\n", pnum);
 		return NULL;
 	}
 	if(!sz){
@@ -512,7 +512,7 @@ add_partition_inner(device *d,const char *name,dev_t devno,unsigned pnum,
 		memset(p,0,sizeof(*p));
 		p->layout = LAYOUT_PARTITION;
 		p->swapprio = SWAP_INVALID;
-		strcpy(p->name,name);
+		strcpy(p->name, name);
 		for(pre = &d->parts ; *pre ; pre = &(*pre)->next){
 			if((*pre)->partdev.fsector >= fsect){
 				break;
@@ -1045,9 +1045,9 @@ rescan(const char *name,device *d){
 						pars,pars == 1 ? "" : "s",
 						pttable);
 				switch(d->layout){
-					case LAYOUT_NONE: assert((d->blkdev.pttable = strdup(pttable))); break;
-					case LAYOUT_MDADM: assert((d->mddev.pttable = strdup(pttable))); break;
-					case LAYOUT_DM: assert((d->dmdev.pttable = strdup(pttable))); break;
+					case LAYOUT_NONE: d->blkdev.pttable = strdup(pttable); break;
+					case LAYOUT_MDADM: d->mddev.pttable = strdup(pttable); break;
+					case LAYOUT_DM: d->dmdev.pttable = strdup(pttable); break;
 					default: diag("Bad layout %d\n",d->layout); assert(0); break;
 				}
 				for(p = d->parts ; p ; p = p->next){
@@ -1102,7 +1102,7 @@ rescan(const char *name,device *d){
 			}
 			blkid_free_probe(pr);
 		}else if((d->layout != LAYOUT_NONE || !d->blkdev.removable) || errno != ENOMEDIUM){
-			diag("Couldn't probe %s (%s)\n",name,strerror(errno));
+			diag("Couldn't probe %s (%s)\n", name,strerror(errno));
 			clobber_device(d);
 			return NULL;
 		}else{
