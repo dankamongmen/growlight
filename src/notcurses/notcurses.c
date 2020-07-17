@@ -772,13 +772,19 @@ device_lines(int expa, const blockobj* bo){
 }
 
 static zobj *
-create_zobj(zobj *prev,unsigned zno,uintmax_t fsector,uintmax_t lsector,
-      device *p,wchar_t rep){
+create_zobj(zobj *prev, unsigned zno, uintmax_t fsector, uintmax_t lsector,
+            device *p, wchar_t rep){
   zobj *z;
 
   assert(lsector >= fsector);
+  if(lsector < fsector){
+    return NULL;
+  }
   assert(fsector > 0 || zno == 0);
   assert(fsector == 0 || zno > 0);
+  if((fsector == 0) != (zno == 0)){
+    return NULL;
+  }
   if( (z = malloc(sizeof(*z))) ){
     z->zoneno = zno;
     z->fsector = fsector;
@@ -5645,8 +5651,8 @@ free_zchain(zobj **z){
 // b->zone->p == NULL: empty space
 // b->zone->p: partition
 static void
-update_blockobj(blockobj* b,device* d){
-  zobj *z,*lastz,*firstchoice;
+update_blockobj(blockobj* b, device* d){
+  zobj *z, *lastz, *firstchoice;
   uintmax_t sector;
   int zonesel = -1; // -1 for no choice (b->zone == NULL on entry)
   int zones;
@@ -5670,7 +5676,7 @@ update_blockobj(blockobj* b,device* d){
     sector = d->size / d->logsec + 1;
   }else{
     if( (sector = first_usable_sector(d)) ){
-      if((z = create_zobj(z, zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
+	    if((z = create_zobj(z, zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
         goto err;
       }
       ++zones;
