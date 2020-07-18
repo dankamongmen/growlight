@@ -1,10 +1,14 @@
 # growlight by nick black (nickblack@linux.com)
 
-[![Build Status](https://drone.dsscaw.com:4443/api/badges/dankamongmen/growlight/status.svg)](https://drone.dsscaw.com:4443/dankamongmen/growlight)
-
 Block device manager and system installation tool.
 
 https://nick-black.com/dankwiki/index.php/Growlight
+
+<p align="center">
+<img width="606" height="600" src="doc/growlight-1.2.8.png"/>
+</p>
+
+[![Build Status](https://drone.dsscaw.com:4443/api/badges/dankamongmen/growlight/status.svg)](https://drone.dsscaw.com:4443/dankamongmen/growlight)
 
 Dependencies:
 
