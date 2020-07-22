@@ -5986,8 +5986,8 @@ int main(int argc, char * const *argv){
   if(!notcurses_version_check()){
     return EXIT_FAILURE;
   }
-  notcurses_options opts;
-  memset(&opts, 0, sizeof(opts));
+  notcurses_options opts = { };
+  opts.flags = NCOPTION_INHIBIT_SETLOCALE;
   if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
