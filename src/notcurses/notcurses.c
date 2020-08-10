@@ -1549,20 +1549,24 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
 }
 
 static int
-redraw_adapter(struct nctablet* t, int begx, int begy, int maxx, int maxy, bool cliptop){
+redraw_adapter(struct nctablet* t, bool drawfromtop){
   struct ncplane* n = nctablet_ncplane(t);
   const adapterstate *as = nctablet_userptr(t);
   //ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
-  int lines = print_adapter_devs(n, as, maxy - begy + 1, maxx - begx + 1, cliptop);
+  int maxx, maxy;
+  ncplane_dim_yx(nctablet_ncplane(t), &maxy, &maxx);
+  --maxx;
+  --maxy;
+  int lines = print_adapter_devs(n, as, maxy + 1, maxx + 1, drawfromtop);
   if(lines < 0){
     return -1;
   }
   // FIXME shouldn't need this, but we're blasting past the bottom see notcurses #222
-  /*if(lines > maxy - begy){
-    lines = maxy - begy;
+  /*if(lines > maxy){
+    lines = maxy;
   }*/
-//fprintf(stderr, "[%s] drew %d/%d cliptop: %d\n", as->c->name, lines, maxy - begy, cliptop);
+//fprintf(stderr, "[%s] drew %d/%d cliptop: %d\n", as->c->name, lines, maxy, cliptop);
   return lines;
 }
 

@@ -12,7 +12,7 @@ https://nick-black.com/dankwiki/index.php/Growlight
 
 Dependencies:
 
- - notcurses 1.6.7+
+ - notcurses 1.6.12+
  - libudev 175+
  - libblkid 2.20.1
  - libpci 3.1.9+
