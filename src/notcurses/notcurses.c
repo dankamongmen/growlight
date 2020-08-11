@@ -1066,18 +1066,18 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
 }
 
 // returns number of lines printed
-// cliptop: if true, we are cut off at the top (printing up), otherwise we'd be
+// drawfromtop: if true, we are cut off at the top (printing up), otherwise we'd be
 // cut off at the bottom (printing down).
 static int
 print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
-          int line, int rows, unsigned cols, bool cliptop){
+          int line, int rows, unsigned cols, bool drawfromtop){
   char buf[BPREFIXSTRLEN + 1];
   int co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
 
 //fprintf(stderr, " HERE FOR %s: %s line %d rows %d cols %d lout %d\n", as->c->name, bo->d->name, line, rows, cols, bo->d->layout);
   ncplane_set_bg_default(n);
-  if(line >= rows/* - !cliptop*/){
+  if(line >= rows){
     return 0;
   }
   strcpy(rolestr, "");
@@ -1115,8 +1115,8 @@ case LAYOUT_NONE:
       cwattrset(n, VIRTUAL_COLOR);
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
-    if(line + !!cliptop >= 1){
-      if(!bo->d->size || line + 2 < rows/* - !cliptop*/){
+    if(line + !!drawfromtop >= 1){
+      if(!bo->d->size || line + 2 < rows){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1150,8 +1150,8 @@ case LAYOUT_MDADM:
       co = MDADM_COLOR;
     }
     cwattrset(n, co);
-    if(line + !!cliptop >= 1){
-      if(!bo->d->size || line + 2 <= rows/* - !cliptop*/){
+    if(line + !!drawfromtop >= 1){
+      if(!bo->d->size || line + 2 <= rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1178,8 +1178,8 @@ case LAYOUT_MDADM:
 case LAYOUT_DM:
     strncpy(rolestr, "dm", sizeof(rolestr));
     cwattrset(n, MDADM_COLOR);
-    if(line + !!cliptop >= 1){
-      if(!bo->d->size || line + 2 < rows/* - !cliptop*/){
+    if(line + !!drawfromtop >= 1){
+      if(!bo->d->size || line + 2 < rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1207,8 +1207,8 @@ case LAYOUT_PARTITION:
 case LAYOUT_ZPOOL:
     strncpy(rolestr, "zpool", sizeof(rolestr));
     cwattrset(n, ZPOOL_COLOR);
-    if(line + !!cliptop >= 1){
-      if(!bo->d->size || line + 2 < rows/* - !cliptop*/){
+    if(line + !!drawfromtop >= 1){
+      if(!bo->d->size || line + 2 < rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
         }else if(selected){
@@ -1239,13 +1239,13 @@ case LAYOUT_ZPOOL:
   cwattrset(n, NCSTYLE_BOLD|SUBDISPLAY_COLOR);
 
   // Box-diagram (3-line) mode. Print the name on the first line.
-  if(line + !!cliptop >= 1){
+  if(line + !!drawfromtop >= 1){
     cmvwprintw(n, line, START_COL, "%11.11s", bo->d->name);
   }
 
   // Print summary below device name, in the same color, but prefix it
   // with the single-character SMART status when applicable.
-  if(line + 1 < rows/* - !cliptop*/ && line + !!cliptop + 1 >= 1){
+  if(line + 1 < rows/* - !drawfromtop*/ && line + !!drawfromtop + 1 >= 1){
     wchar_t rep = L' ';
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
@@ -1269,7 +1269,7 @@ case LAYOUT_ZPOOL:
     }
   }
   // ...and finally the temperature/vfailure status, and utilization...
-  if((line + 2 <= rows/* - !cliptop*/) && (line + !!cliptop + 2 >= 1)){
+  if((line + 2 <= rows/* - !drawfromtop*/) && (line + !!drawfromtop + 2 >= 1)){
     int sumline = line + 2;
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
@@ -1328,16 +1328,16 @@ case LAYOUT_ZPOOL:
   if(selected){
     cwattron(n, NCSTYLE_REVERSE);
   }
-  if(line + !!cliptop >= 1){
+  if(line + !!drawfromtop >= 1){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"╮");
   }
-  if(++line >= rows/* - !cliptop*/){
+  if(++line >= rows/* - !drawfromtop*/){
     return 1;
   }
 
-  if(line + !!cliptop >= 1){
+  if(line + !!drawfromtop >= 1){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"│");
     print_blockbar(n, bo, line, START_COL + 10 + 2,
           cols - START_COL - 1, selected);
@@ -1347,13 +1347,13 @@ case LAYOUT_ZPOOL:
   if(selected){
     cwattron(n, NCSTYLE_REVERSE);
   }
-  if(line + !!cliptop >= 1){
+  if(line + !!drawfromtop >= 1){
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"│");
   }
-  if(++line >= rows/* - !cliptop*/){
+  if(++line >= rows/* - !drawfromtop*/){
     return 2;
   }
-  if(line + !!cliptop >= 1){
+  if(line + !!drawfromtop >= 1){
     int c = cols - 80;
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╰");
     ncplane_putwstr_yx(n, line, START_COL + 12, L"┤");
@@ -1463,10 +1463,10 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
   }
 }
 
-// returns the number of lines printed, plus borders
-// cliptop: if we have too few lines, which side gets clipped?
+// returns the number of lines printed (including borders)
+// drawfromtop: direction in which we draw. if true, from the top.
 static int
-print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols, bool cliptop){
+print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   // If the interface is down, we don't lead with the summary line
   const blockobj *cur;
   int printed = 0;
@@ -1477,17 +1477,19 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
   if(as->expansion == EXPANSION_NONE){
     return 0;
   }
+  int maxx, maxy;
+  ncplane_dim_yx(n, &maxy, &maxx);
   // First, print the selected device (if there is one), and those above
   cur = as->selected;
   line = as->selline;
 //fprintf(stderr, "START WITH %p at %ld of %d\n", cur, line, rows);
-  while(cur && line + (long)device_lines(as->expansion, cur) >= cliptop){
-    p = print_dev(n, as, cur, line, rows, cols, cliptop);
+  while(cur && line + (long)device_lines(as->expansion, cur) >= drawfromtop){
+    p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
     printed += p;
     if( (cur = cur->prev) ){
       line -= device_lines(as->expansion, cur);
     }
-//fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, cliptop, line, rows);
+//fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, drawfromtop, line, rows);
   }
   int abovetop = 0;
   if(as->selected){
@@ -1500,7 +1502,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
     // and then move forward until we find the first visible one. begin
     // printing, in this case, at line 0. you've been clipped!
     line = 1;
-    if(cliptop){
+    if(drawfromtop){
       int totallines = 0;
       const blockobj* iter = cur;
       line = rows - 1;
@@ -1521,10 +1523,10 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
       }
     }
   }
-//fprintf(stderr, "SELECTED CUR FORWARD %p %d (%ld/%d)\n", cur, cliptop, line, rows);
+//fprintf(stderr, "SELECTED CUR FORWARD %p %d (%ld/%d)\n", cur, drawfromtop, line, rows);
   while(cur && line < rows){
-    p = print_dev(n, as, cur, line, rows, cols, cliptop);
-//fprintf(stderr, "ITERATING %d %p (%ld < %d) %d\n", p, cur, line, rows, cliptop);
+    p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
+//fprintf(stderr, "ITERATING %d %p (%ld < %d) %d\n", p, cur, line, rows, drawfromtop);
     printed += p;
     if(line < 0){
       printed += line < -p ? -p : line;
@@ -1543,7 +1545,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, int rows, int cols
     belowend = line - rows + 1;
     line = rows;
   }
-  adapter_box(as, n, abovetop, !cliptop * belowend, printed);
+  adapter_box(as, n, abovetop, !drawfromtop * belowend, printed);
   assert(printed <= rows);
   return printed;
 }
@@ -1554,19 +1556,11 @@ redraw_adapter(struct nctablet* t, bool drawfromtop){
   const adapterstate *as = nctablet_userptr(t);
   //ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
-  int maxx, maxy;
-  ncplane_dim_yx(nctablet_ncplane(t), &maxy, &maxx);
-  --maxx;
-  --maxy;
-  int lines = print_adapter_devs(n, as, maxy + 1, maxx + 1, drawfromtop);
+  int lines = print_adapter_devs(n, as, drawfromtop);
   if(lines < 0){
     return -1;
   }
-  // FIXME shouldn't need this, but we're blasting past the bottom see notcurses #222
-  /*if(lines > maxy){
-    lines = maxy;
-  }*/
-//fprintf(stderr, "[%s] drew %d/%d cliptop: %d\n", as->c->name, lines, maxy, cliptop);
+//fprintf(stderr, "[%s] drew %d/%d drawfromtop: %d\n", as->c->name, lines, maxy, drawfromtop);
   return lines;
 }
 
