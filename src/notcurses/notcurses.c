@@ -1482,6 +1482,8 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   // First, print the selected device (if there is one), and those above
   cur = as->selected;
   line = as->selline;
+  int rows, cols;
+  ncplane_dim_yx(n, &rows, &cols);
 //fprintf(stderr, "START WITH %p at %ld of %d\n", cur, line, rows);
   while(cur && line + (long)device_lines(as->expansion, cur) >= drawfromtop){
     p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
