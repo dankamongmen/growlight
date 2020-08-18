@@ -1378,6 +1378,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
   int attrs;
 
   ncplane_dim_yx(nc, NULL, &cols);
+  --cols;
   if(current){
     hcolor = UHEADING_COLOR; // plus NCSTYLE_BOLD
     bcolor = SELBORDER_COLOR;
@@ -1477,14 +1478,14 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   if(as->expansion == EXPANSION_NONE){
     return 0;
   }
-  int maxx, maxy;
-  ncplane_dim_yx(n, &maxy, &maxx);
   // First, print the selected device (if there is one), and those above
   cur = as->selected;
   line = as->selline;
   int rows, cols;
   ncplane_dim_yx(n, &rows, &cols);
 //fprintf(stderr, "START WITH %p at %ld of %d\n", cur, line, rows);
+  --rows;
+  --cols;
   while(cur && line + (long)device_lines(as->expansion, cur) >= drawfromtop){
     p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
     printed += p;
