@@ -83,7 +83,7 @@ set(COMMON_LIBRARIES
   "${LIBREADLINE_LIBRARIES}"
   "${LIBUDEV_LIBRARIES}"
   "${LIBZFS_LIBRARIES}"
-  "${Notcurses_LIBRARIES}"
+  "${notcurses_LIBRARIES}"
   Threads::Threads
 )
 

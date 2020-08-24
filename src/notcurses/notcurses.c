@@ -95,8 +95,8 @@ struct panel_state {
 };
 
 // inherited jank from ncurses->notcurses conversion, eliminate me FIXME
-#define BOLD (NCSTYLE_BOLD << 8)
-#define REVERSE (NCSTYLE_REVERSE << 8)
+#define BOLD (NCSTYLE_BOLD << 8u)
+#define REVERSE (NCSTYLE_REVERSE << 8u)
 
 #define PANEL_STATE_INITIALIZER { .p = NULL, }
 
@@ -600,40 +600,6 @@ selected_mkfs_safe_p(void){
 }
 
 static int
-bevel_bottom(struct ncplane* w){
-  int rows, cols, z;
-
-  ncplane_dim_yx(w, &rows, &cols);
-  ncplane_putwstr_yx(w, rows - 1, 0, L"╰");
-  for(z = 1 ; z < cols - 1 ; ++z){
-    ncplane_putwstr_yx(w, rows - 1, z, L"─");
-  }
-  ncplane_putwstr_yx(w, rows - 1, cols - 1, L"╯");
-  for(z = 0 ; z < rows - 1 ; ++z){
-    ncplane_putwstr_yx(w, z, 0, L"│");
-    ncplane_putwstr_yx(w, z, cols - 1, L"│");
-  }
-  return 0;
-}
-
-static int
-bevel_top(struct ncplane* w){
-  int rows, cols, z;
-
-  ncplane_dim_yx(w, &rows, &cols);
-  ncplane_putwstr_yx(w, 0, 0, L"╭");
-  for(z = 1 ; z < cols - 1 ; ++z){
-    ncplane_putwstr_yx(w, 0, z, L"─");
-  }
-  ncplane_putwstr_yx(w, 0, cols - 1, L"╮");
-  for(z = 1 ; z < rows ; ++z){
-    ncplane_putwstr_yx(w, z, 0, L"│");
-    ncplane_putwstr_yx(w, z, cols - 1, L"│");
-  }
-  return 0;
-}
-
-static int
 bevel(struct ncplane* nc, int rows, int cols){
   if(rows <= 0 || cols <= 0){
     return -1;
@@ -665,8 +631,8 @@ cwattroff(struct ncplane* n, int style){
 
 static int
 cwattron(struct ncplane* n, int style){
-  ncplane_styles_on(n, style >> 8);
-  compat_set_fg(n, style & 0xff);
+  ncplane_styles_on(n, style >> 8u);
+  compat_set_fg(n, style & 0xffu);
   return 0;
 }
 
@@ -1331,16 +1297,16 @@ case LAYOUT_ZPOOL:
   if(selected){
     cwattron(n, REVERSE);
   }
-  if(line + !!drawfromtop >= 1){
+  if(line >= 1){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"╮");
   }
-  if(++line >= rows/* - !drawfromtop*/){
+  if(++line >= rows){
     return 1;
   }
 
-  if(line + !!drawfromtop >= 1){
+  if(line >= 1){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"│");
     print_blockbar(n, bo, line, START_COL + 10 + 2,
           cols - START_COL - 1, selected);
@@ -1350,13 +1316,13 @@ case LAYOUT_ZPOOL:
   if(selected){
     cwattron(n, REVERSE);
   }
-  if(line + !!drawfromtop >= 1){
+  if(line >= 1){
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"│");
   }
-  if(++line >= rows/* - !drawfromtop*/){
+  if(++line >= rows){
     return 2;
   }
-  if(line + !!drawfromtop >= 1){
+  if(line >= 1){
     int c = cols - 80;
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╰");
     ncplane_putwstr_yx(n, line, START_COL + 12, L"┤");
@@ -1393,17 +1359,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
   }
   cwattrset(nc, attrs | bcolor);
 //fprintf(stderr, "ABOVETOP: %d BELOWEND: %d name: %s\n", abovetop, belowend, as->c->name);
-  if(abovetop == 0){
-    if(belowend == 0){
-      bevel(nc, rows, cols);
-    }else{
-      bevel_top(nc);
-    }
-  }else{
-    if(belowend == 0){
-      bevel_bottom(nc);
-    } // otherwise it has no top or bottom visible
-  }
+  bevel(nc, rows, cols);
   ncplane_set_bg_default(nc);
   if(abovetop == 0){
     if(current){
