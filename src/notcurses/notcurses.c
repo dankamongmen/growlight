@@ -2115,7 +2115,6 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
   form_string_options(fs);
   actform = fs;
   fs->extext = raise_form_explication(notcurses_stdplane(NC), text, FORM_Y_OFFSET);
-  notcurses_cursor_enable(NC);
   screen_update();
 }
 
