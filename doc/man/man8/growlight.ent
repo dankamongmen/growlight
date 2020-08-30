@@ -2,4 +2,4 @@
 <!ENTITY dhsurname "Black">
 <!ENTITY dhemail "nickblack@linux.com">
 <!ENTITY dhusername "&dhfirstname; &dhsurname;">
-<!ENTITY dhrelease "1.2.8">
+<!ENTITY dhrelease "1.2.9">
