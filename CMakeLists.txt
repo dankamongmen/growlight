@@ -23,8 +23,8 @@ add_compile_options(-Wall -Wextra -W -Wshadow -Wformat -fexceptions)
 find_package(PkgConfig REQUIRED)
 find_package(Threads)
 set_package_properties(Threads PROPERTIES TYPE REQUIRED)
-find_package(notcurses 1.6.15)
-set_package_properties(notcurses PROPERTIES TYPE REQUIRED)
+find_package(Notcurses 1.6.20)
+set_package_properties(Notcurses PROPERTIES TYPE REQUIRED)
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
 pkg_check_modules(LIBATASMART REQUIRED libatasmart>=0.19)
 pkg_check_modules(LIBBLKID REQUIRED blkid>=2.20.1)
@@ -54,7 +54,7 @@ set(COMMON_INCLUDE_DIRS
   "${LIBPCIACCESS_INCLUDE_DIRS}"
   "${LIBUDEV_INCLUDE_DIRS}"
   "${LIBZFS_INCLUDE_DIRS}"
-  "${NOTCURSES_INCLUDE_DIRS}"
+  "${Notcurses_INCLUDE_DIRS}"
 )
 
 set(COMMON_LIBRARY_DIRS
@@ -68,7 +68,7 @@ set(COMMON_LIBRARY_DIRS
   "${LIBPCIACCESS_LIBRARY_DIRS}"
   "${LIBUDEV_LIBRARY_DIRS}"
   "${LIBZFS_LIBRARY_DIRS}"
-  "${NOTCURSES_LIBRARY_DIRS}"
+  "${Notcurses_LIBRARY_DIRS}"
 )
 
 set(COMMON_LIBRARIES
@@ -83,7 +83,7 @@ set(COMMON_LIBRARIES
   "${LIBREADLINE_LIBRARIES}"
   "${LIBUDEV_LIBRARIES}"
   "${LIBZFS_LIBRARIES}"
-  "${notcurses_LIBRARIES}"
+  "${Notcurses_LIBRARIES}"
   Threads::Threads
 )
 
