@@ -5918,8 +5918,8 @@ static bool
 notcurses_version_check(void){
   int major, minor, patch, tweak;
   notcurses_version_components(&major, &minor, &patch, &tweak);
-  if(major < 1 || minor < 6 || patch < 1){
-    fprintf(stderr, "Needed notcurses 1.6.1+, got %d.%d.%d.%d\n",
+  if(major < 1 || (major == 1 && minor < 7)){
+    fprintf(stderr, "Needed notcurses 1.7.0+, got %d.%d.%d.%d\n",
             major, minor, patch, tweak);
     return false;
   }
