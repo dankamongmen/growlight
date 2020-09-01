@@ -1,5 +1,5 @@
 % growlight(8)
-% nick black <nickblack@Linux.com>
+% nick black <nickblack@linux.com>
 % v1.2.10
 
 # NAME
@@ -70,6 +70,7 @@ ought be fixed.
 **blkid(8)**,,
 **dmraid(8)**,
 **dmsetup (8)**,
+**growlight-readline(8)**,
 **grub-install (8)**,
 **grub-mkdevicemap (8)**,
 **hdparm (8)**,

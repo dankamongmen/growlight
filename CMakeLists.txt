@@ -9,7 +9,7 @@ include(GNUInstallDirs)
 include(FeatureSummary)
 
 ###################### USER-SELECTABLE OPTIONS ###########################
-option(USE_DOCBOOK "Use docbook to write man pages" ON)
+option(USE_PANDOC "Use pandoc to write man pages" ON)
 option(USE_LIBZFS "Use libzfs to manage zpools/ZFS" ON)
 #################### END USER-SELECTABLE OPTIONS #########################
 
@@ -129,25 +129,20 @@ target_link_directories(growlight-readline
     "${COMMON_LIBRARY_DIRS}"
 )
 
-if(USE_DOCBOOK)
-  file(GLOB MANSOURCE CONFIGURE_DEPENDS doc/man/man8/*.xml)
-  find_program(XSLTPROC xsltproc)
-  if(NOT XSLTPROC)
-    message(FATAL_ERROR "xsltproc not found. USE_DOCBOOK=OFF to disable.")
-    find_file(DOCBOOKXSL
-      NAMES
-        /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl
-        /usr/share/sgml/docbook/xsl-stylesheets/manpages/docbook.xsl
-      REQUIRED
-    )
+# Pandoc documentation (man pages)
+if(USE_PANDOC)
+  file(GLOB MANSOURCE8 CONFIGURE_DEPENDS doc/man/man8/*.md)
+  find_program(PANDOC pandoc)
+  if(NOT PANDOC)
+    message(FATAL_ERROR "pandoc not found. USE_PANDOC=OFF to disable.")
   else()
-    foreach(m ${MANSOURCE})
+    foreach(m ${MANSOURCE8})
       get_filename_component(me ${m} NAME_WLE)
       add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${me}
         DEPENDS ${m}
-        COMMAND ${XSLTPROC}
-        ARGS --nonet ${DOCBOOKXSL} ${m}
+        COMMAND ${PANDOC}
+        ARGS --to man --standalone ${m} > ${CMAKE_CURRENT_BINARY_DIR}/${me}
         COMMENT "Building man page ${me}"
       )
       add_custom_target(${me}.man
@@ -155,9 +150,9 @@ if(USE_DOCBOOK)
         DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${me}
       )
     endforeach()
-    foreach(m ${MANSOURCE})
+    foreach(m ${MANSOURCE8})
       get_filename_component(me ${m} NAME_WLE)
-      LIST(APPEND MANPAGES ${CMAKE_CURRENT_BINARY_DIR}/${me})
+      LIST(APPEND MANPAGES8 ${CMAKE_CURRENT_BINARY_DIR}/${me})
     endforeach()
   endif()
 endif()
