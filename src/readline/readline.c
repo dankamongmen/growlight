@@ -2195,7 +2195,7 @@ int main(int argc,char * const *argv){
   rl_attempted_completion_function = growlight_completion;
   rl_prep_terminal(1); // 1 == read 8-bit input
   if(isatty(STDOUT_FILENO)){
-    if((ncd = ncdirect_init(NULL, NULL)) == NULL){
+    if((ncd = ncdirect_init(NULL, NULL, 0)) == NULL){
       fprintf(stderr, "Couldn't set up notcurses\n");
     }
   }
