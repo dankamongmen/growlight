@@ -35,10 +35,9 @@ Kernel options:
 
 Build-only dependencies:
 
- - xsltproc (tested with 20800/10126/815)
- - docbook-xsl (tested with 4.5)
  - pkg-config (tested with 0.29)
  - cmake (tested with 3.14)
+ - pandoc (tested with 2.9.2.1)
 
 Building:
 
