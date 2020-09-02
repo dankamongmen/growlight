@@ -2209,5 +2209,9 @@ int main(int argc,char * const *argv){
   if(growlight_stop()){
     return EXIT_FAILURE;
   }
+  if(ncdirect_stop(ncd)){
+    fprintf(stderr, "Couldn't reset terminal\n");
+    return EXIT_FAILURE;
+  }
   return EXIT_SUCCESS;
 }

@@ -159,4 +159,4 @@ endif()
 
 install(TARGETS growlight DESTINATION bin)
 install(TARGETS growlight-readline DESTINATION bin)
-install(FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man8)
+install(FILES ${MANPAGES8} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man8)
