@@ -51,7 +51,7 @@ use_terminfo_color(unsigned rgb, int boldp){
     }else{
       ncdirect_styles_set(ncd, NCSTYLE_BOLD);
     }
-    ncdirect_fg(ncd, rgb);
+    ncdirect_fg_rgb(ncd, rgb);
   }
   return 0;
 }

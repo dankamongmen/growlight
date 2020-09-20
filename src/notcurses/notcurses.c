@@ -251,98 +251,98 @@ static void
 compat_set_fg(struct ncplane* nc, int pair){
   switch(pair){
     case 0:
-      ncplane_set_fg_rgb(nc, 128, 192, 128);
+      ncplane_set_fg_rgb8(nc, 128, 192, 128);
       break;
     case HEADER_COLOR:
-      ncplane_set_fg_rgb(nc, 95, 0, 175);
+      ncplane_set_fg_rgb8(nc, 95, 0, 175);
       break;
     case STATUS_COLOR:
-      ncplane_set_fg_rgb(nc, 0, 95, 175);
+      ncplane_set_fg_rgb8(nc, 0, 95, 175);
       break;
     case UHEADING_COLOR:
-      ncplane_set_fg_rgb(nc, 218, 218, 218);
+      ncplane_set_fg_rgb8(nc, 218, 218, 218);
       break;
     case UNHEADING_COLOR:
-      ncplane_set_fg_rgb(nc, 135, 175, 255);
+      ncplane_set_fg_rgb8(nc, 135, 175, 255);
       break;
     case UBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 0, 215, 175);
+      ncplane_set_fg_rgb8(nc, 0, 215, 175);
       break;
     case SELBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 0, 255, 215);
+      ncplane_set_fg_rgb8(nc, 0, 255, 215);
       break;
     case DBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 135, 175, 255); break;
+      ncplane_set_fg_rgb8(nc, 135, 175, 255); break;
     case PBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 215, 255, 0); break;
+      ncplane_set_fg_rgb8(nc, 215, 255, 0); break;
     case PHEADING_COLOR:
-      ncplane_set_fg_rgb(nc, 197, 15, 31); break;
+      ncplane_set_fg_rgb8(nc, 197, 15, 31); break;
     case SELECTED_COLOR:
-      ncplane_set_fg_rgb(nc, 135, 95, 255); break;
+      ncplane_set_fg_rgb8(nc, 135, 95, 255); break;
     case VIRTUAL_COLOR:
-      ncplane_set_fg_rgb(nc, 0xd7, 0xd7, 0xaf); break;
+      ncplane_set_fg_rgb8(nc, 0xd7, 0xd7, 0xaf); break;
     case SSD_COLOR:
-      ncplane_set_fg_rgb(nc, 0xd7, 0xd7, 0xd7); break;
+      ncplane_set_fg_rgb8(nc, 0xd7, 0xd7, 0xd7); break;
     case FS_COLOR:
-      ncplane_set_fg_rgb(nc, 0x5f, 0xff, 0x5f); break;
+      ncplane_set_fg_rgb8(nc, 0x5f, 0xff, 0x5f); break;
     case EMPTY_COLOR: // Empty sectors
-      ncplane_set_fg(nc, 0xffd700); break;
+      ncplane_set_fg_rgb(nc, 0xffd700); break;
     case METADATA_COLOR: // Partition table metadata
-      ncplane_set_fg_rgb(nc, 249, 241, 165); break;
+      ncplane_set_fg_rgb8(nc, 249, 241, 165); break;
     case MDADM_COLOR:
-      ncplane_set_fg_rgb(nc, 0xaf, 0xaf, 0xff); break;
+      ncplane_set_fg_rgb8(nc, 0xaf, 0xaf, 0xff); break;
     case ORANGE_COLOR:
-      ncplane_set_fg_rgb(nc, 0xd7, 0x5f, 0x00); break;
+      ncplane_set_fg_rgb8(nc, 0xd7, 0x5f, 0x00); break;
     case ZPOOL_COLOR:
-      ncplane_set_fg_rgb(nc, 128, 192, 226); break;
+      ncplane_set_fg_rgb8(nc, 128, 192, 226); break;
     case SUBDISPLAY_COLOR:
-      ncplane_set_fg_rgb(nc, 255, 255, 255); break;
+      ncplane_set_fg_rgb8(nc, 255, 255, 255); break;
     case OPTICAL_COLOR:
-      ncplane_set_fg_rgb(nc, 175, 215, 0); break;
+      ncplane_set_fg_rgb8(nc, 175, 215, 0); break;
     case ROTATE_COLOR:
-      ncplane_set_fg_rgb(nc, 175, 175, 135); break;
+      ncplane_set_fg_rgb8(nc, 175, 175, 135); break;
     case PART_COLOR0:
-      ncplane_set_fg_rgb(nc, 0x00, 0xd7, 0xaf); break;
+      ncplane_set_fg_rgb8(nc, 0x00, 0xd7, 0xaf); break;
     case PART_COLOR1:
-      ncplane_set_fg_rgb(nc, 0x00, 0xff, 0xd7); break;
+      ncplane_set_fg_rgb8(nc, 0x00, 0xff, 0xd7); break;
     case PART_COLOR2:
-      ncplane_set_fg_rgb(nc, 0x00, 0xff, 0xff); break;
+      ncplane_set_fg_rgb8(nc, 0x00, 0xff, 0xff); break;
     case PART_COLOR3:
-      ncplane_set_fg_rgb(nc, 0x00, 0xaf, 0x87); break;
+      ncplane_set_fg_rgb8(nc, 0x00, 0xaf, 0x87); break;
     case FORMBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 0xaf, 0xaf, 0x87); break;
+      ncplane_set_fg_rgb8(nc, 0xaf, 0xaf, 0x87); break;
     case FORMTEXT_COLOR:
-      ncplane_set_fg_rgb(nc, 0x00, 0xd7, 0xaf); break;
+      ncplane_set_fg_rgb8(nc, 0x00, 0xd7, 0xaf); break;
     case INPUT_COLOR:
-      ncplane_set_fg_rgb(nc, 0x00, 0xd7, 0x5f); break;
+      ncplane_set_fg_rgb8(nc, 0x00, 0xd7, 0x5f); break;
     case MOUNT_COLOR0:
-      ncplane_set_fg_rgb(nc, 0xd0, 0xd0, 0xd0); break;
+      ncplane_set_fg_rgb8(nc, 0xd0, 0xd0, 0xd0); break;
     case MOUNT_COLOR1:
-      ncplane_set_fg_rgb(nc, 0xbc, 0xbc, 0xbc); break;
+      ncplane_set_fg_rgb8(nc, 0xbc, 0xbc, 0xbc); break;
     case MOUNT_COLOR2:
-      ncplane_set_fg_rgb(nc, 0xa8, 0xa8, 0xa8); break;
+      ncplane_set_fg_rgb8(nc, 0xa8, 0xa8, 0xa8); break;
     case MOUNT_COLOR3:
-      ncplane_set_fg_rgb(nc, 0x94, 0x94, 0x94); break;
+      ncplane_set_fg_rgb8(nc, 0x94, 0x94, 0x94); break;
     case TARGET_COLOR0:      // Targeted filesystems
-      ncplane_set_fg_rgb(nc, 0xaf, 0xff, 0x87); break;
+      ncplane_set_fg_rgb8(nc, 0xaf, 0xff, 0x87); break;
     case TARGET_COLOR1:
-      ncplane_set_fg_rgb(nc, 0x5f, 0xd7, 0xf5); break;
+      ncplane_set_fg_rgb8(nc, 0x5f, 0xd7, 0xf5); break;
     case TARGET_COLOR2:
-      ncplane_set_fg_rgb(nc, 0x87, 0xd7, 0x87); break;
+      ncplane_set_fg_rgb8(nc, 0x87, 0xd7, 0x87); break;
     case TARGET_COLOR3:
-      ncplane_set_fg_rgb(nc, 0x87, 0xff, 0xaf); break;
+      ncplane_set_fg_rgb8(nc, 0x87, 0xff, 0xaf); break;
     case FUCKED_COLOR:      // Things that warrant attention
-      ncplane_set_fg_rgb(nc, 95, 0, 0); break;
+      ncplane_set_fg_rgb8(nc, 95, 0, 0); break;
     case SPLASHBORDER_COLOR:
-      ncplane_set_fg_rgb(nc, 95, 95, 215); break;
+      ncplane_set_fg_rgb8(nc, 95, 95, 215); break;
     case SPLASHTEXT_COLOR:
-      ncplane_set_fg_rgb(nc, 95, 95, 255); break;
+      ncplane_set_fg_rgb8(nc, 95, 95, 255); break;
     case BLACK_COLOR:
-      ncplane_set_fg_rgb(nc, 254, 0, 255); break;
+      ncplane_set_fg_rgb8(nc, 254, 0, 255); break;
     case GREEN_COLOR:
-      ncplane_set_fg_rgb(nc, 95, 255, 215); break;
+      ncplane_set_fg_rgb8(nc, 95, 255, 215); break;
     default:
-      ncplane_set_fg_rgb(nc, 255, 255, 255);
+      ncplane_set_fg_rgb8(nc, 255, 255, 255);
       break;
   }
 }
@@ -685,8 +685,8 @@ draw_main_window(struct ncplane* n){
   int rows, cols, x, y;
   char buf[BUFSIZ];
 
-  ncplane_set_bg_rgb(n, 0xa0, 0xa0, 0xa0);
-  ncplane_set_fg_rgb(n, 95, 0, 175);
+  ncplane_set_bg_rgb8(n, 0xa0, 0xa0, 0xa0);
+  ncplane_set_fg_rgb8(n, 95, 0, 175);
   snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE, VERSION, count_adapters - 1);
   ncplane_dim_yx(n, &rows, &cols);
   cwattrset(n, HEADER_COLOR);
@@ -797,7 +797,7 @@ new_display_panel(struct ncplane* nc, struct panel_state* ps,
   }else{
     yabove += y - (rows + ybelow + yabove);
   }
-  if((ps->p = ncplane_new(NC, rows + 2, cols, yabove, 0, NULL)) == NULL){
+  if((ps->p = ncplane_new(notcurses_stdplane(NC), rows + 2, cols, yabove, 0, NULL, NULL)) == NULL){
     locked_diag("Couldn't create subpanel, uh-oh");
     return -1;
   }
@@ -1814,7 +1814,7 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
   assert(ps);
   int ncols;
   ncplane_dim_yx(n, NULL, &ncols);
-  ps->p = ncplane_new(NC, y + 3, cols, linesz - (y + 2), ncols - cols, NULL);
+  ps->p = ncplane_new(notcurses_stdplane(NC), y + 3, cols, linesz - (y + 2), ncols - cols, NULL, NULL);
   assert(ps->p);
   cwbkgd(ps->p);
   cwattrset(ps->p, FORMBORDER_COLOR);
@@ -1873,7 +1873,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
     return;
   }
   fs->mcb = fxn;
-  if((fs->p = ncplane_new(NC, rows, cols, FORM_Y_OFFSET, x - cols, NULL)) == NULL){
+  if((fs->p = ncplane_new(notcurses_stdplane(NC), rows, cols, FORM_Y_OFFSET, x - cols, NULL, NULL)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -1952,7 +1952,7 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
     return;
   }
   fs->mcb = fxn;
-  fs->p = ncplane_new(NC, rows, cols, FORM_Y_OFFSET, x - cols, NULL);
+  fs->p = ncplane_new(notcurses_stdplane(NC), rows, cols, FORM_Y_OFFSET, x - cols, NULL, NULL);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -2030,7 +2030,7 @@ void raise_form(const char* str, void (*fxn)(const char*),
   if((fs = create_form(str, fxn, FORM_SELECT, 0)) == NULL){
     return;
   }
-  fs->p = ncplane_new(NC, rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4, NULL);
+  fs->p = ncplane_new(notcurses_stdplane(NC), rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4, NULL, NULL);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -2097,7 +2097,7 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
   notcurses_term_dim_yx(NC, &y, &x);
   assert(x >= cols + 3);
   assert(y >= 3);
-  fs->p = ncplane_new(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3, NULL);
+  fs->p = ncplane_new(notcurses_stdplane(NC), 3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3, NULL, NULL);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -5873,7 +5873,7 @@ static void raise_info_form(const char *str, const char *text){
   // factor of 2...FIXME
   lineguess = 2; // yuck
   lineguess += strlen(text) / (x - 2) + 1;
-  fs->p = ncplane_new(NC, 3, cols + START_COL * 2, FORM_Y_OFFSET + lineguess, x - cols - 3, NULL);
+  fs->p = ncplane_new(notcurses_stdplane(NC), 3, cols + START_COL * 2, FORM_Y_OFFSET + lineguess, x - cols - 3, NULL, NULL);
   if(fs->p == NULL){
     locked_diag("Couldn't create plane, uh-oh");
     free_form(fs);
@@ -5952,7 +5952,7 @@ int main(int argc, char * const *argv){
   }
   int ydim, xdim;
   notcurses_stddim_yx(NC, &ydim, &xdim);
-  struct ncplane* n = ncplane_new(NC, ydim - 1, xdim, 0, 0, NULL);
+  struct ncplane* n = ncplane_new(notcurses_stdplane(NC), ydim - 1, xdim, 0, 0, NULL, NULL);
   if(n == NULL){
     notcurses_stop(NC);
     return EXIT_FAILURE;
