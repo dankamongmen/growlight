@@ -1514,7 +1514,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
 
 static int
 redraw_adapter(struct nctablet* t, bool drawfromtop){
-  struct ncplane* n = nctablet_ncplane(t);
+  struct ncplane* n = nctablet_plane(t);
   const adapterstate *as = nctablet_userptr(t);
   //ncplane_erase(n);
 //fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
