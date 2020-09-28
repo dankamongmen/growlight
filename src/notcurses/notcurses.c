@@ -732,6 +732,8 @@ device_lines(int expa, const blockobj* bo){
   int l = 0;
 
   if(expa != EXPANSION_NONE){
+    assert(bo);
+    assert(bo->d);
     if(bo->d->size){
       l += 2;
     }
@@ -1478,7 +1480,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
         line = 1;
       }else{
         abovetop = -(line - 1);
-        while(line + device_lines(as->expansion, cur) < 0){
+        while(cur && (line + device_lines(as->expansion, cur) < 0)){
           line += device_lines(as->expansion, cur);
           cur = cur->next;
         }
@@ -1517,12 +1519,10 @@ redraw_adapter(struct nctablet* t, bool drawfromtop){
   struct ncplane* n = nctablet_plane(t);
   const adapterstate *as = nctablet_userptr(t);
   //ncplane_erase(n);
-//fprintf(stderr, "ADAPTER-redraw %s begx/y %d/%d -> maxx/y %d/%d ASS %p\n", as->c->name, begx, begy, maxx, maxy, as);
   int lines = print_adapter_devs(n, as, drawfromtop);
   if(lines < 0){
     return -1;
   }
-//fprintf(stderr, "[%s] drew %d/%d drawfromtop: %d\n", as->c->name, lines, maxy, drawfromtop);
   return lines;
 }
 
