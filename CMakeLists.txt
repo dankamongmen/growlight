@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(growlight VERSION 1.2.12
+project(growlight VERSION 1.2.13
   DESCRIPTION "Block device and filesystem manager"
   HOMEPAGE_URL "https://nick-black.com/dankwiki/index.php/Growlight"
   LANGUAGES C)
@@ -23,7 +23,7 @@ add_compile_options(-Wall -Wextra -W -Wshadow -Wformat -fexceptions)
 find_package(PkgConfig REQUIRED)
 find_package(Threads)
 set_package_properties(Threads PROPERTIES TYPE REQUIRED)
-find_package(Notcurses 1.7.4)
+find_package(Notcurses 1.7.5)
 set_package_properties(Notcurses PROPERTIES TYPE REQUIRED)
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
 pkg_check_modules(LIBATASMART REQUIRED libatasmart>=0.19)
