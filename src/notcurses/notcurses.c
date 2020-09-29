@@ -356,11 +356,11 @@ static void
 compat_set_fg_all(struct ncplane* nc, int attr){
   switch(attr){
     case SUBDISPLAY_ATTR:
-      ncplane_styles_set(nc, BOLD);
+      ncplane_set_styles(nc, BOLD);
       compat_set_fg(nc, SUBDISPLAY_COLOR);
       break;
     case SUBDISPLAY_INVAL_ATTR:
-      ncplane_styles_set(nc, 0);
+      ncplane_set_styles(nc, 0);
       compat_set_fg(nc, SUBDISPLAY_COLOR);
       break;
     default:
@@ -617,21 +617,21 @@ bevel_all(struct ncplane* nc){
 
 static int
 cwattrset(struct ncplane* n, int style){
-  ncplane_styles_set(n, style >> 8);
+  ncplane_set_styles(n, style >> 8);
   compat_set_fg(n, style & 0xff);
   return 0;
 }
 
 static int
 cwattroff(struct ncplane* n, int style){
-  ncplane_styles_off(n, style >> 8);
+  ncplane_off_styles(n, style >> 8);
   compat_set_fg(n, style & 0xff);
   return 0;
 }
 
 static int
 cwattron(struct ncplane* n, int style){
-  ncplane_styles_on(n, style >> 8u);
+  ncplane_on_styles(n, style >> 8u);
   compat_set_fg(n, style & 0xffu);
   return 0;
 }
@@ -2069,13 +2069,13 @@ form_string_options(struct form_state* fs){
     return;
   }
   ncplane_dim_yx(n, NULL, &cols);
-  ncplane_styles_set(n, BOLD);
+  ncplane_set_styles(n, BOLD);
   compat_set_fg(n, FORMTEXT_COLOR);
   cmvwhline(n, 1, 1, " ", cols - 2);
   cmvwprintw(n, 1, START_COL, "%-*.*s: ", fs->longop, fs->longop, fs->inp.prompt);
   compat_set_fg(n, INPUT_COLOR);
   cwprintw(n, "%.*s", cols - fs->longop - 2 - 2, fs->inp.buffer);
-  ncplane_styles_off(n, BOLD);
+  ncplane_off_styles(n, BOLD);
 }
 
 void raise_str_form(const char* str, void (*fxn)(const char*),
@@ -2985,21 +2985,21 @@ detail_fs(struct ncplane* hw, const device* d, int row){
   if(d->mnttype){
     char buf[BPREFIXSTRLEN + 1];
 
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     const char *size = d->mntsize ? bprefix(d->mntsize, 1, buf, 1) : "";
     cmvwprintw(hw, row, START_COL, "%*s%c ",
         BPREFIXFMT(size), d->mntsize ? 'B' : ' ');
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, "%s%s", d->label ? "" : "unlabeled ", d->mnttype);
     if(d->label){
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       cwprintw(hw, " %lc%s%lc", L'“', d->label, L'”');
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
     }
     cwprintw(hw, "%s", d->mnt.count ? " at " : "");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     cwprintw(hw, "%s", d->mnt.count ? d->mnt.list[0] : "");
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
   }
 }
 
@@ -3037,19 +3037,19 @@ update_details(struct ncplane* hw){
     cmvwprintw(hw, 2, START_COL, "%-*.*s", cols - 2, cols - 2, "No details available");
   }else{
     cmvwprintw(hw, 2, START_COL, "Firmware: ");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     ncplane_putstr(hw, c->fwver ? c->fwver : "Unknown");
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     ncplane_putstr(hw, " BIOS: ");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     ncplane_putstr(hw, c->biosver ? c->biosver : "Unknown");
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     ncplane_putstr(hw, " Load: ");
     qprefix(c->demand, 1, buf, 1);
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     ncplane_putstr(hw, buf);
     ncplane_putstr(hw, "bps");
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
   }
   if((b = get_selected_blockobj()) == NULL){
     return 0;
@@ -3060,14 +3060,14 @@ update_details(struct ncplane* hw){
     const char *sn = d->blkdev.serial;
 
     cmvwprintw(hw, 3, START_COL, "%s: ", d->name);
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     ncplane_putstr(hw, d->model ? d->model : "n/a");
     ncplane_putstr(hw, d->revision ? d->revision : "");
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf, 1));
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     ncplane_putstr(hw, sn ? sn : "n/a");
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     if(cols - curcol > 13){
       cwprintw(hw, " WC%lc WRV%lc RO%lc",
           d->blkdev.wcache ? L'+' : L'-',
@@ -3077,26 +3077,26 @@ update_details(struct ncplane* hw){
     }
     assert(d->physsec <= 4096);
     cmvwprintw(hw, 4, START_COL, "Sectors: ");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     cwprintw(hw, "%ju ", d->size / (d->logsec ? d->logsec : 1));
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, "(");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     cwprintw(hw, "%uB ", d->logsec);
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, "logical / ");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     cwprintw(hw, "%uB ", d->physsec);
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, "physical) %s",
     transport_str(d->blkdev.transport));
     if(transport_bw(d->blkdev.transport)){
       uintmax_t transbw = transport_bw(d->blkdev.transport);
       cwprintw(hw, " (");
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       // FIXME throws -Wformat-truncation on gcc9
       cwprintw(hw, "%sbps", qprefix(transbw, 1, buf, 1));
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
       cwprintw(hw, ")");
     }
   }else{
@@ -3107,49 +3107,49 @@ update_details(struct ncplane* hw){
           d->roflag ? L'+' : L'-');
     if(d->layout == LAYOUT_MDADM){
       cwprintw(hw, " Stride: ");
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       if(d->mddev.stride == 0){
         ncplane_putstr(hw, "n/a");
       }else{
         cwprintw(hw, "%sB", bprefix(d->mddev.stride, 1, buf, 1));
       }
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
       cwprintw(hw, " SWidth: ");
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       if(d->mddev.swidth == 0){
         ncplane_putstr(hw, "n/a");
       }else{
         cwprintw(hw, "%u", d->mddev.swidth);
       }
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
     }
     assert(d->physsec <= 4096);
     cmvwprintw(hw, 4, START_COL, "Sectors: ");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     cwprintw(hw, "%ju ", d->size / (d->logsec ? d->logsec : 1));
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, "(");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     cwprintw(hw, "%uB ", d->logsec);
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, "logical / ");
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     cwprintw(hw, "%uB ", d->physsec);
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, "physical)");
   }
   cmvwprintw(hw, 5, START_COL, "Partitioning: ");
-  ncplane_styles_off(hw, BOLD);
+  ncplane_off_styles(hw, BOLD);
   pttype = (d->layout == LAYOUT_NONE ? d->blkdev.pttable ? d->blkdev.pttable : "none" :
       d->layout == LAYOUT_MDADM ? d->mddev.pttable ? d->mddev.pttable : "none" :
       d->layout == LAYOUT_DM ? d->dmdev.pttable ? d->dmdev.pttable : "none" :
       "n/a");
   cwprintw(hw, "%s", pttype);
-  ncplane_styles_on(hw, BOLD);
+  ncplane_on_styles(hw, BOLD);
   ncplane_putstr(hw, " I/O scheduler: ");
-  ncplane_styles_off(hw, BOLD);
+  ncplane_off_styles(hw, BOLD);
   ncplane_putstr(hw, d->sched ? d->sched : "custom");
-  ncplane_styles_on(hw, BOLD);
+  ncplane_on_styles(hw, BOLD);
   if(blockobj_unloadedp(b)){
     cmvwprintw(hw, 6, START_COL, "Media is not loaded");
     return 0;
@@ -3158,9 +3158,9 @@ update_details(struct ncplane* hw){
     char ubuf[BPREFIXSTRLEN + 1];
 
     bprefix(d->size, 1, ubuf, 1);
-    ncplane_styles_off(hw, BOLD);
+    ncplane_off_styles(hw, BOLD);
     cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(ubuf));
-    ncplane_styles_on(hw, BOLD);
+    ncplane_on_styles(hw, BOLD);
     cwprintw(hw, "%s", "unpartitioned media");
     detail_fs(hw, b->d, 7);
     return 0;
@@ -3174,26 +3174,26 @@ update_details(struct ncplane* hw){
       bprefix(b->zone->p->partdev.alignment, 1, align, 1);
       // FIXME limit length!
       bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1, zbuf, 1);
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
       cwprintw(hw, "P%lc%lc ", subscript((b->zone->p->partdev.pnumber % 100 / 10)),
           subscript((b->zone->p->partdev.pnumber % 10)));
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       cwprintw(hw, "%ju", b->zone->fsector);
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
       cwprintw(hw, "→");
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       cwprintw(hw, "%ju ", b->zone->lsector);
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
       ncplane_putstr(hw, b->zone->p->name);
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       if(b->zone->p->partdev.pname){
         cwprintw(hw, " “%ls” ", b->zone->p->partdev.pname);
       }else{
         cwprintw(hw, " (%s) ", "unnamed");
       }
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
                         if(curcol <= cols - 2 - 4){
         cwprintw(hw, "%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
       }
@@ -3205,17 +3205,17 @@ update_details(struct ncplane* hw){
       // FIXME print alignment for unpartitioned space as well,
       // but not until we implement zones in core (bug 252)
       // or we'll need recreate alignment() etc here
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1);
       cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
-      ncplane_styles_on(hw, BOLD);
-      ncplane_styles_off(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       cwprintw(hw, "%ju", b->zone->fsector);
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
       cwprintw(hw, "→");
-      ncplane_styles_off(hw, BOLD);
+      ncplane_off_styles(hw, BOLD);
       cwprintw(hw, "%ju ", b->zone->lsector);
-      ncplane_styles_on(hw, BOLD);
+      ncplane_on_styles(hw, BOLD);
       cwprintw(hw, "%s ", b->zone->rep == REP_METADATA ?
           "partition table metadata" : "unpartitioned space");
     }
