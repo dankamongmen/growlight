@@ -1100,27 +1100,25 @@ case LAYOUT_NONE:
       cwattrset(n, VIRTUAL_COLOR);
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
-    if(line >= drawfromtop){
-      if(!bo->d->size || line + 2 < rows){
-        if(bo->d->size){
-          line += 2;
-        }else if(selected){
-          cwattron(n, REVERSE);
-        }
-        qprefix(bo->d->size, 1, buf, 0);
-        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
-          bo->d->name,
-          bo->d->model ? bo->d->model : "n/a",
-          bo->d->revision ? bo->d->revision : "n/a",
-          PREFIXFMT(buf),
-          bo->d->physsec,
-          bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
-          bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
-          bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
-          rx, rx, "");
-        if(bo->d->size){
-          line -= 2;
-        }
+    if(!bo->d->size || line + 2 < rows){
+      if(bo->d->size){
+        line += 2;
+      }else if(selected){
+        cwattron(n, REVERSE);
+      }
+      qprefix(bo->d->size, 1, buf, 0);
+      cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        bo->d->name,
+        bo->d->model ? bo->d->model : "n/a",
+        bo->d->revision ? bo->d->revision : "n/a",
+        PREFIXFMT(buf),
+        bo->d->physsec,
+        bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
+        bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
+        bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
+        rx, rx, "");
+      if(bo->d->size){
+        line -= 2;
       }
     }
     break;
