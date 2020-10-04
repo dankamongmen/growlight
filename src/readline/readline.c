@@ -2201,12 +2201,14 @@ int main(int argc,char * const *argv){
   }
   if(tty_ui()){
     growlight_stop();
+    ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }
 // "default foreground color" according to http://bash-hackers.org/wiki/doku.php/scripting/terminalcodes
 // but not defined in ncurses.h -- likely not fully portable :( FIXME
   use_terminfo_color(9,0);
   if(growlight_stop()){
+    ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }
   if(ncdirect_stop(ncd)){
