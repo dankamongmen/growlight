@@ -600,19 +600,33 @@ selected_mkfs_safe_p(void){
 }
 
 static int
-bevel(struct ncplane* nc, int rows, int cols){
+bevel(struct ncplane* nc, int rows, int cols, bool drawtop, bool drawbot){
   if(rows <= 0 || cols <= 0){
     return -1;
   }
+  unsigned ctlword = 0 ;
+  if(drawtop == false){
+    ctlword |= NCBOXMASK_TOP;
+    ctlword |= (2u << NCBOXCORNER_SHIFT);
+    ncplane_putwstr_yx(nc, 0, 0, L"│");
+    ncplane_putwstr_yx(nc, 0, cols - 1, L"│");
+  }
+  if(drawbot == false){
+    ctlword |= NCBOXMASK_BOTTOM;
+    ctlword |= (2u << NCBOXCORNER_SHIFT);
+    ncplane_putwstr_yx(nc, rows - 1, 0, L"│");
+    ncplane_putwstr_yx(nc, rows - 1, cols - 1, L"│");
+  }
   ncplane_cursor_move_yx(nc, 0, 0);
-  return ncplane_rounded_box_sized(nc, 0, ncplane_channels(nc), rows, cols, 0);
+  return ncplane_rounded_box_sized(nc, 0, ncplane_channels(nc),
+                                   rows, cols, ctlword);
 }
 
 static int
 bevel_all(struct ncplane* nc){
   int rows, cols;
   ncplane_dim_yx(nc, &rows, &cols);
-  return bevel(nc, rows, cols);
+  return bevel(nc, rows, cols, true, true);
 }
 
 static int
@@ -1086,27 +1100,25 @@ case LAYOUT_NONE:
       cwattrset(n, VIRTUAL_COLOR);
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
-    if(line + !!drawfromtop >= 1){
-      if(!bo->d->size || line + 2 < rows){
-        if(bo->d->size){
-          line += 2;
-        }else if(selected){
-          cwattron(n, REVERSE);
-        }
-        qprefix(bo->d->size, 1, buf, 0);
-        cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
-          bo->d->name,
-          bo->d->model ? bo->d->model : "n/a",
-          bo->d->revision ? bo->d->revision : "n/a",
-          PREFIXFMT(buf),
-          bo->d->physsec,
-          bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
-          bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
-          bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
-          rx, rx, "");
-        if(bo->d->size){
-          line -= 2;
-        }
+    if(!bo->d->size || line + 2 < rows){
+      if(bo->d->size){
+        line += 2;
+      }else if(selected){
+        cwattron(n, REVERSE);
+      }
+      qprefix(bo->d->size, 1, buf, 0);
+      cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
+        bo->d->name,
+        bo->d->model ? bo->d->model : "n/a",
+        bo->d->revision ? bo->d->revision : "n/a",
+        PREFIXFMT(buf),
+        bo->d->physsec,
+        bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
+        bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
+        bo->d->blkdev.realdev ? transport_str(bo->d->blkdev.transport) : "n/a",
+        rx, rx, "");
+      if(bo->d->size){
+        line -= 2;
       }
     }
     break;
@@ -1121,7 +1133,7 @@ case LAYOUT_MDADM:
       co = MDADM_COLOR;
     }
     cwattrset(n, co);
-    if(line + !!drawfromtop >= 1){
+    if(line >= drawfromtop){
       if(!bo->d->size || line + 2 <= rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
@@ -1149,7 +1161,7 @@ case LAYOUT_MDADM:
 case LAYOUT_DM:
     strncpy(rolestr, "dm", sizeof(rolestr));
     cwattrset(n, MDADM_COLOR);
-    if(line + !!drawfromtop >= 1){
+    if(line >= drawfromtop){
       if(!bo->d->size || line + 2 < rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
@@ -1178,7 +1190,7 @@ case LAYOUT_PARTITION:
 case LAYOUT_ZPOOL:
     strncpy(rolestr, "zpool", sizeof(rolestr));
     cwattrset(n, ZPOOL_COLOR);
-    if(line + !!drawfromtop >= 1){
+    if(line >= drawfromtop){
       if(!bo->d->size || line + 2 < rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
@@ -1210,13 +1222,13 @@ case LAYOUT_ZPOOL:
   cwattrset(n, BOLD|SUBDISPLAY_COLOR);
 
   // Box-diagram (3-line) mode. Print the name on the first line.
-  if(line + !!drawfromtop >= 1){
+  if(line >= drawfromtop){
     cmvwprintw(n, line, START_COL, "%11.11s", bo->d->name);
   }
 
   // Print summary below device name, in the same color, but prefix it
   // with the single-character SMART status when applicable.
-  if(line + 1 < rows/* - !drawfromtop*/ && line + !!drawfromtop + 1 >= 1){
+  if(line + 1 < rows/* - !drawfromtop*/ && line + 1 >= drawfromtop){
     wchar_t rep = L' ';
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
@@ -1240,7 +1252,7 @@ case LAYOUT_ZPOOL:
     }
   }
   // ...and finally the temperature/vfailure status, and utilization...
-  if((line + 2 <= rows/* - !drawfromtop*/) && (line + !!drawfromtop + 2 >= 1)){
+  if((line + 2 <= rows/* - !drawfromtop*/) && (line + 2 >= drawfromtop)){
     int sumline = line + 2;
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
@@ -1299,7 +1311,7 @@ case LAYOUT_ZPOOL:
   if(selected){
     cwattron(n, REVERSE);
   }
-  if(line >= 1){
+  if(line >= drawfromtop){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╭");
     cmvwhline(n, line, START_COL + 2 + 10, "─", cols - START_COL * 2 - 2 - 10);
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"╮");
@@ -1308,7 +1320,7 @@ case LAYOUT_ZPOOL:
     return 1;
   }
 
-  if(line >= 1){
+  if(line >= drawfromtop){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"│");
     print_blockbar(n, bo, line, START_COL + 10 + 2,
           cols - START_COL - 1, selected);
@@ -1318,13 +1330,13 @@ case LAYOUT_ZPOOL:
   if(selected){
     cwattron(n, REVERSE);
   }
-  if(line >= 1){
+  if(line >= drawfromtop){
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"│");
   }
   if(++line >= rows){
     return 2;
   }
-  if(line >= 1){
+  if(line >= drawfromtop){
     int c = cols - 80;
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╰");
     ncplane_putwstr_yx(n, line, START_COL + 12, L"┤");
@@ -1338,11 +1350,9 @@ case LAYOUT_ZPOOL:
   return 3;
 }
 
-// Abovetop: lines hidden at the top of the screen
-// Belowend: lines hidden at the bottom of the screen
 static void
-adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
-            int belowend, int rows){
+adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
+            bool drawbot, int rows){
 //fprintf(stderr, "above: %d below: %d rows: %d\n", abovetop, belowend, rows);
   int current = as == get_current_adapter();
   int bcolor, hcolor, cols;
@@ -1361,9 +1371,9 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
   }
   cwattrset(nc, attrs | bcolor);
 //fprintf(stderr, "ABOVETOP: %d BELOWEND: %d name: %s\n", abovetop, belowend, as->c->name);
-  bevel(nc, rows, cols);
+  bevel(nc, rows, cols, drawtop, drawbot);
   ncplane_set_bg_default(nc);
-  if(abovetop == 0){
+  if(drawtop){
     if(current){
       cwattron(nc, BOLD);
     }else{
@@ -1399,7 +1409,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
     ncplane_putwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
     cwattron(nc, attrs);
   }
-  if(belowend == 0){
+  if(drawbot){
     if(as->c->bus == BUS_PCIe){
       compat_set_fg(nc, bcolor);
       if(current){
@@ -1429,6 +1439,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, int abovetop,
 // drawfromtop: direction in which we draw. if true, from the top.
 static int
 print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
+  bool drawtop = true, drawbottom = true;
   // If the interface is down, we don't lead with the summary line
   const blockobj *cur;
   int printed = 0;
@@ -1440,14 +1451,14 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
     return 0;
   }
   // First, print the selected device (if there is one), and those above
-  cur = as->selected;
-  line = as->selline;
   int rows, cols;
   ncplane_dim_yx(n, &rows, &cols);
 //fprintf(stderr, "START WITH %p at %ld of %d\n", cur, line, rows);
   --rows;
   --cols;
-  while(cur && line + (long)device_lines(as->expansion, cur) >= drawfromtop){
+  cur = as->selected;
+  line = as->selline;
+  while(cur && line >= drawfromtop){
     p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
     printed += p;
     if( (cur = cur->prev) ){
@@ -1455,7 +1466,6 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
     }
 //fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, drawfromtop, line, rows);
   }
-  int abovetop = 0;
   if(as->selected){
     line = as->selline + (long)device_lines(as->expansion, as->selected);
     cur = as->selected->next;
@@ -1465,30 +1475,28 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
     // if we're moving up. if so, run through all devices to get a total length,
     // and then move forward until we find the first visible one. begin
     // printing, in this case, at line 0. you've been clipped!
-    line = 1;
-    if(drawfromtop){
-      int totallines = 0;
-      const blockobj* iter = cur;
-      line = rows - 1;
-      while(iter){
-        totallines += device_lines(as->expansion, iter);
-        line -= device_lines(as->expansion, iter);
-        iter = iter->next;
-      }
+    line = drawfromtop;
+    int totallines = 0;
+    const blockobj* iter = cur;
+    line = rows - 1;
+    while(iter){
+      totallines += device_lines(as->expansion, iter);
+      line -= device_lines(as->expansion, iter);
+      iter = iter->next;
+    }
 //fprintf(stderr, "total lines: %d line: %ld rows: %d\n", totallines, line, rows);
-      if(line > 0){ // they'll all fit, huzzah
-        line = 1;
-      }else{
-        abovetop = -(line - 1);
-        while(cur && (line + device_lines(as->expansion, cur) < 0)){
-          line += device_lines(as->expansion, cur);
-          cur = cur->next;
-        }
+    if(line > 0){ // they'll all fit, huzzah
+      line = 1;
+    }else{
+      drawtop = false;
+      while(cur && (line + device_lines(as->expansion, cur) < 0)){
+        line += device_lines(as->expansion, cur);
+        cur = cur->next;
       }
     }
   }
-//fprintf(stderr, "SELECTED CUR FORWARD %p %d (%ld/%d)\n", cur, drawfromtop, line, rows);
-  while(cur && line < rows){
+//fprintf(stderr, "SELECTED CUR FORWARD %p %d (line %ld/%d rows)\n", cur, drawfromtop, line, rows);
+  while(cur && line < rows - !drawfromtop){
     p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
 //fprintf(stderr, "ITERATING %d %p (%ld < %d) %d\n", p, cur, line, rows, drawfromtop);
     printed += p;
@@ -1499,18 +1507,14 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
     cur = cur->next;
   }
 //fprintf(stderr, "BASEPRINTED %d/%d through %ld for %s\n", printed, rows, line, as->c->name);
-  printed += 1; // top+bottom borders
-  if(!cur && printed < rows){
-    ++printed;
-  }
 //fprintf(stderr, "PRINTED %d/%d through %ld for %s\n", printed, rows, line, as->c->name);
-  int belowend = 0;
-  if(line >= rows){
-    belowend = line - rows + 1;
-    line = rows;
+  if(line > rows - !drawfromtop){
+    drawbottom = false;
+    line = rows - !drawfromtop;
   }
-  adapter_box(as, n, abovetop, !drawfromtop * belowend, printed);
-  assert(printed <= rows);
+  printed += drawtop + drawbottom; // top+bottom borders
+  adapter_box(as, n, drawtop, drawbottom, printed);
+  //assert(printed <= rows);
   return printed;
 }
 
