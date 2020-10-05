@@ -8,7 +8,9 @@ steps:
   image: dankamongmen/unstable_builder:2020-09-29a
   commands:
     - export LANG=en_US.UTF-8
+    - apt-get -y update
     - apt-get -y install nettle-dev
+    - apt-get -y upgrade
     - mkdir build
     - cd build
     - cmake -DUSE_LIBZFS=off ..
