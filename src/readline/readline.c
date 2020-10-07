@@ -2190,16 +2190,19 @@ int main(int argc, char * const *argv){
   if(growlight_init(argc, argv, &ui, NULL)){
     return EXIT_FAILURE;
   }
-  rl_readline_name = PACKAGE;
-  rl_attempted_completion_function = growlight_completion;
-  rl_prep_terminal(1); // 1 == read 8-bit input
   if(isatty(STDOUT_FILENO)){
-    if((ncd = ncdirect_init(NULL, NULL, 0)) == NULL){
+    const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE |
+                           NCDIRECT_OPTION_INHIBIT_CBREAK;
+    if((ncd = ncdirect_init(NULL, NULL, flags)) == NULL){
       fprintf(stderr, "Couldn't set up notcurses\n");
     }
   }
+  rl_readline_name = PACKAGE;
+  rl_attempted_completion_function = growlight_completion;
+  rl_prep_terminal(1); // 1 == read 8-bit input
   if(tty_ui()){
     growlight_stop();
+    rl_deprep_terminal();
     ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }
@@ -2207,9 +2210,11 @@ int main(int argc, char * const *argv){
   // but not defined in ncurses.h -- likely not fully portable :( FIXME
   use_terminfo_color(9, 0);
   if(growlight_stop()){
+    rl_deprep_terminal();
     ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }
+  rl_deprep_terminal();
   if(ncdirect_stop(ncd)){
     fprintf(stderr, "Couldn't reset terminal\n");
     return EXIT_FAILURE;
