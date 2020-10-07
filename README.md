@@ -12,16 +12,17 @@ https://nick-black.com/dankwiki/index.php/Growlight
 
 Dependencies:
 
- - notcurses 1.7.5+
- - libudev 175+
+ - libatasmart 0.19+
  - libblkid 2.20.1
+ - libcap 2.24+
+ - libcryptsetup 2.0.2+
+ - libdevmapper 1.02.74+
+ - libnettle 3.5.1+
+ - libnotcurses 1.7.5+
  - libpci 3.1.9+
  - libpciaccess 0.13.1+
- - libdevmapper 1.02.74+
- - libatasmart 0.19+
- - libcryptsetup 2.0.2+
- - libnettle 3.5.1+
- - libcap 2.24+
+ - libudev 175+
+ - libz 1.2.11+
  - mkswap(8) from util-linux
  - badblocks(8), mkfs.ext4(8), mkfs.ext3(8), mkfs.ext2(8) from e2fsprogs
 

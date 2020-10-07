@@ -36,6 +36,7 @@ pkg_check_modules(LIBPCI REQUIRED libpci>=3.1.9)
 pkg_check_modules(LIBPCIACCESS REQUIRED pciaccess>=0.13.1)
 pkg_check_modules(LIBREADLINE REQUIRED readline)
 pkg_check_modules(LIBUDEV REQUIRED libudev>=175)
+pkg_check_modules(LIBZ REQUIRED zlib>=1.2.11)
 if(${USE_LIBZFS})
 pkg_check_modules(LIBZFS REQUIRED libzfs>=0.8)
 endif()
@@ -53,6 +54,7 @@ set(COMMON_INCLUDE_DIRS
   "${LIBPCI_INCLUDE_DIRS}"
   "${LIBPCIACCESS_INCLUDE_DIRS}"
   "${LIBUDEV_INCLUDE_DIRS}"
+  "${LIBZ_INCLUDE_DIRS}"
   "${LIBZFS_INCLUDE_DIRS}"
   "${Notcurses_INCLUDE_DIRS}"
 )
@@ -67,6 +69,7 @@ set(COMMON_LIBRARY_DIRS
   "${LIBPCI_LIBRARY_DIRS}"
   "${LIBPCIACCESS_LIBRARY_DIRS}"
   "${LIBUDEV_LIBRARY_DIRS}"
+  "${LIBZ_LIBRARY_DIRS}"
   "${LIBZFS_LIBRARY_DIRS}"
   "${Notcurses_LIBRARY_DIRS}"
 )
@@ -82,6 +85,7 @@ set(COMMON_LIBRARIES
   "${LIBPCIACCESS_LIBRARIES}"
   "${LIBREADLINE_LIBRARIES}"
   "${LIBUDEV_LIBRARIES}"
+  "${LIBZ_LIBRARIES}"
   "${LIBZFS_LIBRARIES}"
   "${Notcurses_LIBRARIES}"
   Threads::Threads
