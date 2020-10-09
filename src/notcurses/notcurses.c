@@ -1389,12 +1389,12 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
       char buf[PREFIXSTRLEN + 1], dbuf[PREFIXSTRLEN + 1];
 
       if(as->c->demand){
-        cwprintw(nc, " (%sbps to Southbridge, %sbps (%ju%%) demanded)",
+        cwprintw(nc, " (%sbps to chip, %sbps (%ju%%) demanded)",
           qprefix(as->c->bandwidth, 1, buf, 1),
           qprefix(as->c->demand, 1, dbuf, 1),
           as->c->demand * 100 / as->c->bandwidth);
       }else{
-        cwprintw(nc, " (%sbps to Southbridge)",
+        cwprintw(nc, " (%sbps to chip)",
           qprefix(as->c->bandwidth, 1, buf, 1));
       }
     }else if(as->c->bus != BUS_VIRTUAL && as->c->demand){
@@ -1420,11 +1420,11 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
       cmvwprintw(nc, rows - 1, 6, "[");
       compat_set_fg(nc, hcolor);
       if(as->c->pcie.lanes_neg == 0){
-        cwprintw(nc, "Southbridge device %04x:%02x.%02x.%x",
+        cwprintw(nc, "Onboard %04x:%02x.%02x.%x",
           as->c->pcie.domain, as->c->pcie.bus,
           as->c->pcie.dev, as->c->pcie.func);
       }else{
-        cwprintw(nc, "PCI Express device %04x:%02x.%02x.%x (x%u, gen %s)",
+        cwprintw(nc, "PCI Express %04x:%02x.%02x.%x (x%u, gen %s)",
             as->c->pcie.domain, as->c->pcie.bus,
             as->c->pcie.dev, as->c->pcie.func,
             as->c->pcie.lanes_neg, pcie_gen(as->c->pcie.gen));
