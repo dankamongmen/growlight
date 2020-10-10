@@ -1,6 +1,6 @@
 % growlight-readline(8)
 % nick black <nickblack@linux.com>
-% v1.2.13
+% v1.2.14
 
 # NAME
 
