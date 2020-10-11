@@ -5219,10 +5219,22 @@ handle_ncurses_input(struct ncplane* w){
   ncinput ni;
   int r;
 
+  // FIXME can we not just throw lock_ and unlock_ around the entire stanza?
   while((ch = notcurses_getc_blocking(NC, &ni)) != (char32_t)-1){
-    if(ch == 12){ // CTRL+L FIXME
+    if(ch == 'L' && ni.ctrl){
       lock_notcurses();
       notcurses_refresh(NC, NULL, NULL);
+      locked_diag("refreshed screen");
+      unlock_notcurses();
+      continue;
+    }
+    if(ch == NCKEY_RESIZE){
+      lock_notcurses();
+      struct ncplane *ncp = ncreel_plane(PR);
+      int dimy, dimx;
+      notcurses_refresh(NC, &dimy, &dimx);
+      ncplane_resize_simple(ncp, dimy - 1, dimx);
+      locked_diag("resized to %dx%d", dimx, dimy - 1);
       unlock_notcurses();
       continue;
     }
