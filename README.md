@@ -10,6 +10,10 @@ https://nick-black.com/dankwiki/index.php/Growlight
 
 [![Build Status](https://drone.dsscaw.com:4443/api/badges/dankamongmen/growlight/status.svg)](https://drone.dsscaw.com:4443/dankamongmen/growlight)
 
+<a href="https://repology.org/project/growlight/versions">
+ <img src="https://repology.org/badge/vertical-allrepos/growlight.svg" alt="Packaging status" align="right">
+</a>
+
 Dependencies:
 
  - libatasmart 0.19+
