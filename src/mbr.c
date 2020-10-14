@@ -46,14 +46,14 @@ int mbrsha1(device *d, int fd, void *buf){
 int zerombrp(const void *buf){
 	const void *z = "\x63\x9a\xc5\xcd\xf8\xa5\xcf\x32\x45\x97\x59\x32\xc6\xa4\x21\x54\x50\xa7\xb9\x8f";
 
-	return !memcmp(buf,z,20);
+	return !memcmp(buf, z, 20);
 }
 
 static inline int
-wipe_first_sector(device *d,size_t wipe,size_t wipeend){
+wipe_first_sector(device *d, size_t wipe, size_t wipeend){
 	static char buf[MBR_SIZE];
 	char dbuf[PATH_MAX];
-	int fd,pgsize;
+	int fd, pgsize;
 	void *map;
 
 	if((pgsize = getpagesize()) < 0){
@@ -61,35 +61,35 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 		return -1;
 	}
 	if(wipeend > sizeof(buf) || wipe >= wipeend){
-		diag("Can't wipe %zu/%zu/%zu\n",wipe,wipeend,sizeof(buf));
+		diag("Can't wipe %zu/%zu/%zu\n", wipe, wipeend, sizeof(buf));
 		return -1;
 	}
 	if(d->layout != LAYOUT_NONE){
 		diag("Will only wipe BIOS state for block devices\n");
 		return -1;
 	}
-	if(snprintf(dbuf,sizeof(dbuf),"/dev/%s",d->name) >= (int)sizeof(dbuf)){
-		diag("Bad device name: %s\n",d->name);
+	if(snprintf(dbuf, sizeof(dbuf), "/dev/%s", d->name) >= (int)sizeof(dbuf)){
+		diag("Bad device name: %s\n", d->name);
 		return -1;
 	}
-	if((fd = openat(devfd,d->name,O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
+	if((fd = openat(devfd, d->name, O_RDWR|O_CLOEXEC|O_DIRECT)) < 0){
 		int e = errno;
-		diag("Couldn't open /dev/%s (%s?)\n",d->name,strerror(errno));
+		diag("Couldn't open /dev/%s (%s?)\n", d->name, strerror(errno));
 		errno = e;
 		return -1;
 	}
-	map = mmap(NULL,pgsize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_LOCKED,fd,0);
+	map = mmap(NULL, pgsize, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_LOCKED, fd, 0);
 	if(map == MAP_FAILED){
 		int e = errno;
-		diag("Couldn't map %d from %d on %s (%s?)\n",pgsize,fd,dbuf,strerror(errno));
+		diag("Couldn't map %d from %d on %s (%s?)\n", pgsize, fd, dbuf, strerror(errno));
 		close(fd);
 		errno = e;
 		return -1;
 	}
-	memcpy((char *)map + wipe,buf,wipeend - wipe);
-	if(munmap(map,pgsize)){
+	memcpy((char *)map + wipe, buf, wipeend - wipe);
+	if(munmap(map, pgsize)){
 		int e = errno;
-		diag("Couldn't unmap %d from %d on %s (%s?)\n",pgsize,fd,dbuf,strerror(errno));
+		diag("Couldn't unmap %d from %d on %s (%s?)\n", pgsize, fd, dbuf, strerror(errno));
 		close(fd);
 		errno = e;
 		return -1;
@@ -102,7 +102,7 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 	}
 	if(close(fd)){
 		int e = errno;
-		diag("Couldn't close %s (%s?)\n",dbuf,strerror(errno));
+		diag("Couldn't close %s (%s?)\n", dbuf, strerror(errno));
 		errno = e;
 		return -1;
 	}
@@ -119,18 +119,18 @@ wipe_first_sector(device *d,size_t wipe,size_t wipeend){
 }
 
 int wipe_biosboot(device *d){
-	return wipe_first_sector(d,0,MBR_CODE_SIZE);
+	return wipe_first_sector(d, 0, MBR_CODE_SIZE);
 }
 
 int wipe_dosmbr(device *d){
-	if(wipe_first_sector(d,0,MBR_SIZE)){
+	if(wipe_first_sector(d, 0, MBR_SIZE)){
 		return -1;
 	}
 	return 0;
 }
 
 int wipe_dos_ptable(device *d){
-	if(wipe_first_sector(d,MBR_CODE_SIZE,MBR_SIZE)){
+	if(wipe_first_sector(d, MBR_CODE_SIZE, MBR_SIZE)){
 		return -1;
 	}
 	return 0;
