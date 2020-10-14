@@ -12,11 +12,11 @@ int ata_secure_erase(device *d){
 		diag("Can only run ATA Erase on ATA-connected blockdevs\n");
 		return -1;
 	}
-	if(vspopen_drain("hdparm --user-master u --security-set-pass erasepw /dev/%s",d->name)){
+	if(vspopen_drain("hdparm --user-master u --security-set-pass erasepw /dev/%s", d->name)){
 		diag("Couldn't set ATA user password\n");
 		return -1;
 	}
-	if(vspopen_drain("hdparm --user-master u --security-erase erasepw /dev/%s",d->name)){
+	if(vspopen_drain("hdparm --user-master u --security-erase erasepw /dev/%s", d->name)){
 		diag("Couldn't perform ATA Secure Erase\n");
 		return -1;
 	}
