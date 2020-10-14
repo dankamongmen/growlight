@@ -11,16 +11,16 @@
 #include "growlight.h"
 
 int mkswap(device *d){
-	if(d->mnttype && strcmp(d->mnttype,"swap")){
+	if(d->mnttype && strcmp(d->mnttype, "swap")){
 		diag("Won't create swap on %s filesystem at %s\n",
-				d->mnttype,d->name);
+				d->mnttype, d->name);
 		return -1;
 	}
 	if(d->swapprio >= SWAP_MAXPRIO){
-		diag("Already swapping on %s\n",d->name);
+		diag("Already swapping on %s\n", d->name);
 		return -1;
 	}
-	if(vspopen_drain("mkswap -L SprezzaSwap /dev/%s",d->name)){
+	if(vspopen_drain("mkswap -L SprezzaSwap /dev/%s", d->name)){
 		return -1;
 	}
 	return 0;
@@ -28,17 +28,17 @@ int mkswap(device *d){
 
 // Create swap on the device, and use it
 int swapondev(device *d){
-	char fn[PATH_MAX],*mt;
+	char fn[PATH_MAX], *mt;
 
 	if(mkswap(d)){
 		return -1;
 	}
-	snprintf(fn,sizeof(fn),"/dev/%s",d->name);
+	snprintf(fn, sizeof(fn), "/dev/%s", d->name);
 	if((mt = strdup("swap")) == NULL){
 		return -1;
 	}
-	if(swapon(fn,0)){
-		diag("Couldn't swap on %s (%s?)\n",fn,strerror(errno));
+	if(swapon(fn, 0)){
+		diag("Couldn't swap on %s (%s?)\n", fn, strerror(errno));
 		free(mt);
 		return -1;
 	}
@@ -52,9 +52,9 @@ int swapondev(device *d){
 int swapoffdev(device *d){
 	char fn[PATH_MAX];
 
-	snprintf(fn,sizeof(fn),"/dev/%s",d->name);
+	snprintf(fn, sizeof(fn), "/dev/%s", d->name);
 	if(swapoff(fn)){
-		diag("Couldn't stop swapping on %s (%s?)\n",fn,strerror(errno));
+		diag("Couldn't stop swapping on %s (%s?)\n", fn, strerror(errno));
 		return -1;
 	}
 	d->swapprio = SWAP_INACTIVE;
@@ -62,18 +62,18 @@ int swapoffdev(device *d){
 }
 
 // Parse /proc/swaps to detect active swap devices
-int parse_swaps(const glightui *gui,const char *name){
+int parse_swaps(const glightui *gui, const char *name){
 	char buf[BUFSIZ];
 	int line = 0;
 	FILE *fp;
 
-	if((fp = fopen(name,"re")) == NULL){
-		diag("Couldn't open %s (%s?)\n",name,strerror(errno));
+	if((fp = fopen(name, "re")) == NULL){
+		diag("Couldn't open %s (%s?)\n", name, strerror(errno));
 		return -1;
 	}
 	// First line is a legend
-	while(fgets(buf,sizeof(buf),fp)){
-		char *toke = buf,*type,*size,*e;
+	while(fgets(buf, sizeof(buf), fp)){
+		char *toke = buf, *type, *size, *e;
 		device *d;
 
 		if(++line == 1){
@@ -91,7 +91,7 @@ int parse_swaps(const glightui *gui,const char *name){
 			++toke;
 		}
 		*toke++ = '\0';
-		if(strcmp(type,"file") == 0){
+		if(strcmp(type, "file") == 0){
 			continue;
 		}
 		if((d = lookup_device(buf)) == NULL){
@@ -103,15 +103,15 @@ int parse_swaps(const glightui *gui,const char *name){
 		}
 		*toke++ = '\0';
 		errno = 0;
-		if(((d->mntsize = strtoull(size,&e,0)) == ULLONG_MAX && errno == ERANGE) ||
+		if(((d->mntsize = strtoull(size, &e, 0)) == ULLONG_MAX && errno == ERANGE) ||
 				d->mntsize == 0 || *e){
 			goto err;
 		}
 		d->mntsize *= 1024;
 		if(d->swapprio == SWAP_INVALID){
-			if(!d->mnttype || strcmp(d->mnttype,"swap")){
+			if(!d->mnttype || strcmp(d->mnttype, "swap")){
 				if(d->mnttype){
-					diag("Warning: %s went from %s to swap\n",d->name,d->mnttype);
+					diag("Warning: %s went from %s to swap\n", d->name, d->mnttype);
 					free(d->mnttype);
 					d->mnttype = NULL;
 				}
@@ -124,7 +124,7 @@ int parse_swaps(const glightui *gui,const char *name){
 			if(d->layout == LAYOUT_PARTITION){
 				d = d->partdev.parent;
 			}
-			d->uistate = gui->block_event(d,d->uistate);
+			d->uistate = gui->block_event(d, d->uistate);
 		}
 	}
 	fclose(fp);

@@ -28,12 +28,12 @@ struct zpoolcb_t {
 
 static uintmax_t
 dehumanize(const char *num){
-	unsigned long long ull,dec;
+	unsigned long long ull, dec;
 	char *e;
 
-	ull = strtoul(num,&e,0);
+	ull = strtoul(num, &e, 0);
 	if(*e == '.'){
-		dec = strtoul(++e,&e,0);
+		dec = strtoul(++e, &e, 0);
 	}else{
 		dec = 0;
 	}
@@ -47,20 +47,20 @@ dehumanize(const char *num){
 			break;
 		case '\0':
 			if(dec){
-				diag("Couldn't convert dec: %s\n",num);
+				diag("Couldn't convert dec: %s\n", num);
 				ull = 0;
 			}
 			break;
 		default:
-			diag("Couldn't convert number: %s\n",num);
+			diag("Couldn't convert number: %s\n", num);
 			ull = 0;
 	}
 	return ull;
 }
 
 static int
-zpoolcb(zpool_handle_t *zhp,void *arg){
-	char size[10],guid[21],ashift[5],health[20];
+zpoolcb(zpool_handle_t *zhp, void *arg){
+	char size[10], guid[21], ashift[5], health[20];
 	struct zpoolcb_t *cb = arg;
 	const glightui *gui;
 	uint64_t version;
@@ -71,26 +71,26 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 
 	gui = cb->gui;
 	name = zpool_get_name(zhp);
-	conf = zpool_get_config(zhp,NULL);
+	conf = zpool_get_config(zhp, NULL);
 	if(!name || !conf){
 		diag("name/config failed for zpool\n");
 		zpool_close(zhp);
 		return -1;
 	}
 	if(strlen(name) >= sizeof(d->name)){
-		diag("zpool name too long: %s\n",name);
+		diag("zpool name too long: %s\n", name);
 		zpool_close(zhp);
 		return -1;
 	}
 	++cb->pools;
-	if(nvlist_lookup_uint64(conf,ZPOOL_CONFIG_VERSION,&version)){
-		diag("Couldn't get %s zpool version\n",name);
+	if(nvlist_lookup_uint64(conf, ZPOOL_CONFIG_VERSION, &version)){
+		diag("Couldn't get %s zpool version\n", name);
 		zpool_close(zhp);
 		return -1;
 	}
 	if(version > SPA_VERSION){
 		diag("%s zpool version too new (%lu > %llu)\n",
-				name,version,SPA_VERSION);
+				name, version, SPA_VERSION);
 		zpool_close(zhp);
 		return -1;
 	}
@@ -100,7 +100,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 		zpool_close(zhp);
 		return -1;
 	}
-	if(strcmp(health,"FAULTED")){ // FIXME really?!?!
+	if(strcmp(health, "FAULTED")){ // FIXME really?!?!
 		if(zpool_get_prop(zhp, ZPOOL_PROP_SIZE, size, sizeof(size), NULL, true)){
 			diag("Couldn't get size for zpool '%s'\n", name);
 			zpool_close(zhp);
@@ -128,7 +128,7 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 			zpool_close(zhp);
 			return -1;
 		}
-		if(strcmp(d->uuid,guid)){
+		if(strcmp(d->uuid, guid)){
 			diag("UUID changed on %s\n", name);
 			free(d->uuid);
 		}
@@ -170,8 +170,8 @@ zpoolcb(zpool_handle_t *zhp,void *arg){
 }
 
 static int
-zfscb(zfs_handle_t *zhf,void *arg){
-	char sbuf[BUFSIZ],*mnttype,*label;
+zfscb(zfs_handle_t *zhf, void *arg){
+	char sbuf[BUFSIZ], *mnttype, *label;
 	struct zpoolcb_t *cb = arg;
 	const glightui *gui;
 	uintmax_t totalsize;
@@ -190,22 +190,22 @@ zfscb(zfs_handle_t *zhf,void *arg){
 	lock_growlight();
 	if((d = lookup_device(zname)) == NULL){
 		unlock_growlight();
-		diag("Couldn't look up zpool named %s\n",zname);
+		diag("Couldn't look up zpool named %s\n", zname);
 		return -1;
 	}
 	unlock_growlight();
-	if((version = zfs_prop_get_int(zhf,ZFS_PROP_VERSION)) < 0){
-		diag("Couldn't get dataset version for %s\n",zname);
+	if((version = zfs_prop_get_int(zhf, ZFS_PROP_VERSION)) < 0){
+		diag("Couldn't get dataset version for %s\n", zname);
 		return -1;
 	}
 	totalsize = 0;
-	if(zfs_prop_get(zhf,ZFS_PROP_AVAILABLE,sbuf,sizeof(sbuf),NULL,NULL,0,0)){
-		diag("Couldn't get available size for %s\n",zname);
+	if(zfs_prop_get(zhf, ZFS_PROP_AVAILABLE, sbuf, sizeof(sbuf), NULL, NULL, 0, 0)){
+		diag("Couldn't get available size for %s\n", zname);
 		return -1;
 	}
 	totalsize += dehumanize(sbuf);
-	if(zfs_prop_get(zhf,ZFS_PROP_USED,sbuf,sizeof(sbuf),NULL,NULL,0,0)){
-		diag("Couldn't get used size for %s\n",zname);
+	if(zfs_prop_get(zhf, ZFS_PROP_USED, sbuf, sizeof(sbuf), NULL, NULL, 0, 0)){
+		diag("Couldn't get used size for %s\n", zname);
 		return 0;
 	}
 	totalsize += dehumanize(sbuf);
@@ -225,7 +225,7 @@ zfscb(zfs_handle_t *zhf,void *arg){
 	if(d->layout == LAYOUT_PARTITION){
 		d = d->partdev.parent;
 	}
-	d->uistate = gui->block_event(d,d->uistate);
+	d->uistate = gui->block_event(d, d->uistate);
 	return 0;
 }
 
@@ -237,23 +237,23 @@ int scan_zpools(const glightui *gui){
 	if(zht == NULL){
 		return 0; // ZFS wasn't successfully initialized
 	}
-	if(zprop_get_list(zfs,props,&pools,ZFS_TYPE_POOL)){
+	if(zprop_get_list(zfs, props, &pools, ZFS_TYPE_POOL)){
 		diag("Couldn't list ZFS pools\n");
 		return -1;
 	}
 	// FIXME do what with it?
 	zprop_free_list(pools);
-	memset(&cb,0,sizeof(cb));
+	memset(&cb, 0, sizeof(cb));
 	cb.gui = gui;
-	if(zpool_iter(zht,zpoolcb,&cb)){
+	if(zpool_iter(zht, zpoolcb, &cb)){
 		diag("Couldn't iterate over zpools\n");
 		return -1;
 	}
-	if(zfs_iter_root(zht,zfscb,&cb)){
+	if(zfs_iter_root(zht, zfscb, &cb)){
 		diag("Couldn't iterate over root datasets\n");
 		return -1;
 	}
-	verbf("Found %u ZFS zpool%s\n",cb.pools,cb.pools == 1 ? "" : "s");
+	verbf("Found %u ZFS zpool%s\n", cb.pools, cb.pools == 1 ? "" : "s");
 	return 0;
 }
 
@@ -262,7 +262,7 @@ int init_zfs_support(const glightui *gui){
 		diag("Warning: couldn't initialize ZFS\n");
 		return 0;
 	}
-	libzfs_print_on_error(zht,verbose ? true : false);
+	libzfs_print_on_error(zht, verbose ? true : false);
 	if(scan_zpools(gui)){
 		stop_zfs_support();
 		return -1;
@@ -292,21 +292,21 @@ int destroy_zpool(device *d){
 		return -1;
 	}
 	if(d->layout != LAYOUT_ZPOOL){
-		diag("%s is not a zpool\n",d->name);
+		diag("%s is not a zpool\n", d->name);
 		return -1;
 	}
-	if((zhp = zpool_open_canfail(zht,d->name)) == NULL){
-		diag("Couldn't open zpool %s\n",d->name);
+	if((zhp = zpool_open_canfail(zht, d->name)) == NULL){
+		diag("Couldn't open zpool %s\n", d->name);
 		return -1;
 	}
 	// FIXME only pass force flag when necessary
-	if(zpool_disable_datasets(zhp,1)){
-		diag("Couldn't disable datasets on %s\n",d->name);
+	if(zpool_disable_datasets(zhp, 1)){
+		diag("Couldn't disable datasets on %s\n", d->name);
 		zpool_close(zhp);
 		return -1;
 	}
 	if(zpool_destroy(zhp, "destroyed by growlight")){
-		diag("Couldn't destroy %s\n",d->name);
+		diag("Couldn't destroy %s\n", d->name);
 		zpool_close(zhp);
 	}
 	zpool_close(zhp);
@@ -323,7 +323,7 @@ int stop_zfs_support(void){
 }
 
 int print_zfs_version(FILE *fp){
-	return fprintf(fp,"No ZFS support in this build.\n");
+	return fprintf(fp, "No ZFS support in this build.\n");
 }
 
 int scan_zpools(const glightui *gui __attribute__ ((unused))){
@@ -337,7 +337,7 @@ int destroy_zpool(device *d __attribute__ ((unused))){
 }
 #endif
 static int
-generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num){
+generic_make_zpool(const char *type, const char *name, char * const *vdevs, int num){
 	char buf[BUFSIZ];
 	size_t pos;
 	int z;
@@ -345,7 +345,7 @@ generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num
 	pos = 0;
 #define PREFIX "/dev/"
 	for(z = 0 ; z < num ; ++z){
-		if((unsigned)snprintf(buf + pos,sizeof(buf) - pos," %s%s",PREFIX,*vdevs) >= sizeof(buf) - pos){
+		if((unsigned)snprintf(buf + pos, sizeof(buf) - pos, " %s%s", PREFIX, *vdevs) >= sizeof(buf) - pos){
 			diag("Too many arguments for zpool creation\n");
 			return -1;
 		}
@@ -355,23 +355,23 @@ generic_make_zpool(const char *type,const char *name,char * const *vdevs,int num
 #undef PREFIX
 	// FIXME also, ashift with 512-byte sectors wastes space
 	// FIXME see notes below (make_zfs()) regarding unsafe use of -f
-	return vspopen_drain("zpool create -f -oashift=12 %s %s %s",name,type,buf);
+	return vspopen_drain("zpool create -f -oashift=12 %s %s %s", name, type, buf);
 }
 
-int make_zmirror(const char *name,char * const *vdevs,int num){
-	return generic_make_zpool("mirror",name,vdevs,num);
+int make_zmirror(const char *name, char * const *vdevs, int num){
+	return generic_make_zpool("mirror", name, vdevs, num);
 }
 
-int make_raidz1(const char *name,char * const *vdevs,int num){
-	return generic_make_zpool("raidz1",name,vdevs,num);
+int make_raidz1(const char *name, char * const *vdevs, int num){
+	return generic_make_zpool("raidz1", name, vdevs, num);
 }
 
-int make_raidz2(const char *name,char * const *vdevs,int num){
-	return generic_make_zpool("raidz2",name,vdevs,num);
+int make_raidz2(const char *name, char * const *vdevs, int num){
+	return generic_make_zpool("raidz2", name, vdevs, num);
 }
 
-int make_raidz3(const char *name,char * const *vdevs,int num){
-	return generic_make_zpool("raidz3",name,vdevs,num);
+int make_raidz3(const char *name, char * const *vdevs, int num){
+	return generic_make_zpool("raidz3", name, vdevs, num);
 }
 
 // FIXME rather than using -f with creation, we ought make the vdevs conform to
@@ -381,20 +381,20 @@ int make_raidz3(const char *name,char * const *vdevs,int num){
 //  - blank out mbr
 //  - no partition table
 //  - no filesystem signature
-int make_zfs(const char *dev,const struct mkfsmarshal *mkm){
-	return vspopen_drain("zpool create -f %s %s",mkm->name,dev);
+int make_zfs(const char *dev, const struct mkfsmarshal *mkm){
+	return vspopen_drain("zpool create -f %s %s", mkm->name, dev);
 }
 
 // Remount a zfs
-int mount_zfs(device *d,const char *targ,unsigned mntops,const void *data){
+int mount_zfs(device *d, const char *targ, unsigned mntops, const void *data){
 	if(mntops || data){
-		diag("Invalid arguments to zfs mount: %u %p\n",mntops,data);
+		diag("Invalid arguments to zfs mount: %u %p\n", mntops, data);
 		return -1;
 	}
-	vspopen_drain("zfs unmount %s",d->name); // FIXME
-	if(vspopen_drain("zfs set mountpoint=%s %s",targ,d->name)){
-		vspopen_drain("zfs mount %s",d->name);
+	vspopen_drain("zfs unmount %s", d->name); // FIXME
+	if(vspopen_drain("zfs set mountpoint=%s %s", targ, d->name)){
+		vspopen_drain("zfs mount %s", d->name);
 		return -1;
 	}
-	return vspopen_drain("zfs mount %s",d->name);
+	return vspopen_drain("zfs mount %s", d->name);
 }
