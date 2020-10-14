@@ -403,6 +403,7 @@ subscript(int in){
 
 static struct notcurses* NC;
 static struct ncreel* PR;
+static struct ncmenu* mainmenu;
 
 static inline void
 screen_update(void){
@@ -5233,6 +5234,13 @@ handle_ncurses_input(struct ncplane* w){
       unlock_notcurses();
       continue;
     }
+		bool menuinput;
+    lock_notcurses();
+		menuinput = ncmenu_offer_input(mainmenu, &ni);
+    unlock_notcurses(); // FIXME don't always want a redraw here
+		if(menuinput){
+			continue;
+		}
     if(actform){
       if((ch = handle_actform_input(ch)) == (char32_t)-1){
         break;
@@ -5932,7 +5940,15 @@ create_menu(struct ncplane* n){
 	struct ncmenu_item part_items[] = {
 		{ .desc = "Make filesystem", .shortcut = { .id = 'F', .ctrl = true, }, },
 	};
+	struct ncmenu_item glight_items[] = {
+		{ .desc = "Details window", .shortcut = { .id = 'v', }, },
+		{ .desc = "Help window", .shortcut = { .id = 'h', }, },
+		{ .desc = "Quit", .shortcut = { .id = 'q', }, },
+	};
 	struct ncmenu_section sections[] = {
+		{ .name = "Growlight", .items = glight_items,
+			.itemcount = sizeof(glight_items) / sizeof(*glight_items),
+			.shortcut = { .id = 'g', .alt = true, }, },
 		{ .name = "Blockdev", .items = block_items,
 			.itemcount = sizeof(block_items) / sizeof(*block_items),
 			.shortcut = { .id = 'b', .alt = true, }, },
@@ -5999,8 +6015,7 @@ int main(int argc, char * const *argv){
     notcurses_stop(NC);
     return EXIT_FAILURE;
   }
-	struct ncmenu* menu;
-	if((menu = create_menu(notcurses_stdplane(NC))) == NULL){
+	if((mainmenu = create_menu(notcurses_stdplane(NC))) == NULL){
     notcurses_stop(NC);
     return EXIT_FAILURE;
 	}
