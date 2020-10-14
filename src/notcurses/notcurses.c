@@ -5924,13 +5924,37 @@ boxinfo(const char *text, ...){
   va_end(v);
 }
 
+static struct ncmenu*
+create_menu(struct ncplane* n){
+	struct ncmenu_item block_items[] = {
+		{ .desc = "Make partition table", .shortcut = { .id = 'P', .ctrl = true, }, },
+	};
+	struct ncmenu_item part_items[] = {
+		{ .desc = "Make filesystem", .shortcut = { .id = 'F', .ctrl = true, }, },
+	};
+	struct ncmenu_section sections[] = {
+		{ .name = "Blockdev", .items = block_items,
+			.itemcount = sizeof(block_items) / sizeof(*block_items),
+			.shortcut = { .id = 'b', .alt = true, }, },
+		{ .name = "Partition", .items = part_items,
+			.itemcount = sizeof(part_items) / sizeof(*part_items),
+			.shortcut = { .id = 'p', .alt = true, }, },
+	};
+	struct ncmenu_options mopts = {
+		.sections = sections,
+		.sectioncount = sizeof(sections) / sizeof(*sections),
+	};
+	struct ncmenu* nmenu = ncmenu_create(n, &mopts);
+	return nmenu;
+}
+
 // ensure the version of notcurses we loaded is viable
 static bool
 notcurses_version_check(void){
   int major, minor, patch, tweak;
   notcurses_version_components(&major, &minor, &patch, &tweak);
-  if(major < 1 || (major == 1 && minor < 7)){
-    fprintf(stderr, "Needed notcurses 1.7.0+, got %d.%d.%d.%d\n",
+  if(major < 1 || (major == 1 && minor < 7) || (major == 1 && minor == 7 && patch < 6)){
+    fprintf(stderr, "Needed notcurses 1.7.6+, got %d.%d.%d.%d\n",
             major, minor, patch, tweak);
     return false;
   }
@@ -5963,16 +5987,22 @@ int main(int argc, char * const *argv){
   }
   notcurses_options opts = { };
   opts.flags = NCOPTION_INHIBIT_SETLOCALE;
+	opts.loglevel = NCLOGLEVEL_TRACE;
   if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
   int ydim, xdim;
   notcurses_stddim_yx(NC, &ydim, &xdim);
-  struct ncplane* n = ncplane_new(notcurses_stdplane(NC), ydim - 1, xdim, 0, 0, NULL, NULL);
+  struct ncplane* n = ncplane_new(notcurses_stdplane(NC), ydim - 2, xdim, 1, 0, NULL, NULL);
   if(n == NULL){
     notcurses_stop(NC);
     return EXIT_FAILURE;
   }
+	struct ncmenu* menu;
+	if((menu = create_menu(notcurses_stdplane(NC))) == NULL){
+    notcurses_stop(NC);
+    return EXIT_FAILURE;
+	}
   ps = show_splash(L"Initializing...");
   ncreel_options popts;
   memset(&popts, 0, sizeof(popts));
