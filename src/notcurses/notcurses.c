@@ -423,6 +423,7 @@ screen_update(void){
   if(splash){
     ncplane_move_top(splash->p);
   }
+	ncplane_move_top(ncmenu_plane(mainmenu));
   notcurses_render(NC);
 }
 
@@ -5239,6 +5240,8 @@ handle_ncurses_input(struct ncplane* w){
 		menuinput = ncmenu_offer_input(mainmenu, &ni);
     unlock_notcurses(); // FIXME don't always want a redraw here
 		if(menuinput){
+fprintf(stderr, "GOT A MENU INPUT\n");
+notcurses_debug(NC, stderr);
 			continue;
 		}
     if(actform){
@@ -5321,7 +5324,7 @@ handle_ncurses_input(struct ncplane* w){
         unlock_notcurses();
         break;
       }
-      case NCKEY_PGUP:{
+			case NCKEY_PGUP: case NCKEY_BUTTON4: {
         int sel;
         lock_notcurses();
         sel = selection_active();
@@ -5332,7 +5335,7 @@ handle_ncurses_input(struct ncplane* w){
         unlock_notcurses();
         break;
       }
-      case NCKEY_PGDOWN:{
+			case NCKEY_PGDOWN: case NCKEY_BUTTON5: {
         int sel;
         lock_notcurses();
 // fprintf(stderr, "-------------- BEGIN PgDown ---------------\n");
@@ -5542,7 +5545,7 @@ handle_ncurses_input(struct ncplane* w){
         if(isprint(ch)){
           diag("unknown command '%c'%s", ch, hstr);
         }else{
-          diag("unknown scancode %d%s", ch, hstr);
+          diag("unknown scancode 0x%x%s", ch, hstr);
         }
         break;
       }
@@ -5942,7 +5945,8 @@ create_menu(struct ncplane* n){
 	};
 	struct ncmenu_item glight_items[] = {
 		{ .desc = "Details window", .shortcut = { .id = 'v', }, },
-		{ .desc = "Help window", .shortcut = { .id = 'h', }, },
+		{ .desc = "Help window", .shortcut = { .id = 'H', }, },
+		{ .desc = "Diagnostics", .shortcut = { .id = 'D', }, },
 		{ .desc = "Quit", .shortcut = { .id = 'q', }, },
 	};
 	struct ncmenu_section sections[] = {
@@ -6008,6 +6012,7 @@ int main(int argc, char * const *argv){
   if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
+	notcurses_mouse_enable(NC);
   int ydim, xdim;
   notcurses_stddim_yx(NC, &ydim, &xdim);
   struct ncplane* n = ncplane_new(notcurses_stdplane(NC), ydim - 2, xdim, 1, 0, NULL, NULL);
