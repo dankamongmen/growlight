@@ -5240,8 +5240,6 @@ handle_ncurses_input(struct ncplane* w){
 		menuinput = ncmenu_offer_input(mainmenu, &ni);
     unlock_notcurses(); // FIXME don't always want a redraw here
 		if(menuinput){
-fprintf(stderr, "GOT A MENU INPUT\n");
-notcurses_debug(NC, stderr);
 			continue;
 		}
     if(actform){
