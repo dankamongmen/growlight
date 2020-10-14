@@ -5943,6 +5943,7 @@ create_menu(struct ncplane* n){
 	struct ncmenu_options mopts = {
 		.sections = sections,
 		.sectioncount = sizeof(sections) / sizeof(*sections),
+	  .headerchannels = CHANNELS_RGB_INITIALIZER(0xff, 0xff, 0xff, 0x6b, 0x38, 0x6b),
 	};
 	struct ncmenu* nmenu = ncmenu_create(n, &mopts);
 	return nmenu;
@@ -5987,7 +5988,7 @@ int main(int argc, char * const *argv){
   }
   notcurses_options opts = { };
   opts.flags = NCOPTION_INHIBIT_SETLOCALE;
-	opts.loglevel = NCLOGLEVEL_TRACE;
+	// opts.loglevel = NCLOGLEVEL_TRACE;
   if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
