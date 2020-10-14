@@ -227,17 +227,17 @@ struct scsi_sg_io_hdr {
         unsigned int            info;
 };
 
-int sg_interrogate(device *d,int fd){
+int sg_interrogate(device *d, int fd){
 #define IDSECTORS 1
 	unsigned char cdb[SG_ATA_16_LEN];
-	uint16_t buf[512 / 2],maj,min; // FIXME
+	uint16_t buf[512 / 2], maj, min; // FIXME
 	struct scsi_sg_io_hdr io;
 	char sb[32];
 	unsigned n;
 
 	assert(d->layout == LAYOUT_NONE);
-	memset(buf,0,sizeof(buf));
-	memset(cdb,0,sizeof(cdb));
+	memset(buf, 0, sizeof(buf));
+	memset(cdb, 0, sizeof(cdb));
 	cdb[0] = SG_ATA_16;
 	cdb[1] = SG_ATA_PROTO_PIO_IN;
 	cdb[2] = SG_CDB2_TLEN_NSECT | SG_CDB2_TLEN_SECTORS | SG_CDB2_TDIR_FROM_DEV;
@@ -245,7 +245,7 @@ int sg_interrogate(device *d,int fd){
 	cdb[13] = ATA_USING_LBA;
 	cdb[14] = ATA_OP_IDENTIFY;
 	// data size: 512
-	memset(&io,0,sizeof(io));
+	memset(&io, 0, sizeof(io));
 	io.interface_id = 'S';
 	io.mx_sb_len = sizeof(sb);
 	io.dxfer_direction = SG_DXFER_FROM_DEV;
@@ -254,28 +254,28 @@ int sg_interrogate(device *d,int fd){
 	io.cmdp = cdb;
 	io.sbp = sb;
 	io.cmd_len = sizeof(cdb);
-	if(ioctl(fd,SG_IO,&io)){
-		diag("Couldn't perform SG_IO ioctl on %s:%d (%s?)\n",d->name,fd,strerror(errno));
+	if(ioctl(fd, SG_IO, &io)){
+		diag("Couldn't perform SG_IO ioctl on %s:%d (%s?)\n", d->name, fd, strerror(errno));
 		return -1;
 	}
 	if(io.driver_status && io.driver_status != SG_DRIVER_SENSE){
-		verbf("Bad driver status 0x%x on %s\n",io.driver_status,d->name);
+		verbf("Bad driver status 0x%x on %s\n", io.driver_status, d->name);
 		cdb[14] = ATA_OP_PIDENTIFY;
-		if(ioctl(fd,SG_IO,&io)){
-			diag("Couldn't perform PIDENTIFY ioctl on %s:%d (%s?)\n",d->name,fd,strerror(errno));
+		if(ioctl(fd, SG_IO, &io)){
+			diag("Couldn't perform PIDENTIFY ioctl on %s:%d (%s?)\n", d->name, fd, strerror(errno));
 			return -1;
 		}
 		if(io.driver_status && io.driver_status != SG_DRIVER_SENSE){
-			verbf("Bad PIDENTIFY status 0x%x on %s\n",io.driver_status,d->name);
+			verbf("Bad PIDENTIFY status 0x%x on %s\n", io.driver_status, d->name);
 			return -1;
 		}
 	}
 	if(io.status && io.status != SG_CHECK_CONDITION){
-		verbf("Bad check condition 0x%x on %s\n",io.status,d->name);
+		verbf("Bad check condition 0x%x on %s\n", io.status, d->name);
 		return 0; // FIXME
 	}
 	if(io.host_status){
-		verbf("Bad host status 0x%x on %s\n",io.host_status,d->name);
+		verbf("Bad host status 0x%x on %s\n", io.host_status, d->name);
 		return 0; // FIXME
 	}
 	/*conf = ntohs(buf[GEN_CONFIG]);
@@ -307,7 +307,7 @@ int sg_interrogate(device *d,int fd){
 			}
 		break;
 		default:
-			diag("Unknown transport type %hu on %s\n",maj,d->name);
+			diag("Unknown transport type %hu on %s\n", maj, d->name);
 			break;
 	}
 	if((d->blkdev.rotation = buf[NMRR]) == 1){
@@ -317,14 +317,14 @@ int sg_interrogate(device *d,int fd){
 	}
 	if(ntohs(buf[CMDS_SUPP_0]) & FEATURE_WRITE_CACHE){
 		d->blkdev.wcache = !!(ntohs(buf[CMDS_EN_0]) & FEATURE_WRITE_CACHE);
-		verbf("\t%s write-cache: %s\n",d->name,d->blkdev.wcache ? "Enabled" : "Disabled/not present");
+		verbf("\t%s write-cache: %s\n", d->name, d->blkdev.wcache ? "Enabled" : "Disabled/not present");
 	}
 	if(ntohs(buf[CMDS_SUPP_2]) & WWN_SUP){
 		free(d->blkdev.wwn);
 		if((d->blkdev.wwn = malloc(17)) == NULL){
 			return -1;
 		}
-		snprintf(d->blkdev.wwn,17,"%04x%04x%04x%04x",buf[108],buf[109],buf[110],buf[111]);
+		snprintf(d->blkdev.wwn, 17, "%04x%04x%04x%04x", buf[108], buf[109], buf[110], buf[111]);
 	}
 	if(buf[CMDS_SUPP_3] & FEATURE_READWRITEVERIFY){
 		if(ntohs(buf[CMDS_EN_3]) & FEATURE_READWRITEVERIFY){
@@ -335,7 +335,7 @@ int sg_interrogate(device *d,int fd){
 	}else{
 		d->blkdev.rwverify = RWVERIFY_UNSUPPORTED;
 	}
-	verbf("\t%s read-write-verify: %s\n",d->name,
+	verbf("\t%s read-write-verify: %s\n", d->name,
 			d->blkdev.rwverify == RWVERIFY_UNSUPPORTED ? "Not present" :
 			d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? "Disabled" : "Enabled");
 	for(n = START_SERIAL ; n < START_SERIAL + LENGTH_SERIAL ; ++n){
