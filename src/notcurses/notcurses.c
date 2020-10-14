@@ -4935,11 +4935,6 @@ handle_actform_input(wchar_t ch){
     cb = actform->fxn;
   }
   switch(ch){
-    case 12: // CTRL+L FIXME
-      lock_notcurses();
-      notcurses_refresh(NC, NULL, NULL);
-      unlock_notcurses();
-      break;
     case ' ': case '\r': case '\n': case NCKEY_ENTER:{
       int op, selections, scrolloff;
       char **selarray;
