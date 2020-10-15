@@ -5247,8 +5247,11 @@ handle_input(struct ncplane* w){
 			ch = ni.id;
 		}
 		if(ch <= NCKEY_RELEASE && ch >= NCKEY_BUTTON1){
-			// FIXME check menu (EARLIER) for mouse selection on NCKEY_RELEASE
-			continue;
+			if(ncmenu_mouse_selected(mainmenu, &ni, &ni) == NULL){
+				continue;
+			} // otherwise, continue through with selected item
+			ncmenu_rollup(mainmenu);
+			ch = ni.id;
 		}
     if(actform){
       if((ch = handle_actform_input(ch)) == (char32_t)-1){
