@@ -21,6 +21,12 @@
 #include "aggregate.h"
 #include "notui-aggregate.h"
 
+// FIXME remove after notcurses 2.0.1 is widespread
+#ifndef NCKEY_ESC
+#define NCKEY_ESC 27
+#define NCKEY_SPACE 32
+#endif
+
 static void shutdown_cycle(void) __attribute__ ((noreturn));
 
 void locked_diag(const char *fmt,...) __attribute__ ((format (printf,1,2)));
