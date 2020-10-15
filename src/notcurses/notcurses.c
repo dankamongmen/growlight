@@ -629,13 +629,6 @@ bevel_all(struct ncplane* nc){
 }
 
 static int
-cwattrset(struct ncplane* n, int style){
-  ncplane_set_styles(n, style >> 8);
-  compat_set_fg(n, style & 0xff);
-  return 0;
-}
-
-static int
 cwattroff(struct ncplane* n, int style){
   ncplane_off_styles(n, style >> 8);
   compat_set_fg(n, style & 0xff);
@@ -702,12 +695,13 @@ draw_main_window(struct ncplane* n){
   ncplane_set_fg_rgb8(n, 95, 0, 175);
   snprintf(buf, sizeof(buf), "%s %s (%d)", PACKAGE, VERSION, count_adapters - 1);
   ncplane_dim_yx(n, &rows, &cols);
-  cwattrset(n, HEADER_COLOR);
+  compat_set_fg(n, HEADER_COLOR);
   ncplane_putstr_yx(n, rows - 1, 0, buf);
   ncplane_cursor_yx(n, &y, &x);
   assert(x >= 0);
   cols -= x + 1;
-  cwattron(n, NCSTYLE_BOLD | STATUS_COLOR);
+  ncplane_on_styles(n, NCSTYLE_BOLD);
+  compat_set_fg(n, STATUS_COLOR);
   cwprintw(n, " %-*.*s", cols, cols, statusmsg);
 }
 
@@ -861,7 +855,8 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   if(d->mnttype && (d->layout != LAYOUT_NONE || !d->blkdev.pttable)){
     int co = mnttype_aggregablep(d->mnttype) ? PART_COLOR0 : FS_COLOR;
 
-    cwattrset(n, NCSTYLE_BOLD|co);
+    ncplane_set_styles(n, NCSTYLE_BOLD);
+    compat_set_fg(n, co);
     qprefix(zs, 1, pre, 1);
     if(!d->mnt.count || swprintf(wbuf, wchars, L" %s%s%ls%s%ls%s%s%sat %s ",
       d->label ? "" : "nameless ",
@@ -893,13 +888,15 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     ncplane_putwstr_yx(n, y, ex - 1, L" ");
     selstr = d->name;
   }else if(d->layout == LAYOUT_NONE && d->blkdev.unloaded){
-    cwattrset(n, NCSTYLE_BOLD|OPTICAL_COLOR);
+    ncplane_set_styles(n, NCSTYLE_BOLD);
+    compat_set_fg(n, OPTICAL_COLOR);
     selstr = "No media detected in drive";
     cmvwprintw(n, y, sx, "%-*.*s", ex - sx, ex - sx, selstr);
   }else if((d->layout == LAYOUT_NONE && d->blkdev.pttable == NULL) ||
     (d->layout == LAYOUT_MDADM && d->mddev.pttable == NULL) ||
     (d->layout == LAYOUT_DM && d->dmdev.pttable == NULL)){
-    cwattrset(n, NCSTYLE_BOLD|EMPTY_COLOR);
+    ncplane_set_styles(n, NCSTYLE_BOLD);
+    compat_set_fg(n, EMPTY_COLOR);
     selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
         "unpartitionable space";
     snprintf(buf, sizeof(buf), " %s %s ", qprefix(d->size, 1, pre, 1), selstr) < (int)sizeof(buf);
@@ -934,10 +931,9 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
 
       if(selected && z == bo->zone){
         selstr = repstr;
-        cwattrset(n, NCSTYLE_BOLD|NCSTYLE_UNDERLINE|co);
-      }else{
-        cwattrset(n, co);
+        ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
       }
+      compat_set_fg(n, co);
       if(swprintf(wbuf, wchars - 2, L"%s %s", pre, repstr) >= wchars - 2){
         if(swprintf(wbuf, wchars - 2, L"%s", repstr) >= wchars - 2){
           wbuf[0] = L'\0';
@@ -947,15 +943,19 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     }else{ // dedicated partition
       if(selected && z == bo->zone){ // partition and device are selected
         if(targeted_p(z->p)){
-          cwattrset(n, NCSTYLE_BOLD|NCSTYLE_UNDERLINE|targco);
+          ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
+          compat_set_fg(n, targco);
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          cwattrset(n, NCSTYLE_BOLD|NCSTYLE_UNDERLINE|mountco);
+          ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
+          compat_set_fg(n, mountco);
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          cwattrset(n, NCSTYLE_BOLD|NCSTYLE_UNDERLINE|FS_COLOR);
+          ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
+          compat_set_fg(n, FS_COLOR);
         }else{
-          cwattrset(n, NCSTYLE_BOLD|NCSTYLE_UNDERLINE|partco);
+          ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
+          compat_set_fg(n, partco);
           partco = next_partco(partco);
         }
         // FIXME need to store pname as multibyte char *
@@ -970,15 +970,15 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
         }
       }else{ // partition is not selected
         if(targeted_p(z->p)){
-          cwattrset(n, targco);
+          compat_set_fg(n, targco);
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          cwattrset(n, mountco);
+          compat_set_fg(n, mountco);
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          cwattrset(n, FS_COLOR);
+          compat_set_fg(n, FS_COLOR);
         }else{
-          cwattrset(n, partco);
+          compat_set_fg(n, partco);
           partco = next_partco(partco);
         }
         if(swprintf(wbuf, wchars - 2, L"%s %s", pre, z->p->name) >= wchars - 2){
@@ -988,7 +988,8 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
         }
       }
       if(z->p->partdev.alignment < d->physsec){ // misaligned!
-        cwattrset(n, NCSTYLE_BOLD|FUCKED_COLOR);
+        ncplane_set_styles(n, NCSTYLE_BOLD);
+        compat_set_fg(n, FUCKED_COLOR);
       }
       if(z->p->mnttype){
         if((!z->p->mnt.count || swprintf(wbuf, wchars - 2, L"%s at %s (%s)", z->p->mnttype, z->p->mnt.list[0], pre) >= wchars - 2)){
@@ -1056,8 +1057,8 @@ static int
 print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
           int line, int rows, unsigned cols, bool drawfromtop){
   char buf[BPREFIXSTRLEN + 1];
-  int co, rx, attr;
   char rolestr[12]; // taken from %-11.11s below
+  int co, rx;
 
 //fprintf(stderr, " HERE FOR %s: %s line %d rows %d cols %d lout %d\n", as->c->name, bo->d->name, line, rows, cols, bo->d->layout);
   ncplane_set_bg_default(n);
@@ -1074,11 +1075,11 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
 case LAYOUT_NONE:
     if(bo->d->blkdev.realdev){
       if(bo->d->blkdev.rotation == SSD_ROTATION){
-        cwattrset(n, SSD_COLOR);
+        compat_set_fg(n, SSD_COLOR);
         strncpy(rolestr, "solidstate", sizeof(rolestr));
       }else if(bo->d->blkdev.rotation > 0){
         int32_t speed = bo->d->blkdev.rotation;
-        cwattrset(n, ROTATE_COLOR);
+        compat_set_fg(n, ROTATE_COLOR);
         if(speed > 0){
           if(speed > 99999){
             speed = 99999;
@@ -1088,15 +1089,15 @@ case LAYOUT_NONE:
           strncpy(rolestr, "ferromag", sizeof(rolestr));
         }
       }else if(bo->d->kerneltype == TYPE_ROM){
-        cwattrset(n, OPTICAL_COLOR);
+        compat_set_fg(n, OPTICAL_COLOR);
         strncpy(rolestr, "optical", sizeof(rolestr));
       }else if(bo->d->kerneltype == TYPE_TAPE){
-        cwattrset(n, OPTICAL_COLOR);
+        compat_set_fg(n, OPTICAL_COLOR);
         strncpy(rolestr, "tape", sizeof(rolestr));
       }
       // FIXME do we want a default here?
     }else{
-      cwattrset(n, VIRTUAL_COLOR);
+      compat_set_fg(n, VIRTUAL_COLOR);
       strncpy(rolestr, "virtual", sizeof(rolestr));
     }
     if(!bo->d->size || line + 2 < rows){
@@ -1131,7 +1132,7 @@ case LAYOUT_MDADM:
     }else{
       co = MDADM_COLOR;
     }
-    cwattrset(n, co);
+    compat_set_fg(n, co);
     if(line >= drawfromtop){
       if(!bo->d->size || line + 2 <= rows/* - !drawfromtop*/){
         if(bo->d->size){
@@ -1155,11 +1156,11 @@ case LAYOUT_MDADM:
         }
       }
     }
-    cwattrset(n, MDADM_COLOR);
+    compat_set_fg(n, MDADM_COLOR);
     break;
 case LAYOUT_DM:
     strncpy(rolestr, "dm", sizeof(rolestr));
-    cwattrset(n, MDADM_COLOR);
+    compat_set_fg(n, MDADM_COLOR);
     if(line >= drawfromtop){
       if(!bo->d->size || line + 2 < rows/* - !drawfromtop*/){
         if(bo->d->size){
@@ -1188,7 +1189,7 @@ case LAYOUT_PARTITION:
     break;
 case LAYOUT_ZPOOL:
     strncpy(rolestr, "zpool", sizeof(rolestr));
-    cwattrset(n, ZPOOL_COLOR);
+    compat_set_fg(n, ZPOOL_COLOR);
     if(line >= drawfromtop){
       if(!bo->d->size || line + 2 < rows/* - !drawfromtop*/){
         if(bo->d->size){
@@ -1218,7 +1219,8 @@ case LAYOUT_ZPOOL:
     return 1;
   }
   cwattroff(n, REVERSE);
-  cwattrset(n, NCSTYLE_BOLD|SUBDISPLAY_COLOR);
+  ncplane_set_styles(n, NCSTYLE_BOLD);
+  compat_set_fg(n, SUBDISPLAY_COLOR);
 
   // Box-diagram (3-line) mode. Print the name on the first line.
   if(line >= drawfromtop){
@@ -1231,19 +1233,23 @@ case LAYOUT_ZPOOL:
     wchar_t rep = L' ';
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
-        cwattrset(n, NCSTYLE_BOLD|GREEN_COLOR);
+        ncplane_set_styles(n, NCSTYLE_BOLD);
+        compat_set_fg(n, GREEN_COLOR);
         rep = L'✔';
       }else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
           && bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
-        cwattrset(n, NCSTYLE_BOLD|ORANGE_COLOR);
+        ncplane_set_styles(n, NCSTYLE_BOLD);
+        compat_set_fg(n, ORANGE_COLOR);
         rep = L'☠';
       }else{
-        cwattrset(n, NCSTYLE_BOLD|FUCKED_COLOR);
+        ncplane_set_styles(n, NCSTYLE_BOLD);
+        compat_set_fg(n, FUCKED_COLOR);
         rep = L'✗';
       }
     }
     cmvwprintw(n, line + 1, START_COL, "%lc", rep);
-    cwattrset(n, NCSTYLE_BOLD|SUBDISPLAY_COLOR);
+    ncplane_set_styles(n, NCSTYLE_BOLD);
+    compat_set_fg(n, SUBDISPLAY_COLOR);
     if(strlen(rolestr)){
       cwprintw(n, "%10.10s", rolestr);
     }else{
@@ -1256,11 +1262,13 @@ case LAYOUT_ZPOOL:
     if(bo->d->layout == LAYOUT_NONE){
       if(bo->d->blkdev.celsius && bo->d->blkdev.celsius < 100u){
         if(bo->d->blkdev.celsius >= 60u){
-          cwattrset(n, NCSTYLE_BOLD|FUCKED_COLOR);
+          ncplane_set_styles(n, NCSTYLE_BOLD);
+          compat_set_fg(n, FUCKED_COLOR);
         }else if(bo->d->blkdev.celsius >= 40u){
-          cwattrset(n, NCSTYLE_BOLD|ORANGE_COLOR);
+          ncplane_set_styles(n, NCSTYLE_BOLD);
+          compat_set_fg(n, ORANGE_COLOR);
         }else{
-          cwattrset(n, GREEN_COLOR);
+          compat_set_fg(n, GREEN_COLOR);
         }
         // FIXME would be nice to use ℃ , but it looks weird
         cmvwprintw(n, sumline, START_COL, "%2.ju° ", bo->d->blkdev.celsius);
@@ -1269,23 +1277,25 @@ case LAYOUT_ZPOOL:
       }
     }else if(bo->d->layout == LAYOUT_MDADM){
       if(bo->d->mddev.degraded){
-        cwattrset(n, NCSTYLE_BOLD|FUCKED_COLOR);
+        ncplane_set_styles(n, NCSTYLE_BOLD);
+        compat_set_fg(n, FUCKED_COLOR);
         cmvwprintw(n, sumline, START_COL,
             "%1lux☠ ", bo->d->mddev.degraded);
       }else{
-        cwattrset(n, GREEN_COLOR);
+        compat_set_fg(n, GREEN_COLOR);
         cmvwprintw(n, sumline, START_COL, "up  ");
       }
     }else if(bo->d->layout == LAYOUT_DM){
       // FIXME add more detail...type of dm etc
-      cwattrset(n, GREEN_COLOR);
+      compat_set_fg(n, GREEN_COLOR);
       cmvwprintw(n, sumline, START_COL, "up  ");
     }else if(bo->d->layout == LAYOUT_ZPOOL){
       if(bo->d->zpool.state != POOL_STATE_ACTIVE){
-        cwattrset(n, NCSTYLE_BOLD|FUCKED_COLOR);
+        ncplane_set_styles(n, NCSTYLE_BOLD);
+        compat_set_fg(n, FUCKED_COLOR);
         cmvwprintw(n, sumline, START_COL, "☠☠☠ ");
       }else{
-        cwattrset(n, GREEN_COLOR);
+        compat_set_fg(n, GREEN_COLOR);
         cmvwprintw(n, sumline, START_COL, "up  ");
       }
     }
@@ -1294,7 +1304,7 @@ case LAYOUT_ZPOOL:
     io += bo->d->statdelta.sectors_written;
     io *= bo->d->logsec;
     // FIXME normalize according to timeq
-    cwattrset(n, SELECTED_COLOR);
+    compat_set_fg(n, SELECTED_COLOR);
     // FIXME 'i' shows up only when there are fewer than 3 sigfigs
     // to the left of the decimal point...very annoying
     if(io){
@@ -1306,7 +1316,8 @@ case LAYOUT_ZPOOL:
     }
   }
 
-  cwattrset(n, NCSTYLE_BOLD | DBORDER_COLOR);
+  ncplane_set_styles(n, NCSTYLE_BOLD);
+  compat_set_fg(n, DBORDER_COLOR);
   if(selected){
     cwattron(n, REVERSE);
   }
@@ -1324,8 +1335,8 @@ case LAYOUT_ZPOOL:
     print_blockbar(n, bo, line, START_COL + 10 + 2,
           cols - START_COL - 1, selected);
   }
-  attr = NCSTYLE_BOLD | DBORDER_COLOR;
-  cwattrset(n, attr);
+  ncplane_set_styles(n, NCSTYLE_BOLD);
+	compat_set_fg(n, DBORDER_COLOR);
   if(selected){
     cwattron(n, REVERSE);
   }
@@ -1368,7 +1379,8 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
     bcolor = UBORDER_COLOR;
     attrs = 0;
   }
-  cwattrset(nc, attrs | bcolor);
+	ncplane_set_styles(nc, attrs);
+  compat_set_fg(nc, bcolor);
 //fprintf(stderr, "ABOVETOP: %d BELOWEND: %d name: %s\n", abovetop, belowend, as->c->name);
   bevel(nc, rows, cols, drawtop, drawbot);
   ncplane_set_bg_default(nc);
@@ -1549,7 +1561,8 @@ struct panel_state* show_splash(const wchar_t* msg){
   }
   int cols;
   ncplane_dim_yx(ps->p, NULL, &cols);
-  cwattrset(ps->p, NCSTYLE_BOLD|SPLASHTEXT_COLOR);
+  ncplane_set_styles(ps->p, NCSTYLE_BOLD);
+  compat_set_fg(ps->p, SPLASHTEXT_COLOR);
   cmvwhline(ps->p, 1, 1, " ", cols - 2);
   cmvwhline(ps->p, 2, 1, " ", cols - 2);
   ncplane_putwstr_yx(ps->p, 2, 2, msg);
@@ -1649,7 +1662,7 @@ multiform_options(struct form_state *fs){
 
   assert(fs->formtype == FORM_MULTISELECT);
   ncplane_dim_yx(fsw, &maxz, &cols);
-  cwattrset(fsw, FORMBORDER_COLOR);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   cwattron(fsw, NCSTYLE_BOLD);
   ncplane_putwstr_yx(fsw, 1, 1, L"╭");
   ncplane_putwstr_yx(fsw, 1, fs->longop + 4, L"╮");
@@ -1686,7 +1699,7 @@ multiform_options(struct form_state *fs){
       cwattroff(fsw, REVERSE);
     }
   }
-  cwattrset(fsw, FORMBORDER_COLOR);
+  compat_set_fg(fsw, FORMBORDER_COLOR);
   cwattron(fsw, NCSTYLE_BOLD);
   for(z = 0 ; z < fs->selections ; ++z){
     ncplane_putstr_yx(fsw, z >= fs->selectno ? 3 + z : 2 + z, 4, fs->selarray[z]);
@@ -1703,7 +1716,7 @@ check_options(struct form_state *fs){
   assert(fs->formtype == FORM_CHECKBOXEN);
   ncplane_dim_yx(fs->p, &maxz, &cols);
   maxz -= 3;
-  cwattrset(fs->p, FORMBORDER_COLOR);
+  compat_set_fg(fs->p, FORMBORDER_COLOR);
   cwattron(fs->p, NCSTYLE_BOLD);
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
@@ -1735,7 +1748,7 @@ check_options(struct form_state *fs){
       cwattroff(fs->p, REVERSE);
     }
   }
-  cwattrset(fs->p, FORMBORDER_COLOR);
+  compat_set_fg(fs->p, FORMBORDER_COLOR);
 }
 
 static void
@@ -1820,7 +1833,7 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
   ps->p = ncplane_new(notcurses_stdplane(NC), y + 3, cols, linesz - (y + 2), ncols - cols, NULL, NULL);
   assert(ps->p);
   cwbkgd(ps->p);
-  cwattrset(ps->p, FORMBORDER_COLOR);
+  compat_set_fg(ps->p, FORMBORDER_COLOR);
   bevel_all(ps->p);
   compat_set_fg(ps->p, FORMTEXT_COLOR);
   do{
@@ -3637,7 +3650,8 @@ map_details(struct ncplane *hw){
   if(growlight_target){
     int blockout;
 
-    cwattrset(hw, NCSTYLE_BOLD|PHEADING_COLOR);
+    ncplane_set_styles(hw, NCSTYLE_BOLD);
+    compat_set_fg(hw, PHEADING_COLOR);
     cmvwprintw(hw, y, 1, "Operating in target mode (%s)", growlight_target);
     ncplane_cursor_yx(hw, NULL, &curcol);
     if( (blockout = cols - curcol - 1) ){
@@ -3645,7 +3659,8 @@ map_details(struct ncplane *hw){
     }
     ++y;
   }
-  cwattrset(hw, NCSTYLE_BOLD|FORMTEXT_COLOR);
+  ncplane_set_styles(hw, NCSTYLE_BOLD);
+  compat_set_fg(hw, FORMTEXT_COLOR);
   // First we list the target fstab, and then the targets
   // FIXME this is probably multibyte input and needs be handled as such
   if( (fstab = dump_targets()) ){
@@ -3676,7 +3691,8 @@ map_details(struct ncplane *hw){
     }
     free(fstab);
   }
-  cwattrset(hw, NCSTYLE_BOLD|SUBDISPLAY_COLOR);
+  ncplane_set_styles(hw, NCSTYLE_BOLD);
+  compat_set_fg(hw, SUBDISPLAY_COLOR);
   cmvwhline(hw, y, 1, " ", cols - 2);
   cmvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s %*s %s",
       FSLABELSIZ, FSLABELSIZ, "Label",
@@ -3684,7 +3700,8 @@ map_details(struct ncplane *hw){
   if(++y >= rows){
     return 0;
   }
-  cwattrset(hw, NCSTYLE_BOLD|FORMTEXT_COLOR);
+  ncplane_set_styles(hw, NCSTYLE_BOLD);
+  compat_set_fg(hw, FORMTEXT_COLOR);
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -3704,7 +3721,8 @@ map_details(struct ncplane *hw){
     }
   }
   // Now list the existing maps, a superset of the targets
-  cwattrset(hw, NCSTYLE_BOLD|SUBDISPLAY_COLOR);
+  ncplane_set_styles(hw, NCSTYLE_BOLD);
+  compat_set_fg(hw, SUBDISPLAY_COLOR);
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
