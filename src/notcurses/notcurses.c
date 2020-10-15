@@ -3070,13 +3070,11 @@ update_details(struct ncplane* hw){
     ncplane_off_styles(hw, NCSTYLE_BOLD);
     ncplane_putstr(hw, sn ? sn : "n/a");
     ncplane_on_styles(hw, NCSTYLE_BOLD);
-    if(cols - curcol > 13){
-      cwprintw(hw, " WC%lc WRV%lc RO%lc",
-          d->blkdev.wcache ? L'+' : L'-',
-          d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
-          d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
-          d->roflag ? L'+' : L'-');
-    }
+		cwprintw(hw, " WC%lc WRV%lc RO%lc",
+				d->blkdev.wcache ? L'+' : L'-',
+				d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
+				d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
+				d->roflag ? L'+' : L'-');
     assert(d->physsec <= 4096);
     cmvwprintw(hw, 4, START_COL, "Sectors: ");
     ncplane_off_styles(hw, NCSTYLE_BOLD);
@@ -3196,12 +3194,8 @@ update_details(struct ncplane* hw){
         cwprintw(hw, " (%s) ", "unnamed");
       }
       ncplane_on_styles(hw, NCSTYLE_BOLD);
-                        if(curcol <= cols - 2 - 4){
-        cwprintw(hw, "%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
-      }
-      if(curcol <= cols - 2 - 11){
-        cwprintw(hw, " %sB align", align);
-      }
+      cwprintw(hw, "%04x", get_code_specific(pttype, b->zone->p->partdev.ptype));
+      cwprintw(hw, " %sB align", align);
       detail_fs(hw, b->zone->p, 7);
     }else{
       // FIXME print alignment for unpartitioned space as well,
@@ -5250,7 +5244,7 @@ handle_input(struct ncplane* w){
 			ncmenu_rollup(mainmenu);
 			ch = ni.id;
 		}
-		if(ch <= NCKEY_RELEASE && ch >= NCKEY_BUTTON1){
+		if(ch == NCKEY_RELEASE){
 			if(ncmenu_mouse_selected(mainmenu, &ni, &ni) == NULL){
 				continue;
 			} // otherwise, continue through with selected item
