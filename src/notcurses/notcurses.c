@@ -5948,24 +5948,39 @@ static struct ncmenu*
 create_menu(struct ncplane* n){
 	struct ncmenu_item block_items[] = {
 		{ .desc = "Make partition table", .shortcut = { .id = 'm', }, },
+		{ .desc = "Remove partition table", .shortcut = { .id = 'r', }, },
+		{ .desc = "Wipe MBR", .shortcut = { .id = 'W', }, },
+		{ .desc = "Bad block check", .shortcut = { .id = 'B', }, },
+		{ .desc = "Create aggregate", .shortcut = { .id = 'A', }, },
+		{ .desc = "Modify aggregate", .shortcut = { .id = 'z', }, },
+		{ .desc = "Destroy aggregate", .shortcut = { .id = 'Z', }, },
 	};
 	struct ncmenu_item part_items[] = {
-		{ .desc = "Make filesystem", .shortcut = { .id = 'M', }, },
+		{ .desc = "New partition", .shortcut = { .id = 'n', }, },
+		{ .desc = "Delete partition", .shortcut = { .id = 'd', }, },
+		{ .desc = "Set partition attributes", .shortcut = { .id = 's', }, },
+		{ .desc = "Make filesystem/swap", .shortcut = { .id = 'M', }, },
+		{ .desc = "fsck filesystem", .shortcut = { .id = 'F', }, },
+		{ .desc = "Wipe filesystem", .shortcut = { .id = 'w', }, },
+    { .desc = "Name filesystem", .shortcut = { .id = 'L', }, },
+    { .desc = "Mount filesystem", .shortcut = { .id = 'o', }, },
+    { .desc = "Unmount filesystem", .shortcut = { .id = 'O', }, },
 	};
 	struct ncmenu_item glight_items[] = {
-		{ .desc = "Details window", .shortcut = { .id = 'v', }, },
-		{ .desc = "Help window", .shortcut = { .id = 'H', }, },
+		{ .desc = "View details", .shortcut = { .id = 'v', }, },
+		{ .desc = "Show mounts", .shortcut = { .id = 'E', }, },
 		{ .desc = "Diagnostics", .shortcut = { .id = 'D', }, },
+		{ .desc = "Help", .shortcut = { .id = 'H', }, },
 		{ .desc = "Quit", .shortcut = { .id = 'q', }, },
 	};
 	struct ncmenu_section sections[] = {
 		{ .name = "Growlight", .items = glight_items,
 			.itemcount = sizeof(glight_items) / sizeof(*glight_items),
 			.shortcut = { .id = 'g', .alt = true, }, },
-		{ .name = "Blockdev", .items = block_items,
+		{ .name = "Blockdevs", .items = block_items,
 			.itemcount = sizeof(block_items) / sizeof(*block_items),
 			.shortcut = { .id = 'b', .alt = true, }, },
-		{ .name = "Partition", .items = part_items,
+		{ .name = "Partitions", .items = part_items,
 			.itemcount = sizeof(part_items) / sizeof(*part_items),
 			.shortcut = { .id = 'p', .alt = true, }, },
 	};
