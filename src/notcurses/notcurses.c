@@ -5962,6 +5962,7 @@ create_menu(struct ncplane* n){
 		.sections = sections,
 		.sectioncount = sizeof(sections) / sizeof(*sections),
 	  .headerchannels = CHANNELS_RGB_INITIALIZER(0xff, 0xff, 0xff, 0x6b, 0x38, 0x6b),
+		.sectionchannels = CHANNELS_RGB_INITIALIZER(0xd6, 0x70, 0xd6, 0x00, 0x00, 0x00),
 	};
 	struct ncmenu* nmenu = ncmenu_create(n, &mopts);
 	return nmenu;
