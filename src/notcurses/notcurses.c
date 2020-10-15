@@ -5230,8 +5230,8 @@ handle_ncurses_input(struct ncplane* w){
       struct ncplane *ncp = ncreel_plane(PR);
       int dimy, dimx;
       notcurses_refresh(NC, &dimy, &dimx);
-      ncplane_resize_simple(ncp, dimy - 1, dimx);
-      locked_diag("resized to %dx%d", dimx, dimy - 1);
+      ncplane_resize_simple(ncp, dimy - 2, dimx);
+      locked_diag("resized to %dx%d", dimx, dimy);
       unlock_notcurses();
       continue;
     }
