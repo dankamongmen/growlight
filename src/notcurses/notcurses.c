@@ -92,9 +92,6 @@ struct panel_state {
   struct ncplane *p;
 };
 
-// inherited jank from ncurses->notcurses conversion, eliminate me FIXME
-#define REVERSE (NCSTYLE_REVERSE << 8u)
-
 #define PANEL_STATE_INITIALIZER { .p = NULL, }
 
 static struct panel_state *splash;
@@ -832,6 +829,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   int off = sx;
   uintmax_t zs;
 
+	ncplane_set_styles(n, NCSTYLE_NONE);
   zs = d->mntsize ? d->mntsize :
     (last_usable_sector(d) - first_usable_sector(d) + 1) * bo->d->logsec;
   // Sometimes, a partitioned block device will be given a mnttype by
@@ -1054,7 +1052,11 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   strcpy(rolestr, "");
   bool selected = false;
   if(as == get_current_adapter()){
-    selected = line >= 1 && line == as->selline;
+		if(line >= 1){
+      if(line == as->selline){
+				selected = true;
+			}
+		}
   }
   rx = cols - 79;
   switch(bo->d->layout){
@@ -1089,7 +1091,8 @@ case LAYOUT_NONE:
     if(!bo->d->size || line + 2 < rows){
       if(bo->d->size){
         line += 2;
-      }else if(selected){
+      }
+			if(selected){
         ncplane_on_styles(n, NCSTYLE_REVERSE);
       }
       qprefix(bo->d->size, 1, buf, 0);
@@ -1123,7 +1126,8 @@ case LAYOUT_MDADM:
       if(!bo->d->size || line + 2 <= rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
-        }else if(selected){
+        }
+				if(selected){
           ncplane_on_styles(n, NCSTYLE_REVERSE);
         }
         qprefix(bo->d->size, 1, buf, 0);
@@ -1151,7 +1155,8 @@ case LAYOUT_DM:
       if(!bo->d->size || line + 2 < rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
-        }else if(selected){
+        }
+				if(selected){
           ncplane_on_styles(n, NCSTYLE_REVERSE);
         }
         qprefix(bo->d->size, 1, buf, 0);
@@ -1180,7 +1185,8 @@ case LAYOUT_ZPOOL:
       if(!bo->d->size || line + 2 < rows/* - !drawfromtop*/){
         if(bo->d->size){
           line += 2;
-        }else if(selected){
+        }
+				if(selected){
           ncplane_on_styles(n, NCSTYLE_REVERSE);
         }
         qprefix(bo->d->size, 1, buf, 0);
@@ -1343,6 +1349,7 @@ case LAYOUT_ZPOOL:
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"╯");
   }
   ++line;
+  ncplane_off_styles(n, NCSTYLE_REVERSE);
   return 3;
 }
 
@@ -2744,6 +2751,7 @@ lex_part_spec(const char *psects, zobj *z, size_t sectsize,
     if(el[1]){
       return -1;
     }
+		// FIXME replace with ncenmetric()
     switch(*el){
       case 'E': case 'e':
         ull *= 1024llu * 1024 * 1024 * 1024 * 1024 * 1024; break;
