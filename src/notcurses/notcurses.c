@@ -629,20 +629,6 @@ bevel_all(struct ncplane* nc){
 }
 
 static int
-cwattroff(struct ncplane* n, int style){
-  ncplane_off_styles(n, style >> 8);
-  compat_set_fg(n, style & 0xff);
-  return 0;
-}
-
-static int
-cwattron(struct ncplane* n, int style){
-  ncplane_on_styles(n, style >> 8u);
-  compat_set_fg(n, style & 0xffu);
-  return 0;
-}
-
-static int
 cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   if(ncplane_cursor_move_yx(nc, y, x)){
     return -1;
@@ -810,10 +796,10 @@ new_display_panel(struct ncplane* nc, struct panel_state* ps,
     locked_diag("Couldn't create subpanel, uh-oh");
     return -1;
   }
-  cwattron(ps->p, NCSTYLE_BOLD);
+  ncplane_on_styles(ps->p, NCSTYLE_BOLD);
   compat_set_fg(ps->p, borderpair);
   bevel_all(ps->p);
-  cwattroff(ps->p, NCSTYLE_BOLD);
+  ncplane_off_styles(ps->p, NCSTYLE_BOLD);
   compat_set_fg(ps->p, PHEADING_COLOR);
   if(hstr){
     ncplane_putwstr_yx(ps->p, 0, START_COL * 2, hstr);
@@ -907,9 +893,9 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   }
   if((z = bo->zchain) == NULL){
     if(selected){
-      cwattron(n, REVERSE);
+      ncplane_on_styles(n, NCSTYLE_REVERSE);
       cmvwprintw(n, y - 1, sx + 1, "⇗⇨⇨⇨%.*s", (int)(ex - (sx + 5)), selstr);
-      cwattroff(n, REVERSE);
+      ncplane_off_styles(n, NCSTYLE_REVERSE);
     }
     return;
   }
@@ -1019,7 +1005,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
         break;
       }
     }
-    cwattron(n, REVERSE);
+    ncplane_on_styles(n, NCSTYLE_REVERSE);
     if(selstr){
       if(och < ex / 2u){
         cmvwprintw(n, y - 1, och, "⇗⇨⇨⇨%.*s", (int)(ex - (off + strlen(selstr) + 4)), selstr);
@@ -1027,7 +1013,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
         cmvwprintw(n, y - 1, off - 4 - strlen(selstr), "%s⇦⇦⇦⇖", selstr);
       }
     }
-    cwattroff(n, REVERSE);
+    ncplane_off_styles(n, NCSTYLE_REVERSE);
     // Truncate it at whitespace until it's small enough to fit
     while(wcslen(wbuf) && wcslen(wbuf) + 2 > (off - och + 1)){
       wchar_t *wtrunc = wcsrchr(wbuf, L' ');
@@ -1041,7 +1027,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     if(wcslen(wbuf)){
       size_t start = och + ((off - och + 1) - wcslen(wbuf)) / 2;
 
-      cwattron(n, NCSTYLE_BOLD);
+      ncplane_on_styles(n, NCSTYLE_BOLD);
       ncplane_putwstr_yx(n, y, start, wbuf);
       ncplane_putwstr_yx(n, y, start - 1, L" ");
       ncplane_putwstr_yx(n, y, start + wcslen(wbuf), L" ");
@@ -1104,7 +1090,7 @@ case LAYOUT_NONE:
       if(bo->d->size){
         line += 2;
       }else if(selected){
-        cwattron(n, REVERSE);
+        ncplane_on_styles(n, NCSTYLE_REVERSE);
       }
       qprefix(bo->d->size, 1, buf, 0);
       cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1138,7 +1124,7 @@ case LAYOUT_MDADM:
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          cwattron(n, REVERSE);
+          ncplane_on_styles(n, NCSTYLE_REVERSE);
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1166,7 +1152,7 @@ case LAYOUT_DM:
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          cwattron(n, REVERSE);
+          ncplane_on_styles(n, NCSTYLE_REVERSE);
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1195,7 +1181,7 @@ case LAYOUT_ZPOOL:
         if(bo->d->size){
           line += 2;
         }else if(selected){
-          cwattron(n, REVERSE);
+          ncplane_on_styles(n, NCSTYLE_REVERSE);
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1218,7 +1204,7 @@ case LAYOUT_ZPOOL:
   if(bo->d->size == 0){
     return 1;
   }
-  cwattroff(n, REVERSE);
+  ncplane_off_styles(n, NCSTYLE_REVERSE);
   ncplane_set_styles(n, NCSTYLE_BOLD);
   compat_set_fg(n, SUBDISPLAY_COLOR);
 
@@ -1319,7 +1305,7 @@ case LAYOUT_ZPOOL:
   ncplane_set_styles(n, NCSTYLE_BOLD);
   compat_set_fg(n, DBORDER_COLOR);
   if(selected){
-    cwattron(n, REVERSE);
+    ncplane_on_styles(n, NCSTYLE_REVERSE);
   }
   if(line >= drawfromtop){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╭");
@@ -1338,7 +1324,7 @@ case LAYOUT_ZPOOL:
   ncplane_set_styles(n, NCSTYLE_BOLD);
 	compat_set_fg(n, DBORDER_COLOR);
   if(selected){
-    cwattron(n, REVERSE);
+    ncplane_on_styles(n, NCSTYLE_REVERSE);
   }
   if(line >= drawfromtop){
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"│");
@@ -1386,9 +1372,9 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
   ncplane_set_bg_default(nc);
   if(drawtop){
     if(current){
-      cwattron(nc, NCSTYLE_BOLD);
+      ncplane_on_styles(nc, NCSTYLE_BOLD);
     }else{
-      cwattroff(nc, NCSTYLE_BOLD);
+      ncplane_off_styles(nc, NCSTYLE_BOLD);
     }
     cmvwprintw(nc, 0, 7, "%ls", L"[");
     compat_set_fg(nc, hcolor);
@@ -1413,20 +1399,20 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
 
       cwprintw(nc, " (%sbps demanded)", qprefix(as->c->demand, 1, dbuf, 1));
     }
-    cwattron(nc, bcolor);
+    compat_set_fg(nc, bcolor);
     cwprintw(nc, "]");
-    cwattron(nc, NCSTYLE_BOLD);
+    ncplane_on_styles(nc, NCSTYLE_BOLD);
     ncplane_cursor_move_yx(nc, 0, cols - 5);
     ncplane_putwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
-    cwattron(nc, attrs);
+    ncplane_on_styles(nc, attrs);
   }
   if(drawbot){
     if(as->c->bus == BUS_PCIe){
       compat_set_fg(nc, bcolor);
       if(current){
-        cwattron(nc, NCSTYLE_BOLD);
+        ncplane_on_styles(nc, NCSTYLE_BOLD);
       }else{
-        cwattroff(nc, NCSTYLE_BOLD);
+        ncplane_off_styles(nc, NCSTYLE_BOLD);
       }
       cmvwprintw(nc, rows - 1, 6, "[");
       compat_set_fg(nc, hcolor);
@@ -1663,7 +1649,7 @@ multiform_options(struct form_state *fs){
   assert(fs->formtype == FORM_MULTISELECT);
   ncplane_dim_yx(fsw, &maxz, &cols);
   compat_set_fg(fsw, FORMBORDER_COLOR);
-  cwattron(fsw, NCSTYLE_BOLD);
+  ncplane_on_styles(fsw, NCSTYLE_BOLD);
   ncplane_putwstr_yx(fsw, 1, 1, L"╭");
   ncplane_putwstr_yx(fsw, 1, fs->longop + 4, L"╮");
   maxz -= 3;
@@ -1672,7 +1658,7 @@ multiform_options(struct form_state *fs){
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    cwattroff(fsw, NCSTYLE_BOLD);
+    ncplane_off_styles(fsw, NCSTYLE_BOLD);
     compat_set_fg(fsw, FORMBORDER_COLOR);
     if(fs->selectno >= z){
       cmvwprintw(fsw, z + 1, START_COL * 2, "%d", z);
@@ -1680,12 +1666,12 @@ multiform_options(struct form_state *fs){
       cmvwprintw(fsw, z + 2, START_COL * 2, "%d", z);
     }
     if(z < fs->opcount + 1){
-      cwattron(fsw, NCSTYLE_BOLD);
+      ncplane_on_styles(fsw, NCSTYLE_BOLD);
       compat_set_fg(fsw, FORMTEXT_COLOR);
       cmvwprintw(fsw, z + 1, START_COL * 2 + fs->longop + 4, "%-*.*s ",
                  fs->longop, fs->longop, opstrs[op].option);
       if(op == fs->idx){
-        cwattron(fsw, REVERSE);
+        ncplane_on_styles(fsw, NCSTYLE_REVERSE);
       }
       compat_set_fg(fsw, INPUT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
@@ -1696,11 +1682,11 @@ multiform_options(struct form_state *fs){
       }
       cwprintw(fsw, "%-*.*s", cols - fs->longop * 2 - 9,
         cols - fs->longop * 2 - 9, opstrs[op].desc);
-      cwattroff(fsw, REVERSE);
+      ncplane_off_styles(fsw, NCSTYLE_REVERSE);
     }
   }
   compat_set_fg(fsw, FORMBORDER_COLOR);
-  cwattron(fsw, NCSTYLE_BOLD);
+  ncplane_on_styles(fsw, NCSTYLE_BOLD);
   for(z = 0 ; z < fs->selections ; ++z){
     ncplane_putstr_yx(fsw, z >= fs->selectno ? 3 + z : 2 + z, 4, fs->selarray[z]);
   }
@@ -1717,18 +1703,18 @@ check_options(struct form_state *fs){
   ncplane_dim_yx(fs->p, &maxz, &cols);
   maxz -= 3;
   compat_set_fg(fs->p, FORMBORDER_COLOR);
-  cwattron(fs->p, NCSTYLE_BOLD);
+  ncplane_on_styles(fs->p, NCSTYLE_BOLD);
   for(z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
-    cwattroff(fs->p, NCSTYLE_BOLD);
+    ncplane_off_styles(fs->p, NCSTYLE_BOLD);
     compat_set_fg(fs->p, FORMBORDER_COLOR);
     if(z < fs->opcount + 1){
       wchar_t ballot = L'☐';
 
-      cwattron(fs->p, NCSTYLE_BOLD);
+      ncplane_on_styles(fs->p, NCSTYLE_BOLD);
       compat_set_fg(fs->p, FORMTEXT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
         if(strcmp(opstrs[op].option, fs->selarray[selidx]) == 0){
@@ -1737,7 +1723,7 @@ check_options(struct form_state *fs){
         }
       }
       if(op == fs->idx){
-        cwattron(fs->p, REVERSE);
+        ncplane_on_styles(fs->p, NCSTYLE_REVERSE);
       }else{
         compat_set_fg(fs->p, INPUT_COLOR);
       }
@@ -1745,7 +1731,7 @@ check_options(struct form_state *fs){
         ballot, fs->longop, fs->longop, opstrs[op].option);
       cwprintw(fs->p, "%-*.*s", cols - fs->longop - 7,
         cols - fs->longop - 7, opstrs[op].desc);
-      cwattroff(fs->p, REVERSE);
+      ncplane_off_styles(fs->p, NCSTYLE_REVERSE);
     }
   }
   compat_set_fg(fs->p, FORMBORDER_COLOR);
@@ -1760,7 +1746,7 @@ form_options(struct form_state *fs){
     return;
   }
   ncplane_dim_yx(fs->p, &rows, &cols);
-  cwattron(fs->p, NCSTYLE_BOLD);
+  ncplane_on_styles(fs->p, NCSTYLE_BOLD);
   for(z = 1 ; z < rows - 3 ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
@@ -1770,12 +1756,12 @@ form_options(struct form_state *fs){
     cmvwprintw(fs->p, z + 1, START_COL * 2, "%-*.*s ",
       fs->longop, fs->longop, opstrs[op].option);
     if(op == fs->idx){
-      cwattron(fs->p, REVERSE);
+      ncplane_on_styles(fs->p, NCSTYLE_REVERSE);
     }
     compat_set_fg(fs->p, INPUT_COLOR);
     cwprintw(fs->p, "%-*.*s", cols - fs->longop - 1 - START_COL * 4,
       cols - fs->longop - 1 - START_COL * 4, opstrs[op].desc);
-    cwattroff(fs->p, REVERSE);
+    ncplane_off_styles(fs->p, NCSTYLE_REVERSE);
   }
 }
 
@@ -1902,14 +1888,14 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
-  cwattroff(fs->p, NCSTYLE_BOLD);
+  ncplane_off_styles(fs->p, NCSTYLE_BOLD);
   compat_set_fg(fs->p, FORMBORDER_COLOR);
   bevel_all(fs->p);
-  cwattron(fs->p, NCSTYLE_BOLD);
+  ncplane_on_styles(fs->p, NCSTYLE_BOLD);
   cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr) - 4, "%s", fs->boxstr);
   ncplane_putwstr_yx(fs->p, rows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
-  cwattroff(fs->p, NCSTYLE_BOLD);
+  ncplane_off_styles(fs->p, NCSTYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   fs->selectno = selectno;
@@ -1983,16 +1969,16 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
-  cwattroff(fsw, NCSTYLE_BOLD);
+  ncplane_off_styles(fsw, NCSTYLE_BOLD);
   compat_set_fg(fsw, FORMBORDER_COLOR);
   bevel_all(fsw);
-  cwattron(fsw, NCSTYLE_BOLD);
+  ncplane_on_styles(fsw, NCSTYLE_BOLD);
   cmvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 2, "%s", fs->boxstr);
   int nrows;
   ncplane_dim_yx(fsw, &nrows, NULL);
   ncplane_putwstr_yx(fsw, nrows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
-  cwattroff(fsw, NCSTYLE_BOLD);
+  ncplane_off_styles(fsw, NCSTYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   check_options(fs);
@@ -2058,13 +2044,13 @@ void raise_form(const char* str, void (*fxn)(const char*),
     fs->idx = defidx = 0;
   }
   fs->opcount = ops;
-  cwattroff(fs->p, NCSTYLE_BOLD);
+  ncplane_off_styles(fs->p, NCSTYLE_BOLD);
   compat_set_fg(fs->p, FORMBORDER_COLOR);
   bevel_all(fs->p);
-  cwattron(fs->p, NCSTYLE_BOLD);
+  ncplane_on_styles(fs->p, NCSTYLE_BOLD);
   cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
   ncplane_putwstr_yx(fs->p, rows - 1, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
-  cwattroff(fs->p, NCSTYLE_BOLD);
+  ncplane_off_styles(fs->p, NCSTYLE_BOLD);
   fs->longop = longop;
   fs->ops = opstrs;
   form_options(fs);
@@ -2119,10 +2105,10 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
     free_form(fs);
     return;
   }
-  cwattroff(fs->p, NCSTYLE_BOLD);
+  ncplane_off_styles(fs->p, NCSTYLE_BOLD);
   compat_set_fg(fs->p, FORMBORDER_COLOR);
   bevel_all(fs->p);
-  cwattron(fs->p, NCSTYLE_BOLD);
+  ncplane_on_styles(fs->p, NCSTYLE_BOLD);
   cmvwprintw(fs->p, 0, cols - strlen(fs->boxstr), "%s", fs->boxstr);
   ncplane_putwstr_yx(fs->p, 2, cols - wcslen(L"⎋esc returns"), L"⎋esc returns");
   fs->inp.prompt = fs->boxstr;
@@ -3587,13 +3573,13 @@ detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
     if(++*row == maxy){
       return;
     }
-    cwattroff(w, NCSTYLE_BOLD);
+    ncplane_off_styles(w, NCSTYLE_BOLD);
     if((r = snprintf(b, sizeof(b), " %s %s", d->mnt.list[z], d->mntops.list[z])) >= (int)sizeof(b)){
       b[sizeof(b) - 1] = '\0';
     }
     cmvwhline(w, *row, START_COL, " ", cols - 2);
     cmvwprintw(w, *row, START_COL, "%-*.*s", cols - 2, cols - 2, b);
-    cwattron(w, NCSTYLE_BOLD);
+    ncplane_on_styles(w, NCSTYLE_BOLD);
     ++*row;
   }
 }
@@ -3626,13 +3612,13 @@ detail_targets(struct ncplane* w, int* row, int both, const device* d){
     if(!both){
       return;
     }
-    cwattroff(w, NCSTYLE_BOLD);
+    ncplane_off_styles(w, NCSTYLE_BOLD);
     if((r = snprintf(b, sizeof(b), " %s %s", d->mnt.list[z], d->mntops.list[z])) >= (int)sizeof(b)){
       b[sizeof(b) - 1] = '\0';
     }
     cmvwhline(w, *row, START_COL, " ", cols - 2);
     cmvwprintw(w, *row, START_COL, "%-*.*s", cols - 2, cols - 2, b);
-    cwattron(w, NCSTYLE_BOLD);
+    ncplane_on_styles(w, NCSTYLE_BOLD);
     ++*row;
     break; // FIXME no space currently
   }
@@ -5928,10 +5914,10 @@ static void raise_info_form(const char *str, const char *text){
     free_form(fs);
     return;
   }
-  cwattroff(fs->p, NCSTYLE_BOLD);
+  ncplane_off_styles(fs->p, NCSTYLE_BOLD);
   compat_set_fg(fs->p, FORMBORDER_COLOR);
   bevel_all(fs->p);
-  cwattron(fs->p, NCSTYLE_BOLD);
+  ncplane_on_styles(fs->p, NCSTYLE_BOLD);
   cmvwprintw(fs->p, 1, START_COL, "%-*.*s", cols, cols, str);
   form_string_options(fs);
   actform = fs;
