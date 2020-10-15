@@ -5936,10 +5936,10 @@ boxinfo(const char *text, ...){
 static struct ncmenu*
 create_menu(struct ncplane* n){
 	struct ncmenu_item block_items[] = {
-		{ .desc = "Make partition table", .shortcut = { .id = 'P', .ctrl = true, }, },
+		{ .desc = "Make partition table", .shortcut = { .id = 'm', }, },
 	};
 	struct ncmenu_item part_items[] = {
-		{ .desc = "Make filesystem", .shortcut = { .id = 'F', .ctrl = true, }, },
+		{ .desc = "Make filesystem", .shortcut = { .id = 'M', }, },
 	};
 	struct ncmenu_item glight_items[] = {
 		{ .desc = "Details window", .shortcut = { .id = 'v', }, },
