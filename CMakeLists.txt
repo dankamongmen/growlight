@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(growlight VERSION 1.2.14
+project(growlight VERSION 1.2.15
   DESCRIPTION "Block device and filesystem manager"
   HOMEPAGE_URL "https://nick-black.com/dankwiki/index.php/Growlight"
   LANGUAGES C)
