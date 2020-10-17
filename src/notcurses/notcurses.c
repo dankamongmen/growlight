@@ -910,12 +910,12 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     unsigned ch, och;
     wchar_t rep[2] = {L'\0', L'\0'};
 
+    ncplane_set_styles(n, NCSTYLE_NONE);
     wbuf[0] = L'\0';
     zs = (z->lsector - z->fsector + 1) * bo->d->logsec;
     qprefix(zs, 1, pre, 1);
     if(z->p == NULL){ // unused space among partitions, or metadata
-      int co = (z->rep == REP_METADATA ? METADATA_COLOR :
-          EMPTY_COLOR);
+      int co = (z->rep == REP_METADATA ? METADATA_COLOR : EMPTY_COLOR);
       const char *repstr = z->rep == REP_METADATA ?
         "partition table metadata" : "empty space";
 
@@ -932,19 +932,16 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
       rep[0] = z->rep;
     }else{ // dedicated partition
       if(selected && z == bo->zone){ // partition and device are selected
+        ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
         if(targeted_p(z->p)){
-          ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
           compat_set_fg(n, targco);
           targco = next_targco(targco);
         }else if(z->p->mnt.count){
-          ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
           compat_set_fg(n, mountco);
           mountco = next_mountco(mountco);
         }else if(z->p->mnttype && !mnttype_aggregablep(z->p->mnttype)){
-          ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
           compat_set_fg(n, FS_COLOR);
         }else{
-          ncplane_set_styles(n, NCSTYLE_BOLD | NCSTYLE_UNDERLINE);
           compat_set_fg(n, partco);
           partco = next_partco(partco);
         }
@@ -5732,8 +5729,7 @@ update_blockobj(blockobj* b, device* d){
     // If we hadn't selected one before, select the first
     // empty space (where we can make a partition)
     while(z->prev){
-      if((zonesel == z->zoneno) ||
-          (zonesel == -1 && !z->p && z->rep == REP_EMPTY)){
+      if((zonesel == z->zoneno) || (zonesel == -1 && !z->p && z->rep == REP_EMPTY)){
         b->zone = z;
       }else if(z->zoneno){
         firstchoice = z;
