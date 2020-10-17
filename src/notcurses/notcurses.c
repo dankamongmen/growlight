@@ -1099,7 +1099,8 @@ case LAYOUT_NONE:
         line += 2;
       }
 			if(selected){
-        ncplane_on_styles(n, NCSTYLE_REVERSE);
+				compat_set_fg(n, DBORDER_COLOR);
+        ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
       }
       qprefix(bo->d->size, 1, buf, 0);
       cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1134,7 +1135,8 @@ case LAYOUT_MDADM:
           line += 2;
         }
 				if(selected){
-          ncplane_on_styles(n, NCSTYLE_REVERSE);
+				  compat_set_fg(n, DBORDER_COLOR);
+          ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1163,7 +1165,8 @@ case LAYOUT_DM:
           line += 2;
         }
 				if(selected){
-          ncplane_on_styles(n, NCSTYLE_REVERSE);
+				  compat_set_fg(n, DBORDER_COLOR);
+          ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1193,7 +1196,8 @@ case LAYOUT_ZPOOL:
           line += 2;
         }
 				if(selected){
-          ncplane_on_styles(n, NCSTYLE_REVERSE);
+				  compat_set_fg(n, DBORDER_COLOR);
+          ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -5561,13 +5565,15 @@ handle_input(struct ncplane* w){
         confirm_operation("exit without finalizing a target", untargeted_exit_confirm);
         break;
       default:{
-        const char *hstr = !help.p ? " ('H' for help)" : "";
-        // diag() locks/unlocks, and calls screen_update()
-        if(isprint(ch)){
-          diag("unknown command '%c'%s", ch, hstr);
-        }else{
-          diag("unknown scancode 0x%x%s", ch, hstr);
-        }
+				if(!nckey_mouse_p(ch)){ // don't print warnings for mouse clicks
+					const char *hstr = !help.p ? " ('H' for help)" : "";
+					// diag() locks/unlocks, and calls screen_update()
+					if(isprint(ch)){
+						diag("unknown command '%c'%s", ch, hstr);
+					}else{
+						diag("unknown scancode 0x%x%s", ch, hstr);
+					}
+				}
         break;
       }
     }
