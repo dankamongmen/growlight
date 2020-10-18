@@ -22,16 +22,15 @@ static const int SG_ATA_16 = 0x85; // 16-byte ATA pass-though command
 static const int SG_ATA_PROTO_PIO_IN = 4;
 #define SG_CHECK_CONDITION	0x02
 #define SG_DRIVER_SENSE		0x08
-#define START_SERIAL            10  /* ASCII serial number */
-#define LENGTH_SERIAL           10  /* 10 words (20 bytes or characters) */
-                                    /* multiword DMA xfer cycle time: */
-#define CMDS_SUPP_0             82  /* command/feature set(s) supported */
-#define FEATURE_WRITE_CACHE     16 // use with CMDS_SUPP_1
+#define START_SERIAL            10  // ASCII serial number
+#define LENGTH_SERIAL           20
+#define CMDS_SUPP_0             82  // command/feature set(s) supported
+#define FEATURE_WRITE_CACHE     16  // use with CMDS_SUPP_1
 #define CMDS_SUPP_1             83
 #define CMDS_SUPP_2             84
 #define CMDS_SUPP_3             119
-#define FEATURE_READWRITEVERIFY 2  // use with CMDS_SUPP_3
-#define CMDS_EN_0               85  /* command/feature set(s) enabled */
+#define FEATURE_READWRITEVERIFY 2   // use with CMDS_SUPP_3
+#define CMDS_EN_0               85  // command/feature set(s) enabled
 #define CMDS_EN_1               86
 #define CMDS_EN_2               87
 #define CMDS_EN_3               120
