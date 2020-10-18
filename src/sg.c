@@ -16,21 +16,21 @@
 #include "sysfs.h"
 #include "growlight.h"
 
-#define FEATURE_WRITE_CACHE     16 // use with CMDS_SUPP_1
-#define FEATURE_READWRITEVERIFY 2  // use with CMDS_SUPP_3
-
-#define SG_ATA_16	0x85
+// Consult T10/04-262r3 "ATA Comand Pass-Through" revision 3 2004-08-31
+static const int SG_ATA_16 = 0x85; // 16-byte ATA pass-though command
 #define SG_ATA_16_LEN	16
-#define SG_ATA_PROTO_PIO_IN     ( 4 << 1)
+static const int SG_ATA_PROTO_PIO_IN = 4;
 #define SG_CHECK_CONDITION	0x02
 #define SG_DRIVER_SENSE		0x08
 #define START_SERIAL            10  /* ASCII serial number */
 #define LENGTH_SERIAL           10  /* 10 words (20 bytes or characters) */
                                     /* multiword DMA xfer cycle time: */
 #define CMDS_SUPP_0             82  /* command/feature set(s) supported */
+#define FEATURE_WRITE_CACHE     16 // use with CMDS_SUPP_1
 #define CMDS_SUPP_1             83
 #define CMDS_SUPP_2             84
 #define CMDS_SUPP_3             119
+#define FEATURE_READWRITEVERIFY 2  // use with CMDS_SUPP_3
 #define CMDS_EN_0               85  /* command/feature set(s) enabled */
 #define CMDS_EN_1               86
 #define CMDS_EN_2               87
@@ -92,7 +92,7 @@ int sg_interrogate(device *d, int fd){
 	memset(buf, 0, sizeof(buf));
 	memset(cdb, 0, sizeof(cdb));
 	cdb[0] = SG_ATA_16;
-	cdb[1] = SG_ATA_PROTO_PIO_IN;
+	cdb[1] = SG_ATA_PROTO_PIO_IN << 1u;
 	cdb[2] = SG_CDB2_TLEN_NSECT | SG_CDB2_TLEN_SECTORS | SG_CDB2_TDIR_FROM_DEV;
 	cdb[6] = IDSECTORS;
 	cdb[13] = ATA_USING_LBA;
@@ -186,8 +186,7 @@ int sg_interrogate(device *d, int fd){
 		buf[n] = ntohs(buf[n]);
 	}
 	free(d->blkdev.serial);
-	d->blkdev.serial = cleanup_serial(buf + START_SERIAL,
-					  LENGTH_SERIAL * sizeof(*buf));
+	d->blkdev.serial = cleanup_serial(buf + START_SERIAL, LENGTH_SERIAL * sizeof(*buf));
 	if(d->blkdev.serial == NULL){
 		return -1;
 	}
