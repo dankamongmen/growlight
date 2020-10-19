@@ -95,10 +95,13 @@ static const char FSTYPE_TEXT[] =
 static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 struct panel_state {
-  struct ncplane *p;
+  struct ncplane *n;
+	char* hstr;
+	char* bstr;
+	int borderpair;
 };
 
-#define PANEL_STATE_INITIALIZER { .p = NULL, }
+#define PANEL_STATE_INITIALIZER { .n = NULL, .hstr = NULL, .bstr = NULL, }
 
 static struct panel_state *splash;
 static struct panel_state *active;
@@ -412,16 +415,16 @@ screen_update(void){
     ncreel_redraw(PR);
   }
   if(active){
-    ncplane_move_top(active->p);
+    ncplane_move_top(active->n);
   }
   if(actform){
     if(actform->extext){
-      ncplane_move_top(actform->extext->p);
+      ncplane_move_top(actform->extext->n);
     }
     ncplane_move_top(actform->p);
   }
   if(splash){
-    ncplane_move_top(splash->p);
+    ncplane_move_top(splash->n);
   }
 	ncplane_move_top(ncmenu_plane(mainmenu));
   notcurses_render(NC);
@@ -709,7 +712,7 @@ locked_vdiag(const char *fmt, va_list v){
     }
   }
   draw_main_window(notcurses_stdplane(NC));
-  if(diags.p){
+  if(diags.n){
     update_diags(&diags);
   }
   screen_update();
@@ -766,14 +769,33 @@ create_zobj(zobj *prev, unsigned zno, uintmax_t fsector, uintmax_t lsector,
   return z;
 }
 
+static int
+redraw_subdisplay_border(const struct panel_state* ps){
+	struct ncplane* n = ps->n;
+  ncplane_on_styles(n, NCSTYLE_BOLD);
+  compat_set_fg(n, ps->borderpair);
+  bevel_all(n);
+  ncplane_off_styles(n, NCSTYLE_BOLD);
+  compat_set_fg(n, PHEADING_COLOR);
+  if(ps->hstr){
+    ncplane_putstr_yx(n, 0, START_COL * 2, ps->hstr);
+  }
+	int rows, cols;
+	ncplane_dim_yx(ps->n, &rows, &cols);
+  if(ps->bstr){
+    const int crightlen = ps->bstr ? strlen(ps->bstr) : 0;
+    ncplane_putstr_yx(n, rows + 1, cols - (crightlen + START_COL * 2), ps->bstr);
+  }
+	return 0;
+}
+
 // Create a panel at the bottom of the window, referred to as the "subdisplay".
 // Only one can currently be active at a time. Window decoration and placement
 // is managed here; only the rows needed for display ought be provided.
 static int
 new_display_panel(struct ncplane* nc, struct panel_state* ps,
-                  int rows, int cols, const wchar_t* hstr,
-                  const wchar_t* bstr, int borderpair){
-  const int crightlen = bstr ? wcslen(bstr) : 0;
+                  int rows, int cols, const char* hstr,
+                  const char* bstr, int borderpair){
   int ybelow, yabove;
   int x, y;
 
@@ -795,29 +817,22 @@ new_display_panel(struct ncplane* nc, struct panel_state* ps,
   }else{
     yabove += y - (rows + ybelow + yabove);
   }
-  if((ps->p = ncplane_new(notcurses_stdplane(NC), rows + 2, cols, yabove, 0, NULL, NULL)) == NULL){
+  if((ps->n = ncplane_new(notcurses_stdplane(NC), rows + 2, cols, yabove, 0, NULL, NULL)) == NULL){
     locked_diag("Couldn't create subpanel, uh-oh");
     return -1;
   }
-  ncplane_on_styles(ps->p, NCSTYLE_BOLD);
-  compat_set_fg(ps->p, borderpair);
-  bevel_all(ps->p);
-  ncplane_off_styles(ps->p, NCSTYLE_BOLD);
-  compat_set_fg(ps->p, PHEADING_COLOR);
-  if(hstr){
-    ncplane_putwstr_yx(ps->p, 0, START_COL * 2, hstr);
-  }
-  if(bstr){
-    ncplane_putwstr_yx(ps->p, rows + 1, cols - (crightlen + START_COL * 2), bstr);
-  }
+	ps->bstr = bstr ? strdup(bstr) : NULL;
+	ps->hstr = hstr ? strdup(hstr) : NULL;
+	ps->borderpair = borderpair;
+	redraw_subdisplay_border(ps);
   return 0;
 }
 
 static void
 hide_panel_locked(struct panel_state* ps){
   if(ps){
-    ncplane_destroy(ps->p);
-    ps->p = NULL;
+    ncplane_destroy(ps->n);
+    ps->n = NULL;
   }
 }
 
@@ -1560,14 +1575,14 @@ struct panel_state* show_splash(const wchar_t* msg){
     return NULL;
   }
   int cols;
-  ncplane_dim_yx(ps->p, NULL, &cols);
-  ncplane_set_styles(ps->p, NCSTYLE_BOLD);
-  compat_set_fg(ps->p, SPLASHTEXT_COLOR);
-  cmvwhline(ps->p, 1, 1, " ", cols - 2);
-  cmvwhline(ps->p, 2, 1, " ", cols - 2);
-  ncplane_putwstr_yx(ps->p, 2, 2, msg);
-  cmvwhline(ps->p, 3, 1, " ", cols - 2);
-  ncplane_move_yx(ps->p, 3, 3);
+  ncplane_dim_yx(ps->n, NULL, &cols);
+  ncplane_set_styles(ps->n, NCSTYLE_BOLD);
+  compat_set_fg(ps->n, SPLASHTEXT_COLOR);
+  cmvwhline(ps->n, 1, 1, " ", cols - 2);
+  cmvwhline(ps->n, 2, 1, " ", cols - 2);
+  ncplane_putwstr_yx(ps->n, 2, 2, msg);
+  cmvwhline(ps->n, 3, 1, " ", cols - 2);
+  ncplane_move_yx(ps->n, 3, 3);
   screen_update();
   return splash = ps;
 }
@@ -1830,14 +1845,14 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
   assert(ps);
   int ncols;
   ncplane_dim_yx(n, NULL, &ncols);
-  ps->p = ncplane_new(notcurses_stdplane(NC), y + 3, cols, linesz - (y + 2), ncols - cols, NULL, NULL);
-  assert(ps->p);
-  cwbkgd(ps->p);
-  compat_set_fg(ps->p, FORMBORDER_COLOR);
-  bevel_all(ps->p);
-  compat_set_fg(ps->p, FORMTEXT_COLOR);
+  ps->n = ncplane_new(notcurses_stdplane(NC), y + 3, cols, linesz - (y + 2), ncols - cols, NULL, NULL);
+  assert(ps->n);
+  cwbkgd(ps->n);
+  compat_set_fg(ps->n, FORMBORDER_COLOR);
+  bevel_all(ps->n);
+  compat_set_fg(ps->n, FORMTEXT_COLOR);
   do{
-    ncplane_printf_yx(ps->p, y + 1, 1, "%.*s", linelen[y], text + linepre[y]);
+    ncplane_printf_yx(ps->n, y + 1, 1, "%.*s", linelen[y], text + linepre[y]);
   }while(y--);
   screen_update();
   return ps;
@@ -2418,7 +2433,7 @@ void kill_splash(struct panel_state *ps){
   if(actform){
     ncplane_move_top(actform->p);
     if(actform->extext){
-      ncplane_move_top(actform->extext->p);
+      ncplane_move_top(actform->extext->n);
     }
   }
   screen_update();
@@ -3329,9 +3344,9 @@ lock_notcurses(void){
 
 static inline void
 unlock_notcurses(void){
-  update_details_cond(details.p);
-  update_help_cond(help.p);
-  update_map_cond(maps.p);
+  update_details_cond(details.n);
+  update_help_cond(help.n);
+  update_map_cond(maps.n);
   screen_update();
   pthread_mutex_unlock(&bfl);
   unlock_growlight();
@@ -3346,9 +3361,9 @@ lock_notcurses_growlight(void){
 
 static inline void
 unlock_notcurses_growlight(void){
-  update_details_cond(details.p);
-  update_help_cond(help.p);
-  update_map_cond(maps.p);
+  update_details_cond(details.n);
+  update_help_cond(help.n);
+  update_map_cond(maps.n);
   screen_update();
   pthread_mutex_unlock(&bfl);
 }
@@ -3432,13 +3447,13 @@ update_diags(struct panel_state *ps){
   logent l[DIAGROWS];
   int y, x, r;
 
-  ncplane_dim_yx(ps->p, &y, &x);
+  ncplane_dim_yx(ps->n, &y, &x);
   y -= 2;
   assert(x > 26 + START_COL * 2); // see ctime_r(3)
   if((y = get_logs(y, l)) < 0){
     return -1;
   }
-  compat_set_fg_all(ps->p, SUBDISPLAY_ATTR);
+  compat_set_fg_all(ps->n, SUBDISPLAY_ATTR);
   for(r = 0 ; r < y ; ++r){
     char *c, tbuf[x];
     struct tm tm;
@@ -3467,7 +3482,7 @@ update_diags(struct panel_state *ps){
     while((c = strchr(tbuf, '\b')) || (c = strchr(tbuf, '\t'))){
       *c = ' ';
     }
-    cmvwprintw(ps->p, y - r, START_COL, "%-*.*s", x - 2, x - 2, tbuf);
+    cmvwprintw(ps->n, y - r, START_COL, "%-*.*s", x - 2, x - 2, tbuf);
     free(l[r].msg);
   }
   return 0;
@@ -3477,7 +3492,7 @@ static int
 display_diags(struct ncplane* mainw, struct panel_state* ps){
   memset(ps, 0, sizeof(*ps));
   if(new_display_panel(mainw, ps, DIAGROWS, 0,
-                       L"press 'D' to dismiss diagnostics", NULL,
+                       "press 'D' to dismiss diagnostics", NULL,
                        PBORDER_COLOR)){
     goto err;
   }
@@ -3487,8 +3502,8 @@ display_diags(struct ncplane* mainw, struct panel_state* ps){
   return 0;
 
 err:
-  if(ps->p){
-    ncplane_destroy(ps->p);
+  if(ps->n){
+    ncplane_destroy(ps->n);
   }
   memset(ps, 0, sizeof(*ps));
   return -1;
@@ -3500,20 +3515,20 @@ static int
 display_details(struct ncplane* mainw, struct panel_state* ps){
   memset(ps, 0, sizeof(*ps));
   if(new_display_panel(mainw, ps, DETAILROWS, 78,
-                       L"press 'v' to dismiss details",
+                       "press 'v' to dismiss details",
                        NULL, PBORDER_COLOR)){
     goto err;
   }
   if(get_current_adapter()){
-    if(update_details(ps->p)){
+    if(update_details(ps->n)){
       goto err;
     }
   }
   return 0;
 
 err:
-  if(ps->p){
-    ncplane_destroy(ps->p);
+  if(ps->n){
+    ncplane_destroy(ps->n);
   }
   memset(ps, 0, sizeof(*ps));
   return -1;
@@ -3536,19 +3551,19 @@ display_help(struct ncplane* nc, struct panel_state* ps){
   helpcols += 2; // spacing + borders
   memset(ps, 0, sizeof(*ps));
   if(new_display_panel(nc, ps, helprows, helpcols,
-                       L"press 'H' to dismiss help",
-                       L"https://nick-black.com/dankwiki/index.php/Growlight",
+                       "press 'H' to dismiss help",
+                       "https://nick-black.com/dankwiki/index.php/Growlight",
                        PBORDER_COLOR)){
     goto err;
   }
-  if(helpstrs(ps->p)){
+  if(helpstrs(ps->n)){
     goto err;
   }
   return 0;
 
 err:
-  if(ps->p){
-    ncplane_destroy(ps->p);
+  if(ps->n){
+    ncplane_destroy(ps->n);
   }
   memset(ps, 0, sizeof(*ps));
   return -1;
@@ -3751,18 +3766,18 @@ display_maps(struct ncplane* mainw, struct panel_state* ps){
   rows -= 15;
 
   memset(ps, 0, sizeof(*ps));
-  if(new_display_panel(mainw, ps, rows, 0, L"press 'E' to dismiss display",
+  if(new_display_panel(mainw, ps, rows, 0, "press 'E' to dismiss display",
                        NULL, PBORDER_COLOR)){
     goto err;
   }
-  if(map_details(ps->p)){
+  if(map_details(ps->n)){
     goto err;
   }
   return 0;
 
 err:
-  if(ps->p){
-    ncplane_destroy(ps->p);
+  if(ps->n){
+    ncplane_destroy(ps->n);
   }
   memset(ps, 0, sizeof(*ps));
   return -1;
@@ -3771,7 +3786,7 @@ err:
 static void
 toggle_panel(struct ncplane* nc, struct panel_state *ps,
              int (*psfxn)(struct ncplane*, struct panel_state*)){
-  if(ps->p){
+  if(ps->n){
     hide_panel_locked(ps);
     active = NULL;
   }else{
@@ -5563,7 +5578,7 @@ handle_input(struct ncplane* w){
         break;
       default:{
 				if(!nckey_mouse_p(ch)){ // don't print warnings for mouse clicks
-					const char *hstr = !help.p ? " ('H' for help)" : "";
+					const char *hstr = !help.n ? " ('H' for help)" : "";
 					// diag() locks/unlocks, and calls screen_update()
 					if(isprint(ch)){
 						diag("unknown command '%c'%s", ch, hstr);
