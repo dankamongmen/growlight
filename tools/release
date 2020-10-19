@@ -14,11 +14,12 @@ git clean -f -d -x
 # bump version numbers wherever they occur (wherever we enumerate them, anyway)
 BUMP="CMakeLists.txt doc/man/man*/*"
 for i in $BUMP ; do
+  echo -n "Bumping version to $VERSION in $i..."
   sed -i -e "s/$OLDVERSION/$VERSION/g" $i
+  echo "done."
 done
 
 BUILDDIR="build-$VERSION"
-
 mkdir "$BUILDDIR"
 cd "$BUILDDIR"
 cmake ..
