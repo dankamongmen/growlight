@@ -784,7 +784,7 @@ redraw_subdisplay_border(const struct panel_state* ps){
 	ncplane_dim_yx(ps->n, &rows, &cols);
   if(ps->bstr){
     const int crightlen = ps->bstr ? strlen(ps->bstr) : 0;
-    ncplane_putstr_yx(n, rows + 1, cols - (crightlen + START_COL * 2), ps->bstr);
+    ncplane_putstr_yx(n, rows - 1, cols - (crightlen + START_COL * 2), ps->bstr);
   }
 	return 0;
 }
@@ -3246,6 +3246,7 @@ update_details(struct ncplane* hw){
           "partition table metadata" : "unpartitioned space");
     }
   }
+  redraw_subdisplay_border(&details);
   return 0;
 }
 
