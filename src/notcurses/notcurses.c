@@ -6024,19 +6024,6 @@ create_menu(struct ncplane* n){
 	return nmenu;
 }
 
-// ensure the version of notcurses we loaded is viable
-static bool
-notcurses_version_check(void){
-  int major, minor, patch, tweak;
-  notcurses_version_components(&major, &minor, &patch, &tweak);
-  if(major < 1 || (major == 1 && minor < 7) || (major == 1 && minor == 7 && patch < 6)){
-    fprintf(stderr, "Needed notcurses 1.7.6+, got %d.%d.%d.%d\n",
-            major, minor, patch, tweak);
-    return false;
-  }
-  return true;
-}
-
 int main(int argc, char * const *argv){
   const glightui ui = {
     .vdiag = vdiag,
@@ -6058,9 +6045,6 @@ int main(int argc, char * const *argv){
   sigemptyset(&sigmask);
   sigaddset(&sigmask, SIGWINCH);
   pthread_sigmask(SIG_SETMASK, &sigmask, NULL);
-  if(!notcurses_version_check()){
-    return EXIT_FAILURE;
-  }
   notcurses_options opts = { };
   opts.flags = NCOPTION_INHIBIT_SETLOCALE;
 	// opts.loglevel = NCLOGLEVEL_TRACE;
