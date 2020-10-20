@@ -119,8 +119,7 @@ int probe_blkid_superblock(const char *dev, blkid_probe *sbp, device *d){
 		diag("Couldn't enable blkid superprobe for %s (%s)\n", dev, strerror(errno));
 		goto err;
 	}
-	if(blkid_probe_set_superblocks_flags(bp, BLKID_SUBLKS_DEFAULT |
-						BLKID_SUBLKS_VERSION)){
+	if(blkid_probe_set_superblocks_flags(bp, BLKID_SUBLKS_DEFAULT | BLKID_SUBLKS_VERSION)){
 		diag("Couldn't set blkid superflags for %s (%s)\n", dev, strerror(errno));
 		goto err;
 	}
@@ -208,8 +207,7 @@ int probe_blkid_superblock(const char *dev, blkid_probe *sbp, device *d){
 			d->partdev.ptype = parttype;
 		}else if(!parttype || d->partdev.ptype != parttype){
 			if(d->partdev.ptype){
-				diag("Partition type changed (%04x->%04x)\n",
-					d->partdev.ptype, parttype);
+				diag("Partition type changed (%04x->%04x)\n", d->partdev.ptype, parttype);
 			}
 			d->partdev.ptype = parttype;
 		}
@@ -217,8 +215,7 @@ int probe_blkid_superblock(const char *dev, blkid_probe *sbp, device *d){
 			d->partdev.uuid = partuuid;
 		}else if(!partuuid || strcmp(d->partdev.uuid, partuuid)){
 			if(d->partdev.uuid){
-				diag("Partition UUID changed (%s->%s)\n",
-					d->partdev.uuid, partuuid ? partuuid : "none");
+				diag("Partition UUID changed (%s->%s)\n", d->partdev.uuid, partuuid ? partuuid : "none");
 			}
 			free(d->partdev.uuid);
 			d->partdev.uuid = partuuid;
@@ -227,8 +224,7 @@ int probe_blkid_superblock(const char *dev, blkid_probe *sbp, device *d){
 			d->partdev.pname = pname;
 		}else if(!pname || wcscmp(d->partdev.pname, pname)){
 			if(d->partdev.pname){
-				diag("Partition name changed (%ls->%ls)\n",
-					d->partdev.pname, pname ? pname : L"none");
+				diag("Partition name changed (%ls->%ls)\n", d->partdev.pname, pname ? pname : L"none");
 			}
 			free(d->partdev.pname);
 			d->partdev.pname = pname;
@@ -238,8 +234,7 @@ int probe_blkid_superblock(const char *dev, blkid_probe *sbp, device *d){
 		d->mnttype = mnttype;
 	}else if(!mnttype || strcmp(mnttype, d->mnttype)){
 		if(d->mnttype){
-			diag("FS type changed (%s->%s)\n",
-				d->mnttype, mnttype ? mnttype : "none");
+			diag("FS type changed (%s->%s)\n", d->mnttype, mnttype ? mnttype : "none");
 		}
 		free(d->mnttype);
 		d->mnttype = mnttype;
@@ -250,8 +245,7 @@ int probe_blkid_superblock(const char *dev, blkid_probe *sbp, device *d){
 		d->uuid = uuid;
 	}else if(!uuid || strcmp(uuid, d->uuid)){
 		if(d->uuid){
-			diag("FS UUID changed (%s->%s)\n", d->uuid,
-					uuid ? uuid : "none");
+			diag("FS UUID changed (%s->%s)\n", d->uuid, uuid ? uuid : "none");
 		}
 		free(d->uuid);
 		d->uuid = uuid;
@@ -262,8 +256,7 @@ int probe_blkid_superblock(const char *dev, blkid_probe *sbp, device *d){
 		d->label = label;
 	}else if(!label || strcmp(label, d->label)){
 		if(d->label){
-			diag("FS label changed (%s->%s)\n", d->label,
-					label ? label : "none");
+			diag("FS label changed (%s->%s)\n", d->label, label ? label : "none");
 		}
 		free(d->label);
 		d->label = label;
