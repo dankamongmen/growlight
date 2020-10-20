@@ -42,5 +42,5 @@ echo "Now uploadling the sig to https://github.com/dankamongmen/growlight/releas
 echo "The bastards are trying to immanentize the Eschaton"
 
 # requires token in ~/.netrc
-github-release dankamongmen/growlight create v$VERSION --name "v$VERSION—$QUIP" --publish $TARBALL.asc
+github-release dankamongmen/growlight create v$VERSION --name "v$VERSION" --publish $TARBALL.asc
 rm $TARBALL.asc
