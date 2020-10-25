@@ -28,7 +28,6 @@
 #include <sys/inotify.h>
 #include <libdevmapper.h>
 #include <sys/capability.h>
-#include <gnu/libc-version.h>
 
 #include "fs.h"
 #include "sg.h"
@@ -2035,9 +2034,8 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
     return -1;
   }
 	dm_get_library_version(buf, sizeof(buf));
-	verbf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s, glibc %s %s\n", PACKAGE,
-			VERSION, BLKID_VERSION, PCI_LIB_VERSION, buf,
-			gnu_get_libc_version(), gnu_get_libc_release());
+	verbf("%s %s\nlibblkid %s, libpci 0x%x, libdm %s\n", PACKAGE,
+			VERSION, BLKID_VERSION, PCI_LIB_VERSION, buf);
 	if(glight_pci_init()){
 		diag("Couldn't init libpciaccess (%s)\n", strerror(errno));
 	}else{
