@@ -1,3 +1,4 @@
+// copyright 2012–2020 nick black
 #include <errno.h>
 #include <assert.h>
 #include <stdlib.h>

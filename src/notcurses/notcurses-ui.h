@@ -1,3 +1,4 @@
+// copyright 2012–2020 nick black
 #ifndef GROWLIGHT_SRC_UI_NOTCURSES
 #define GROWLIGHT_SRC_UI_NOTCURSES
 

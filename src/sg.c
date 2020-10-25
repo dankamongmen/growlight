@@ -1,3 +1,4 @@
+// copyright 2012–2020 nick black, except where otherwise noted below
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
@@ -17,6 +18,16 @@
 #include "growlight.h"
 
 // Consult T10/04-262r3 "ATA Comand Pass-Through" revision 3 2004-08-31
+// The following defines and enums are taken from sgio.h from hdparm 9.58.
+// That file is copyright Mark Lord (mlord@pobox.com), and licensed as follows:
+//
+// You may freely use, modify, and redistribute the hdparm program,
+// as either binary or source, or both.
+//
+// The only condition is that my name and copyright notice
+// remain in the source code as-is.
+//
+// Mark Lord (mlord@pobox.com)
 static const int SG_ATA_16 = 0x85; // 16-byte ATA pass-though command
 #define SG_ATA_16_LEN	16
 static const int SG_ATA_PROTO_PIO_IN = 4;
@@ -78,6 +89,7 @@ struct scsi_sg_io_hdr {
         unsigned int            duration;
         unsigned int            info;
 };
+// Material taken from hdparm ends here
 
 int sg_interrogate(device *d, int fd){
 #define IDSECTORS 1

@@ -1,3 +1,4 @@
+// copyright 2012–2020 nick black
 #include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>

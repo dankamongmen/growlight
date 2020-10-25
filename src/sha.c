@@ -1,3 +1,4 @@
+// copyright 2012–2020 nick black
 #include <stdio.h>
 
 #include "sha.h"

@@ -1,3 +1,4 @@
+// copyright 2012–2020 nick black
 #ifndef GROWLIGHT_MSDOS
 #define GROWLIGHT_MSDOS
 

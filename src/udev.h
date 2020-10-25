@@ -1,3 +1,4 @@
+// copyright 2012–2020 nick black
 #ifndef GROWLIGHT_UDEV
 #define GROWLIGHT_UDEV
 

@@ -1,3 +1,4 @@
+// copyright 2012–2020 nick black
 #include <stdint.h>
 #include <stdlib.h>
 #include "ptypes.h"
