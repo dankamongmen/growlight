@@ -18,6 +18,7 @@
 #include "health.h"
 #include "ptable.h"
 #include "ptypes.h"
+#include "threads.h"
 #include "growlight.h"
 #include "aggregate.h"
 #include "notui-aggregate.h"
@@ -87,7 +88,7 @@ static const char FSTYPE_TEXT[] =
 "not natively support it. I recommend use of EXT4 or FAT16 for root and ZFS "
 "(in a redundant configuration) for other filesystems.";
 
-static pthread_mutex_t bfl = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+static pthread_mutex_t bfl; // recursive, initialized in main()
 
 struct panel_state {
   struct ncplane *n;
@@ -6032,7 +6033,11 @@ int main(int argc, char * const *argv){
   int showhelp = 1;
 
   if(setlocale(LC_ALL, "") == NULL){
-    fprintf(stderr,"Warning: couldn't load locale\n");
+    fprintf(stderr, "Warning: couldn't load locale\n");
+    return EXIT_FAILURE;
+  }
+  if(recursive_lock_init(&bfl)){
+    fprintf(stderr, "Error initializing recursive mutex\n");
     return EXIT_FAILURE;
   }
   sigset_t sigmask;

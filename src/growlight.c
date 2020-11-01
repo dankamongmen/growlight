@@ -48,6 +48,7 @@
 #include "ptable.h"
 #include "mounts.h"
 #include "target.h"
+#include "threads.h"
 #include "version.h"
 #include "libblkid.h"
 #include "growlight.h"
@@ -71,7 +72,7 @@ int devfd = -1; // Hold a reference to DEVROOT
 static unsigned usepci;
 static const glightui *gui;
 static struct pci_access *pciacc;
-static pthread_mutex_t lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+static pthread_mutex_t lock; // recursive, initialized in growlight_init()
 
 static unsigned thrcount;
 static pthread_mutex_t barrier = PTHREAD_MUTEX_INITIALIZER;
@@ -1900,6 +1901,9 @@ check_privileges(unsigned notroot){
 }
 
 int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphelp){
+	if(recursive_lock_init(&lock)){
+		return -1;
+	}
 	static const struct option ops[] = {
 		{
 			.name = "help",
