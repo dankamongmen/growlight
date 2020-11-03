@@ -161,6 +161,6 @@ if(USE_PANDOC)
   endif()
 endif()
 
-install(TARGETS growlight DESTINATION bin)
-install(TARGETS growlight-readline DESTINATION bin)
+install(TARGETS growlight DESTINATION sbin)
+install(TARGETS growlight-readline DESTINATION sbin)
 install(FILES ${MANPAGES8} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man8)
