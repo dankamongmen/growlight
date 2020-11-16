@@ -5295,7 +5295,7 @@ handle_input(struct ncplane* w){
       }
     }
     switch(ch){
-      case 'H':{
+      case 'H': case NCKEY_F01: {
         lock_notcurses();
         toggle_panel(w, &help, display_help);
         unlock_notcurses();
