@@ -2198,6 +2198,8 @@ int main(int argc, char * const *argv){
       fprintf(stderr, "Couldn't set up notcurses\n");
     }
   }
+  rl_outstream = stdout;
+  rl_instream = stdin;
   rl_readline_name = PACKAGE;
   rl_attempted_completion_function = growlight_completion;
   rl_prep_terminal(1); // 1 == read 8-bit input
