@@ -47,7 +47,7 @@ make_parent_directories(const char *path){
 }
 
 static int
-parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops){
+parse_mount(const char *map, off_t len, char **dev, char **mnt, char **fs, char **ops){
 	const char *t;
 	int r = 0;
 
@@ -137,7 +137,7 @@ parse_mount(const char *map,off_t len,char **dev,char **mnt,char **fs,char **ops
 	return r;
 
 err:
-	diag("Couldn't extract mount info from %s\n",map);
+	diag("Couldn't extract mount info from %s\n", map);
 	free(*dev);
 	free(*mnt);
 	free(*fs);
