@@ -6048,7 +6048,7 @@ int main(int argc, char * const *argv){
   sigaddset(&sigmask, SIGWINCH);
   pthread_sigmask(SIG_SETMASK, &sigmask, NULL);
   notcurses_options opts = { };
-  opts.flags = NCOPTION_INHIBIT_SETLOCALE;
+  opts.flags = NCOPTION_INHIBIT_SETLOCALE | NCOPTION_NO_ALTERNATE_SCREEN;
 	// opts.loglevel = NCLOGLEVEL_TRACE;
   if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;

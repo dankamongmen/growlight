@@ -13,12 +13,12 @@ growlight-readline - Block device and filesystem editor
 
 # DESCRIPTION
 
-**growlight** detects and describes disk pools, block devices, partition
-tables, and partitions. It can partition devices, manipulate ZFS, MD, DM, LVM
-and hardware RAID virtual devices, and prepare an fstab file for using the
-devices to boot or in a chroot, and is fully aware of variable sector sizes,
-GPT, and UEFI. **growlight** facilitates use of UUID/WWN- and HBA-based
-identification of block devices.
+**growlight-readline** detects and describes disk pools, block devices,
+partition tables, and partitions. It can partition devices, manipulate ZFS, MD,
+DM, LVM and hardware RAID virtual devices, and prepare an fstab file for using
+the devices to boot or in a chroot, and is fully aware of variable sector
+sizes, GPT, and UEFI. **growlight-readline** facilitates use of UUID/WWN- and
+HBA-based identification of block devices.
 
 This page describes the line-based implementation. Consult **growlight(8)** for
 a fullscreen **notcurses(3)**-based variant.
@@ -36,15 +36,18 @@ based on block device scans at startup.
 
 **--disphelp**: Display the help subdisplay upon startup.
 
+**--notroot**: Force **growlight-readline** to start without necessary
+privileges (it will usually refuse to start).
+
 **-t path|--target=path**: Run in system installation mode, using **path**
 as the temporary mountpoint for the target's root filesystem. "map" commands
 will populate the hierarchy rooted at this mountpoint. System installation mode
 can also be entered at run time with the "target" command. The "map" command
-will not result in active mounts unless **growlight** is operating in system
-installation mode (they will merely be used to construct target fstab output).
-Once system installation mode is entered, **growlight** will return 0 only as a
-result of a successful invocation of the "target finalize" command. **path**
-must exist at the time of its specification.
+will not result in active mounts unless **growlight-readline** is operating in
+system installation mode (they will merely be used to construct target fstab
+output). Once system installation mode is entered, **growlight-readline** will
+return 0 only as a result of a successful invocation of the "target finalize"
+command. **path** must exist at the time of its specification.
 
 # USAGE
 
@@ -127,7 +130,7 @@ Passed no arguments, **blockdev** concisely lists
 all block devices recognized by the system. Passed "-v", partitions and
 filesystems present on a given block device will also be listed. The "rescan"
 command causes the kernel to reanalyze the device's geometry and partition tables.
-Any changes will be propagated to **growlight**. "badblocks"
+Any changes will be propagated to **growlight-readline**. "badblocks"
 runs a non-destructive bad block check on the device. If provided "rw", "badblocks"
 will perform a destructive, lenghtier, more strenuous read-write check. "wipebiosboot"
 writes zeroes to the BIOS bootcode section of a disk (the first 446 bytes of

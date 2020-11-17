@@ -37,6 +37,9 @@ based on block device scans at startup.
 
 **--disphelp**: Display the help subdisplay upon startup.
 
+**--notroot**: Force **growlight** to start without necessary privileges (it
+will usually refuse to start).
+
 **-t path|--target=path**: Run in system installation mode, using **path**
 as the temporary mountpoint for the target's root filesystem. "map" commands
 will populate the hierarchy rooted at this mountpoint. System installation mode
