@@ -49,6 +49,49 @@ must exist at the time of its specification.
 
 # USAGE
 
+Press 'H' or 'F1' to toggle a help display. This display lists all available
+commands; commands which don't make sense at the moment are grayed out. Most
+of these commands are also available from the menu at the top of the screen.
+Press 'Alt' plus the underlined shortcut key to open a section of the menu,
+or click on it with a mouse.
+
+Press 'q' to exit the program.
+
+The display is hierarchal, with block devices being collected under their
+respective storage adapters. In addition to various physical adapters, a
+"virtual" adapter is provided for e.g. aggregated devices. Move among the
+adapters with Page Up and Page Down. Move among the block devices of an adapter
+with up and down; move among the partitions of a block device with left and
+right. Vi keys ('h'/'j'/'k'/'l') are also supported. Search with '/'; this
+search will be applied to all metadata.
+
+The 'G'rowlight menu allows toggling various subscreens, including the help,
+recent diagnostics, mount points, and a details view. Only one subscreen can
+be up at a time.
+
+The 'B'lockdevs menu allows you to 'm'ake a partition table (only if the
+selected block device doesn't already have one), 'r'emove a partition table
+(assuming one is present), 'W'ipe a Master Boot Record (overwriting it with
+zeroes), perform a 'B'ad block check, cre'A'te a new aggregate block device
+(e.g. an mdadm array or ZFS zpool), modify an existing aggregate with 'z',
+unbind an aggregate with 'Z', or set u'p' a loop device.
+
+The 'P'artitions menu allows you to make a 'n'ew partition (in empty,
+unallocated space, on a block device with an existing partition table),
+'d'elete a partition, 's'et partition attributes, 'M'ake a filesystem, 'F'sck a
+filesystem, 'w'ipe a filesystem, name a filesystem 'L'abel or name, set a
+filesystem's 'U'uid, m'o'unt a filesystem, or unm'O'unt a filesystem. Most of
+these latter commands can also be applied to swap devices.
+
+When running in system installation mode (see **--target** above), the
+following commands are also supported:
+
+* moun't' target
+* unmoun'T' target
+* finalize UEFI with '*'
+* finalize BIOS with '#'
+* finalize fstab with '@'
+
 # BUGS
 
 Pedantic collections of ambiguous identifiers (for instance, if a label

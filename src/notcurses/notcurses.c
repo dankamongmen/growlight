@@ -5980,6 +5980,7 @@ create_menu(struct ncplane* n){
 		{ .desc = "Create aggregate", .shortcut = { .id = 'A', }, },
 		{ .desc = "Modify aggregate", .shortcut = { .id = 'z', }, },
 		{ .desc = "Destroy aggregate", .shortcut = { .id = 'Z', }, },
+    { .desc = "Setup loop device", .shortcut = { .id = 'p', }, },
 	};
 	struct ncmenu_item part_items[] = {
 		{ .desc = "New partition", .shortcut = { .id = 'n', }, },
@@ -5989,6 +5990,7 @@ create_menu(struct ncplane* n){
 		{ .desc = "fsck filesystem", .shortcut = { .id = 'F', }, },
 		{ .desc = "Wipe filesystem", .shortcut = { .id = 'w', }, },
     { .desc = "Name filesystem", .shortcut = { .id = 'L', }, },
+		{ .desc = "Set filesystem UUID", .shortcut = { .id = 'U', }, },
     { .desc = "Mount filesystem", .shortcut = { .id = 'o', }, },
     { .desc = "Unmount filesystem", .shortcut = { .id = 'O', }, },
 	};
