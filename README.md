@@ -76,7 +76,7 @@ fullscreen view, controllers are boxes labeled by their type, bus path, and
 bandwidth. Below, we see a machine with one SATA SSD, a dmcrypt device mapper
 block built atop that, and an unloaded SD card reader hanging off USB 3.0:
 
-<pre>
+```
 ╭──────[virtual [0]]────────────────────────────────────────────────────[-]─╮
 │       dm-0┌─⇗⇨⇨⇨dm-0─────────────────────────────────────────────────────┐│
 │✔        dm│ ∾∾∾∾∾∾∾∾∾∾ ext4 “grimeshome” (384.42G) at /home ∾∾∾∾∾∾∾∾∾∾∾∾ ││
@@ -92,12 +92,12 @@ block built atop that, and an unloaded SD card reader hanging off USB 3.0:
 │✔solidstate│me122 ext4 at / 2333333333333 crypto_LUKS (391.65G) 333333333m││
 │37° 32.78Mi└┤Samsung SSD 850  2B6Q 500.10G  512B gpt   5002d410be12f SAT3├┘│
 ╰─────[Southbridge device 0000:00.17.0]─────────────────────────────────────╯
-</pre>
+```
 
 Navigate among the adapters using PgUp and PgDn. Bring up the details subscreen
 with `v` to see full details about the adapter (along with other information):
 
-<pre>
+```
 ╭──────[ahci-0 (6Gbps demanded)]────────────────────────────────────────[-]─╮
 │        sda┌──⇗⇨⇨⇨sda1────────────────────────────────────────────────────┐│
 │✔solidstate│me122 ext4 at / 23333333333 crypto_LUKS (391.65G) 33333333333m││
@@ -111,12 +111,12 @@ with `v` to see full details about the adapter (along with other information):
 │    512MiB P₀ 2048→1050623 sda1 (unnamed) ef00 1MiB align                │
 │ 510.98MiB vfat “GRIMESESP” at /boot/efi                                 │
 ╰─────────────────────────────────────────────────────────────────────────╯
-</pre>
+```
 
 In the readline mode, adapters are listed via the `adapter` command (`-v` can
 be provided to `adapter` for full details of attached devices and filesystems):
 
-<pre>
+```
 [growlight](0)> adapter
 [ahci-0] Southbridge device 0000:00.17.0
  Intel Corporation Sunrise Point-LP SATA Controller [AHCI mode]
@@ -124,4 +124,7 @@ Virtual devices
 [xhci_pci-0] Southbridge device 0000:00.14.0
  Intel Corporation Sunrise Point-LP USB 3.0 xHCI Controller
 [growlight](0)>
-</pre>
+```
+
+Within an adapter, up and down moves between block devices, and left and right
+move between partitions.
