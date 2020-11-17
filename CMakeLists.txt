@@ -146,7 +146,7 @@ if(USE_PANDOC)
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${me}
         DEPENDS ${m}
         COMMAND ${PANDOC}
-        ARGS --to man --standalone ${m} > ${CMAKE_CURRENT_BINARY_DIR}/${me}
+        ARGS --to man --standalone --from markdown-smart ${m} > ${CMAKE_CURRENT_BINARY_DIR}/${me}
         COMMENT "Building man page ${me}"
       )
       add_custom_target(${me}.man
