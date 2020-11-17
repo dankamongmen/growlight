@@ -9,7 +9,7 @@ growlight-readline - Block device and filesystem editor
 # SYNOPSIS
 
 **growlight-readline** [**-h|--help**] [**-i|--import**] [**-v|--verbose**]
- [**-V|--version**] [**--disphelp**] [**-t path|--target=path**]
+ [**-V|--version**] [**-t path|--target=path**]
 
 # DESCRIPTION
 
@@ -33,8 +33,6 @@ based on block device scans at startup.
 **-v|--verbose**: Be more verbose.
 
 **-V|--version**: Print version information and exit.
-
-**--disphelp**: Display the help subdisplay upon startup.
 
 **--notroot**: Force **growlight-readline** to start without necessary
 privileges (it will usually refuse to start).
