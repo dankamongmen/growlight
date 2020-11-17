@@ -3422,18 +3422,13 @@ dump_diags(void){
   logent l[10];
   int y, r;
 
+  fprintf(stderr, "\n");
   y = sizeof(l) / sizeof(*l);
   if((y = get_logs(y, l)) < 0){
     return -1;
   }
   for(r = 0 ; r < y ; ++r){
-    char tbuf[27];
-
-    if(l[r].msg == NULL){
-      break;
-    }
-    ctime_r(&l[r].when, tbuf);
-    fprintf(stderr, "%s %s", tbuf, l[r].msg);
+    fprintf(stderr, "%s", l[r].msg);
     free(l[r].msg);
   }
   return 0;

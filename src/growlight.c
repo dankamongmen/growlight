@@ -102,7 +102,7 @@ const glightui *get_glightui(void){
 }
 
 static void
-add_log(const char *fmt,va_list vac){
+add_log(const char *fmt, va_list vac){
 	va_list vacc;
 	char *b;
 	int len;
@@ -113,20 +113,20 @@ add_log(const char *fmt,va_list vac){
 		rblast = 0;
 	}
 	// FIXME reuse the entry!
-	len = vsnprintf(NULL,0,fmt,vac);
+	len = vsnprintf(NULL, 0, fmt, vac);
 	if( (b = malloc(len + 1)) ){
 		logs[rblast].when = time(NULL);
 		if(logs[rblast].msg){
 			free(logs[rblast].msg);
 		}
 		logs[rblast].msg = b;
-		vsnprintf(b,len + 1,fmt,vacc);
+		vsnprintf(b, len + 1, fmt, vacc);
 	}
 	pthread_mutex_unlock(&loglock);
 	va_end(vacc);
 }
 
-int get_logs(unsigned n,logent *cplogs){
+int get_logs(unsigned n, logent *cplogs){
 	unsigned idx = 0;
 	unsigned rb;
 
@@ -1893,7 +1893,7 @@ check_privileges(unsigned notroot){
     if(notroot){
       diag("Not root, but running anyway...\n");
     }else{
-      fprintf(stderr, "Refusing to run without privileges. Use --notroot to force.\n");
+      diag("Refusing to run without privileges. Use --notroot to force.\n");
       return -1;
     }
   }
