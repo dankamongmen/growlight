@@ -1,7 +1,0 @@
-* Change version in CMakeFiles.txt and doc/man/man8/growlight.ent
-* Commit, push
-* Tag, push tags
-* Download tarball:
-  * `wget https://github.com/dankamongmen/growlight/archive/v$VERSION.tar.gz`
-  * `gpg --sign --armor --detach-sign v$VERSION.tar.gz`
-  * `github-release dankamongmen/growlight create v$VERSION --name v$VERSION --publish v$VERSION.tar.gz.asc`
