@@ -108,7 +108,7 @@ with `v` to see full details about the adapter (along with other information):
 │sda: Samsung SSD 8502B6Q (465.76GiB) S/N: S2RANX0H729580X WC+ WRV- RO-   │
 │Sectors: 976773168 (512B logical / 512B physical) SAT3 (6Gbps)           │
 │Partitioning: gpt I/O scheduler: [mq-deadline] none                      │
-│    512MiB P₀₁ 2048→1050623 sda1 (unnamed) ef00 1MiB align               │
+│    512MiB P₀ 2048→1050623 sda1 (unnamed) ef00 1MiB align                │
 │ 510.98MiB vfat “GRIMESESP” at /boot/efi                                 │
 ╰─────────────────────────────────────────────────────────────────────────╯
 </pre>

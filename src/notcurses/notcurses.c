@@ -5865,13 +5865,13 @@ static void
 adapter_free(void *cv){
   adapterstate *as = cv;
   lock_notcurses_growlight();
-  as->prev->next = as->next;
-  as->next->prev = as->prev;
+  if(as->prev){
+    as->prev->next = as->next;
+    as->next->prev = as->prev;
+  }
   if(as->rb){
     ncreel_del(PR, as->rb);
   }
-  as->next->prev = as->prev;
-  as->prev->next = as->next;
   free_adapter_state(as); // clears subentries
   --count_adapters;
   draw_main_window(notcurses_stdplane(NC)); // Update the device count
@@ -5892,12 +5892,12 @@ shutdown_cycle(void){
 
   diag("User-initiated shutdown\n");
   ps = show_splash(L"Shutting down...");
-  /*if(growlight_stop()){
+  if(growlight_stop()){
     kill_splash(ps);
     notcurses_stop(NC);
     dump_diags();
     exit(EXIT_FAILURE);
-  } FIXME */
+  }
   kill_splash(ps);
   if(notcurses_stop(NC)){
     dump_diags();
