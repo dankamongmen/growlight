@@ -1375,7 +1375,7 @@ case LAYOUT_ZPOOL:
 
 static void
 adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
-            bool drawbot, int rows){
+            bool drawbot, int rows, bool drawfromtop){
   int current = as == get_current_adapter();
   int bcolor, hcolor, cols;
   int attrs;
@@ -1394,7 +1394,8 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
 	ncplane_set_styles(nc, attrs);
   compat_set_fg(nc, bcolor);
 //fprintf(stderr, "DRAW ADAPTER %s DRAWT/B: %u/%u\n", as->c->name, drawtop, drawbot);
-  bevel(nc, rows, cols, drawtop, drawbot);
+  bevel(nc, rows, cols, drawfromtop || (drawbot && drawtop),
+                        !drawfromtop || (drawtop && drawbot));
 //fprintf(stderr, "DREW ADAPTER %s\n", as->c->name);
   ncplane_set_bg_default(nc);
   if(drawtop){
@@ -1537,7 +1538,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
     line = rows - !drawfromtop;
   }
   printed += drawtop + drawbottom; // top+bottom borders
-  adapter_box(as, n, drawtop, drawbottom, printed);
+  adapter_box(as, n, drawtop, drawbottom, printed, drawfromtop);
   //assert(printed <= rows);
   return printed;
 }
