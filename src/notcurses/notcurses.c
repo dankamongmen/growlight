@@ -1381,7 +1381,6 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
   int attrs;
 
   ncplane_dim_yx(nc, NULL, &cols);
-  --cols;
   if(current){
     hcolor = UHEADING_COLOR; // plus NCSTYLE_BOLD
     bcolor = SELBORDER_COLOR;
@@ -1393,7 +1392,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
   }
 	ncplane_set_styles(nc, attrs);
   compat_set_fg(nc, bcolor);
-//fprintf(stderr, "DRAW ADAPTER %s DRAWT/B: %u/%u\n", as->c->name, drawtop, drawbot);
+//fprintf(stderr, "DRAW ADAPTER %s DRAWT/B: %u/%u rows/cols: %d/%d\n", as->c->name, drawtop, drawbot, rows, cols);
   bevel(nc, rows, cols, drawfromtop || (drawbot && drawtop),
                         !drawfromtop || (drawtop && drawbot));
 //fprintf(stderr, "DREW ADAPTER %s\n", as->c->name);
@@ -1478,9 +1477,8 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   // First, print the selected device (if there is one), and those above
   int rows, cols;
   ncplane_dim_yx(n, &rows, &cols);
-//fprintf(stderr, "START WITH %p at %ld of %d\n", cur, line, rows);
+//fprintf(stderr, "START WITH %p at %ld of %d (%d cols)\n", cur, line, rows, cols);
   --rows;
-  --cols;
   cur = as->selected;
   line = as->selline;
   while(cur && line >= drawfromtop){
@@ -1547,7 +1545,6 @@ static int
 redraw_adapter(struct nctablet* t, bool drawfromtop){
   struct ncplane* n = nctablet_plane(t);
   const adapterstate *as = nctablet_userptr(t);
-  //ncplane_erase(n);
   int lines = print_adapter_devs(n, as, drawfromtop);
   if(lines < 0){
     return -1;
