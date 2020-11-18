@@ -1398,7 +1398,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
                         !drawfromtop || (drawtop && drawbot));
 //fprintf(stderr, "DREW ADAPTER %s\n", as->c->name);
   ncplane_set_bg_default(nc);
-  if(drawtop){
+  if(drawfromtop || (drawbot && drawtop)){
     if(current){
       ncplane_on_styles(nc, NCSTYLE_BOLD);
     }else{
@@ -1434,7 +1434,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
     ncplane_putwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
     ncplane_on_styles(nc, attrs);
   }
-  if(drawbot){
+  if(!drawfromtop || (drawbot && drawtop)){
     if(as->c->bus == BUS_PCIe){
       compat_set_fg(nc, bcolor);
       if(current){
