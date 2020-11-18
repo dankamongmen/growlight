@@ -407,6 +407,7 @@ static struct ncmenu* mainmenu;
 static inline void
 screen_update(void){
   // must do the ncreel first, as it can create new ones at the top
+//fprintf(stderr, "REDRAW--------------------------------------\n");
   if(PR){
     ncreel_redraw(PR);
   }
@@ -602,6 +603,7 @@ selected_mkfs_safe_p(void){
 
 static int
 bevel(struct ncplane* nc, int rows, int cols, bool drawtop, bool drawbot){
+//fprintf(stderr, "bevel %p: %dx%d DT: %u DB: %u\n", nc, rows, cols, drawtop, drawbot);
   if(rows <= 0 || cols <= 0){
     return -1;
   }
@@ -1374,7 +1376,6 @@ case LAYOUT_ZPOOL:
 static void
 adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
             bool drawbot, int rows){
-//fprintf(stderr, "above: %d below: %d rows: %d\n", abovetop, belowend, rows);
   int current = as == get_current_adapter();
   int bcolor, hcolor, cols;
   int attrs;
@@ -1392,8 +1393,9 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
   }
 	ncplane_set_styles(nc, attrs);
   compat_set_fg(nc, bcolor);
-//fprintf(stderr, "ABOVETOP: %d BELOWEND: %d name: %s\n", abovetop, belowend, as->c->name);
+//fprintf(stderr, "DRAW ADAPTER %s DRAWT/B: %u/%u\n", as->c->name, drawtop, drawbot);
   bevel(nc, rows, cols, drawtop, drawbot);
+//fprintf(stderr, "DREW ADAPTER %s\n", as->c->name);
   ncplane_set_bg_default(nc);
   if(drawtop){
     if(current){
