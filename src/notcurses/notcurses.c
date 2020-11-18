@@ -5993,9 +5993,11 @@ create_menu(struct ncplane* n){
 		{ .desc = "View details", .shortcut = { .id = 'v', }, },
 		{ .desc = "Show mounts", .shortcut = { .id = 'E', }, },
 		{ .desc = "Diagnostics", .shortcut = { .id = 'D', }, },
-		{ .desc = "Help", .shortcut = { .id = 'H', }, },
 		{ .desc = "Quit", .shortcut = { .id = 'q', }, },
 	};
+  struct ncmenu_item help_items[] = {
+		{ .desc = "Help", .shortcut = { .id = 'H', }, },
+  };
 	struct ncmenu_section sections[] = {
 		{ .name = "Growlight", .items = glight_items,
 			.itemcount = sizeof(glight_items) / sizeof(*glight_items),
@@ -6006,6 +6008,10 @@ create_menu(struct ncplane* n){
 		{ .name = "Partitions", .items = part_items,
 			.itemcount = sizeof(part_items) / sizeof(*part_items),
 			.shortcut = { .id = 'p', .alt = true, }, },
+    { .name = NULL, .items = NULL, .itemcount = 0, },
+    { .name = "Info", .items = help_items,
+      .itemcount = sizeof(help_items) / sizeof(*help_items),
+			.shortcut = { .id = 'i', .alt = true, }, },
 	};
 	struct ncmenu_options mopts = {
 		.sections = sections,
@@ -6054,10 +6060,12 @@ int main(int argc, char * const *argv){
   struct ncplane* n = ncplane_new(notcurses_stdplane(NC), ydim - 2, xdim, 1, 0, NULL, NULL);
   if(n == NULL){
     notcurses_stop(NC);
+    fprintf(stderr, "Error creating main plane for reel, aborting\n");
     return EXIT_FAILURE;
   }
 	if((mainmenu = create_menu(notcurses_stdplane(NC))) == NULL){
     notcurses_stop(NC);
+    fprintf(stderr, "Error creating menu, aborting\n");
     return EXIT_FAILURE;
 	}
   ps = show_splash(L"Initializing...");
