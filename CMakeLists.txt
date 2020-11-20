@@ -154,6 +154,10 @@ target_include_directories(growlight-tester
     src
     "${PROJECT_BINARY_DIR}/include"
 )
+add_test(
+  NAME growlight-tester
+  COMMAND growlight-tester
+)
 endif()
 
 # Pandoc documentation (man pages)

@@ -40,20 +40,17 @@ Kernel options:
 
 Build-only dependencies:
 
- - pkg-config (tested with 0.29)
- - cmake (tested with 3.14)
- - pandoc (tested with 2.9.2.1)
+ - pkg-config 0.29+
+ - cmake 3.14+
+ - pandoc 2.9.2.1+ (if building man pages)
+ - doctest 2.3.5+ (if building unit tests)
 
 Building:
 
  - mkdir build && cd build
  - cmake ..
  - make
-
-## Using it
-
-Terse help is available from the `growlight` and `growlight-readline` man
-pages, or by pressing 'H' in fullscreeen mode, or type "help" in readline mode.
+ - (optionally) make check
 
 ### User's guide
 
