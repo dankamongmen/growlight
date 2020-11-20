@@ -1375,7 +1375,7 @@ case LAYOUT_ZPOOL:
 
 static void
 adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
-            bool drawbot, int rows, bool drawfromtop){
+            bool drawbot, int rows){
   int current = as == get_current_adapter();
   int bcolor, hcolor, cols;
   int attrs;
@@ -1393,11 +1393,10 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
 	ncplane_set_styles(nc, attrs);
   compat_set_fg(nc, bcolor);
 //fprintf(stderr, "DRAW ADAPTER %s DRAWT/B: %u/%u rows/cols: %d/%d\n", as->c->name, drawtop, drawbot, rows, cols);
-  bevel(nc, rows, cols, drawfromtop || (drawbot && drawtop),
-                        !drawfromtop || (drawtop && drawbot));
+  bevel(nc, rows, cols, drawtop, drawbot);
 //fprintf(stderr, "DREW ADAPTER %s\n", as->c->name);
   ncplane_set_bg_default(nc);
-  if(drawfromtop || (drawbot && drawtop)){
+  if(drawtop){
     if(current){
       ncplane_on_styles(nc, NCSTYLE_BOLD);
     }else{
@@ -1433,7 +1432,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
     ncplane_putwstr(nc, as->expansion != EXPANSION_MAX ? L"[+]" : L"[-]");
     ncplane_on_styles(nc, attrs);
   }
-  if(!drawfromtop || (drawbot && drawtop)){
+  if(drawbot){
     if(as->c->bus == BUS_PCIe){
       compat_set_fg(nc, bcolor);
       if(current){
@@ -1467,33 +1466,33 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   // If the interface is down, we don't lead with the summary line
   const blockobj *cur;
   int printed = 0;
-  long line;
+  int line;
   int p;
 
-//fprintf(stderr, "%s [%d/%d] sel: %p selline: %d\n", as->c->name, rows, cols, as->selected, as->selline);
   if(as->expansion == EXPANSION_NONE){
     return 0;
   }
   // First, print the selected device (if there is one), and those above
   int rows, cols;
   ncplane_dim_yx(n, &rows, &cols);
-//fprintf(stderr, "START WITH %p at %ld of %d (%d cols)\n", cur, line, rows, cols);
   --rows;
   cur = as->selected;
   line = as->selline;
+fprintf(stderr, "%s %p [%d:%d/%d] sel: %p selline: %d\n", as->c->name, cur, line, rows, cols, as->selected, as->selline);
   while(cur && line >= drawfromtop){
     p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
     printed += p;
     if( (cur = cur->prev) ){
       line -= device_lines(as->expansion, cur);
     }
-//fprintf(stderr, "SELECTED MOVES TO %p %d (%ld/%d)\n", cur, drawfromtop, line, rows);
+//fprintf(stderr, "SELECTED MOVES TO %p %d (%d/%d)\n", cur, drawfromtop, line, rows);
   }
   if(as->selected){
     line = as->selline + (long)device_lines(as->expansion, as->selected);
     cur = as->selected->next;
   }else{
     cur = as->bobjs;
+fprintf(stderr, "none selected, starting with %p\n", cur);
     // if nothing was selected, we might have to clip at the top. check to see
     // if we're moving up. if so, run through all devices to get a total length,
     // and then move forward until we find the first visible one. begin
@@ -1507,21 +1506,27 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
       line -= device_lines(as->expansion, iter);
       iter = iter->next;
     }
-//fprintf(stderr, "total lines: %d line: %ld rows: %d\n", totallines, line, rows);
+fprintf(stderr, "total lines: %d line: %d rows: %d\n", totallines, line, rows);
     if(line > 0){ // they'll all fit, huzzah
       line = 1;
     }else{
-      drawtop = false;
+      if(drawfromtop){
+        drawbottom = false;
+      }else{
+        drawtop = false;
+      }
       while(cur && (line + device_lines(as->expansion, cur) < 0)){
         line += device_lines(as->expansion, cur);
         cur = cur->next;
       }
     }
   }
-//fprintf(stderr, "SELECTED CUR FORWARD %p %d (line %ld/%d rows)\n", cur, drawfromtop, line, rows);
+  // start printing forward (we've printed the selected dev and any previous
+  // to it already, and are on either the first dev or that following selected)
+//fprintf(stderr, "SELECTED CUR %p (next: %p) %d (line %d/%d rows)\n", cur, cur ? NULL : cur->next, drawfromtop, line, rows);
   while(cur && line < rows - !drawfromtop){
     p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
-//fprintf(stderr, "ITERATING %d %p (%ld < %d) %d\n", p, cur, line, rows, drawfromtop);
+fprintf(stderr, "ITERATING %d %p (%d < %d) %d\n", p, cur, line, rows, drawfromtop);
     printed += p;
     if(line < 0){
       printed += line < -p ? -p : line;
@@ -1531,12 +1536,8 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   }
 //fprintf(stderr, "BASEPRINTED %d/%d through %ld for %s\n", printed, rows, line, as->c->name);
 //fprintf(stderr, "PRINTED %d/%d through %ld for %s\n", printed, rows, line, as->c->name);
-  if(line > rows - !drawfromtop){
-    drawbottom = false;
-    line = rows - !drawfromtop;
-  }
   printed += drawtop + drawbottom; // top+bottom borders
-  adapter_box(as, n, drawtop, drawbottom, printed, drawfromtop);
+  adapter_box(as, n, drawtop, drawbottom, printed);
   //assert(printed <= rows);
   return printed;
 }
