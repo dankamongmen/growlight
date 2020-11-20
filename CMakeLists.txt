@@ -2,13 +2,22 @@ cmake_minimum_required(VERSION 3.14)
 project(growlight VERSION 1.2.21
   DESCRIPTION "Block device and filesystem manager"
   HOMEPAGE_URL "https://nick-black.com/dankwiki/index.php/Growlight"
-  LANGUAGES C)
+  LANGUAGES C CXX)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
+include(CTest)
 include(GNUInstallDirs)
 include(FeatureSummary)
+include(CMakeDependentOption)
 
 ###################### USER-SELECTABLE OPTIONS ###########################
+# BUILD_TESTING is defined by CTest
+cmake_dependent_option(
+  USE_DOCTEST "Use doctest to build unit tests" ON
+  "${BUILD_TESTING}" OFF
+)
 option(USE_PANDOC "Use pandoc to write man pages" ON)
 option(USE_LIBZFS "Use libzfs to manage zpools/ZFS" ON)
 #################### END USER-SELECTABLE OPTIONS #########################
@@ -37,6 +46,10 @@ pkg_check_modules(LIBPCIACCESS REQUIRED pciaccess>=0.13.1)
 pkg_check_modules(LIBREADLINE REQUIRED readline)
 pkg_check_modules(LIBUDEV REQUIRED libudev>=175)
 pkg_check_modules(LIBZ REQUIRED zlib>=1.2.11)
+if(${USE_DOCTEST})
+find_package(doctest 2.3.5)
+set_package_properties(doctest PROPERTIES TYPE REQUIRED)
+endif()
 if(${USE_LIBZFS})
 pkg_check_modules(LIBZFS REQUIRED libzfs>=0.8)
 endif()
@@ -132,6 +145,16 @@ target_link_directories(growlight-readline
   PRIVATE
     "${COMMON_LIBRARY_DIRS}"
 )
+
+if(${USE_DOCTEST})
+file(GLOB TESTSRCS CONFIGURE_DEPENDS tests/*.cpp)
+add_executable(growlight-tester ${TESTSRCS})
+target_include_directories(growlight-tester
+  PRIVATE
+    src
+    "${PROJECT_BINARY_DIR}/include"
+)
+endif()
 
 # Pandoc documentation (man pages)
 if(USE_PANDOC)
