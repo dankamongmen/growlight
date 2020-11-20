@@ -1478,7 +1478,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   --rows;
   cur = as->selected;
   line = as->selline;
-fprintf(stderr, "%s %p [%d:%d/%d] sel: %p selline: %d\n", as->c->name, cur, line, rows, cols, as->selected, as->selline);
+//fprintf(stderr, "%s %p [%d:%d/%d] sel: %p selline: %d\n", as->c->name, cur, line, rows, cols, as->selected, as->selline);
   while(cur && line >= drawfromtop){
     p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
     printed += p;
@@ -1492,7 +1492,7 @@ fprintf(stderr, "%s %p [%d:%d/%d] sel: %p selline: %d\n", as->c->name, cur, line
     cur = as->selected->next;
   }else{
     cur = as->bobjs;
-fprintf(stderr, "none selected, starting with %p for %d rows\n", cur, rows);
+//fprintf(stderr, "none selected, starting with %p for %d rows\n", cur, rows);
     // if nothing was selected, we might have to clip at the top. check to see
     // if we're moving up. if so, run through all devices to get a total length,
     // and then move forward until we find the first visible one. begin
@@ -1503,7 +1503,7 @@ fprintf(stderr, "none selected, starting with %p for %d rows\n", cur, rows);
       line -= device_lines(as->expansion, iter);
       iter = iter->next;
     }
-fprintf(stderr, "line: %d rows: %d drawfromtop: %u\n", line, rows, drawfromtop);
+//fprintf(stderr, "pre-adj: line: %d rows: %d drawfromtop: %u\n", line, rows, drawfromtop);
     if(line >= 0){ // everything fits, huzzah
       line = 1;
     }else{
@@ -1513,18 +1513,20 @@ fprintf(stderr, "line: %d rows: %d drawfromtop: %u\n", line, rows, drawfromtop);
         drawtop = false;
       }
       ++line; // we get one back for tossing a border
-      while(cur && (line + device_lines(as->expansion, cur) < 0)){
+      while(cur && (line + device_lines(as->expansion, cur) < drawtop)){
         line += device_lines(as->expansion, cur);
         cur = cur->next;
       }
+      line += drawtop;
     }
+//fprintf(stderr, "post-adj: line: %d rows: %d drawtop: %u drawbot: %u\n", line, rows, drawtop, drawbottom);
   }
   // start printing forward (we've printed the selected dev and any previous
   // to it already, and are on either the first dev or that following selected)
 //fprintf(stderr, "SELECTED CUR %p (next: %p) %d (line %d/%d rows)\n", cur, cur ? NULL : cur->next, drawfromtop, line, rows);
   while(cur && line < rows - !drawfromtop){
     p = print_dev(n, as, cur, line, rows, cols, drawfromtop);
-fprintf(stderr, "ITERATING %d %p (%d < %d) %d\n", p, cur, line, rows, drawfromtop);
+//fprintf(stderr, "ITERATING %d %p (%d < %d) %d\n", p, cur, line, rows, drawfromtop);
     printed += p;
     if(line < 0){
       printed += line < -p ? -p : line;
@@ -1537,6 +1539,7 @@ fprintf(stderr, "ITERATING %d %p (%d < %d) %d\n", p, cur, line, rows, drawfromto
   printed += drawtop + drawbottom; // top+bottom borders
   adapter_box(as, n, drawtop, drawbottom, printed);
   //assert(printed <= rows);
+//fprintf(stderr, "printed: %d (dt: %u db: %u)\n", printed, drawtop, drawbottom);
   return printed;
 }
 
