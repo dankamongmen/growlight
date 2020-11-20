@@ -1060,6 +1060,9 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   char rolestr[12]; // taken from %-11.11s below
   int co, rx;
 
+  if(as->expansion == EXPANSION_NONE){
+    return 0;
+  }
 //fprintf(stderr, " HERE FOR %s: %s line %d rows %d cols %d lout %d\n", as->c->name, bo->d->name, line, rows, cols, bo->d->layout);
   ncplane_set_bg_default(n);
   if(line >= rows){
@@ -1469,9 +1472,6 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   int line;
   int p;
 
-  if(as->expansion == EXPANSION_NONE){
-    return 0;
-  }
   // First, print the selected device (if there is one), and those above
   int rows, cols;
   ncplane_dim_yx(n, &rows, &cols);
