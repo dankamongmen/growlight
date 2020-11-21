@@ -92,9 +92,9 @@ static pthread_mutex_t bfl; // recursive, initialized in main()
 
 struct panel_state {
   struct ncplane *n;
-	char* hstr;
-	char* bstr;
-	int borderpair;
+  char* hstr;
+  char* bstr;
+  int borderpair;
 };
 
 #define PANEL_STATE_INITIALIZER { .n = NULL, .hstr = NULL, .bstr = NULL, }
@@ -198,11 +198,11 @@ enum {
   STATUS_COLOR,
   UHEADING_COLOR,
   UNHEADING_COLOR,
-  UBORDER_COLOR,      // Adapters
-  SELBORDER_COLOR,    // Current adapter
-  DBORDER_COLOR,      // Block bar borders
-  PBORDER_COLOR,
-  PHEADING_COLOR,
+  UBORDER_COLOR,    // Adapters
+  SELBORDER_COLOR,  // Current adapter
+  DBORDER_COLOR,    // Block bar borders
+  PBORDER_COLOR,    // Subwindow border
+  PHEADING_COLOR,   // Subwindow border text
 
   //10
   SUBDISPLAY_COLOR,
@@ -212,7 +212,7 @@ enum {
   SSD_COLOR,
   FS_COLOR,
   EMPTY_COLOR,      // Empty sectors
-  METADATA_COLOR,      // Partition table metadata
+  METADATA_COLOR,   // Partition table metadata
   MDADM_COLOR,
   ZPOOL_COLOR,
 
@@ -224,18 +224,18 @@ enum {
   FORMBORDER_COLOR,
   FORMTEXT_COLOR,
   INPUT_COLOR,      // Form input color
-  SELECTED_COLOR,      // Selected options in multiform
-  MOUNT_COLOR0,      // Mounted, untargeted filesystems
+  SELECTED_COLOR,   // Selected options in multiform
+  MOUNT_COLOR0,     // Mounted, untargeted filesystems
   MOUNT_COLOR1,
 
   //30
   MOUNT_COLOR2,
   MOUNT_COLOR3,
-  TARGET_COLOR0,      // Targeted filesystems
+  TARGET_COLOR0,    // Targeted filesystems
   TARGET_COLOR1,
   TARGET_COLOR2,
   TARGET_COLOR3,
-  FUCKED_COLOR,      // Things that warrant attention
+  FUCKED_COLOR,     // Things that warrant attention
   SPLASHBORDER_COLOR,
   SPLASHTEXT_COLOR,
 
@@ -346,27 +346,6 @@ compat_set_fg(struct ncplane* nc, int pair){
   }
 }
 
-enum {
-  SUBDISPLAY_ATTR,
-  SUBDISPLAY_INVAL_ATTR,
-};
-
-static void
-compat_set_fg_all(struct ncplane* nc, int attr){
-  switch(attr){
-    case SUBDISPLAY_ATTR:
-      ncplane_set_styles(nc, NCSTYLE_BOLD);
-      compat_set_fg(nc, SUBDISPLAY_COLOR);
-      break;
-    case SUBDISPLAY_INVAL_ATTR:
-      ncplane_set_styles(nc, 0);
-      compat_set_fg(nc, SUBDISPLAY_COLOR);
-      break;
-    default:
-      assert(false);
-  }
-}
-
 static inline int
 next_targco(int targco){
   if(++targco > TARGET_COLOR3){
@@ -423,7 +402,7 @@ screen_update(void){
   if(splash){
     ncplane_move_top(splash->n);
   }
-	ncplane_move_top(ncmenu_plane(mainmenu));
+  ncplane_move_top(ncmenu_plane(mainmenu));
   notcurses_render(NC);
 }
 
@@ -769,7 +748,7 @@ create_zobj(zobj *prev, unsigned zno, uintmax_t fsector, uintmax_t lsector,
 
 static int
 redraw_subdisplay_border(const struct panel_state* ps){
-	struct ncplane* n = ps->n;
+  struct ncplane* n = ps->n;
   ncplane_on_styles(n, NCSTYLE_BOLD);
   compat_set_fg(n, ps->borderpair);
   bevel_all(n);
@@ -778,13 +757,13 @@ redraw_subdisplay_border(const struct panel_state* ps){
   if(ps->hstr){
     ncplane_putstr_yx(n, 0, START_COL * 2, ps->hstr);
   }
-	int rows, cols;
-	ncplane_dim_yx(ps->n, &rows, &cols);
+  int rows, cols;
+  ncplane_dim_yx(ps->n, &rows, &cols);
   if(ps->bstr){
     const int crightlen = ps->bstr ? strlen(ps->bstr) : 0;
     ncplane_putstr_yx(n, rows - 1, cols - (crightlen + START_COL * 2), ps->bstr);
   }
-	return 0;
+  return 0;
 }
 
 // Create a panel at the bottom of the window, referred to as the "subdisplay".
@@ -819,10 +798,10 @@ new_display_panel(struct ncplane* nc, struct panel_state* ps,
     locked_diag("Couldn't create subpanel, uh-oh");
     return -1;
   }
-	ps->bstr = bstr ? strdup(bstr) : NULL;
-	ps->hstr = hstr ? strdup(hstr) : NULL;
-	ps->borderpair = borderpair;
-	redraw_subdisplay_border(ps);
+  ps->bstr = bstr ? strdup(bstr) : NULL;
+  ps->hstr = hstr ? strdup(hstr) : NULL;
+  ps->borderpair = borderpair;
+  redraw_subdisplay_border(ps);
   return 0;
 }
 
@@ -848,7 +827,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   int off = sx;
   uintmax_t zs;
 
-	ncplane_set_styles(n, NCSTYLE_NONE);
+  ncplane_set_styles(n, NCSTYLE_NONE);
   zs = d->mntsize ? d->mntsize :
     (last_usable_sector(d) - first_usable_sector(d) + 1) * bo->d->logsec;
   // Sometimes, a partitioned block device will be given a mnttype by
@@ -1071,11 +1050,11 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   strcpy(rolestr, "");
   bool selected = false;
   if(as == get_current_adapter()){
-		if(line >= 1){
+    if(line >= 1){
       if(line == as->selline){
-				selected = true;
-			}
-		}
+        selected = true;
+      }
+    }
   }
   rx = cols - 79;
   switch(bo->d->layout){
@@ -1111,8 +1090,8 @@ case LAYOUT_NONE:
       if(bo->d->size){
         line += 2;
       }
-			if(selected){
-				compat_set_fg(n, DBORDER_COLOR);
+      if(selected){
+        compat_set_fg(n, DBORDER_COLOR);
         ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
       }
       qprefix(bo->d->size, 1, buf, 0);
@@ -1147,8 +1126,8 @@ case LAYOUT_MDADM:
         if(bo->d->size){
           line += 2;
         }
-				if(selected){
-				  compat_set_fg(n, DBORDER_COLOR);
+        if(selected){
+          compat_set_fg(n, DBORDER_COLOR);
           ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
         }
         qprefix(bo->d->size, 1, buf, 0);
@@ -1177,8 +1156,8 @@ case LAYOUT_DM:
         if(bo->d->size){
           line += 2;
         }
-				if(selected){
-				  compat_set_fg(n, DBORDER_COLOR);
+        if(selected){
+          compat_set_fg(n, DBORDER_COLOR);
           ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
         }
         qprefix(bo->d->size, 1, buf, 0);
@@ -1208,8 +1187,8 @@ case LAYOUT_ZPOOL:
         if(bo->d->size){
           line += 2;
         }
-				if(selected){
-				  compat_set_fg(n, DBORDER_COLOR);
+        if(selected){
+          compat_set_fg(n, DBORDER_COLOR);
           ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
         }
         qprefix(bo->d->size, 1, buf, 0);
@@ -1351,7 +1330,7 @@ case LAYOUT_ZPOOL:
           cols - START_COL - 1, selected);
   }
   ncplane_set_styles(n, NCSTYLE_BOLD);
-	compat_set_fg(n, DBORDER_COLOR);
+  compat_set_fg(n, DBORDER_COLOR);
   if(selected){
     ncplane_on_styles(n, NCSTYLE_REVERSE);
   }
@@ -1389,12 +1368,12 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
     bcolor = SELBORDER_COLOR;
     attrs = NCSTYLE_BOLD;
   }else{
-    hcolor = UNHEADING_COLOR;;
+    hcolor = UNHEADING_COLOR;
     bcolor = UBORDER_COLOR;
     attrs = 0;
   }
-	ncplane_set_styles(nc, attrs);
-  compat_set_fg(nc, bcolor);
+  ncplane_set_styles(nc, attrs);
+  compat_set_fg(nc, hcolor);
 //fprintf(stderr, "DRAW ADAPTER %s DRAWT/B: %u/%u rows/cols: %d/%d\n", as->c->name, drawtop, drawbot, rows, cols);
   bevel(nc, rows, cols, drawtop, drawbot);
 //fprintf(stderr, "DREW ADAPTER %s\n", as->c->name);
@@ -2771,7 +2750,7 @@ lex_part_spec(const char *psects, zobj *z, size_t sectsize,
     if(el[1]){
       return -1;
     }
-		// FIXME replace with ncenmetric()
+    // FIXME replace with ncenmetric()
     switch(*el){
       case 'E': case 'e':
         ull *= 1024llu * 1024 * 1024 * 1024 * 1024 * 1024; break;
@@ -3058,7 +3037,8 @@ update_details(struct ncplane* hw){
   for(n = 1 ; n < rows - 1 ; ++n){
     cmvwhline(hw, n, START_COL, " ", cols - 2);
   }
-  compat_set_fg_all(hw, SUBDISPLAY_ATTR);
+  ncplane_set_styles(hw, NCSTYLE_BOLD);
+  compat_set_fg(hw, SUBDISPLAY_COLOR);
   cmvwprintw(hw, 1, START_COL, "%-*.*s", cols - 2, cols - 2, c->name);
   if(rows == 1){
     return 0;
@@ -3098,11 +3078,11 @@ update_details(struct ncplane* hw){
     ncplane_off_styles(hw, NCSTYLE_BOLD);
     ncplane_putstr(hw, sn ? sn : "n/a");
     ncplane_on_styles(hw, NCSTYLE_BOLD);
-		cwprintw(hw, " WC%lc WRV%lc RO%lc",
-				d->blkdev.wcache ? L'+' : L'-',
-				d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
-				d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
-				d->roflag ? L'+' : L'-');
+    cwprintw(hw, " WC%lc WRV%lc RO%lc",
+        d->blkdev.wcache ? L'+' : L'-',
+        d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
+        d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
+        d->roflag ? L'+' : L'-');
     assert(d->physsec <= 4096);
     cmvwprintw(hw, 4, START_COL, "Sectors: ");
     ncplane_off_styles(hw, NCSTYLE_BOLD);
@@ -3307,16 +3287,19 @@ helpstrs(struct ncplane* n){
   int row = 1;
 
   ncplane_dim_yx(n, &rows, &cols);
-  compat_set_fg_all(n, SUBDISPLAY_ATTR);
+  ncplane_set_styles(n, NCSTYLE_BOLD);
+  compat_set_fg(n, SUBDISPLAY_COLOR);
   for(z = 0 ; (hs = helps[z]) && z < rows ; ++z){
     cmvwhline(n, row + z, START_COL, " ", cols - 2);
     ncplane_putwstr_yx(n, row + z, START_COL, hs);
   }
   row += z;
   if(!get_selected_blockobj()){
-    compat_set_fg_all(n, SUBDISPLAY_INVAL_ATTR);
+    ncplane_set_styles(n, NCSTYLE_NONE);
+    compat_set_fg(n, SUBDISPLAY_COLOR);
   }else{
-    compat_set_fg_all(n, SUBDISPLAY_ATTR);
+    ncplane_set_styles(n, NCSTYLE_BOLD);
+    compat_set_fg(n, SUBDISPLAY_COLOR);
   }
   for(z = 0 ; (hs = helps_block[z]) && z < rows ; ++z){
     cmvwhline(n, row + z, START_COL, " ", cols - 2);
@@ -3324,9 +3307,11 @@ helpstrs(struct ncplane* n){
   }
   row += z;
   if(!target_mode_p()){
-    compat_set_fg_all(n, SUBDISPLAY_INVAL_ATTR);
+    ncplane_set_styles(n, NCSTYLE_NONE);
+    compat_set_fg(n, SUBDISPLAY_COLOR);
   }else{
-    compat_set_fg_all(n, SUBDISPLAY_ATTR);
+    ncplane_set_styles(n, NCSTYLE_BOLD);
+    compat_set_fg(n, SUBDISPLAY_COLOR);
   }
   for(z = 0 ; (hs = helps_target[z]) && z < rows ; ++z){
     cmvwhline(n, row + z, START_COL, " ", cols - 2);
@@ -3447,7 +3432,8 @@ update_diags(struct panel_state *ps){
   if((y = get_logs(y, l)) < 0){
     return -1;
   }
-  compat_set_fg_all(ps->n, SUBDISPLAY_ATTR);
+  ncplane_set_styles(ps->n, NCSTYLE_BOLD);
+  compat_set_fg(ps->n, SUBDISPLAY_COLOR);
   for(r = 0 ; r < y ; ++r){
     char *c, tbuf[x];
     struct tm tm;
@@ -5254,27 +5240,27 @@ handle_input(struct ncplane* w){
       unlock_notcurses();
       continue;
     }
-		bool menuinput;
+    bool menuinput;
     lock_notcurses();
-		menuinput = ncmenu_offer_input(mainmenu, &ni);
+    menuinput = ncmenu_offer_input(mainmenu, &ni);
     unlock_notcurses(); // FIXME don't always want a redraw here
-		if(menuinput){
-			continue;
-		}
-		if(ch == NCKEY_ENTER || ch == NCKEY_SPACE){
-			if(ncmenu_selected(mainmenu, &ni) == NULL){
-				continue;
-			} // otherwise, continue through with selected item
-			ncmenu_rollup(mainmenu);
-			ch = ni.id;
-		}
-		if(ch == NCKEY_RELEASE){
-			if(ncmenu_mouse_selected(mainmenu, &ni, &ni) == NULL){
-				continue;
-			} // otherwise, continue through with selected item
-			ncmenu_rollup(mainmenu);
-			ch = ni.id;
-		}
+    if(menuinput){
+      continue;
+    }
+    if(ch == NCKEY_ENTER || ch == NCKEY_SPACE){
+      if(ncmenu_selected(mainmenu, &ni) == NULL){
+        continue;
+      } // otherwise, continue through with selected item
+      ncmenu_rollup(mainmenu);
+      ch = ni.id;
+    }
+    if(ch == NCKEY_RELEASE){
+      if(ncmenu_mouse_selected(mainmenu, &ni, &ni) == NULL){
+        continue;
+      } // otherwise, continue through with selected item
+      ncmenu_rollup(mainmenu);
+      ch = ni.id;
+    }
     if(actform){
       if((ch = handle_actform_input(ch)) == (char32_t)-1){
         break;
@@ -5355,7 +5341,7 @@ handle_input(struct ncplane* w){
         unlock_notcurses();
         break;
       }
-			case NCKEY_PGUP: case NCKEY_BUTTON4: {
+      case NCKEY_PGUP: case NCKEY_BUTTON4: {
         int sel;
         lock_notcurses();
         sel = selection_active();
@@ -5366,7 +5352,7 @@ handle_input(struct ncplane* w){
         unlock_notcurses();
         break;
       }
-			case NCKEY_PGDOWN: case NCKEY_BUTTON5: {
+      case NCKEY_PGDOWN: case NCKEY_BUTTON5: {
         int sel;
         lock_notcurses();
 // fprintf(stderr, "-------------- BEGIN PgDown ---------------\n");
@@ -5571,15 +5557,15 @@ handle_input(struct ncplane* w){
         confirm_operation("exit without finalizing a target", untargeted_exit_confirm);
         break;
       default:{
-				if(!nckey_mouse_p(ch)){ // don't print warnings for mouse clicks
-					const char *hstr = !help.n ? " ('H' for help)" : "";
-					// diag() locks/unlocks, and calls screen_update()
-					if(isprint(ch)){
-						diag("unknown command '%c'%s", ch, hstr);
-					}else{
-						diag("unknown scancode 0x%x%s", ch, hstr);
-					}
-				}
+        if(!nckey_mouse_p(ch)){ // don't print warnings for mouse clicks
+          const char *hstr = !help.n ? " ('H' for help)" : "";
+          // diag() locks/unlocks, and calls screen_update()
+          if(isprint(ch)){
+            diag("unknown command '%c'%s", ch, hstr);
+          }else{
+            diag("unknown scancode 0x%x%s", ch, hstr);
+          }
+        }
         break;
       }
     }
@@ -5690,7 +5676,7 @@ update_blockobj(blockobj* b, device* d){
     sector = d->size / d->logsec + 1;
   }else{
     if( (sector = first_usable_sector(d)) ){
-	    if((z = create_zobj(z, zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
+      if((z = create_zobj(z, zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
         goto err;
       }
       ++zones;
@@ -5969,60 +5955,60 @@ boxinfo(const char *text, ...){
 
 static struct ncmenu*
 create_menu(struct ncplane* n){
-	struct ncmenu_item block_items[] = {
-		{ .desc = "Make partition table", .shortcut = { .id = 'm', }, },
-		{ .desc = "Remove partition table", .shortcut = { .id = 'r', }, },
-		{ .desc = "Wipe MBR", .shortcut = { .id = 'W', }, },
-		{ .desc = "Bad block check", .shortcut = { .id = 'B', }, },
-		{ .desc = "Create aggregate", .shortcut = { .id = 'A', }, },
-		{ .desc = "Modify aggregate", .shortcut = { .id = 'z', }, },
-		{ .desc = "Destroy aggregate", .shortcut = { .id = 'Z', }, },
+  struct ncmenu_item block_items[] = {
+    { .desc = "Make partition table", .shortcut = { .id = 'm', }, },
+    { .desc = "Remove partition table", .shortcut = { .id = 'r', }, },
+    { .desc = "Wipe MBR", .shortcut = { .id = 'W', }, },
+    { .desc = "Bad block check", .shortcut = { .id = 'B', }, },
+    { .desc = "Create aggregate", .shortcut = { .id = 'A', }, },
+    { .desc = "Modify aggregate", .shortcut = { .id = 'z', }, },
+    { .desc = "Destroy aggregate", .shortcut = { .id = 'Z', }, },
     { .desc = "Setup loop device", .shortcut = { .id = 'p', }, },
-	};
-	struct ncmenu_item part_items[] = {
-		{ .desc = "New partition", .shortcut = { .id = 'n', }, },
-		{ .desc = "Delete partition", .shortcut = { .id = 'd', }, },
-		{ .desc = "Set partition attributes", .shortcut = { .id = 's', }, },
-		{ .desc = "Make filesystem/swap", .shortcut = { .id = 'M', }, },
-		{ .desc = "fsck filesystem", .shortcut = { .id = 'F', }, },
-		{ .desc = "Wipe filesystem", .shortcut = { .id = 'w', }, },
+  };
+  struct ncmenu_item part_items[] = {
+    { .desc = "New partition", .shortcut = { .id = 'n', }, },
+    { .desc = "Delete partition", .shortcut = { .id = 'd', }, },
+    { .desc = "Set partition attributes", .shortcut = { .id = 's', }, },
+    { .desc = "Make filesystem/swap", .shortcut = { .id = 'M', }, },
+    { .desc = "fsck filesystem", .shortcut = { .id = 'F', }, },
+    { .desc = "Wipe filesystem", .shortcut = { .id = 'w', }, },
     { .desc = "Name filesystem", .shortcut = { .id = 'L', }, },
-		{ .desc = "Set filesystem UUID", .shortcut = { .id = 'U', }, },
+    { .desc = "Set filesystem UUID", .shortcut = { .id = 'U', }, },
     { .desc = "Mount filesystem", .shortcut = { .id = 'o', }, },
     { .desc = "Unmount filesystem", .shortcut = { .id = 'O', }, },
-	};
-	struct ncmenu_item glight_items[] = {
-		{ .desc = "View details", .shortcut = { .id = 'v', }, },
-		{ .desc = "Show mounts", .shortcut = { .id = 'E', }, },
-		{ .desc = "Diagnostics", .shortcut = { .id = 'D', }, },
-		{ .desc = "Quit", .shortcut = { .id = 'q', }, },
-	};
-  struct ncmenu_item help_items[] = {
-		{ .desc = "Help", .shortcut = { .id = 'H', }, },
   };
-	struct ncmenu_section sections[] = {
-		{ .name = "Growlight", .items = glight_items,
-			.itemcount = sizeof(glight_items) / sizeof(*glight_items),
-			.shortcut = { .id = 'g', .alt = true, }, },
-		{ .name = "Blockdevs", .items = block_items,
-			.itemcount = sizeof(block_items) / sizeof(*block_items),
-			.shortcut = { .id = 'b', .alt = true, }, },
-		{ .name = "Partitions", .items = part_items,
-			.itemcount = sizeof(part_items) / sizeof(*part_items),
-			.shortcut = { .id = 'p', .alt = true, }, },
+  struct ncmenu_item glight_items[] = {
+    { .desc = "View details", .shortcut = { .id = 'v', }, },
+    { .desc = "Show mounts", .shortcut = { .id = 'E', }, },
+    { .desc = "Diagnostics", .shortcut = { .id = 'D', }, },
+    { .desc = "Quit", .shortcut = { .id = 'q', }, },
+  };
+  struct ncmenu_item help_items[] = {
+    { .desc = "Help", .shortcut = { .id = 'H', }, },
+  };
+  struct ncmenu_section sections[] = {
+    { .name = "Growlight", .items = glight_items,
+      .itemcount = sizeof(glight_items) / sizeof(*glight_items),
+      .shortcut = { .id = 'g', .alt = true, }, },
+    { .name = "Blockdevs", .items = block_items,
+      .itemcount = sizeof(block_items) / sizeof(*block_items),
+      .shortcut = { .id = 'b', .alt = true, }, },
+    { .name = "Partitions", .items = part_items,
+      .itemcount = sizeof(part_items) / sizeof(*part_items),
+      .shortcut = { .id = 'p', .alt = true, }, },
     { .name = NULL, .items = NULL, .itemcount = 0, },
     { .name = "Info", .items = help_items,
       .itemcount = sizeof(help_items) / sizeof(*help_items),
-			.shortcut = { .id = 'i', .alt = true, }, },
-	};
-	struct ncmenu_options mopts = {
-		.sections = sections,
-		.sectioncount = sizeof(sections) / sizeof(*sections),
-	  .headerchannels = CHANNELS_RGB_INITIALIZER(0xff, 0xff, 0xff, 0x6b, 0x38, 0x6b),
-		.sectionchannels = CHANNELS_RGB_INITIALIZER(0xd6, 0x70, 0xd6, 0x00, 0x00, 0x00),
-	};
-	struct ncmenu* nmenu = ncmenu_create(n, &mopts);
-	return nmenu;
+      .shortcut = { .id = 'i', .alt = true, }, },
+  };
+  struct ncmenu_options mopts = {
+    .sections = sections,
+    .sectioncount = sizeof(sections) / sizeof(*sections),
+    .headerchannels = CHANNELS_RGB_INITIALIZER(0xff, 0xff, 0xff, 0x6b, 0x38, 0x6b),
+    .sectionchannels = CHANNELS_RGB_INITIALIZER(0xd6, 0x70, 0xd6, 0x00, 0x00, 0x00),
+  };
+  struct ncmenu* nmenu = ncmenu_create(n, &mopts);
+  return nmenu;
 }
 
 int main(int argc, char * const *argv){
@@ -6052,11 +6038,11 @@ int main(int argc, char * const *argv){
   pthread_sigmask(SIG_SETMASK, &sigmask, NULL);
   notcurses_options opts = { };
   opts.flags = NCOPTION_INHIBIT_SETLOCALE;
-	// opts.loglevel = NCLOGLEVEL_TRACE;
+  // opts.loglevel = NCLOGLEVEL_TRACE;
   if((NC = notcurses_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
-	notcurses_mouse_enable(NC);
+  notcurses_mouse_enable(NC);
   int ydim, xdim;
   notcurses_stddim_yx(NC, &ydim, &xdim);
   struct ncplane* n = ncplane_new(notcurses_stdplane(NC), ydim - 2, xdim, 1, 0, NULL, NULL);
@@ -6065,11 +6051,11 @@ int main(int argc, char * const *argv){
     fprintf(stderr, "Error creating main plane for reel, aborting\n");
     return EXIT_FAILURE;
   }
-	if((mainmenu = create_menu(notcurses_stdplane(NC))) == NULL){
+  if((mainmenu = create_menu(notcurses_stdplane(NC))) == NULL){
     notcurses_stop(NC);
     fprintf(stderr, "Error creating menu, aborting\n");
     return EXIT_FAILURE;
-	}
+  }
   ps = show_splash(L"Initializing...");
   ncreel_options popts;
   memset(&popts, 0, sizeof(popts));
