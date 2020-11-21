@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <locale.h>
+#include <version.h>
 #include <atasmart.h>
 #include <notcurses/direct.h>
 #include <readline/history.h>
@@ -1772,11 +1773,13 @@ tokenize(const char *line, wchar_t ***tokes){
   return t;
 }
 
-static int
-version(wchar_t * const *args, const char *arghelp){
-  int ret = 0;
-
-  ZERO_ARG_CHECK(args, arghelp);
+static void
+do_logo(void){
+  int v = ncdirect_render_image(ncd, GROWLIGHT_SHARE "/growlight.jpg",
+                                NCALIGN_CENTER, NCBLIT_DEFAULT, NCSCALE_SCALE);
+  if(v >= 0){
+    return;
+  }
   use_terminfo_color(COLOR_RED, 1);
   printf("+++++++++++++++++++++++++++++++++++++++++++++++++############++++++++++++++++++\n"
 "++++++++++++++++++++++++++++++++++++++++++++++++++###########++++++++++++++++++\n"
@@ -1800,6 +1803,14 @@ version(wchar_t * const *args, const char *arghelp){
 "+''++''++++++++++++++++++++++++++++++++''++'''+++++++++##########++++''''''''''\n"
 "++'''''#++++++++++++++++++++++++++++++++'''''++++++++++##########++++''++++++''\n"
 "++#++++++++++++++++++++++++++++++++++++++++#++++++++++++#########++++'+''''''++\n");
+}
+
+static int
+version(wchar_t * const *args, const char *arghelp){
+  int ret = 0;
+
+  ZERO_ARG_CHECK(args, arghelp);
+  do_logo();
   use_terminfo_color(COLOR_WHITE, 1);
   ret |= popen_drain("mkswap --version");
   printf("\n");

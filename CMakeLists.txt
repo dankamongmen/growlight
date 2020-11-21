@@ -161,6 +161,7 @@ if(USE_PANDOC)
   endif()
 endif()
 
+install(FILES doc/growlight.jpg DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/growlight)
 install(TARGETS growlight DESTINATION sbin)
 install(TARGETS growlight-readline DESTINATION sbin)
 install(FILES ${MANPAGES8} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man8)

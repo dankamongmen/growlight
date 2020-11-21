@@ -4,4 +4,5 @@
 #define growlight_VERSION_PATCH "@growlight_VERSION_PATCH@"
 #define VERSION growlight_VERSION_MAJOR  "."  growlight_VERSION_MINOR  "."  growlight_VERSION_PATCH
 #define PACKAGE "growlight"
+#define GROWLIGHT_SHARE "@CMAKE_INSTALL_FULL_DATADIR@/" PACKAGE
 #cmakedefine USE_LIBZFS
