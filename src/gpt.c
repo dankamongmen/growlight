@@ -101,6 +101,9 @@ update_backup(int fd, const gpt_header *ghead, unsigned gptlbas, uint64_t lbas,
 }
 
 int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t firstusable){
+  if(firstusable == 0){
+    return -1;
+  }
   memcpy(&gh->signature, gpt_signature, sizeof(gh->signature));
   gh->revision = 0x10000u;
   gh->headsize = sizeof(*gh);
@@ -109,7 +112,6 @@ int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t 
   // ->crc is set by update_crc()
   gh->backuplba = backuplba;
   gh->first_usable = firstusable;
-  assert(gh->first_usable);
   gh->last_usable = backuplba - (firstusable - 1);
   if(getrandom(gh->disk_guid, GUIDSIZE, GRND_NONBLOCK) != GUIDSIZE){
     diag("Couldn't get %d random bytes (%s)\n", GUIDSIZE, strerror(errno));
@@ -143,7 +145,9 @@ write_gpt(int fd, ssize_t lbasize, uint64_t lbas, unsigned realdata){
   void *map;
   off_t off;
 
-  assert(pgsize > 0 && pgsize % lbasize == 0);
+  if(pgsize <= 0 || (pgsize % lbasize)){
+    return -1;
+  }
   // The first copy goes into LBA 1. Calculate offset into map due to
   // lbasize possibly (probably) not equalling the page size.
   if((off = lbasize % pgsize) == 0){
@@ -153,7 +157,9 @@ write_gpt(int fd, ssize_t lbasize, uint64_t lbas, unsigned realdata){
   }
   mapsize += gptlbas * lbasize;
   mapsize = ((mapsize / pgsize) + !!(mapsize % pgsize)) * pgsize;
-  assert(mapsize % pgsize == 0);
+  if(mapsize % pgsize){
+    return -1;
+  }
   map = mmap(NULL, mapsize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
   if(map == MAP_FAILED){
     diag("Error mapping %zub at %d (%s?)\n", mapsize, fd, strerror(errno));
@@ -323,10 +329,6 @@ const_map_gpt(const device *d, size_t *mapsize, int *fd, size_t lbasize){
     diag("Bad lbasize for GPT: %zu\n", lbasize);
     return MAP_FAILED;
   }
-  if((*fd = openat(devfd, d->name, O_RDONLY|O_CLOEXEC|O_DIRECT)) < 0){
-    diag("Couldn't open %s (%s?)\n", d->name, strerror(errno));
-    return MAP_FAILED;
-  }
   // The first copy goes into LBA 1. Calculate offset into map due to
   // lbasize possibly (probably) not equalling the page size.
   if((off = lbasize % pgsize) == 0){
@@ -336,7 +338,14 @@ const_map_gpt(const device *d, size_t *mapsize, int *fd, size_t lbasize){
   }
   *mapsize += gptlbas * lbasize;
   *mapsize = ((*mapsize / pgsize) + !!(*mapsize % pgsize)) * pgsize;
-  assert(*mapsize % pgsize == 0);
+  if(*mapsize % pgsize){
+    diag("Bad mapsize %zu for page size %d\n", *mapsize, pgsize);
+    return MAP_FAILED;
+  }
+  if((*fd = openat(devfd, d->name, O_RDONLY|O_CLOEXEC|O_DIRECT)) < 0){
+    diag("Couldn't open %s (%s?)\n", d->name, strerror(errno));
+    return MAP_FAILED;
+  }
   map = mmap(NULL, *mapsize, PROT_READ, MAP_SHARED, *fd, 0);
   if(map == MAP_FAILED){
     diag("Couldn't map GPT header (%s?)\n", strerror(errno));
