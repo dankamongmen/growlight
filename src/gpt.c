@@ -105,6 +105,10 @@ int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t 
     diag("Illegal first usable LBA %ju\n", (uintmax_t)firstusable);
     return -1;
   }
+  if(backuplba < 2){
+    diag("Illegal backup LBA %ju\n", (uintmax_t)backuplba);
+    return -1;
+  }
   if(lbasize == 0){
     diag("Illegal LBA size %zu\n", lbasize);
     return -1;
