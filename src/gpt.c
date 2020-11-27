@@ -100,7 +100,8 @@ update_backup(int fd, const gpt_header *ghead, unsigned gptlbas, uint64_t lbas,
   return 0;
 }
 
-int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t firstusable){
+int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba,
+                   uint64_t firstusable, const void* uuid){
   if(firstusable == 0){
     diag("Illegal first usable LBA %ju\n", (uintmax_t)firstusable);
     return -1;
@@ -123,9 +124,13 @@ int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t 
   gh->backuplba = backuplba;
   gh->first_usable = firstusable;
   gh->last_usable = backuplba - (firstusable - 1);
-  if(getrandom(gh->disk_guid, GUIDSIZE, GRND_NONBLOCK) != GUIDSIZE){
-    diag("Couldn't get %d random bytes (%s)\n", GUIDSIZE, strerror(errno));
-    return -1;
+  if(uuid){
+    memcpy(gh->disk_guid, uuid, GUIDSIZE);
+  }else{
+    if(getrandom(gh->disk_guid, GUIDSIZE, GRND_NONBLOCK) != GUIDSIZE){
+      diag("Couldn't get %d random bytes (%s)\n", GUIDSIZE, strerror(errno));
+      return -1;
+    }
   }
   gh->partlba = gh->lba + 1;
   gh->partcount = MINIMUM_GPT_ENTRIES;
@@ -179,7 +184,7 @@ write_gpt(int fd, ssize_t lbasize, uint64_t lbas, unsigned realdata){
   if(!realdata){
     memset(ghead, 0, gptlbas * lbasize);
   }else{
-    if(initialize_gpt(ghead, lbasize, backuplba, gptlbas)){
+    if(initialize_gpt(ghead, lbasize, backuplba, gptlbas, NULL)){
       munmap(map, mapsize);
       return -1;
     }
