@@ -68,6 +68,9 @@ typedef struct __attribute__ ((packed)) gpt_entry {
 // Update CRCs over GPT header and (->partcount >= MINIMUM_GPT_ENTRIES) GPT PEs
 int update_crc(gpt_header *head, const gpt_entry *gpes);
 
+// Initialize the 'lbasize'-byte sector headed by 'gh' as a GPT primary. The
+// backup is at sector 'backuplba'. 'firstusable' is the first LBA at which an
+// actual partition may be placed.
 int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t firstusable);
 
 #ifdef __cplusplus
