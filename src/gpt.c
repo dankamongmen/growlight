@@ -111,6 +111,7 @@ int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t 
   }
   memcpy(&gh->signature, gpt_signature, sizeof(gh->signature));
   gh->revision = 0x10000u;
+  // FIXME ought be the lbasize and greater than 92, but everyone uses 92 :/
   gh->headsize = sizeof(*gh);
   gh->reserved = 0;
   gh->lba = 1;
