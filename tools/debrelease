@@ -10,7 +10,7 @@ VERSION="$1"
 
 dch -v $VERSION-1
 dch -r
-uscan --force
+uscan --force --repack --compression xz
 git commit -m "v$VERSION" -a
 gbp import-orig ../growlight_$VERSION.orig.tar.gz
 git push --tags
