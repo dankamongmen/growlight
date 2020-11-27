@@ -12,3 +12,4 @@ steps:
     - cd build
     - cmake -DUSE_LIBZFS=off ..
     - make
+    - make test
