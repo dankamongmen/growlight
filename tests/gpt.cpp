@@ -25,6 +25,16 @@ TEST_CASE("GPT") {
     CHECK(92 == head.headsize);
   }
 
+  // Bytes 0x18--0x1f are the sector of the GPT primary, usually 1
+  // Bytes 0x20--0x27 are the sector of the GPT alternate, provided as argument
+  SUBCASE("GPTLBAs") {
+    gpt_header head;
+    CHECK(0 == initialize_gpt(&head, 92, 100000, 34));
+    CHECK(1 == head.lba);
+    CHECK(100000 == head.backuplba);
+  }
+
+  // Verify both CRCs, and the reserved area following HeaderCRC32
   SUBCASE("CRC32") {
     gpt_header head;
     CHECK(0 == initialize_gpt(&head, 92, 0, 34));
@@ -36,6 +46,7 @@ TEST_CASE("GPT") {
     auto entries = new gpt_entry[head.partcount];
     update_crc(&head, entries);
     CHECK(0xc803405b == head.crc);
+    CHECK(0 == head.reserved);
     CHECK(0x1ec50fb7 == head.partcrc);
     delete[] entries;
   }
