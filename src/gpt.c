@@ -37,14 +37,20 @@ static const unsigned char gpt_signature[8] =
 #define MINIMUM_GPT_ENTRIES 128
 #define CRCPOLY 0x04C11DB7
 
-void update_crc(gpt_header *head, const gpt_entry *gpes){
+int update_crc(gpt_header *head, const gpt_entry *gpes){
   size_t hs = head->headsize; // FIXME little-endian; swap on BE machines
-
-  assert(head->partcount == MINIMUM_GPT_ENTRIES);
-  assert(head->partsize == sizeof(struct gpt_entry));
+  // partition entry size must be a positive multiple of 128 (usually 128)
+  if(head->partsize == 0 || head->partsize % 128){
+    return -1;
+  }
+  if(head->partcount < MINIMUM_GPT_ENTRIES){
+    return -1;
+  }
+fprintf(stderr, "CRC over %d * %d\n", head->partcount, head->partsize);
   head->partcrc = crc32(CRCPOLY, (const void*)gpes, head->partcount * head->partsize);
   head->crc = 0;
   head->crc = crc32(CRCPOLY, (void*)head, hs);
+  return 0;
 }
 
 static int
@@ -95,8 +101,7 @@ update_backup(int fd, const gpt_header *ghead, unsigned gptlbas, uint64_t lbas,
   return 0;
 }
 
-static int
-initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t firstusable){
+int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t firstusable){
   memcpy(&gh->signature, gpt_signature, sizeof(gh->signature));
   gh->revision = 0x10000u;
   gh->headsize = sizeof(*gh);
@@ -163,7 +168,10 @@ write_gpt(int fd, ssize_t lbasize, uint64_t lbas, unsigned realdata){
       munmap(map, mapsize);
       return -1;
     }
-    update_crc(ghead, (const gpt_entry *)((char *)ghead + lbasize));
+    if(update_crc(ghead, (const gpt_entry *)((char *)ghead + lbasize))){
+      munmap(map, mapsize);
+      return -1;;
+    }
   }
   if(msync(map, mapsize, MS_SYNC|MS_INVALIDATE)){
     diag("Error syncing %d (%s?)\n", fd, strerror(errno));
@@ -406,7 +414,11 @@ unmap_gpt(const device *parent, void *map, size_t mapsize, int fd, size_t lbasiz
   if(pgsize < 0){
     diag("Warning: bad pgsize for GPT: %d\n", pgsize);
   }
-  update_crc(gpt, gpe);
+  if(update_crc(gpt, gpe)){
+    munmap(map, mapsize);
+    close(fd);
+    return -1;
+  }
   if(update_backup(fd, gpt, gptlbas, lbas, LBA_SIZE, pgsize, 1)){
     munmap(map, mapsize);
     close(fd);

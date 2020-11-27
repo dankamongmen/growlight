@@ -65,7 +65,10 @@ typedef struct __attribute__ ((packed)) gpt_entry {
   uint16_t name[36];  // 36 UTF-16LE code units
 } gpt_entry;
 
-void update_crc(gpt_header *head, const gpt_entry *gpes);
+// Update CRCs over GPT header and (->partcount >= MINIMUM_GPT_ENTRIES) GPT PEs
+int update_crc(gpt_header *head, const gpt_entry *gpes);
+
+int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t firstusable);
 
 #ifdef __cplusplus
 }
