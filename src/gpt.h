@@ -70,8 +70,10 @@ int update_crc(gpt_header *head, const gpt_entry *gpes);
 
 // Initialize the 'lbasize'-byte sector headed by 'gh' as a GPT primary. The
 // backup is at sector 'backuplba'. 'firstusable' is the first LBA at which an
-// actual partition may be placed.
-int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t firstusable);
+// actual partition may be placed. Provide a GUIDSIZE-byte UUID, or NULL for a
+// random one to be generated.
+int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba,
+                   uint64_t firstusable, const void* uuid);
 
 #ifdef __cplusplus
 }
