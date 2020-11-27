@@ -7,21 +7,21 @@ TEST_CASE("GPT") {
   // First eight bytes must be "EFI PART"
   SUBCASE("Signature") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 0, 34));
+    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34));
     CHECK(0 == memcmp(&head.signature, "EFI PART", sizeof(head.signature)));
   }
 
   // Bytes 0x8--0xb must be 00 00 01 00 (1.00 by UEFI logic)
   SUBCASE("Revision") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 0, 34));
+    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34));
     CHECK(0x00010000 == head.revision);
   }
 
   // Bytes 0xc--0xf must be >= 92, should be the logical block size
   SUBCASE("HeaderSize") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 0, 34));
+    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34));
     CHECK(92 == head.headsize);
   }
 
@@ -37,7 +37,7 @@ TEST_CASE("GPT") {
   // Verify both CRCs, and the reserved area following HeaderCRC32
   SUBCASE("CRC32") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 0, 34));
+    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34));
     // partition entry size must be a positive multiple of 128 (usually 128)
     CHECK(0 < head.partsize);
     CHECK(0 == (head.partsize % 128));
@@ -60,7 +60,7 @@ TEST_CASE("GPT") {
     unsigned char sector[512];
     memset(sector, 0xff, sizeof(sector));
     gpt_header* head = reinterpret_cast<gpt_header*>(sector);
-    CHECK(0 == initialize_gpt(head, sizeof(sector), 0, 34));
+    CHECK(0 == initialize_gpt(head, sizeof(sector), 4194287, 34));
     CHECK(92 == head->headsize);
     for(size_t idx = 92 ; idx < sizeof(sector) ; ++idx){
       CHECK(0 == sector[idx]);
