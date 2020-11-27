@@ -102,6 +102,11 @@ update_backup(int fd, const gpt_header *ghead, unsigned gptlbas, uint64_t lbas,
 
 int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba, uint64_t firstusable){
   if(firstusable == 0){
+    diag("Illegal first usable LBA %ju\n", (uintmax_t)firstusable);
+    return -1;
+  }
+  if(lbasize == 0){
+    diag("Illegal LBA size %zu\n", lbasize);
     return -1;
   }
   memcpy(&gh->signature, gpt_signature, sizeof(gh->signature));
