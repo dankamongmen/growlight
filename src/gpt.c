@@ -46,7 +46,6 @@ int update_crc(gpt_header *head, const gpt_entry *gpes){
   if(head->partcount < MINIMUM_GPT_ENTRIES){
     return -1;
   }
-fprintf(stderr, "CRC over %d * %d\n", head->partcount, head->partsize);
   head->partcrc = crc32(CRCPOLY, (const void*)gpes, head->partcount * head->partsize);
   head->crc = 0;
   head->crc = crc32(CRCPOLY, (void*)head, hs);

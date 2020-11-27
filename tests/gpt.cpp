@@ -11,6 +11,13 @@ TEST_CASE("GPT") {
     CHECK(0 == memcmp(&head, "EFI PART", 8));
   }
 
+  // Bytes 0x8--0xb must be 00 00 01 00 (1.00 by UEFI logic)
+  SUBCASE("Revision") {
+    gpt_header head;
+    initialize_gpt(&head, 0, 0, 0); // FIXME
+    CHECK(0 == memcmp(reinterpret_cast<char*>(&head) + 8, "\x00\x00\x01\x00", 4));
+  }
+
   SUBCASE("CRC32") {
     gpt_header head;
     initialize_gpt(&head, 0, 0, 0); // FIXME
