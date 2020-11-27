@@ -2984,7 +2984,7 @@ confirm_operation(const char *op,void (*confirmcb)(const char *)){
   ops_confirm[1].option = strdup("do it");
   ops_confirm[1].desc = strdup(op);
   // FIXME check values
-  raise_form("confirm operation",confirmcb,ops_confirm,2,0,
+  raise_form("confirm operation", confirmcb,ops_confirm, 2, 0,
       "Please confirm the request. You will not be able to undo this action.");
   return 0;
 }
@@ -5284,11 +5284,10 @@ handle_input(struct ncplane* w){
       continue;
     }
     if(ch == NCKEY_ENTER || ch == NCKEY_SPACE){
-      if(ncmenu_selected(mainmenu, &ni) == NULL){
-        continue;
+      if(ncmenu_selected(mainmenu, &ni)){
+        ncmenu_rollup(mainmenu);
+        ch = ni.id;
       } // otherwise, continue through with selected item
-      ncmenu_rollup(mainmenu);
-      ch = ni.id;
     }
     if(ch == NCKEY_RELEASE){
       if(ncmenu_mouse_selected(mainmenu, &ni, &ni) == NULL){
