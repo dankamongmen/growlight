@@ -159,11 +159,14 @@ int get_logs(unsigned n, logent *cplogs){
 
 void diag(const char *fmt,...){
   va_list vac,ap;
-
-  va_start(ap,fmt);
-  va_copy(vac,ap);
-  gui->vdiag(fmt,ap);
-  add_log(fmt,vac);
+  va_start(ap, fmt);
+  va_copy(vac, ap);
+  if(gui){
+    gui->vdiag(fmt, ap);
+    add_log(fmt, vac);
+  }else{
+    vfprintf(stderr, fmt, ap);
+  }
   va_end(vac);
 }
 
