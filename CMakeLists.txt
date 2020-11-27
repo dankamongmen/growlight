@@ -5,7 +5,9 @@ project(growlight VERSION 1.2.21
   LANGUAGES C CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 include(CTest)
 include(GNUInstallDirs)
@@ -148,11 +150,24 @@ target_link_directories(growlight-readline
 
 if(${USE_DOCTEST})
 file(GLOB TESTSRCS CONFIGURE_DEPENDS tests/*.cpp)
-add_executable(growlight-tester ${TESTSRCS})
+add_executable(growlight-tester ${SRCS} ${TESTSRCS})
 target_include_directories(growlight-tester
   PRIVATE
     src
     "${PROJECT_BINARY_DIR}/include"
+    "${COMMON_INCLUDE_DIRS}"
+)
+target_compile_definitions(growlight-tester
+  PRIVATE
+    _GNU_SOURCE _DEFAULT_SOURCE _XOPEN_SOURCE=600
+)
+target_link_libraries(growlight-tester
+  PRIVATE
+    "${COMMON_LIBRARIES}"
+)
+target_link_directories(growlight-tester
+  PRIVATE
+    "${COMMON_LIBRARY_DIRS}"
 )
 add_test(
   NAME growlight-tester
