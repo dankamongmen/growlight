@@ -1033,17 +1033,11 @@ rescan(const char *name,device *d){
     snprintf(devbuf, sizeof(devbuf), DEVROOT "/%s", name);
     // FIXME move all this to its own function
     if(probe_blkid_superblock(devbuf, &pr, d) == 0){
-      if( (ppl = blkid_probe_get_partitions(pr)) ){
+      if( (ppl = blkid_probe_get_partitions(pr)) && (ptbl = blkid_partlist_get_table(ppl))){
         const char *pttable;
         device *p;
 
         pars = blkid_partlist_numof_partitions(ppl);
-        if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
-          diag("Couldn't probe partition table of %s (%s)\n", name, strerror(errno));
-          clobber_device(d);
-          blkid_free_probe(pr);
-          return NULL;
-        }
         pttable = blkid_parttable_get_type(ptbl);
         verbf("\t%d partition%s, table type %s\n",
               pars, pars == 1 ? "" : "s", pttable);
@@ -1094,11 +1088,10 @@ rescan(const char *name,device *d){
           }
         }
       }else{
-        device *p;
-
         verbf("\tNo partition table\n");
+        device *p;
         while( (p = d->parts) ){
-          diag("Eliminating malingering partition %s\n",p->name);
+          diag("Eliminating malingering partition %s\n", p->name);
           d->parts = p->next;
           clobber_device(p);
         }
