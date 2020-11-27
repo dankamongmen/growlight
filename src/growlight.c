@@ -1027,24 +1027,23 @@ rescan(const char *name,device *d){
       }
       close(dfd);
     }
-    snprintf(devbuf,sizeof(devbuf),DEVROOT "/%s",name);
+    snprintf(devbuf, sizeof(devbuf), DEVROOT "/%s", name);
     // FIXME move all this to its own function
-    if(probe_blkid_superblock(devbuf,&pr,d) == 0){
+    if(probe_blkid_superblock(devbuf, &pr, d) == 0){
       if( (ppl = blkid_probe_get_partitions(pr)) ){
         const char *pttable;
         device *p;
 
+        pars = blkid_partlist_numof_partitions(ppl);
         if((ptbl = blkid_partlist_get_table(ppl)) == NULL){
-          diag("Couldn't probe partition table of %s (%s)\n",name,strerror(errno));
+          diag("Couldn't probe partition table of %s (%s)\n", name, strerror(errno));
           clobber_device(d);
           blkid_free_probe(pr);
           return NULL;
         }
-        pars = blkid_partlist_numof_partitions(ppl);
         pttable = blkid_parttable_get_type(ptbl);
         verbf("\t%d partition%s, table type %s\n",
-            pars,pars == 1 ? "" : "s",
-            pttable);
+              pars, pars == 1 ? "" : "s", pttable);
         switch(d->layout){
           case LAYOUT_NONE: d->blkdev.pttable = strdup(pttable); break;
           case LAYOUT_MDADM: d->mddev.pttable = strdup(pttable); break;
@@ -1054,17 +1053,17 @@ rescan(const char *name,device *d){
         for(p = d->parts ; p ; p = p->next){
           blkid_partition part;
 
-          part = blkid_partlist_devno_to_partition(ppl,p->devno);
+          part = blkid_partlist_devno_to_partition(ppl, p->devno);
           if(part){
             unsigned long long flags;
 
-            if(probe_blkid_superblock(p->name,NULL,p)){
+            if(probe_blkid_superblock(p->name, NULL, p)){
               clobber_device(d);
               blkid_free_probe(pr);
               return NULL;
             }
             flags = blkid_partition_get_flags(part);
-            if(strcmp(pttable,"gpt") == 0){
+            if(strcmp(pttable, "gpt") == 0){
               // FIXME verify bootable flag?
             }else{
               if(blkid_partition_is_logical(part)){
