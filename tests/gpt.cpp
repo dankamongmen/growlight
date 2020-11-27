@@ -1,6 +1,7 @@
 #include "main.h"
 #include "gpt.h"
 #include <cstring>
+#include <zlib.h>
 
 TEST_CASE("GPT") {
 
@@ -52,9 +53,9 @@ TEST_CASE("GPT") {
     CHECK(128 <= head.partcount);
     auto entries = new gpt_entry[head.partcount];
     update_crc(&head, entries);
-    CHECK(0xc803405b == head.crc);
+    CHECK(2006165414 == head.crc);
     CHECK(0 == head.reserved);
-    CHECK(0x1ec50fb7 == head.partcrc);
+    CHECK(2874462854 == head.partcrc);
     delete[] entries;
   }
 
