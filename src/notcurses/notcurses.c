@@ -794,7 +794,13 @@ new_display_panel(struct ncplane* nc, struct panel_state* ps,
   }else{
     yabove += y - (rows + ybelow + yabove);
   }
-  if((ps->n = ncplane_new(notcurses_stdplane(NC), rows + 2, cols, yabove, 0, NULL, NULL)) == NULL){
+  struct ncplane_options nopts = {
+    .y = yabove,
+    .x = 0,
+    .rows = rows + 2,
+    .cols = cols,
+  };
+  if((ps->n = ncplane_create(notcurses_stdplane(NC), &nopts)) == NULL){
     locked_diag("Couldn't create subpanel, uh-oh");
     return -1;
   }
@@ -1822,7 +1828,13 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
   assert(ps);
   int ncols;
   ncplane_dim_yx(n, NULL, &ncols);
-  ps->n = ncplane_new(notcurses_stdplane(NC), y + 3, cols, linesz - (y + 2), ncols - cols, NULL, NULL);
+  struct ncplane_options nopts = {
+    .y = linesz - (y + 2),
+    .x = ncols - cols,
+    .rows = y + 3,
+    .cols = cols,
+  };
+  ps->n = ncplane_create(notcurses_stdplane(NC), &nopts);
   assert(ps->n);
   cwbkgd(ps->n);
   compat_set_fg(ps->n, FORMBORDER_COLOR);
@@ -1881,7 +1893,13 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
     return;
   }
   fs->mcb = fxn;
-  if((fs->p = ncplane_new(notcurses_stdplane(NC), rows, cols, FORM_Y_OFFSET, x - cols, NULL, NULL)) == NULL){
+  struct ncplane_options nopts = {
+    .y = FORM_Y_OFFSET,
+    .x = x - cols,
+    .rows = rows,
+    .cols = cols,
+  };
+  if((fs->p = ncplane_create(notcurses_stdplane(NC), &nopts)) == NULL){
     locked_diag("Couldn't create form window, uh-oh");
     free_form(fs);
     return;
@@ -1960,7 +1978,13 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
     return;
   }
   fs->mcb = fxn;
-  fs->p = ncplane_new(notcurses_stdplane(NC), rows, cols, FORM_Y_OFFSET, x - cols, NULL, NULL);
+  struct ncplane_options nopts = {
+    .y = FORM_Y_OFFSET,
+    .x = x - cols,
+    .rows = rows,
+    .cols = cols,
+  };
+  fs->p = ncplane_create(notcurses_stdplane(NC), &nopts);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -2038,7 +2062,13 @@ void raise_form(const char* str, void (*fxn)(const char*),
   if((fs = create_form(str, fxn, FORM_SELECT, 0)) == NULL){
     return;
   }
-  fs->p = ncplane_new(notcurses_stdplane(NC), rows, cols + START_COL * 4, FORM_Y_OFFSET, x - cols - 4, NULL, NULL);
+  struct ncplane_options nopts = {
+    .y = FORM_Y_OFFSET,
+    .x = x - cols - 4,
+    .rows = rows,
+    .cols = cols + START_COL * 4,
+  };
+  fs->p = ncplane_create(notcurses_stdplane(NC), &nopts);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -2105,7 +2135,13 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
   notcurses_term_dim_yx(NC, &y, &x);
   assert(x >= cols + 3);
   assert(y >= 3);
-  fs->p = ncplane_new(notcurses_stdplane(NC), 3, cols + START_COL * 2, FORM_Y_OFFSET, x - cols - 3, NULL, NULL);
+  struct ncplane_options nopts = {
+    .y = FORM_Y_OFFSET,
+    .x = x - cols - 3,
+    .rows = 3,
+    .cols = cols + START_COL * 2,
+  };
+  fs->p = ncplane_create(notcurses_stdplane(NC), &nopts);
   if(fs->p == NULL){
     locked_diag("Couldn't create form panel, uh-oh");
     free_form(fs);
@@ -5913,7 +5949,13 @@ static void raise_info_form(const char *str, const char *text){
   // factor of 2...FIXME
   lineguess = 2; // yuck
   lineguess += strlen(text) / (x - 2) + 1;
-  fs->p = ncplane_new(notcurses_stdplane(NC), 3, cols + START_COL * 2, FORM_Y_OFFSET + lineguess, x - cols - 3, NULL, NULL);
+  struct ncplane_options nopts = {
+    .y = FORM_Y_OFFSET + lineguess,
+    .x = x - cols - 3,
+    .rows = 3,
+    .cols = cols + START_COL * 2,
+  };
+  fs->p = ncplane_create(notcurses_stdplane(NC), &nopts);
   if(fs->p == NULL){
     locked_diag("Couldn't create plane, uh-oh");
     free_form(fs);
@@ -6045,7 +6087,10 @@ int main(int argc, char * const *argv){
   notcurses_mouse_enable(NC);
   int ydim, xdim;
   notcurses_stddim_yx(NC, &ydim, &xdim);
-  struct ncplane* n = ncplane_new(notcurses_stdplane(NC), ydim - 2, xdim, 1, 0, NULL, NULL);
+  struct ncplane_options nopts = {
+    .y = 1, .x = 0, .rows = ydim - 2, .cols = xdim,
+  };
+  struct ncplane* n = ncplane_create(notcurses_stdplane(NC), &nopts);
   if(n == NULL){
     notcurses_stop(NC);
     fprintf(stderr, "Error creating main plane for reel, aborting\n");
