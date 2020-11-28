@@ -4839,13 +4839,17 @@ umount_filesystem(void){
       locked_diag("Cannot unmount unused space");
       return;
     }
-    if(fstype_swap_p(b->zone->p->mnttype)){
+    if(b->zone->p->mnttype == NULL){
+      diag("%s is not mounted\n", b->d->name);
+    }else if(fstype_swap_p(b->zone->p->mnttype)){
       swapoffdev(b->zone->p);
     }else{
       unmount(b->zone->p, NULL);
     }
   }else{
-    if(fstype_swap_p(b->d->mnttype)){
+    if(b->d->mnttype == NULL){
+      diag("%s is not mounted\n", b->d->name);
+    }else if(fstype_swap_p(b->d->mnttype)){
       swapoffdev(b->d);
     }else{
       unmount(b->d, NULL);

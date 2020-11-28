@@ -19,18 +19,18 @@ int wipe_filesystem(struct device *);
 
 static inline int
 fstype_default_p(const char *fstype){
-	return !strcmp(fstype,"ext4");
+	return !strcmp(fstype, "ext4");
 }
 
 static inline int
 fstype_swap_p(const char *fstype){
-	return !strcmp(fstype,"swap");
+	return !strcmp(fstype, "swap");
 }
 
 static inline int
 aggregate_fs_p(const char *fstype){
 	return !strcmp(fstype,"linux_raid_member") ||
-		!strcmp(fstype,"zfs_member");
+		!strcmp(fstype, "zfs_member");
 }
 
 struct mkfsmarshal {
