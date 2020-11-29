@@ -27,7 +27,7 @@ static void shutdown_cycle(void) __attribute__ ((noreturn));
 
 void locked_diag(const char *fmt,...) __attribute__ ((format (printf,1,2)));
 
-// For the ANSI standard terminal, we can fit only 4 lines of explicative text
+// For the "standard" terminal, we can fit only 4 lines of explicative text
 // onto the screen, so make each glyph count. By default, 76 characters can be
 // placed on each row.
 static const char SEARCH_TEXT[] =
@@ -2709,7 +2709,7 @@ ptype_name_callback(const char *name){
 
 static int
 lex_part_spec(const char *psects, zobj *z, size_t sectsize,
-      uintmax_t *fsect, uintmax_t *lsect){
+              uintmax_t *fsect, uintmax_t *lsect){
   unsigned long long ull;
   const char *col, *pct;
   char *el;
@@ -2786,7 +2786,6 @@ lex_part_spec(const char *psects, zobj *z, size_t sectsize,
     if(el[1]){
       return -1;
     }
-    // FIXME replace with ncenmetric()
     switch(*el){
       case 'E': case 'e':
         ull *= 1024llu * 1024 * 1024 * 1024 * 1024 * 1024; break;

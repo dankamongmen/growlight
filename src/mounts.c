@@ -32,15 +32,15 @@ make_parent_directories(const char *path){
       continue;
     }
     *next = '\0';
-    if(mkdir(dir,0755) && errno != EEXIST){
-      diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
+    if(mkdir(dir, 0755) && errno != EEXIST){
+      diag("Couldn't create directory at %s (%s?)\n", dir, strerror(errno));
       return -1;
     }
     *next = '/';
     ++next;
   }
-  if(mkdir(dir,0755) && errno != EEXIST){
-    diag("Couldn't create directory at %s (%s?)\n",dir,strerror(errno));
+  if(mkdir(dir, 0755) && errno != EEXIST){
+    diag("Couldn't create directory at %s (%s?)\n", dir, strerror(errno));
     return -1;
   }
   return 0;
