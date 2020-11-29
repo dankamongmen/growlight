@@ -173,7 +173,7 @@ ext4_mkfs(const char *dev, const struct mkfsmarshal *mkm){
 			mkm->stride, mkm->swidth, mkm->force ? "-F " : "", name, dev)){
 		}
 	}else if(vspopen_drain("mkfs.ext4 %s-b -2048 -L \"%s\" -O dir_index,extent %s",
-			mkm->force ? "-F " : "", name, dev)){
+			     mkm->force ? "-F " : "", name, dev)){
 		return -1;
 	}
 	return 0;

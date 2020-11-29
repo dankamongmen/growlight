@@ -67,6 +67,7 @@ read_map_virt_fd(int fd, off_t *len){
     }
   }
 //fprintf(stderr, "***[%.*s]***\n", (int)*len, (char*)map);
+  free(buf);
   return map;
 
 maperr:

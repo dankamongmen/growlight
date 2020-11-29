@@ -5906,7 +5906,6 @@ vdiag(const char *fmt, va_list v){
   unlock_notcurses_growlight();
 }
 
-// FIXME destroy ncreel
 static void
 shutdown_cycle(void){
   struct panel_state *ps;

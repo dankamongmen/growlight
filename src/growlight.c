@@ -1715,6 +1715,7 @@ event_thread(int ifd, int ufd, int syswd, int bypathwd, int byidwd, int mdwd){
 
   memset(&ev, 0, sizeof(ev));
   ev.events = EPOLLIN | EPOLLRDHUP;
+  // FIXME free() this post-pthread_join()
   if((em = malloc(sizeof(*em))) == NULL){
     diag("Couldn't create event marshal (%s)\n", strerror(errno));
     return -1;
@@ -1850,11 +1851,11 @@ kill_event_thread(void){
     int rr;
 
     if( (rr = pthread_cancel(eventtid)) ){
-      diag("Couldn't cancel event thread (%s)\n",strerror(rr));
+      diag("Couldn't cancel event thread (%s)\n", strerror(rr));
       r |= -1;
     }
-    if( (rr = pthread_join(eventtid,NULL)) ){
-      diag("Couldn't join event thread (%s)\n",strerror(rr));
+    if( (rr = pthread_join(eventtid, NULL)) ){
+      diag("Couldn't join event thread (%s)\n", strerror(rr));
       r |= -1;
     }
   }

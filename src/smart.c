@@ -33,6 +33,7 @@ int probe_smart(device *d){
 	}
 	if(sk_disk_smart_is_available(sk, &avail)){
 		verbf("Couldn't probe %s SMART availability\n", path);
+		sk_disk_free(sk);
 		return -1;
 	}
 	if(!avail){
@@ -42,6 +43,7 @@ int probe_smart(device *d){
 	}
 	if(sk_disk_smart_read_data(sk)){
 		verbf("Couldn't read %s SMART data\n", d->name);
+		sk_disk_free(sk);
 		return -1;
 	}
 	if(sk_disk_smart_status(sk, &good) == 0){
