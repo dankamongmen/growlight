@@ -35,12 +35,11 @@ static const unsigned char gpt_signature[8] =
  "\x45\x46\x49\x20\x50\x41\x52\x54";
 
 #define MINIMUM_GPT_ENTRIES 128
-#define CRCPOLY 0x04C11DB7
 
 int update_crc(gpt_header *head, const gpt_entry *gpes){
   size_t hs = head->headsize; // FIXME little-endian; swap on BE machines
   // partition entry size must be a positive multiple of 128 (usually 128)
-  if(head->partsize == 0 || head->partsize % 128){
+  if(head->partsize == 0 || head->partsize % MINIMUM_GPT_ENTRIES){
     return -1;
   }
   if(head->partcount < MINIMUM_GPT_ENTRIES){

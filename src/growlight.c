@@ -1199,12 +1199,12 @@ controller *lookup_controller(const char *name){
   controller *c;
 
   for(c = controllers ; c ; c = c->next){
-    if(strcmp(name,c->ident) == 0){
+    if(strcmp(name, c->ident) == 0){
       break;
     }
   }
   if(!c){
-    diag("Couldn't find device \"%s\"\n",name);
+    diag("Couldn't find device \"%s\"\n", name);
   }
   return c;
 }
@@ -1219,26 +1219,26 @@ device *lookup_device(const char *name){
 
   do{
     for(dl = discovery_active ; dl ; dl = dl->next){
-      if(strcmp(name,dl->name) == 0){
+      if(strcmp(name, dl->name) == 0){
         struct timespec ts;
 
         // FIXME we're missing the signal somehow; see
         // bug 387...
         ts.tv_sec = 0;
         ts.tv_nsec = 100000000;
-        pthread_cond_timedwait(&discovery_cond,&lock,&ts);
+        pthread_cond_timedwait(&discovery_cond, &lock, &ts);
         break;
       }
     }
   }while(dl);
   do{
-    if(strncmp(name,"/",1) == 0){
+    if(strncmp(name, "/", 1) == 0){
       s = 1;
-    }else if(strncmp(name,"./",2) == 0){
+    }else if(strncmp(name, "./", 2) == 0){
       s = 2;
-    }else if(strncmp(name,"../",3) == 0){
+    }else if(strncmp(name, "../", 3) == 0){
       s = 3;
-    }else if(strncmp(name,"dev/",4) == 0){
+    }else if(strncmp(name, "dev/", 4) == 0){
       s = 4;
     }else{
       s = 0;
@@ -1249,11 +1249,11 @@ device *lookup_device(const char *name){
     for(d = c->blockdevs ; d ; d = d->next){
       device *p;
 
-      if(strcmp(name,d->name) == 0){
+      if(strcmp(name, d->name) == 0){
         return d;
       }
       for(p = d->parts ; p ; p = p->next){
-        if(strcmp(name,p->name) == 0){
+        if(strcmp(name, p->name) == 0){
           return p;
         }
       }
@@ -1267,7 +1267,7 @@ device *lookup_device(const char *name){
 
 static void *
 scan_mdalias(void *vname){
-  char buf[PATH_MAX + 1],path[PATH_MAX + 1];
+  char buf[PATH_MAX + 1], path[PATH_MAX + 1];
   char *name = vname;
   device *d;
   int r;
@@ -1275,13 +1275,13 @@ scan_mdalias(void *vname){
   if(!name){
     goto done;
   }
-  if((unsigned)snprintf(path,sizeof(path),"%s/%s",DEVMD,name) >= sizeof(path)){
-    diag("Bad link: %s\n",name);
+  if((unsigned)snprintf(path, sizeof(path), "%s/%s", DEVMD, name) >= sizeof(path)){
+    diag("Bad link: %s\n", name);
     free(vname);
     goto done;
   }
-  if((r = readlink(path,buf,sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
-    diag("Couldn't read link at %s\n",path);
+  if((r = readlink(path, buf, sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
+    diag("Couldn't read link at %s\n", path);
     free(vname);
     goto done;
   }
@@ -1289,7 +1289,7 @@ scan_mdalias(void *vname){
   lock_growlight();
   if( (d = lookup_device(buf)) ){
     if(d->layout != LAYOUT_MDADM){
-      diag("Alias %s wasn't an md device (%s)\n",path,buf);
+      diag("Alias %s wasn't an md device (%s)\n", path, buf);
     }else{
       free(d->mddev.mdname);
       d->mddev.mdname = name;
@@ -1310,7 +1310,7 @@ done:
 
 static void *
 scan_devbypath(void *vname){
-  char buf[PATH_MAX + 1],path[PATH_MAX + 1];
+  char buf[PATH_MAX + 1], path[PATH_MAX + 1];
   char *name = vname;
   device *d;
   int r;
@@ -1318,13 +1318,13 @@ scan_devbypath(void *vname){
   if(!name){
     goto done;
   }
-  if((unsigned)snprintf(path,sizeof(path),"%s/%s",DEVBYPATH,name) >= sizeof(path)){
-    diag("Bad link: %s\n",name);
+  if((unsigned)snprintf(path, sizeof(path), "%s/%s", DEVBYPATH, name) >= sizeof(path)){
+    diag("Bad link: %s\n", name);
     free(vname);
     goto done;
   }
-  if((r = readlink(path,buf,sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
-    diag("Couldn't read link at %s\n",path);
+  if((r = readlink(path, buf, sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
+    diag("Couldn't read link at %s\n", path);
     free(vname);
     goto done;
   }
@@ -1349,7 +1349,7 @@ done:
 
 static void *
 scan_devbyid(void *vname){
-  char buf[PATH_MAX + 1],id[PATH_MAX + 1];
+  char buf[PATH_MAX + 1], id[PATH_MAX + 1];
   char *name = vname;
   device *d;
   int r;
@@ -1357,13 +1357,13 @@ scan_devbyid(void *vname){
   if(!name){
     goto done;
   }
-  if((unsigned)snprintf(id,sizeof(id),"%s/%s",DEVBYID,name) >= sizeof(id)){
-    diag("Bad link: %s\n",name);
+  if((unsigned)snprintf(id, sizeof(id), "%s/%s", DEVBYID, name) >= sizeof(id)){
+    diag("Bad link: %s\n", name);
     free(vname);
     goto done;
   }
-  if((r = readlink(id,buf,sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
-    diag("Couldn't read link at %s\n",id);
+  if((r = readlink(id, buf, sizeof(buf))) < 0 || (unsigned)r >= sizeof(buf)){;
+    diag("Couldn't read link at %s\n", id);
     free(vname);
     goto done;
   }
@@ -1407,7 +1407,7 @@ inotify_fd(void){
   int fd;
 
   if((fd = inotify_init1(IN_NONBLOCK|IN_CLOEXEC)) < 0){
-    diag("Couldn't get inotify fd (%s)\n",strerror(errno));
+    diag("Couldn't get inotify fd (%s)\n", strerror(errno));
   }
   return fd;
 }
