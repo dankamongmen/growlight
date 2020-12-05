@@ -2553,6 +2553,7 @@ ptype_table(const device *d, int *count, int match, int *defidx){
     pttable = d->mddev.pttable;
   }else{
     locked_diag("Can't partition this type of device");
+    *count = -1;
     return NULL;
   }
   *count = 0;
