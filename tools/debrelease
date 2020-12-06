@@ -12,7 +12,7 @@ dch -v $VERSION-1
 dch -r
 uscan --force --repack --compression xz
 git commit -m "v$VERSION" -a
-gbp import-orig ../growlight_$VERSION.orig.tar.gz
+gbp import-orig ../growlight_$VERSION.orig.tar.xz
 git push --tags
 dpkg-buildpackage --build=source
 cd ..
