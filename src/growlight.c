@@ -1600,18 +1600,22 @@ event_posix_thread(void *unsafe){
   struct timeval laststatcheck = { .tv_sec = 0, .tv_usec = 0, };
   const struct event_marshal *em = unsafe;
   static struct epoll_event events[128]; // static so as not to be on the stack
-  int e,r;
+  int e, r;
 
+  char* buf = malloc(BUFSIZ);
+  if(buf == NULL){
+    diag("Couldn't get event thread buffer %d\n", BUFSIZ);
+    return NULL;
+  }
   do{
     do{
       e = epoll_wait(em->efd, events, sizeof(events) / sizeof(*events), 1000/*-1*/);
       for(r = 0 ; r < e ; ++r){
         if(events[r].data.fd == em->ifd){
-          char buf[BUFSIZ];
           ssize_t s;
 
           assert(events[r].events == EPOLLIN);
-          while((s = read(em->ifd,buf,sizeof(buf))) > 0){
+          while((s = read(em->ifd, buf, sizeof(buf))) > 0){
             const struct inotify_event *in;
             unsigned idx = 0;
 
@@ -1620,7 +1624,7 @@ event_posix_thread(void *unsafe){
               idx += sizeof(*in);
 
               if(in->len == 0){
-                diag("Nil-file event on unknown watch desc %d\n",in->wd);
+                diag("Nil-file event on unknown watch desc %d\n", in->wd);
               }else{
                 pthread_mutex_lock(&barrier);
                 ++thrcount;
@@ -1645,32 +1649,32 @@ event_posix_thread(void *unsafe){
                   pthread_mutex_lock(&barrier);
                   --thrcount;
                   pthread_mutex_unlock(&barrier);
-                  diag("Event on unknown watch desc %d (%s)\n",in->wd,in->name);
+                  diag("Event on unknown watch desc %d (%s)\n", in->wd, in->name);
                 }
               }
             }
           }
           if(s && errno != EAGAIN && errno != EWOULDBLOCK){
-            diag("Error reading inotify event on %d (%s)\n",
-                em->ifd,strerror(errno));
+            diag("Error reading inotify event on %d (%s)\n", em->ifd, strerror(errno));
           }
+        // FIXME check these to ensure they're not matching -1?
         }else if(events[r].data.fd == em->ufd){
           udev_event(gui);
         }else if(events[r].data.fd == em->mfd){
-          verbf("Reparsing %s...\n",MOUNTS);
+          verbf("Reparsing %s...\n", MOUNTS);
           lock_growlight();
           clear_mounts(controllers);
-          parse_mounts(gui,MOUNTS);
+          parse_mounts(gui, MOUNTS);
           unlock_growlight();
         }else if(events[r].data.fd == em->sfd){
-          verbf("Reparsing %s...\n",SWAPS);
+          verbf("Reparsing %s...\n", SWAPS);
           lock_growlight();
-          parse_swaps(gui,SWAPS);
+          parse_swaps(gui, SWAPS);
           unlock_growlight();
         }else if(events[r].data.fd == em->ffd){
-          verbf("Reparsing %s...\n",FILESYSTEMS);
+          verbf("Reparsing %s...\n", FILESYSTEMS);
           lock_growlight();
-          parse_filesystems(gui,FILESYSTEMS);
+          parse_filesystems(gui, FILESYSTEMS);
           unlock_growlight();
         }else if(events[r].data.fd == em->stats_timerfd){
           struct timeval now;
@@ -1695,12 +1699,13 @@ event_posix_thread(void *unsafe){
             free(dstats);
           }
         }else{
-          diag("Unknown fd %d saw event\n",events[r].data.fd);
+          diag("Unknown fd %d saw event\n", events[r].data.fd);
         }
       }
     }while(e >= 0);
-    diag("Error processing event queue (%s)\n",strerror(errno));
+    diag("Error processing event queue (%s)\n", strerror(errno));
   }while(1);
+  free(buf);
   return NULL;
 }
 
@@ -1764,25 +1769,13 @@ event_thread(int ifd, int ufd, int syswd, int bypathwd, int byidwd, int mdwd){
     return -1;
   }
   if((em->mfd = open(MOUNTS, O_RDONLY|O_CLOEXEC)) < 0){
-    close(em->stats_timerfd);
-    close(em->efd);
-    free(em);
-    return -1;
+    diag("Warning: couldn't open %s (%s)\n", MOUNTS, strerror(errno));
   }
   if((em->sfd = open(SWAPS, O_RDONLY|O_CLOEXEC)) < 0){
-    close(em->stats_timerfd);
-    close(em->mfd);
-    close(em->efd);
-    free(em);
-    return -1;
+    diag("Warning: couldn't open %s (%s)\n", SWAPS, strerror(errno));
   }
   if((em->ffd = open(FILESYSTEMS, O_RDONLY|O_CLOEXEC)) < 0){
-    close(em->stats_timerfd);
-    close(em->sfd);
-    close(em->mfd);
-    close(em->efd);
-    free(em);
-    return -1;
+    diag("Warning: couldn't open %s (%s)\n", FILESYSTEMS, strerror(errno));
   }
   ev.data.fd = em->stats_timerfd;
   if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->stats_timerfd, &ev)){
@@ -1797,38 +1790,41 @@ event_thread(int ifd, int ufd, int syswd, int bypathwd, int byidwd, int mdwd){
   }
   // /proc/* always returns readable. On change they return EPOLLERR.
   ev.events = EPOLLRDHUP;
-  ev.data.fd = em->ffd;
-  if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->ffd, &ev)){
-    diag("Couldn't add %d to epoll (%s)\n", em->ffd, strerror(errno));
-    close(em->stats_timerfd);
-    close(em->ffd);
-    close(em->sfd);
-    close(em->mfd);
-    close(em->efd);
-    free(em);
-    return -1;
+  if((ev.data.fd = em->ffd) >= 0){
+    if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->ffd, &ev)){
+      diag("Couldn't add %d to epoll (%s)\n", em->ffd, strerror(errno));
+      close(em->stats_timerfd);
+      close(em->ffd);
+      close(em->sfd);
+      close(em->mfd);
+      close(em->efd);
+      free(em);
+      return -1;
+    }
   }
-  ev.data.fd = em->sfd;
-  if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->sfd, &ev)){
-    diag("Couldn't add %d to epoll (%s)\n", em->sfd, strerror(errno));
-    close(em->stats_timerfd);
-    close(em->ffd);
-    close(em->sfd);
-    close(em->mfd);
-    close(em->efd);
-    free(em);
-    return -1;
+  if((ev.data.fd = em->sfd) >= 0){
+    if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->sfd, &ev)){
+      diag("Couldn't add %d to epoll (%s)\n", em->sfd, strerror(errno));
+      close(em->stats_timerfd);
+      close(em->ffd);
+      close(em->sfd);
+      close(em->mfd);
+      close(em->efd);
+      free(em);
+      return -1;
+    }
   }
-  ev.data.fd = em->mfd;
-  if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->mfd, &ev)){
-    diag("Couldn't add %d to epoll (%s)\n", em->mfd, strerror(errno));
-    close(em->stats_timerfd);
-    close(em->ffd);
-    close(em->sfd);
-    close(em->mfd);
-    close(em->efd);
-    free(em);
-    return -1;
+  if((ev.data.fd = em->mfd) >= 0){
+    if(epoll_ctl(em->efd, EPOLL_CTL_ADD, em->mfd, &ev)){
+      diag("Couldn't add %d to epoll (%s)\n", em->mfd, strerror(errno));
+      close(em->stats_timerfd);
+      close(em->ffd);
+      close(em->sfd);
+      close(em->mfd);
+      close(em->efd);
+      free(em);
+      return -1;
+    }
   }
   if( (r = pthread_create(&eventtid, NULL, event_posix_thread, em)) ){
     diag("Couldn't create event thread (%s)\n", strerror(r));
@@ -2096,10 +2092,7 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
     unlock_growlight();
     goto err;
   }
-  if(parse_swaps(gui, SWAPS)){
-    unlock_growlight();
-    goto err;
-  }
+  parse_swaps(gui, SWAPS); // /proc/mounts doesn't always exist
   unlock_growlight();
   if((udevfd = monitor_udev()) < 0){
     goto err;
