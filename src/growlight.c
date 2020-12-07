@@ -214,8 +214,8 @@ kernelmodulep(const char *driver){
 }
 
 static controller *
-find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
-      char *module,char *sysfs){
+find_pcie_controller(unsigned domain, unsigned bus, unsigned dev,
+                     unsigned func, char *module, char *sysfs){
   controller *c;
 
   for(c = controllers ; c ; c = c->next){
@@ -236,7 +236,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
     controller **pre;
 
     for(idc = controllers ; idc ; idc = idc->next){
-      if(idc->driver && strcmp(idc->driver,module) == 0){
+      if(idc->driver && strcmp(idc->driver, module) == 0){
         ++devno;
       }
     }
@@ -247,7 +247,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
 
       memset(c,0,sizeof(*c));
       if( (c->ident = malloc(len)) ){
-        if(snprintf(c->ident,len,"%s-%u",module,devno) >= (int)len){
+        if(snprintf(c->ident, len, "%s-%u", module, devno) >= (int)len){
           free(c);
           return NULL;
         }
@@ -260,15 +260,15 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
     if( (c->sysfs = strdup(sysfs)) ){
       char path[PATH_MAX + 1];
 
-      if((unsigned)snprintf(path,sizeof(path),"%s/host0/scsi_host/host0/version_fw",c->sysfs) < sizeof(path)){
-        c->fwver = get_sysfs_string(sysfd,path);
+      if((unsigned)snprintf(path, sizeof(path), "%s/host0/scsi_host/host0/version_fw",c->sysfs) < sizeof(path)){
+        c->fwver = get_sysfs_string(sysfd, path);
       }
-      if((unsigned)snprintf(path,sizeof(path),"%s/host0/scsi_host/host0/version_bios",c->sysfs) < sizeof(path)){
-        c->biosver = get_sysfs_string(sysfd,path);
+      if((unsigned)snprintf(path, sizeof(path), "%s/host0/scsi_host/host0/version_bios",c->sysfs) < sizeof(path)){
+        c->biosver = get_sysfs_string(sysfd, path);
       }
-      if((unsigned)snprintf(path,sizeof(path),"%s/numa_node",c->sysfs) < sizeof(path)){
-        if(get_sysfs_int(sysfd,path,&c->numa_node) == 0){
-          verbf("Numa node %d (%s)\n",c->numa_node,path);
+      if((unsigned)snprintf(path, sizeof(path), "%s/numa_node", c->sysfs) < sizeof(path)){
+        if(get_sysfs_int(sysfd,path, &c->numa_node) == 0){
+          verbf("Numa node %d (%s)\n", c->numa_node, path);
         }
       }else{
         c->numa_node = -1;
@@ -294,21 +294,21 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
       char buf[BUFSIZ];
       uint32_t data;
 
-      if((pci = pci_device_find_by_slot(domain,bus,dev,func)) == NULL){
+      if((pci = pci_device_find_by_slot(domain, bus, dev, func)) == NULL){
         diag("Couldn't look up PCIe device\n");
         free_controller(c);
         free(c);
         return NULL;
       }
-      if((pcidev = pci_get_dev(pciacc,domain,bus,dev,func)) == NULL){
+      if((pcidev = pci_get_dev(pciacc, domain, bus, dev, func)) == NULL){
         diag("Couldn't look up PCIe device\n");
         free_controller(c);
         free(c);
         return NULL;
       }
-      pci_fill_info(pcidev,PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|PCI_FILL_ROM_BASE|
-              PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
-              PCI_FILL_SIZES|PCI_FILL_RESCAN);
+      pci_fill_info(pcidev, PCI_FILL_IDENT|PCI_FILL_IRQ|PCI_FILL_BASES|
+                            PCI_FILL_ROM_BASE|PCI_FILL_CAPS|PCI_FILL_EXT_CAPS|
+                            PCI_FILL_SIZES|PCI_FILL_RESCAN);
       vend = pci_device_get_vendor_name(pci);
       model = pci_device_get_device_name(pci);
       snprintf(buf,sizeof(buf),"%s %s",
@@ -323,9 +323,9 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
       //verbf("\tPCI domain: %lu bus: %lu dev: %lu func: %lu\n",domain,bus,dev,func);
       /* Get the relevant address pointer */
       data = 0;
-      if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_EXP,PCI_CAP_NORMAL)) ){
-        data = pci_read_word(pcidev,pcicap->addr + PCI_EXP_LNKSTA);
-      }else if( (pcicap = pci_find_cap(pcidev,PCI_CAP_ID_MSI,PCI_CAP_NORMAL)) ){
+      if( (pcicap = pci_find_cap(pcidev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL)) ){
+        data = pci_read_word(pcidev, pcicap->addr + PCI_EXP_LNKSTA);
+      }else if( (pcicap = pci_find_cap(pcidev, PCI_CAP_ID_MSI, PCI_CAP_NORMAL)) ){
         // FIXME?
       }
       if(data){
@@ -345,7 +345,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
       pci_free_dev(pcidev);
     }
     for(pre = &controllers ; *pre ; pre = &(*pre)->next){
-      int r = (*pre)->ident ? strcmp(c->ident,(*pre)->ident) : -1;
+      int r = (*pre)->ident ? strcmp(c->ident, (*pre)->ident) : -1;
 
       if(r < 0){
         break;
@@ -353,7 +353,7 @@ find_pcie_controller(unsigned domain,unsigned bus,unsigned dev,unsigned func,
     }
     c->next = *pre;
     *pre = c;
-    c->uistate = gui->adapter_event(c,NULL);
+    c->uistate = gui->adapter_event(c, NULL);
   }
   return c;
 }
