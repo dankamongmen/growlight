@@ -47,7 +47,7 @@ int update_crc(gpt_header *head, const gpt_entry *gpes){
   }
   head->partcrc = crc32(0, (const void*)gpes, head->partcount * head->partsize);
   head->crc = 0;
-  head->crc = crc32(0, (void*)head, hs);
+  head->crc = crc32(0, (const void*)head, hs);
   return 0;
 }
 

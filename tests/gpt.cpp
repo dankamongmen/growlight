@@ -1,7 +1,8 @@
 #include "main.h"
 #include "gpt.h"
-#include <cstring>
 #include <zlib.h>
+#include <cstring>
+#include <arpa/inet.h>
 
 #define UUID "\x5E\x86\x90\xEF\xD0\x30\x03\x46\x99\x3D\x54\x6E\xB0\xE7\x1B\x0D"
 
@@ -44,6 +45,17 @@ TEST_CASE("GPT") {
     CHECK(0 == memcmp(head.disk_guid, UUID, sizeof(head.disk_guid)));
   }
 
+  SUBCASE("CRC32Sanity") {
+    const unsigned char sample[] = "123456789";
+    uint32_t crc = crc32(0L, Z_NULL, 0);
+    crc = crc32(crc, sample, sizeof(sample) - 1);
+    CHECK(crc == 0xCBF43926);
+    crc = crc32(0L, Z_NULL, 0);
+    uint32_t db = htonl(0xdeadbeef);
+    crc = crc32(crc, (const unsigned char*)&db, 4);
+    CHECK(crc == 2090640218);
+  }
+
   // Verify both CRCs, and the reserved area following HeaderCRC32
   SUBCASE("CRC32") {
     gpt_header head;
@@ -55,7 +67,7 @@ TEST_CASE("GPT") {
     CHECK(128 <= head.partcount);
     auto entries = new gpt_entry[head.partcount];
     memset(entries, 0, sizeof(*entries) * head.partcount);
-    update_crc(&head, entries);
+    CHECK(0 == update_crc(&head, entries));
     CHECK(2006165414 == head.crc);
     CHECK(0 == head.reserved);
     CHECK(2874462854 == head.partcrc);
