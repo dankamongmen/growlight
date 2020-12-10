@@ -109,10 +109,11 @@ int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba,
     diag("Illegal backup LBA %ju\n", (uintmax_t)backuplba);
     return -1;
   }
-  if(lbasize == 0){
+  if(lbasize == 0 || lbasize < sizeof(*gh)){
     diag("Illegal LBA size %zu\n", lbasize);
     return -1;
   }
+  memset(gh, 0, lbasize);
   memcpy(&gh->signature, gpt_signature, sizeof(gh->signature));
   gh->revision = 0x10000u;
   // FIXME ought be the lbasize and greater than 92, but everyone uses 92 :/
@@ -135,9 +136,6 @@ int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba,
   gh->partcount = MINIMUM_GPT_ENTRIES;
   gh->partsize = sizeof(gpt_entry);
   // ->partcrc is set by update_crc()
-  if(lbasize > sizeof(*gh)){
-    memset((char *)gh + sizeof(*gh), 0, lbasize - sizeof(*gh));
-  }
   return 0;
 }
 

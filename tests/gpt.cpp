@@ -54,6 +54,7 @@ TEST_CASE("GPT") {
     // number of partition entries, usually 128 (MINIMUM_GPT_ENTRIES)
     CHECK(128 <= head.partcount);
     auto entries = new gpt_entry[head.partcount];
+    memset(entries, 0, sizeof(*entries) * head.partcount);
     update_crc(&head, entries);
     CHECK(2006165414 == head.crc);
     CHECK(0 == head.reserved);
