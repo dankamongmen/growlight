@@ -1597,14 +1597,15 @@ struct event_marshal {
 
 static void *
 event_posix_thread(void *unsafe){
+  const size_t buflen = 8192;
   struct timeval laststatcheck = { .tv_sec = 0, .tv_usec = 0, };
   const struct event_marshal *em = unsafe;
   static struct epoll_event events[128]; // static so as not to be on the stack
   int e, r;
 
-  char* buf = malloc(BUFSIZ);
+  char* buf = malloc(buflen);
   if(buf == NULL){
-    diag("Couldn't get event thread buffer %d\n", BUFSIZ);
+    diag("Couldn't get %zuB event thread buffer\n", buflen);
     return NULL;
   }
   do{
@@ -1615,7 +1616,7 @@ event_posix_thread(void *unsafe){
           ssize_t s;
 
           assert(events[r].events == EPOLLIN);
-          while((s = read(em->ifd, buf, sizeof(buf))) > 0){
+          while((s = read(em->ifd, buf, buflen)) > 0){
             const struct inotify_event *in;
             unsigned idx = 0;
 
