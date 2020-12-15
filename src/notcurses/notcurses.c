@@ -85,7 +85,7 @@ static const char PARTTYPE_TEXT[] =     // characters here will be bumped ---v
 static const char FSTYPE_TEXT[] =
 "UEFI through version 1.1 requires FAT16 for the EFI System Partition. As of "
 "version 3.5, ext4 is the default Linux filesystem, but Windows and OS X do "
-"not natively support it. I recommend use of EXT4 or FAT16 for root and ZFS "
+"not natively support it. I recommend use of ext4 or FAT16 for root and ZFS "
 "(in a redundant configuration) for other filesystems.";
 
 static pthread_mutex_t bfl; // recursive, initialized in main()
@@ -1777,7 +1777,7 @@ form_options(struct form_state *fs){
   }
 }
 
-#define FORM_Y_OFFSET 5
+#define FORM_Y_OFFSET 6
 
 static struct panel_state *
 raise_form_explication(struct ncplane* n, const char* text, int linesz){
