@@ -75,7 +75,7 @@ update_backup(int fd, const gpt_header *ghead, unsigned gptlbas, uint64_t lbas,
   mapsize = lbasize * gptlbas + mapoff;
   mapsize = pgsize * (mapsize / pgsize + !!mapoff);
   if((map = mmap(NULL, mapsize, PROT_READ|PROT_WRITE, MAP_SHARED, fd,
-        absdevoff - mapoff)) == MAP_FAILED){
+                 absdevoff - mapoff)) == MAP_FAILED){
     diag("Error mapping %zub at %d (%s?)\n", mapsize, fd, strerror(errno));
     return -1;
   }
@@ -84,8 +84,7 @@ update_backup(int fd, const gpt_header *ghead, unsigned gptlbas, uint64_t lbas,
     // Copy the partition table entries -- all but the first of the
     // primary header's sectors to all but the last of the backup
     // header's sectors.
-    memcpy((char *)map + mapoff, (char *)ghead + lbasize,
-      (gptlbas - 1) * lbasize);
+    memcpy((char *)map + mapoff, (char *)ghead + lbasize, (gptlbas - 1) * lbasize);
     // Copy the header, always a single LBA sector
     gh = (gpt_header *)((char *)map + lbasize * (gptlbas - 1) + mapoff);
     memcpy(gh, ghead, lbasize);
