@@ -75,6 +75,9 @@ int update_crc(gpt_header *head, const gpt_entry *gpes);
 int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba,
                    uint64_t firstusable, const void* uuid);
 
+uint32_t host_to_le32(uint32_t x);
+uint64_t host_to_le64(uint64_t x);
+
 #ifdef __cplusplus
 }
 #endif

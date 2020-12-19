@@ -11,21 +11,21 @@ TEST_CASE("GPT") {
   // First eight bytes must be "EFI PART"
   SUBCASE("Signature") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34, nullptr));
+    CHECK(0 == initialize_gpt(&head, 512, 4194287, 34, nullptr));
     CHECK(0 == memcmp(&head.signature, "EFI PART", sizeof(head.signature)));
   }
 
   // Bytes 0x8--0xb must be 00 00 01 00 (1.00 by UEFI logic)
   SUBCASE("Revision") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34, nullptr));
+    CHECK(0 == initialize_gpt(&head, 512, 4194287, 34, nullptr));
     CHECK(0x00010000 == head.revision);
   }
 
   // Bytes 0xc--0xf must be >= 92, should be the logical block size
   SUBCASE("HeaderSize") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34, nullptr));
+    CHECK(0 == initialize_gpt(&head, 512, 4194287, 34, nullptr));
     CHECK(92 == head.headsize);
   }
 
@@ -33,7 +33,7 @@ TEST_CASE("GPT") {
   // Bytes 0x20--0x27 are the sector of the GPT alternate, provided as argument
   SUBCASE("GPTLBAs") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 100000, 34, nullptr));
+    CHECK(0 == initialize_gpt(&head, 512, 100000, 34, nullptr));
     CHECK(1 == head.lba);
     CHECK(100000 == head.backuplba);
   }
@@ -41,7 +41,7 @@ TEST_CASE("GPT") {
   // Verify the 16-byte UUID is as specified
   SUBCASE("UUID") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34, UUID));
+    CHECK(0 == initialize_gpt(&head, 512, 4194287, 34, UUID));
     CHECK(0 == memcmp(head.disk_guid, UUID, sizeof(head.disk_guid)));
   }
 
@@ -59,7 +59,7 @@ TEST_CASE("GPT") {
   // Verify both CRCs, and the reserved area following HeaderCRC32
   SUBCASE("CRC32") {
     gpt_header head;
-    CHECK(0 == initialize_gpt(&head, 92, 4194287, 34, UUID));
+    CHECK(0 == initialize_gpt(&head, 512, 4194287, 34, UUID));
     // partition entry size must be a positive multiple of 128 (usually 128)
     CHECK(0 < head.partsize);
     CHECK(0 == (head.partsize % 128));

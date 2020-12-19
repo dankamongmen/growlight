@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/random.h>
+#include <linux/byteorder/little_endian.h>
 
 #include "gpt.h"
 #include "ptypes.h"
@@ -33,6 +34,14 @@ static const unsigned char GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
 
 static const unsigned char gpt_signature[8] =
  "\x45\x46\x49\x20\x50\x41\x52\x54";
+
+uint32_t host_to_le32(uint32_t x){
+  return __cpu_to_le32(x);
+}
+
+uint64_t host_to_le64(uint64_t x){
+  return __cpu_to_le64(x);
+}
 
 #define MINIMUM_GPT_ENTRIES 128
 
@@ -115,7 +124,7 @@ int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba,
   }
   memset(gh, 0, lbasize);
   memcpy(&gh->signature, gpt_signature, sizeof(gh->signature));
-  gh->revision = 0x10000u;
+  gh->revision = host_to_le32(0x00010000ul);
   // FIXME ought be the lbasize and greater than 92, but everyone uses 92 :/
   gh->headsize = sizeof(*gh);
   gh->reserved = 0;
