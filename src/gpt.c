@@ -46,7 +46,7 @@ uint64_t host_to_le64(uint64_t x){
 #define MINIMUM_GPT_ENTRIES 128
 
 int update_crc(gpt_header *head, const gpt_entry *gpes){
-  size_t hs = head->headsize; // FIXME little-endian; swap on BE machines
+  size_t hs = host_to_le32(head->headsize);
   // partition entry size must be a positive multiple of 128 (usually 128)
   if(head->partsize == 0 || head->partsize % MINIMUM_GPT_ENTRIES){
     return -1;
@@ -54,9 +54,9 @@ int update_crc(gpt_header *head, const gpt_entry *gpes){
   if(head->partcount < MINIMUM_GPT_ENTRIES){
     return -1;
   }
-  head->partcrc = crc32(0, (const void*)gpes, head->partcount * head->partsize);
+  head->partcrc = host_to_le32(crc32(0, (const void*)gpes, head->partcount * head->partsize));
   head->crc = 0;
-  head->crc = crc32(0, (const void*)head, hs);
+  head->crc = host_to_le32(crc32(0, (const void*)head, hs));
   return 0;
 }
 
@@ -126,7 +126,7 @@ int initialize_gpt(gpt_header *gh, size_t lbasize, uint64_t backuplba,
   memcpy(&gh->signature, gpt_signature, sizeof(gh->signature));
   gh->revision = host_to_le32(0x00010000ul);
   // FIXME ought be the lbasize and greater than 92, but everyone uses 92 :/
-  gh->headsize = sizeof(*gh);
+  gh->headsize = host_to_le32(sizeof(*gh));
   gh->reserved = 0;
   gh->lba = 1;
   // ->crc is set by update_crc()
