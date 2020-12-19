@@ -2666,7 +2666,7 @@ ptype_name_callback(const char *name){
 
   if(name == NULL){ // go back to partition spec
     raise_str_form("enter partition spec", psectors_callback,
-        pending_spec, PSPEC_TEXT);
+                   pending_spec, PSPEC_TEXT);
     return;
   }
   if((b = partition_base_p()) == NULL){
@@ -2734,7 +2734,7 @@ lex_part_spec(const char *psects, zobj *z, size_t sectsize,
       return -1;
     }
     *fsect = z->fsector;
-    *lsect = ((z->lsector - z->fsector) * ul) / 100 + *fsect;
+    *lsect = ((z->lsector - z->fsector) * ul) / 100 + *fsect - 1;
     return 0;
   }else if( (col = strchr(psects, ':')) ){
     unsigned long long ull2;
@@ -2835,29 +2835,28 @@ psectors_callback(const char *psects){
     if((ops_ptype = ptype_table(b->d, &opcount, pending_ptype, &defidx)) == NULL){
       if(opcount == 0){
         raise_str_form("enter partition spec", psectors_callback,
-            pending_spec ? pending_spec : "100%", PSPEC_TEXT);
+                       pending_spec ? pending_spec : "100%", PSPEC_TEXT);
         return;
       }
       cleanup_new_partition();
       return;
     }
     raise_form("select a partition type", ptype_callback, ops_ptype,
-        opcount, defidx, PARTTYPE_TEXT);
+               opcount, defidx, PARTTYPE_TEXT);
     return;
   }
   pending_spec = strdup(psects);
   if(lex_part_spec(psects, b->zone, b->d->logsec, &fsect, &lsect)){
     locked_diag("Not a valid partition spec: \"%s\"\n", psects);
     raise_str_form("enter partition spec", psectors_callback,
-        psects, PSPEC_TEXT);
+                   psects, PSPEC_TEXT);
     return;
   }
   if(partitions_named_p(b->d)){
     pending_spec = strdup(psects);
     pending_fsect = fsect;
     pending_lsect = lsect;
-    raise_str_form("enter partition name", ptype_name_callback,
-        NULL, PNAME_TEXT);
+    raise_str_form("enter partition name", ptype_name_callback, NULL, PNAME_TEXT);
     return;
   }
   ps = show_splash(L"Creating partition...");
@@ -2891,7 +2890,7 @@ ptype_callback(const char *pty){
   }
   pending_ptype = pt;
   raise_str_form("enter partition spec", psectors_callback,
-      pending_spec ? pending_spec : "100%", PSPEC_TEXT);
+                 pending_spec ? pending_spec : "100%", PSPEC_TEXT);
 }
 
 static void
@@ -2907,13 +2906,13 @@ new_partition(void){
   if((ops_ptype = ptype_table(b->d, &opcount, -1, &defidx)) == NULL){
     if(opcount == 0){
       raise_str_form("enter partition spec", psectors_callback,
-          pending_spec ? pending_spec : "100%", PSPEC_TEXT);
+                     pending_spec ? pending_spec : "100%", PSPEC_TEXT);
       return;
     }
     return;
   }
   raise_form("select a partition type", ptype_callback, ops_ptype, opcount,
-      defidx, PARTTYPE_TEXT);
+             defidx, PARTTYPE_TEXT);
 }
 
 // -------------------------------------------------------------------------
