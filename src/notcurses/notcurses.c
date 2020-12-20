@@ -2305,7 +2305,7 @@ mountop_callback(const char *op, char **selarray, int selections, int scrollidx)
     if(blockobj_unpartitionedp(b)){
       mmount(b->d, forming_targ, mntos, NULL);
     }else if(blockobj_emptyp(b)){
-      locked_diag("%s is not a partition, aborting.\n", b->zone->p->name);
+      locked_diag("Not a partition, aborting.\n");
     }else{
       mmount(b->zone->p, forming_targ, mntos, NULL);
     }
@@ -2353,7 +2353,7 @@ targpoint_callback(const char *path){
     return;
   }
   if(blockobj_emptyp(b)){
-    locked_diag("%s is not a partition, aborting.\n", b->zone->p->name);
+    locked_diag("Not a partition, aborting.\n");
     return;
   }else{
     int opcount = 0, defidx = 0;
