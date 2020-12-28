@@ -1,4 +1,4 @@
-// copyright 2012–2020 nick black
+// copyright 2012–2021 nick black
 #include "threads.h"
 
 // initialize a recursive mutex lock in a way that works on both glibc + musl

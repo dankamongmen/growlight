@@ -1,4 +1,4 @@
-// copyright 2012–2020 nick black
+// copyright 2012–2021 nick black
 #include <stdio.h> // libcryptsetup.h needs size_t
 #include <libcryptsetup.h>
 

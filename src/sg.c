@@ -1,4 +1,4 @@
-// copyright 2012–2020 nick black, except where otherwise noted below
+// copyright 2012–2021 nick black, except where otherwise noted below
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>

@@ -1,4 +1,4 @@
-// copyright 2012–2020 nick black
+// copyright 2012–2021 nick black
 #ifndef GROWLIGHT_SRC_NOTUI_AGGREGATE
 #define GROWLIGHT_SRC_NOTUI_AGGREGATE
 
