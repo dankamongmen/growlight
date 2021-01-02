@@ -49,11 +49,11 @@ static int
 use_terminfo_color(unsigned rgb, int boldp){
   if(ncd){
     if(!boldp){
-      ncdirect_styles_set(ncd, 0);
+      ncdirect_set_styles(ncd, 0);
     }else{
-      ncdirect_styles_set(ncd, NCSTYLE_BOLD);
+      ncdirect_set_styles(ncd, NCSTYLE_BOLD);
     }
-    ncdirect_fg_rgb(ncd, rgb);
+    ncdirect_set_fg_rgb(ncd, rgb);
   }
   return 0;
 }
