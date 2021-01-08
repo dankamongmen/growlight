@@ -2220,9 +2220,6 @@ int main(int argc, char * const *argv){
     ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }
-  // "default foreground color" according to http://bash-hackers.org/wiki/doku.php/scripting/terminalcodes
-  // but not defined in ncurses.h -- likely not fully portable :( FIXME
-  use_terminfo_color(9, 0);
   if(growlight_stop()){
     rl_deprep_terminal();
     ncdirect_stop(ncd);
