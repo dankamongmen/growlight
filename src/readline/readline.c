@@ -401,25 +401,25 @@ print_drive(const device *d, int descend){
       use_terminfo_color(COLOR_MAGENTA, 1); // virtual
     }
     qprefix(d->size, 1, buf, 0);
-    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
+    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %ls%ls%ls%ls%ls %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
       PREFIXFMT(buf),
       d->physsec,
-      d->blkdev.unloaded ? L'U' :
-       d->blkdev.removable ? L'R' :
-       d->blkdev.smart == SK_SMART_OVERALL_GOOD ? L'✔' :
+      d->blkdev.unloaded ? L"U" :
+       d->blkdev.removable ? L"R" :
+       d->blkdev.smart == SK_SMART_OVERALL_GOOD ? L"✔" :
        (d->blkdev.smart == SK_SMART_OVERALL_BAD_STATUS ||
-         d->blkdev.smart == SK_SMART_OVERALL_BAD_SECTOR_MANY) ? L'✗' :
-       d->blkdev.smart > 0 ? L'☠' :
-       d->blkdev.realdev ? L'.' : L'V',
-      d->blkdev.rotation >= 0 ? L'O' : L'.',
-      d->roflag ? L'r' :
-       d->blkdev.wcache ? L'W' : L'.',
-      d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'v' :
-       d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'⚠' : L'.',
-      d->blkdev.biosboot ? L'B' : L'.',
+         d->blkdev.smart == SK_SMART_OVERALL_BAD_SECTOR_MANY) ? L"✗" :
+       d->blkdev.smart > 0 ? L"☠" :
+       d->blkdev.realdev ? L"." : L"V",
+      d->blkdev.rotation >= 0 ? L"O" : L".",
+      d->roflag ? L"r" :
+       d->blkdev.wcache ? L"W" : L".",
+      d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L"v" :
+       d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L"⚠" : L".",
+      d->blkdev.biosboot ? L"B" : L".",
       d->blkdev.pttable ? d->blkdev.pttable : "none",
       d->blkdev.wwn ? d->blkdev.wwn : "n/a",
       d->blkdev.realdev ? transport_str(d->blkdev.transport) : "n/a"
@@ -428,13 +428,13 @@ print_drive(const device *d, int descend){
   }case LAYOUT_MDADM:{
     use_terminfo_color(COLOR_YELLOW, 1);
     qprefix(d->size, 1, buf, 0);
-    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
+    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %ls%ls%ls%ls%ls %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
       PREFIXFMT(buf),
-      d->physsec, L'V', L'M', L'.',
-      d->roflag ? L'r' : L'.', L'.',
+      d->physsec, L"V", L"M", L".",
+      d->roflag ? L"r" : L".", L".",
       d->mddev.pttable ? d->mddev.pttable : "none",
       d->mddev.mdname ? d->mddev.mdname : "n/a",
       transport_str(d->mddev.transport)
@@ -443,13 +443,13 @@ print_drive(const device *d, int descend){
   }case LAYOUT_DM:{
     use_terminfo_color(COLOR_YELLOW, 1);
     qprefix(d->size, 1, buf, 0);
-    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
+    r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %ls%ls%ls%ls%ls %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
       PREFIXFMT(buf),
-      d->physsec, L'V', L'D', L'.',
-      d->roflag ? L'r' : L'.', L'.',
+      d->physsec, L"V", L"D", L".",
+      d->roflag ? L"r" : L".", L".",
       "n/a",
       d->dmdev.dmname ? d->dmdev.dmname : "n/a",
       transport_str(d->dmdev.transport)
@@ -458,13 +458,13 @@ print_drive(const device *d, int descend){
   }case LAYOUT_ZPOOL:{
     use_terminfo_color(COLOR_RED, 1);
     qprefix(d->size, 1, buf, 0);
-    r += rr = printf("%-10.10s %-16.16s %4ju %*s %4uB %lc%lc%lc%lc%lc %-6.6s%-16.16s %-4.4s\n",
+    r += rr = printf("%-10.10s %-16.16s %4ju %*s %4uB %ls%ls%ls%ls%ls %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       (uintmax_t)d->zpool.zpoolver,
       PREFIXFMT(buf),
-      d->physsec, L'V', L'Z', L'.',
-      d->roflag ? L'r' : L'.', L'.',
+      d->physsec, L"V", L"Z", L".",
+      d->roflag ? L"r" : L".", L".",
       "spa",
       "n/a", // FIXME
       transport_str(d->zpool.transport)
@@ -2202,30 +2202,24 @@ int main(int argc, char * const *argv){
   if(growlight_init(argc, argv, &ui, NULL)){
     return EXIT_FAILURE;
   }
+  rl_readline_name = PACKAGE;
   if(isatty(STDOUT_FILENO)){
     const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE |
                            NCDIRECT_OPTION_INHIBIT_CBREAK;
+    rl_attempted_completion_function = growlight_completion;
     if((ncd = ncdirect_init(NULL, NULL, flags)) == NULL){
       fprintf(stderr, "Couldn't set up notcurses\n");
     }
   }
-  rl_outstream = stdout;
-  rl_instream = stdin;
-  rl_readline_name = PACKAGE;
-  rl_attempted_completion_function = growlight_completion;
-  rl_prep_terminal(1); // 1 == read 8-bit input
   if(tty_ui()){
     growlight_stop();
-    rl_deprep_terminal();
     ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }
   if(growlight_stop()){
-    rl_deprep_terminal();
     ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }
-  rl_deprep_terminal();
   if(ncdirect_stop(ncd)){
     fprintf(stderr, "Couldn't reset terminal\n");
     return EXIT_FAILURE;
