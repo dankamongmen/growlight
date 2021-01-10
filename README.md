@@ -19,12 +19,13 @@ Dependencies:
  - libatasmart 0.19+
  - libblkid 2.20.1
  - libcap 2.24+
- - libcryptsetup 2.0.2+
+ - libcryptsetup 2.1.5+
  - libdevmapper 1.02.74+
  - libnettle 3.5.1+
  - libnotcurses 2.0.5+
  - libpci 3.1.9+
  - libpciaccess 0.13.1+
+ - libreadline 8.0+
  - libudev 175+
  - libz 1.2.11+
  - mkswap(8) from util-linux

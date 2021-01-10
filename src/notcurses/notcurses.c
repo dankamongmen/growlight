@@ -1230,24 +1230,24 @@ case LAYOUT_ZPOOL:
   // Print summary below device name, in the same color, but prefix it
   // with the single-character SMART status when applicable.
   if(line + 1 < rows/* - !drawfromtop*/ && line + 1 >= drawfromtop){
-    wchar_t rep = L' ';
+    const wchar_t* rep = L" ";
     if(bo->d->blkdev.smart >= 0){
       if(bo->d->blkdev.smart == SK_SMART_OVERALL_GOOD){
         ncplane_set_styles(n, NCSTYLE_BOLD);
         compat_set_fg(n, GREEN_COLOR);
-        rep = L'✔';
+        rep = L"✔";
       }else if(bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_STATUS
           && bo->d->blkdev.smart != SK_SMART_OVERALL_BAD_SECTOR_MANY){
         ncplane_set_styles(n, NCSTYLE_BOLD);
         compat_set_fg(n, ORANGE_COLOR);
-        rep = L'☠';
+        rep = L"☠";
       }else{
         ncplane_set_styles(n, NCSTYLE_BOLD);
         compat_set_fg(n, FUCKED_COLOR);
-        rep = L'✗';
+        rep = L"✗";
       }
     }
-    cmvwprintw(n, line + 1, START_COL, "%lc", rep);
+    cmvwprintw(n, line + 1, START_COL, "%ls", rep);
     ncplane_set_styles(n, NCSTYLE_BOLD);
     compat_set_fg(n, SUBDISPLAY_COLOR);
     if(strlen(rolestr)){
@@ -1724,13 +1724,13 @@ check_options(struct form_state *fs){
     ncplane_off_styles(fs->p, NCSTYLE_BOLD);
     compat_set_fg(fs->p, FORMBORDER_COLOR);
     if(z < fs->opcount + 1){
-      wchar_t ballot = L'☐';
+      const wchar_t* ballot = L"☐";
 
       ncplane_on_styles(fs->p, NCSTYLE_BOLD);
       compat_set_fg(fs->p, FORMTEXT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
         if(strcmp(opstrs[op].option, fs->selarray[selidx]) == 0){
-          ballot = L'☒';
+          ballot = L"☒";
           break;
         }
       }
@@ -1739,7 +1739,7 @@ check_options(struct form_state *fs){
       }else{
         compat_set_fg(fs->p, INPUT_COLOR);
       }
-      cmvwprintw(fs->p, z + 1, START_COL * 2, "%lc %-*.*s ",
+      cmvwprintw(fs->p, z + 1, START_COL * 2, "%ls %-*.*s ",
         ballot, fs->longop, fs->longop, opstrs[op].option);
       cwprintw(fs->p, "%-*.*s", cols - fs->longop - 7,
         cols - fs->longop - 7, opstrs[op].desc);
@@ -3037,7 +3037,7 @@ detail_fs(struct ncplane* hw, const device* d, int row){
     cwprintw(hw, "%s%s", d->label ? "" : "unlabeled ", d->mnttype);
     if(d->label){
       ncplane_off_styles(hw, NCSTYLE_BOLD);
-      cwprintw(hw, " %lc%s%lc", L'“', d->label, L'”');
+      cwprintw(hw, " %ls%s%ls", L"“", d->label, L"”");
       ncplane_on_styles(hw, NCSTYLE_BOLD);
     }
     cwprintw(hw, "%s", d->mnt.count ? " at " : "");
@@ -3113,11 +3113,11 @@ update_details(struct ncplane* hw){
     ncplane_off_styles(hw, NCSTYLE_BOLD);
     ncplane_putstr(hw, sn ? sn : "n/a");
     ncplane_on_styles(hw, NCSTYLE_BOLD);
-    cwprintw(hw, " WC%lc WRV%lc RO%lc",
-        d->blkdev.wcache ? L'+' : L'-',
-        d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? L'+' :
-        d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? L'-' : L'x',
-        d->roflag ? L'+' : L'-');
+    cwprintw(hw, " WC%c WRV%c RO%c",
+        d->blkdev.wcache ? '+' : '-',
+        d->blkdev.rwverify == RWVERIFY_SUPPORTED_ON ? '+' :
+        d->blkdev.rwverify == RWVERIFY_SUPPORTED_OFF ? '-' : 'x',
+        d->roflag ? '+' : '-');
     assert(d->physsec <= 4096);
     cmvwprintw(hw, 4, START_COL, "Sectors: ");
     ncplane_off_styles(hw, NCSTYLE_BOLD);
@@ -3143,11 +3143,11 @@ update_details(struct ncplane* hw){
       cwprintw(hw, ")");
     }
   }else{
-    cmvwprintw(hw, 3, START_COL, "%s: %s %s (%s) RO%lc", d->name,
+    cmvwprintw(hw, 3, START_COL, "%s: %s %s (%s) RO%c", d->name,
           d->model ? d->model : "n/a",
           d->revision ? d->revision : "n/a",
           bprefix(d->size, 1, buf, 1),
-          d->roflag ? L'+' : L'-');
+          d->roflag ? '+' : '-');
     if(d->layout == LAYOUT_MDADM){
       cwprintw(hw, " Stride: ");
       ncplane_off_styles(hw, NCSTYLE_BOLD);
