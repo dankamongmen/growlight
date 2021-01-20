@@ -6082,7 +6082,7 @@ int main(int argc, char * const *argv){
   notcurses_options opts = { };
   opts.flags = NCOPTION_INHIBIT_SETLOCALE;
   // opts.loglevel = NCLOGLEVEL_TRACE;
-  if((NC = notcurses_init(&opts, stdout)) == NULL){
+  if((NC = notcurses_core_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
   notcurses_mouse_enable(NC);
