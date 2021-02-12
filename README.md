@@ -22,7 +22,7 @@ Dependencies:
  - libcryptsetup 2.1.5+
  - libdevmapper 1.02.74+
  - libnettle 3.5.1+
- - libnotcurses 2.1.5+
+ - libnotcurses 2.1.8+
  - libpci 3.1.9+
  - libpciaccess 0.13.1+
  - libreadline 8.0+

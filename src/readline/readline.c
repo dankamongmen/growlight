@@ -1776,7 +1776,7 @@ tokenize(const char *line, wchar_t ***tokes){
 static void
 do_logo(void){
   int v = ncdirect_render_image(ncd, GROWLIGHT_SHARE "/growlight.jpg",
-                                NCALIGN_CENTER, NCBLIT_DEFAULT, NCSCALE_SCALE);
+                                NCALIGN_CENTER, NCBLIT_DEFAULT, NCSCALE_SCALE_HIRES);
   if(v >= 0){
     return;
   }
@@ -2060,7 +2060,7 @@ tty_ui(void){
         "(0)> " RL_START "\033[1;37m" RL_END;
   char *l;
 
-  while( (l = readline(prompt)) ){
+  while( (l = ncdirect_readline(ncd, prompt)) ){
     const struct fxn *fxn;
     wchar_t **tokes;
     int z;
