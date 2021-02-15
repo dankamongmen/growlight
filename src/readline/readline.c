@@ -2209,6 +2209,8 @@ int main(int argc, char * const *argv){
     rl_attempted_completion_function = growlight_completion;
     if((ncd = ncdirect_init(NULL, NULL, flags)) == NULL){
       fprintf(stderr, "Couldn't set up notcurses\n");
+      growlight_stop();
+      return EXIT_FAILURE;
     }
   }
   if(tty_ui()){
