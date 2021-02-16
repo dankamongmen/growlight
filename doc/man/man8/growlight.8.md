@@ -1,6 +1,6 @@
 % growlight(8)
 % nick black <nickblack@linux.com>
-% v1.2.29
+% v1.2.30
 
 # NAME
 
