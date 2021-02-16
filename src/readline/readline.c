@@ -1775,10 +1775,12 @@ tokenize(const char *line, wchar_t ***tokes){
 
 static void
 do_logo(void){
-  int v = ncdirect_render_image(ncd, GROWLIGHT_SHARE "/growlight.jpg",
-                                NCALIGN_CENTER, NCBLIT_DEFAULT, NCSCALE_SCALE_HIRES);
-  if(v >= 0){
-    return;
+  if(ncd){
+    int v = ncdirect_render_image(ncd, GROWLIGHT_SHARE "/growlight.jpg",
+                                  NCALIGN_CENTER, NCBLIT_DEFAULT, NCSCALE_SCALE_HIRES);
+    if(v >= 0){
+      return;
+    }
   }
   use_terminfo_color(COLOR_RED, 1);
   printf("+++++++++++++++++++++++++++++++++++++++++++++++++############++++++++++++++++++\n"
@@ -2048,19 +2050,35 @@ help(wchar_t * const *args, const char *arghelp){
   return 0;
 }
 
+// heap-allocated input line, using readline if available, fgets() otherwise.
+static char*
+getinline(const char* prompt){
+  if(ncd){
+    return ncdirect_readline(ncd, prompt);
+  }
+  size_t buflen = 8192;
+  char* buf = malloc(buflen); // sure FIXME
+  if(buf){
+    if(fgets(buf, buflen, stdin) == NULL){
+      free(buf);
+      buf = NULL;
+    }
+  }
+  return buf;
+}
+
 #define RL_START "\x01" // RL_PROMPT_START_IGNORE
 #define RL_END "\x02"  // RL_PROMPT_END_IGNORE
-
 static int
 tty_ui(void){
-  char prompt[80] = RL_START "\033[0;35m" RL_END
-        "[" RL_START "\033[0;36m" RL_END
-        PACKAGE RL_START "\033[0;35m" RL_END
-        "]" RL_START "\033[1;32m" RL_END
-        "(0)> " RL_START "\033[1;37m" RL_END;
+  static char prompt[80] = RL_START "\033[0;35m" RL_END
+                           "[" RL_START "\033[0;36m" RL_END
+                           PACKAGE RL_START "\033[0;35m" RL_END
+                           "]" RL_START "\033[1;32m" RL_END
+                           "(0)> " RL_START "\033[1;37m" RL_END;
   char *l;
 
-  while( (l = ncdirect_readline(ncd, prompt)) ){
+  while( (l = getinline(prompt)) ){
     const struct fxn *fxn;
     wchar_t **tokes;
     int z;
@@ -2115,6 +2133,8 @@ tty_ui(void){
   printf("\n");
   return 0;
 }
+#undef RL_END
+#undef RL_START
 
 // FIXME it'd be nice to do secondary completion (ie command-sensitive) for
 // command arguments
@@ -2203,7 +2223,7 @@ int main(int argc, char * const *argv){
     return EXIT_FAILURE;
   }
   rl_readline_name = PACKAGE;
-  //if(isatty(STDOUT_FILENO)){
+  if(isatty(STDOUT_FILENO)){
     const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE |
                            NCDIRECT_OPTION_INHIBIT_CBREAK;
     rl_attempted_completion_function = growlight_completion;
@@ -2212,7 +2232,7 @@ int main(int argc, char * const *argv){
       growlight_stop();
       return EXIT_FAILURE;
     }
-  //}
+  }
   if(tty_ui()){
     growlight_stop();
     ncdirect_stop(ncd);
