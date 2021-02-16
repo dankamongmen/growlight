@@ -12,7 +12,7 @@ VERSION="$2"
 git clean -f -d -x
 
 # bump version numbers wherever they occur (wherever we enumerate them, anyway)
-sed -i -e "s/\(project(notcurses VERSION \)$OLDVERSION/\1$VERSION/" CMakeLists.txt
+sed -i -e "s/\(project(growlight VERSION \)$OLDVERSION/\1$VERSION/" CMakeLists.txt
 for i in doc/man/man*/*.md ; do
   sed -i -e "s/% v$OLDVERSION/% v$VERSION/" "$i"
 done
