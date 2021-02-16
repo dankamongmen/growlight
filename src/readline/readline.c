@@ -2203,7 +2203,7 @@ int main(int argc, char * const *argv){
     return EXIT_FAILURE;
   }
   rl_readline_name = PACKAGE;
-  if(isatty(STDOUT_FILENO)){
+  //if(isatty(STDOUT_FILENO)){
     const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE |
                            NCDIRECT_OPTION_INHIBIT_CBREAK;
     rl_attempted_completion_function = growlight_completion;
@@ -2212,7 +2212,7 @@ int main(int argc, char * const *argv){
       growlight_stop();
       return EXIT_FAILURE;
     }
-  }
+  //}
   if(tty_ui()){
     growlight_stop();
     ncdirect_stop(ncd);
