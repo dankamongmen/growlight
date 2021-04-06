@@ -19,14 +19,16 @@ TEST_CASE("GPT") {
   SUBCASE("Revision") {
     gpt_header head;
     CHECK(0 == initialize_gpt(&head, 512, 4194287, 34, nullptr));
-    CHECK(0x00010000 == head.revision);
+    auto revision = head.revision;
+    CHECK(0x00010000 == revision);
   }
 
   // Bytes 0xc--0xf must be >= 92, should be the logical block size
   SUBCASE("HeaderSize") {
     gpt_header head;
     CHECK(0 == initialize_gpt(&head, 512, 4194287, 34, nullptr));
-    CHECK(92 == head.headsize);
+    auto headsize = head.headsize;
+    CHECK(92 == headsize);
   }
 
   // Bytes 0x18--0x1f are the sector of the GPT primary, usually 1
@@ -34,8 +36,10 @@ TEST_CASE("GPT") {
   SUBCASE("GPTLBAs") {
     gpt_header head;
     CHECK(0 == initialize_gpt(&head, 512, 100000, 34, nullptr));
-    CHECK(1 == head.lba);
-    CHECK(100000 == head.backuplba);
+    auto lba = head.lba;
+    CHECK(1 == lba);
+    auto backuplba = head.backuplba;
+    CHECK(100000 == backuplba);
   }
 
   // Verify the 16-byte UUID is as specified
@@ -61,17 +65,22 @@ TEST_CASE("GPT") {
     gpt_header head;
     CHECK(0 == initialize_gpt(&head, 512, 4194287, 34, UUID));
     // partition entry size must be a positive multiple of 128 (usually 128)
-    CHECK(0 < head.partsize);
-    CHECK(0 == (head.partsize % 128));
+    auto partsize = head.partsize;
+    CHECK(0 < partsize);
+    CHECK(0 == (partsize % 128));
     // number of partition entries, usually 128 (MINIMUM_GPT_ENTRIES)
-    CHECK(128 <= head.partcount);
-    auto entries = new gpt_entry[head.partcount];
-    memset(entries, 0, sizeof(*entries) * head.partcount);
+    auto partcount = head.partcount;
+    CHECK(128 <= partcount);
+    auto entries = new gpt_entry[partcount];
+    memset(entries, 0, sizeof(*entries) * partcount);
     CHECK(0 == update_crc(&head, entries));
+    auto crc = head.crc;
     // FIXME fix on big-endian!
-    WARN(2006165414 == head.crc);
-    CHECK(0 == head.reserved);
-    CHECK(2874462854 == head.partcrc);
+    WARN(2006165414 == crc);
+    auto reserved = head.reserved;
+    CHECK(0 == reserved);
+    auto partcrc = head.partcrc;
+    CHECK(2874462854 == partcrc);
     delete[] entries;
   }
 
@@ -85,7 +94,8 @@ TEST_CASE("GPT") {
     memset(sector, 0xff, sizeof(sector));
     gpt_header* head = reinterpret_cast<gpt_header*>(sector);
     CHECK(0 == initialize_gpt(head, sizeof(sector), 4194287, 34, nullptr));
-    CHECK(92 == head->headsize);
+    auto headsize = head->headsize;
+    CHECK(92 == headsize);
     for(size_t idx = 92 ; idx < sizeof(sector) ; ++idx){
       CHECK(0 == sector[idx]);
     }
