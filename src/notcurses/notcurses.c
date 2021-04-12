@@ -622,10 +622,10 @@ cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   }
   c.channels = ncplane_channels(nc);
   if(ncplane_hline(nc, &c, n) != n){
-    cell_release(nc, &c);
+    nccell_release(nc, &c);
     return -1;
   }
-  cell_release(nc, &c);
+  nccell_release(nc, &c);
   return 0;
 }
 
