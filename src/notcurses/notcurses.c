@@ -616,16 +616,16 @@ cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   if(ncplane_cursor_move_yx(nc, y, x)){
     return -1;
   }
-  cell c = CELL_TRIVIAL_INITIALIZER;
+  nccell c = CELL_TRIVIAL_INITIALIZER;
   if(cell_load(nc, &c, ch) < 0){
     return -1;
   }
   c.channels = ncplane_channels(nc);
   if(ncplane_hline(nc, &c, n) != n){
-    cell_release(nc, &c);
+    nccell_release(nc, &c);
     return -1;
   }
-  cell_release(nc, &c);
+  nccell_release(nc, &c);
   return 0;
 }
 
