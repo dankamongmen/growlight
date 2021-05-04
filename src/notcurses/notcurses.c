@@ -617,7 +617,7 @@ cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
     return -1;
   }
   nccell c = CELL_TRIVIAL_INITIALIZER;
-  if(cell_load(nc, &c, ch) < 0){
+  if(nccell_load(nc, &c, ch) < 0){
     return -1;
   }
   c.channels = ncplane_channels(nc);
