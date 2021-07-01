@@ -28,7 +28,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the build mode." FORCE)
 endif()
 
-add_compile_definitions(FORTIFY_SOURCE=2)
+add_compile_definitions(_FORTIFY_SOURCE=2)
 add_compile_options(-Wall -Wextra -W -Wshadow -Wformat -fexceptions)
 
 find_package(PkgConfig REQUIRED)
