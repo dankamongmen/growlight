@@ -6047,8 +6047,8 @@ create_menu(struct ncplane* n){
   struct ncmenu_options mopts = {
     .sections = sections,
     .sectioncount = sizeof(sections) / sizeof(*sections),
-    .headerchannels = CHANNELS_RGB_INITIALIZER(0xff, 0xff, 0xff, 0x35, 0x1c, 0x35),
-    .sectionchannels = CHANNELS_RGB_INITIALIZER(0xd6, 0x70, 0xd6, 0x00, 0x00, 0x00),
+    .headerchannels = NCCHANNELS_INITIALIZER(0xff, 0xff, 0xff, 0x35, 0x1c, 0x35),
+    .sectionchannels = NCCHANNELS_INITIALIZER(0xd6, 0x70, 0xd6, 0x00, 0x00, 0x00),
   };
   struct ncmenu* nmenu = ncmenu_create(n, &mopts);
   return nmenu;
