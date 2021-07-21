@@ -4939,8 +4939,8 @@ handle_actform_string_input(int ch){
 // typical UI, and handle it according to the subwindow. If we are not
 // interested in the input, return it for further use. Otherwise, return 0 to
 // indicate intercept.
-static char32_t
-handle_subwindow_input(char32_t ch){
+static uint32_t
+handle_subwindow_input(uint32_t ch){
   switch(ch){
     default:
       // locked_diag("FIXME handle subwindow input");
@@ -4961,7 +4961,7 @@ handle_actform_splash_input(void){
 // We received input while a modal form was active. Divert it from the typical
 // UI, and handle it according to the form. Returning non-zero quits the
 // program, and should pretty much only indicate that 'q' was pressed.
-static char32_t
+static uint32_t
 handle_actform_input(wchar_t ch){
   struct form_state *fs = actform;
   void (*mcb)(const char *, char **, int, int);
@@ -5256,12 +5256,12 @@ unset_target(void){
 
 static void
 handle_input(struct ncplane* w){
-  char32_t ch;
+  uint32_t ch;
   ncinput ni;
   int r;
 
   // FIXME can we not just throw lock_ and unlock_ around the entire stanza?
-  while((ch = notcurses_getc_blocking(NC, &ni)) != (char32_t)-1){
+  while((ch = notcurses_getc_blocking(NC, &ni)) != (uint32_t)-1){
     if(ch == 'L' && ni.ctrl){
       lock_notcurses();
       notcurses_refresh(NC, NULL, NULL);
@@ -5300,7 +5300,7 @@ handle_input(struct ncplane* w){
       ch = ni.id;
     }
     if(actform){
-      if((ch = handle_actform_input(ch)) == (char32_t)-1){
+      if((ch = handle_actform_input(ch)) == (uint32_t)-1){
         break;
       }
       if(ch == 0){
@@ -5308,7 +5308,7 @@ handle_input(struct ncplane* w){
       }
     }
     if(active){
-      if((ch = handle_subwindow_input(ch)) == (char32_t)-1){
+      if((ch = handle_subwindow_input(ch)) == (uint32_t)-1){
         return;
       }
       if(ch == 0){ // intercepted
