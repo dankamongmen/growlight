@@ -39,11 +39,11 @@ dehumanize(const char *num){
 		dec = 0;
 	}
 	switch(*e){
-		case 'E': case 'e': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
-		case 'P': case 'p': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
-		case 'T': case 't': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
-		case 'G': case 'g': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
-		case 'M': case 'm': ull = ull * 1000 + dec * 10; dec = 0; __attribute__ ((fallthrough));
+		case 'E': case 'e': ull = ull * 1000 + dec * 10; dec = 0; __attribute__((__fallthrough__));
+		case 'P': case 'p': ull = ull * 1000 + dec * 10; dec = 0; __attribute__((__fallthrough__));
+		case 'T': case 't': ull = ull * 1000 + dec * 10; dec = 0; __attribute__((__fallthrough__));
+		case 'G': case 'g': ull = ull * 1000 + dec * 10; dec = 0; __attribute__((__fallthrough__));
+		case 'M': case 'm': ull = ull * 1000 + dec * 10; dec = 0; __attribute__((__fallthrough__));
 		case 'K': case 'k': ull = ull * 1000 + dec * 10; dec = 0;
 			break;
 		case '\0':
