@@ -895,9 +895,9 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   }
   if((z = bo->zchain) == NULL){
     if(selected){
-      ncplane_on_styles(n, NCSTYLE_REVERSE);
+      ncplane_set_channels(n, ncchannels_reverse(ncplane_channels(n)));
       cmvwprintw(n, y - 1, sx + 1, "⇗⇨⇨⇨%.*s", (int)(ex - (sx + 5)), selstr);
-      ncplane_off_styles(n, NCSTYLE_REVERSE);
+      ncplane_set_channels(n, ncchannels_reverse(ncplane_channels(n)));
     }
     return;
   }
@@ -1004,7 +1004,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
         break;
       }
     }
-    ncplane_on_styles(n, NCSTYLE_REVERSE);
+    ncplane_set_channels(n, ncchannels_reverse(ncplane_channels(n)));
     if(selstr){
       if(och < ex / 2u){
         cmvwprintw(n, y - 1, och, "⇗⇨⇨⇨%.*s", (int)(ex - (off + strlen(selstr) + 4)), selstr);
@@ -1012,7 +1012,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
         cmvwprintw(n, y - 1, off - 4 - strlen(selstr), "%s⇦⇦⇦⇖", selstr);
       }
     }
-    ncplane_off_styles(n, NCSTYLE_REVERSE);
+    ncplane_set_channels(n, ncchannels_reverse(ncplane_channels(n)));
     // Truncate it at whitespace until it's small enough to fit
     while(wcslen(wbuf) && wcslen(wbuf) + 2 > (off - och + 1)){
       wchar_t *wtrunc = wcsrchr(wbuf, L' ');
@@ -1053,6 +1053,7 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   if(line >= rows){
     return 0;
   }
+  uint64_t origchannels = ncplane_channels(n);
   strcpy(rolestr, "");
   bool selected = false;
   if(as == get_current_adapter()){
@@ -1098,7 +1099,8 @@ case LAYOUT_NONE:
       }
       if(selected){
         compat_set_fg(n, DBORDER_COLOR);
-        ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
+        ncplane_on_styles(n, NCSTYLE_BOLD);
+        ncplane_set_channels(n, ncchannels_reverse(origchannels));
       }
       qprefix(bo->d->size, 1, buf, 0);
       cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1134,7 +1136,8 @@ case LAYOUT_MDADM:
         }
         if(selected){
           compat_set_fg(n, DBORDER_COLOR);
-          ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
+          ncplane_on_styles(n, NCSTYLE_BOLD);
+          ncplane_set_channels(n, ncchannels_reverse(origchannels));
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1164,7 +1167,8 @@ case LAYOUT_DM:
         }
         if(selected){
           compat_set_fg(n, DBORDER_COLOR);
-          ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
+          ncplane_on_styles(n, NCSTYLE_BOLD);
+          ncplane_set_channels(n, ncchannels_reverse(origchannels));
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1195,7 +1199,8 @@ case LAYOUT_ZPOOL:
         }
         if(selected){
           compat_set_fg(n, DBORDER_COLOR);
-          ncplane_on_styles(n, NCSTYLE_REVERSE | NCSTYLE_BOLD);
+          ncplane_on_styles(n, NCSTYLE_BOLD);
+          ncplane_set_channels(n, ncchannels_reverse(origchannels));
         }
         qprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
@@ -1218,7 +1223,7 @@ case LAYOUT_ZPOOL:
   if(bo->d->size == 0){
     return 1;
   }
-  ncplane_off_styles(n, NCSTYLE_REVERSE);
+  ncplane_set_channels(n, origchannels);
   ncplane_set_styles(n, NCSTYLE_BOLD);
   compat_set_fg(n, SUBDISPLAY_COLOR);
 
@@ -1318,8 +1323,9 @@ case LAYOUT_ZPOOL:
 
   ncplane_set_styles(n, NCSTYLE_BOLD);
   compat_set_fg(n, DBORDER_COLOR);
+  origchannels = ncplane_channels(n);
   if(selected){
-    ncplane_on_styles(n, NCSTYLE_REVERSE);
+    ncplane_set_channels(n, ncchannels_reverse(origchannels));
   }
   if(line >= drawfromtop){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╭");
@@ -1335,10 +1341,11 @@ case LAYOUT_ZPOOL:
     print_blockbar(n, bo, line, START_COL + 10 + 2,
           cols - START_COL - 1, selected);
   }
+  ncplane_set_channels(n, origchannels);
   ncplane_set_styles(n, NCSTYLE_BOLD);
   compat_set_fg(n, DBORDER_COLOR);
   if(selected){
-    ncplane_on_styles(n, NCSTYLE_REVERSE);
+    ncplane_set_channels(n, ncchannels_reverse(origchannels));
   }
   if(line >= drawfromtop){
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"│");
@@ -1357,7 +1364,7 @@ case LAYOUT_ZPOOL:
     ncplane_putwstr_yx(n, line, cols - START_COL * 2, L"╯");
   }
   ++line;
-  ncplane_off_styles(n, NCSTYLE_REVERSE);
+  ncplane_set_channels(n, ncchannels_reverse(origchannels));
   return 3;
 }
 
@@ -1682,8 +1689,9 @@ multiform_options(struct form_state *fs){
       compat_set_fg(fsw, FORMTEXT_COLOR);
       cmvwprintw(fsw, z + 1, START_COL * 2 + fs->longop + 4, "%-*.*s ",
                  fs->longop, fs->longop, opstrs[op].option);
+      uint64_t origchannels = ncplane_channels(fsw);
       if(op == fs->idx){
-        ncplane_on_styles(fsw, NCSTYLE_REVERSE);
+        ncplane_set_channels(fsw, ncchannels_reverse(origchannels));
       }
       compat_set_fg(fsw, INPUT_COLOR);
       for(selidx = 0 ; selidx < fs->selections ; ++selidx){
@@ -1694,7 +1702,7 @@ multiform_options(struct form_state *fs){
       }
       cwprintw(fsw, "%-*.*s", cols - fs->longop * 2 - 9,
         cols - fs->longop * 2 - 9, opstrs[op].desc);
-      ncplane_off_styles(fsw, NCSTYLE_REVERSE);
+      ncplane_set_channels(fsw, origchannels);
     }
   }
   compat_set_fg(fsw, FORMBORDER_COLOR);
@@ -1734,8 +1742,9 @@ check_options(struct form_state *fs){
           break;
         }
       }
+      uint64_t origchannels = ncplane_channels(fs->p);
       if(op == fs->idx){
-        ncplane_on_styles(fs->p, NCSTYLE_REVERSE);
+        ncplane_set_channels(fs->p, ncchannels_reverse(origchannels));
       }else{
         compat_set_fg(fs->p, INPUT_COLOR);
       }
@@ -1743,7 +1752,7 @@ check_options(struct form_state *fs){
         ballot, fs->longop, fs->longop, opstrs[op].option);
       cwprintw(fs->p, "%-*.*s", cols - fs->longop - 7,
         cols - fs->longop - 7, opstrs[op].desc);
-      ncplane_off_styles(fs->p, NCSTYLE_REVERSE);
+      ncplane_set_channels(fs->p, origchannels);
     }
   }
   compat_set_fg(fs->p, FORMBORDER_COLOR);
@@ -1767,13 +1776,14 @@ form_options(struct form_state *fs){
     compat_set_fg(fs->p, FORMTEXT_COLOR);
     cmvwprintw(fs->p, z + 1, START_COL * 2, "%-*.*s ",
       fs->longop, fs->longop, opstrs[op].option);
-    if(op == fs->idx){
-      ncplane_on_styles(fs->p, NCSTYLE_REVERSE);
-    }
     compat_set_fg(fs->p, INPUT_COLOR);
+    uint64_t origchannels = ncplane_channels(fs->p);
+    if(op == fs->idx){
+      ncplane_set_channels(fs->p, ncchannels_reverse(origchannels));
+    }
     cwprintw(fs->p, "%-*.*s", cols - fs->longop - 1 - START_COL * 4,
       cols - fs->longop - 1 - START_COL * 4, opstrs[op].desc);
-    ncplane_off_styles(fs->p, NCSTYLE_REVERSE);
+    ncplane_set_channels(fs->p, origchannels);
   }
 }
 
@@ -5292,7 +5302,7 @@ handle_input(struct ncplane* w){
         ch = ni.id;
       } // otherwise, continue through with selected item
     }
-    if(ch == NCKEY_RELEASE){
+    if(ch == NCKEY_BUTTON1 && (ni.evtype == NCTYPE_RELEASE || ni.evtype == NCTYPE_UNKNOWN)){
       if(ncmenu_mouse_selected(mainmenu, &ni, &ni) == NULL){
         continue;
       } // otherwise, continue through with selected item
