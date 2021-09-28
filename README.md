@@ -22,10 +22,9 @@ Dependencies:
  - libcryptsetup 2.1.5+
  - libdevmapper 1.02.74+
  - libnettle 3.5.1+
- - libnotcurses 2.4.0+
+ - libnotcurses 2.4.4+
  - libpci 3.1.9+
  - libpciaccess 0.13.1+
- - libreadline 8.0+
  - libudev 175+
  - libz 1.2.11+
  - mkswap(8) from util-linux

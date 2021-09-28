@@ -10,8 +10,6 @@
 #include <version.h>
 #include <atasmart.h>
 #include <notcurses/direct.h>
-#include <readline/history.h>
-#include <readline/readline.h>
 
 #include "fs.h"
 #include "mbr.h"
@@ -2050,23 +2048,6 @@ help(wchar_t * const *args, const char *arghelp){
   return 0;
 }
 
-// heap-allocated input line, using readline if available, fgets() otherwise.
-static char*
-getinline(const char* prompt){
-  if(ncd){
-    return ncdirect_readline(ncd, prompt);
-  }
-  size_t buflen = 8192;
-  char* buf = malloc(buflen); // sure FIXME
-  if(buf){
-    if(fgets(buf, buflen, stdin) == NULL){
-      free(buf);
-      buf = NULL;
-    }
-  }
-  return buf;
-}
-
 #define RL_START "\x01" // RL_PROMPT_START_IGNORE
 #define RL_END "\x02"  // RL_PROMPT_END_IGNORE
 static int
@@ -2078,13 +2059,12 @@ tty_ui(void){
                            "(0)> " RL_START "\033[1;37m" RL_END;
   char *l;
 
-  while( (l = getinline(prompt)) ){
+  while( (l = ncdirect_readline(ncd, prompt)) ){
     const struct fxn *fxn;
     wchar_t **tokes;
     int z;
 
     fflush(stdout);
-    add_history(l);
     z = tokenize(l, &tokes);
     free(l);
     if(z <= 0){
@@ -2125,7 +2105,6 @@ tty_ui(void){
           "(0)" RL_START "\033[1;32m" RL_END
           "> " RL_START "\033[1;37m" RL_END);
     }
-    rl_set_prompt(prompt);
     if(lights_off){
       return 0;
     }
@@ -2135,38 +2114,6 @@ tty_ui(void){
 }
 #undef RL_END
 #undef RL_START
-
-// FIXME it'd be nice to do secondary completion (ie command-sensitive) for
-// command arguments
-static char *
-completion_engine(const char *text, int state){
-  static const struct fxn *fxn;
-  static size_t len;
-
-  // 'state' tells us whether readline has tried to complete already
-  if(state == 0){
-    len = strlen(text);
-    fxn = fxns;
-  }else{
-    ++fxn;
-  }
-  while(fxn->cmd){
-    char fxnbuf[NAME_MAX];
-
-    snprintf(fxnbuf, sizeof(fxnbuf), "%ls", fxn->cmd);
-    if(strncmp(fxnbuf, text, len) == 0){
-
-      return strdup(fxnbuf);
-    }
-    ++fxn;
-  }
-  return NULL;
-}
-
-static char **
-growlight_completion(const char *text, int start __attribute__ ((unused)), int end __attribute__ ((unused))){
-  return rl_completion_matches(text, completion_engine);
-}
 
 static void
 vdiag(const char *fmt, va_list va){
@@ -2222,11 +2169,8 @@ int main(int argc, char * const *argv){
   if(growlight_init(argc, argv, &ui, NULL)){
     return EXIT_FAILURE;
   }
-  rl_readline_name = PACKAGE;
   if(isatty(STDOUT_FILENO)){
-    const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE |
-                           NCDIRECT_OPTION_INHIBIT_CBREAK;
-    rl_attempted_completion_function = growlight_completion;
+    const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE;
     if((ncd = ncdirect_init(NULL, NULL, flags)) == NULL){
       fprintf(stderr, "Couldn't set up notcurses\n");
       growlight_stop();
