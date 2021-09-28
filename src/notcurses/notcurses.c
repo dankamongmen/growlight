@@ -844,6 +844,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   uintmax_t zs;
 
   ncplane_set_styles(n, NCSTYLE_NONE);
+  ncplane_set_bg_default(n);
   zs = d->mntsize ? d->mntsize :
     (last_usable_sector(d) - first_usable_sector(d) + 1) * bo->d->logsec;
   // Sometimes, a partitioned block device will be given a mnttype by
@@ -905,9 +906,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
   }
   if((z = bo->zchain) == NULL){
     if(selected){
-      ncplane_set_channels(n, ncchannels_reverse(ncplane_channels(n)));
       cmvwprintw(n, y - 1, sx + 1, "⇗⇨⇨⇨%.*s", (int)(ex - (sx + 5)), selstr);
-      ncplane_set_channels(n, ncchannels_reverse(ncplane_channels(n)));
     }
     return;
   }
@@ -1014,15 +1013,13 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
         break;
       }
     }
-    ncplane_set_channels(n, ncchannels_reverse(ncplane_channels(n)));
-    if(selstr){
+    if(selected && selstr){
       if(och < ex / 2u){
         cmvwprintw(n, y - 1, och, "⇗⇨⇨⇨%.*s", (int)(ex - (off + strlen(selstr) + 4)), selstr);
       }else{
         cmvwprintw(n, y - 1, off - 4 - strlen(selstr), "%s⇦⇦⇦⇖", selstr);
       }
     }
-    ncplane_set_channels(n, ncchannels_reverse(ncplane_channels(n)));
     // Truncate it at whitespace until it's small enough to fit
     while(wcslen(wbuf) && wcslen(wbuf) + 2 > (off - och + 1)){
       wchar_t *wtrunc = wcsrchr(wbuf, L' ');
@@ -1060,10 +1057,10 @@ print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
   }
 //fprintf(stderr, " HERE FOR %s: %s line %d rows %d cols %d lout %d\n", as->c->name, bo->d->name, line, rows, cols, bo->d->layout);
   ncplane_set_bg_default(n);
+  uint64_t origchannels = ncplane_channels(n);
   if(line >= rows){
     return 0;
   }
-  uint64_t origchannels = ncplane_channels(n);
   strcpy(rolestr, "");
   bool selected = false;
   if(as == get_current_adapter()){
@@ -1333,9 +1330,10 @@ case LAYOUT_ZPOOL:
 
   ncplane_set_styles(n, NCSTYLE_BOLD);
   compat_set_fg(n, DBORDER_COLOR);
-  origchannels = ncplane_channels(n);
   if(selected){
     ncplane_set_channels(n, ncchannels_reverse(origchannels));
+  }else{
+    ncplane_set_bg_default(n);
   }
   if(line >= drawfromtop){
     ncplane_putwstr_yx(n, line, START_COL + 10 + 1, L"╭");
