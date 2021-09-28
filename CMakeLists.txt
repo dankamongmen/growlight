@@ -34,7 +34,7 @@ add_compile_options(-Wall -Wextra -W -Wshadow -Wformat -fexceptions)
 find_package(PkgConfig REQUIRED)
 find_package(Threads)
 set_package_properties(Threads PROPERTIES TYPE REQUIRED)
-find_package(Notcurses 2.4.0 CONFIG)
+find_package(Notcurses 2.4.4 CONFIG)
 set_package_properties(Notcurses PROPERTIES TYPE REQUIRED)
 pkg_check_modules(LIBATASMART REQUIRED libatasmart>=0.19)
 pkg_check_modules(LIBBLKID REQUIRED blkid>=2.20.1)
@@ -44,7 +44,6 @@ pkg_check_modules(LIBDEVMAPPER REQUIRED devmapper>=1.02.74)
 pkg_check_modules(LIBNETTLE REQUIRED nettle>=3.5.1)
 pkg_check_modules(LIBPCI REQUIRED libpci>=3.1.9)
 pkg_check_modules(LIBPCIACCESS REQUIRED pciaccess>=0.13.1)
-pkg_check_modules(LIBREADLINE REQUIRED readline)
 pkg_check_modules(LIBUDEV REQUIRED libudev>=175)
 pkg_check_modules(LIBZ REQUIRED zlib>=1.2.11)
 if(${USE_DOCTEST})
@@ -98,7 +97,6 @@ set(COMMON_LIBRARIES
   "${LIBNETTLE_LIBRARIES}"
   "${LIBPCI_LIBRARIES}"
   "${LIBPCIACCESS_LIBRARIES}"
-  "${LIBREADLINE_LIBRARIES}"
   "${LIBUDEV_LIBRARIES}"
   "${LIBZ_LIBRARIES}"
   "${LIBZFS_LIBRARIES}"
