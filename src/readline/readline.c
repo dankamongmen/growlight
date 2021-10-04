@@ -2017,6 +2017,7 @@ static const struct fxn {
   FXN(version, ""),
   FXN(help, "[ command ]"),
   FXN(quit, ""),
+  { .cmd = L"exit", .fxn = quit, .arghelp = "", },
   { .cmd = NULL, .fxn = NULL, .arghelp = NULL, },
 #undef FXN
 };
