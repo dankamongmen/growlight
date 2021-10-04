@@ -1775,7 +1775,7 @@ static void
 do_logo(void){
   if(ncd){
     int v = ncdirect_render_image(ncd, GROWLIGHT_SHARE "/growlight.jpg",
-                                  NCALIGN_CENTER, NCBLIT_DEFAULT, NCSCALE_SCALE_HIRES);
+                                  NCALIGN_LEFT, NCBLIT_DEFAULT, NCSCALE_SCALE_HIRES);
     if(v >= 0){
       return;
     }
