@@ -2170,13 +2170,11 @@ int main(int argc, char * const *argv){
   if(growlight_init(argc, argv, &ui, NULL)){
     return EXIT_FAILURE;
   }
-  if(isatty(STDOUT_FILENO)){
-    const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE;
-    if((ncd = ncdirect_init(NULL, NULL, flags)) == NULL){
-      fprintf(stderr, "Couldn't set up notcurses\n");
-      growlight_stop();
-      return EXIT_FAILURE;
-    }
+  const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE;
+  if((ncd = ncdirect_init(NULL, NULL, flags)) == NULL){
+    fprintf(stderr, "Couldn't set up notcurses\n");
+    growlight_stop();
+    return EXIT_FAILURE;
   }
   if(tty_ui()){
     growlight_stop();
