@@ -5282,6 +5282,9 @@ handle_input(struct ncplane* w){
 
   // FIXME can we not just throw lock_ and unlock_ around the entire stanza?
   while((ch = notcurses_getc_blocking(NC, &ni)) != (uint32_t)-1){
+    if(ni.evtype == NCTYPE_RELEASE){
+      continue;
+    }
     if(ch == 'L' && ni.ctrl){
       lock_notcurses();
       notcurses_refresh(NC, NULL, NULL);
@@ -5312,7 +5315,7 @@ handle_input(struct ncplane* w){
         ch = ni.id;
       } // otherwise, continue through with selected item
     }
-    if(ch == NCKEY_BUTTON1 && (ni.evtype == NCTYPE_RELEASE || ni.evtype == NCTYPE_UNKNOWN)){
+    if(ch == NCKEY_BUTTON1 && (ni.evtype == NCTYPE_PRESS || ni.evtype == NCTYPE_UNKNOWN)){
       if(ncmenu_mouse_selected(mainmenu, &ni, &ni) == NULL){
         continue;
       } // otherwise, continue through with selected item
