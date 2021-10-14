@@ -65,7 +65,7 @@ typedef struct growlight_ui {
 const glightui *get_glightui(void);
 
 int growlight_init(int,char * const *,const glightui *,int *);
-int growlight_stop(void);
+int growlight_stop(int retcode);
 
 struct device;
 

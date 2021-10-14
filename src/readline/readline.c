@@ -2173,15 +2173,15 @@ int main(int argc, char * const *argv){
   const uint64_t flags = NCDIRECT_OPTION_INHIBIT_SETLOCALE;
   if((ncd = ncdirect_init(NULL, NULL, flags)) == NULL){
     fprintf(stderr, "Couldn't set up notcurses\n");
-    growlight_stop();
+    growlight_stop(EXIT_FAILURE);
     return EXIT_FAILURE;
   }
   if(tty_ui()){
-    growlight_stop();
+    growlight_stop(EXIT_FAILURE);
     ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }
-  if(growlight_stop()){
+  if(growlight_stop(EXIT_SUCCESS)){
     ncdirect_stop(ncd);
     return EXIT_FAILURE;
   }

@@ -2104,11 +2104,13 @@ int growlight_init(int argc, char * const *argv, const glightui *ui, int *disphe
   return 0;
 
 err:
-  growlight_stop();
+  growlight_stop(-1);
   return -1;
 }
 
-int growlight_stop(void){
+// if calling this on some error path, pass in your non-zero retcode, so that
+// the closing diagnostic doesn't suggest success when we've already failed.
+int growlight_stop(int retcode){
   int r = 0;
 
   diag("Killing the event thread...\n");
@@ -2132,11 +2134,11 @@ int growlight_stop(void){
       return -1;
     }
   }
-  diag("Returning %d...\n", r);
-  if(r){
-    return -1;
+  if(retcode){
+    r = retcode;
   }
-  return 0;
+  diag("Returning %d...\n", r);
+  return r;
 }
 
 int rescan_controller(controller *c){

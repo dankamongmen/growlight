@@ -5932,7 +5932,7 @@ shutdown_cycle(void){
 
   diag("User-initiated shutdown\n");
   ps = show_splash(L"Shutting down...");
-  if(growlight_stop()){
+  if(growlight_stop(0)){
     kill_splash(ps);
     notcurses_stop(NC);
     dump_diags();
