@@ -856,7 +856,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
 
     ncplane_set_styles(n, NCSTYLE_BOLD);
     compat_set_fg(n, co);
-    qprefix(zs, 1, pre, 1);
+    ncqprefix(zs, 1, pre, 1);
     if(!d->mnt.count || swprintf(wbuf, wchars, L" %s%s%ls%s%ls%s%s%sat %s ",
       d->label ? "" : "nameless ",
       d->mnttype,
@@ -898,7 +898,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     compat_set_fg(n, EMPTY_COLOR);
     selstr = d->layout == LAYOUT_NONE ? "unpartitioned space" :
         "unpartitionable space";
-    snprintf(buf, sizeof(buf), " %s %s ", qprefix(d->size, 1, pre, 1), selstr) < (int)sizeof(buf);
+    snprintf(buf, sizeof(buf), " %s %s ", ncqprefix(d->size, 1, pre, 1), selstr) < (int)sizeof(buf);
     cmvwhline(n, y, sx, "∾", ex - sx + 1);
     ncplane_putwstr_yx(n, y, sx, L" ");
     ncplane_putstr_yx(n, y, sx + (ex - sx + 1 - strlen(buf)) / 2, buf);
@@ -920,7 +920,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
     ncplane_set_styles(n, NCSTYLE_NONE);
     wbuf[0] = L'\0';
     zs = (z->lsector - z->fsector + 1) * bo->d->logsec;
-    qprefix(zs, 1, pre, 1);
+    ncqprefix(zs, 1, pre, 1);
     if(z->p == NULL){ // unused space among partitions, or metadata
       int co = (z->rep == REP_METADATA ? METADATA_COLOR : EMPTY_COLOR);
       const char *repstr = z->rep == REP_METADATA ?
@@ -1109,7 +1109,7 @@ case LAYOUT_NONE:
         ncplane_on_styles(n, NCSTYLE_BOLD);
         ncplane_set_channels(n, ncchannels_reverse(origchannels));
       }
-      qprefix(bo->d->size, 1, buf, 0);
+      ncqprefix(bo->d->size, 1, buf, 0);
       cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
         bo->d->name,
         bo->d->model ? bo->d->model : "n/a",
@@ -1146,7 +1146,7 @@ case LAYOUT_MDADM:
           ncplane_on_styles(n, NCSTYLE_BOLD);
           ncplane_set_channels(n, ncchannels_reverse(origchannels));
         }
-        qprefix(bo->d->size, 1, buf, 0);
+        ncqprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
@@ -1177,7 +1177,7 @@ case LAYOUT_DM:
           ncplane_on_styles(n, NCSTYLE_BOLD);
           ncplane_set_channels(n, ncchannels_reverse(origchannels));
         }
-        qprefix(bo->d->size, 1, buf, 0);
+        ncqprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4.4s %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
@@ -1209,7 +1209,7 @@ case LAYOUT_ZPOOL:
           ncplane_on_styles(n, NCSTYLE_BOLD);
           ncplane_set_channels(n, ncchannels_reverse(origchannels));
         }
-        qprefix(bo->d->size, 1, buf, 0);
+        ncqprefix(bo->d->size, 1, buf, 0);
         cmvwprintw(n, line, 1, "%11.11s  %-16.16s %4ju %*s %4uB %-6.6s%-16.16s %4.4s %-*.*s",
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
@@ -1321,7 +1321,7 @@ case LAYOUT_ZPOOL:
     // to the left of the decimal point...very annoying
     if(io){
       char qbuf[BPREFIXSTRLEN + 1];
-      bprefix(io, 1, qbuf, 1);
+      ncbprefix(io, 1, qbuf, 1);
       cmvwprintw(n, sumline, -1, "%7.7s", qbuf); // might chop off 'i'
     }else{
       cmvwprintw(n, sumline, -1, " no i/o");
@@ -1418,17 +1418,17 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
 
       if(as->c->demand){
         cwprintw(nc, " (%sbps to chip, %sbps (%ju%%) demanded)",
-          qprefix(as->c->bandwidth, 1, buf, 1),
-          qprefix(as->c->demand, 1, dbuf, 1),
+          ncqprefix(as->c->bandwidth, 1, buf, 1),
+          ncqprefix(as->c->demand, 1, dbuf, 1),
           as->c->demand * 100 / as->c->bandwidth);
       }else{
         cwprintw(nc, " (%sbps to chip)",
-          qprefix(as->c->bandwidth, 1, buf, 1));
+                 ncqprefix(as->c->bandwidth, 1, buf, 1));
       }
     }else if(as->c->bus != BUS_VIRTUAL && as->c->demand){
       char dbuf[PREFIXSTRLEN + 1];
 
-      cwprintw(nc, " (%sbps demanded)", qprefix(as->c->demand, 1, dbuf, 1));
+      cwprintw(nc, " (%sbps demanded)", ncqprefix(as->c->demand, 1, dbuf, 1));
     }
     compat_set_fg(nc, bcolor);
     cwprintw(nc, "]");
@@ -3050,7 +3050,7 @@ detail_fs(struct ncplane* hw, const device* d, int row){
     char buf[BPREFIXSTRLEN + 1];
 
     ncplane_off_styles(hw, NCSTYLE_BOLD);
-    const char *size = d->mntsize ? bprefix(d->mntsize, 1, buf, 1) : "";
+    const char *size = d->mntsize ? ncbprefix(d->mntsize, 1, buf, 1) : "";
     cmvwprintw(hw, row, START_COL, "%*s%c ",
         BPREFIXFMT(size), d->mntsize ? 'B' : ' ');
     ncplane_on_styles(hw, NCSTYLE_BOLD);
@@ -3110,7 +3110,7 @@ update_details(struct ncplane* hw){
     ncplane_putstr(hw, c->biosver ? c->biosver : "Unknown");
     ncplane_on_styles(hw, NCSTYLE_BOLD);
     ncplane_putstr(hw, " Load: ");
-    qprefix(c->demand, 1, buf, 1);
+    ncqprefix(c->demand, 1, buf, 1);
     ncplane_off_styles(hw, NCSTYLE_BOLD);
     ncplane_putstr(hw, buf);
     ncplane_putstr(hw, "bps");
@@ -3129,7 +3129,7 @@ update_details(struct ncplane* hw){
     ncplane_putstr(hw, d->model ? d->model : "n/a");
     ncplane_putstr(hw, d->revision ? d->revision : "");
     ncplane_on_styles(hw, NCSTYLE_BOLD);
-    cwprintw(hw, " (%sB) S/N: ", bprefix(d->size, 1, buf, 1));
+    cwprintw(hw, " (%sB) S/N: ", ncbprefix(d->size, 1, buf, 1));
     ncplane_off_styles(hw, NCSTYLE_BOLD);
     ncplane_putstr(hw, sn ? sn : "n/a");
     ncplane_on_styles(hw, NCSTYLE_BOLD);
@@ -3158,7 +3158,7 @@ update_details(struct ncplane* hw){
       cwprintw(hw, " (");
       ncplane_off_styles(hw, NCSTYLE_BOLD);
       // FIXME throws -Wformat-truncation on gcc9
-      cwprintw(hw, "%sbps", qprefix(transbw, 1, buf, 1));
+      cwprintw(hw, "%sbps", ncqprefix(transbw, 1, buf, 1));
       ncplane_on_styles(hw, NCSTYLE_BOLD);
       cwprintw(hw, ")");
     }
@@ -3166,7 +3166,7 @@ update_details(struct ncplane* hw){
     cmvwprintw(hw, 3, START_COL, "%s: %s %s (%s) RO%c", d->name,
           d->model ? d->model : "n/a",
           d->revision ? d->revision : "n/a",
-          bprefix(d->size, 1, buf, 1),
+          ncbprefix(d->size, 1, buf, 1),
           d->roflag ? '+' : '-');
     if(d->layout == LAYOUT_MDADM){
       cwprintw(hw, " Stride: ");
@@ -3174,7 +3174,7 @@ update_details(struct ncplane* hw){
       if(d->mddev.stride == 0){
         ncplane_putstr(hw, "n/a");
       }else{
-        cwprintw(hw, "%sB", bprefix(d->mddev.stride, 1, buf, 1));
+        cwprintw(hw, "%sB", ncbprefix(d->mddev.stride, 1, buf, 1));
       }
       ncplane_on_styles(hw, NCSTYLE_BOLD);
       cwprintw(hw, " SWidth: ");
@@ -3220,7 +3220,7 @@ update_details(struct ncplane* hw){
   if(blockobj_unpartitionedp(b)){
     char ubuf[BPREFIXSTRLEN + 1];
 
-    bprefix(d->size, 1, ubuf, 1);
+    ncbprefix(d->size, 1, ubuf, 1);
     ncplane_off_styles(hw, NCSTYLE_BOLD);
     cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(ubuf));
     ncplane_on_styles(hw, NCSTYLE_BOLD);
@@ -3234,9 +3234,9 @@ update_details(struct ncplane* hw){
 
     if(b->zone->p){
       assert(b->zone->p->layout == LAYOUT_PARTITION);
-      bprefix(b->zone->p->partdev.alignment, 1, align, 1);
+      ncbprefix(b->zone->p->partdev.alignment, 1, align, 1);
       // FIXME limit length!
-      bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1, zbuf, 1);
+      ncbprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1, zbuf, 1);
       ncplane_off_styles(hw, NCSTYLE_BOLD);
       cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
       ncplane_on_styles(hw, NCSTYLE_BOLD);
@@ -3265,7 +3265,7 @@ update_details(struct ncplane* hw){
       // but not until we implement zones in core (bug 252)
       // or we'll need recreate alignment() etc here
       ncplane_off_styles(hw, NCSTYLE_BOLD);
-      bprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1);
+      ncbprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1);
       cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
       ncplane_on_styles(hw, NCSTYLE_BOLD);
       ncplane_off_styles(hw, NCSTYLE_BOLD);
@@ -3620,7 +3620,7 @@ detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
       continue;
     }
     cmvwhline(w, *row, START_COL, " ", cols - 2);
-    qprefix(d->mntsize, 1, buf, 0);
+    ncqprefix(d->mntsize, 1, buf, 0);
     cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s %*s %-*.*s",
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
@@ -3658,7 +3658,7 @@ detail_targets(struct ncplane* w, int* row, int both, const device* d){
       continue;
     }
     cmvwhline(w, *row, START_COL, " ", cols - 2);
-    qprefix(d->mntsize, 1, buf, 0);
+    ncqprefix(d->mntsize, 1, buf, 0);
     cmvwprintw(w, *row, START_COL, "%-*.*s %-5.5s %-36.36s %*s %-*.*s",
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
