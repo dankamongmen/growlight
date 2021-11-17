@@ -6108,7 +6108,7 @@ int main(int argc, char * const *argv){
   if((NC = notcurses_core_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
-  notcurses_mouse_enable(NC);
+  notcurses_mice_enable(NC, NCMICE_BUTTON_EVENT);
   int ydim, xdim;
   notcurses_stddim_yx(NC, &ydim, &xdim);
   struct ncplane_options nopts = {
