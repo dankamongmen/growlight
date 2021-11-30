@@ -115,16 +115,16 @@ err:
 // On success, we must free input desc (hence it not being const)
 static char *
 prefix_desc_with_size(const device *d,char *desc){
-	char s[BPREFIXSTRLEN],*uni;
+	char s[NCBPREFIXSTRLEN],*uni;
 	size_t sz;
 
-	bprefix(d->size, 1, s, 1);
-	// Might be a bit overspacious due to full BPREFIXSTRLEN, but who cares
+	ncbprefix(d->size, 1, s, 1);
+	// Might be a bit overspacious due to full NCBPREFIXSTRLEN, but who cares
 	sz = (sizeof(s) / sizeof(*s)) + strlen(desc) + 5; // '(' 'B' ')' ' ' '\0'
 	if((uni = malloc(sz)) == NULL){
 		return NULL;
 	}
-	if((unsigned)snprintf(uni,sz,"(%*sB) %s", BPREFIXFMT(s), desc) >= sz){
+	if((unsigned)snprintf(uni,sz,"(%*sB) %s", NCBPREFIXFMT(s), desc) >= sz){
 		free(uni);
 		return NULL;
 	}

@@ -616,7 +616,7 @@ bevel(struct ncplane* nc, int rows, int cols, bool drawtop, bool drawbot){
 
 static int
 bevel_all(struct ncplane* nc){
-  int rows, cols;
+  unsigned rows, cols;
   ncplane_dim_yx(nc, &rows, &cols);
   return bevel(nc, rows, cols, true, true);
 }
@@ -626,7 +626,7 @@ cmvwhline(struct ncplane* nc, int y, int x, const char* ch, int n){
   if(ncplane_cursor_move_yx(nc, y, x)){
     return -1;
   }
-  nccell c = CELL_TRIVIAL_INITIALIZER;
+  nccell c = NCCELL_TRIVIAL_INITIALIZER;
   if(nccell_load(nc, &c, ch) < 0){
     return -1;
   }
@@ -667,7 +667,7 @@ cwbkgd(struct ncplane* nc){
 
 static void
 draw_main_window(struct ncplane* n){
-  int rows, cols, x, y;
+  unsigned rows, cols, x, y;
   char buf[BUFSIZ];
 
   ncplane_set_bg_rgb8(n, 0xa0, 0xa0, 0xa0);
@@ -677,7 +677,6 @@ draw_main_window(struct ncplane* n){
   compat_set_fg(n, HEADER_COLOR);
   ncplane_putstr_yx(n, rows - 1, 0, buf);
   ncplane_cursor_yx(n, &y, &x);
-  assert(x >= 0);
   cols -= x + 1;
   ncplane_on_styles(n, NCSTYLE_BOLD);
   compat_set_fg(n, STATUS_COLOR);
@@ -767,7 +766,7 @@ redraw_subdisplay_border(const struct panel_state* ps){
   if(ps->hstr){
     ncplane_putstr_yx(n, 0, START_COL * 2, ps->hstr);
   }
-  int rows, cols;
+  unsigned rows, cols;
   ncplane_dim_yx(ps->n, &rows, &cols);
   if(ps->bstr){
     const int crightlen = ps->bstr ? strlen(ps->bstr) : 0;
@@ -783,8 +782,8 @@ static int
 new_display_panel(struct ncplane* nc, struct panel_state* ps,
                   int rows, int cols, const char* hstr,
                   const char* bstr, int borderpair){
-  int ybelow, yabove;
-  int x, y;
+  unsigned ybelow, yabove;
+  unsigned x, y;
 
   // Desired space above and below, which will be impugned upon as needed
   ybelow = 3;
@@ -832,7 +831,7 @@ hide_panel_locked(struct panel_state* ps){
 // Print the contents of the block device in a horizontal bar of arbitrary size
 static void
 print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int selected){
-  char pre[BPREFIXSTRLEN + 1];
+  char pre[NCBPREFIXSTRLEN + 1];
   const char *selstr = NULL;
   wchar_t wbuf[ex - sx + 2];
   const int wchars = sizeof(wbuf) / sizeof(*wbuf);
@@ -1048,7 +1047,7 @@ print_blockbar(struct ncplane* n, const blockobj* bo, int y, int sx, int ex, int
 static int
 print_dev(struct ncplane* n, const adapterstate* as, const blockobj* bo,
           int line, int rows, unsigned cols, bool drawfromtop){
-  char buf[BPREFIXSTRLEN + 1];
+  char buf[NCBPREFIXSTRLEN + 1];
   char rolestr[12]; // taken from %-11.11s below
   int co, rx;
 
@@ -1114,7 +1113,7 @@ case LAYOUT_NONE:
         bo->d->name,
         bo->d->model ? bo->d->model : "n/a",
         bo->d->revision ? bo->d->revision : "n/a",
-        PREFIXFMT(buf),
+        NCPREFIXFMT(buf),
         bo->d->physsec,
         bo->d->blkdev.pttable ? bo->d->blkdev.pttable : "none",
         bo->d->blkdev.wwn ? bo->d->blkdev.wwn : "n/a",
@@ -1151,7 +1150,7 @@ case LAYOUT_MDADM:
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          PREFIXFMT(buf),
+          NCPREFIXFMT(buf),
           bo->d->physsec,
           bo->d->mddev.pttable ? bo->d->mddev.pttable : "none",
           bo->d->mddev.mdname ? bo->d->mddev.mdname : "n/a",
@@ -1182,7 +1181,7 @@ case LAYOUT_DM:
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           bo->d->revision ? bo->d->revision : "n/a",
-          PREFIXFMT(buf),
+          NCPREFIXFMT(buf),
           bo->d->physsec,
           bo->d->dmdev.pttable ? bo->d->dmdev.pttable : "none",
           bo->d->dmdev.dmname ? bo->d->dmdev.dmname : "n/a",
@@ -1214,7 +1213,7 @@ case LAYOUT_ZPOOL:
           bo->d->name,
           bo->d->model ? bo->d->model : "n/a",
           (uintmax_t)bo->d->zpool.zpoolver,
-          PREFIXFMT(buf),
+          NCPREFIXFMT(buf),
           bo->d->physsec,
           "spa",
           "n/a",  // FIXME
@@ -1320,7 +1319,7 @@ case LAYOUT_ZPOOL:
     // FIXME 'i' shows up only when there are fewer than 3 sigfigs
     // to the left of the decimal point...very annoying
     if(io){
-      char qbuf[BPREFIXSTRLEN + 1];
+      char qbuf[NCBPREFIXSTRLEN + 1];
       ncbprefix(io, 1, qbuf, 1);
       cmvwprintw(n, sumline, -1, "%7.7s", qbuf); // might chop off 'i'
     }else{
@@ -1380,7 +1379,8 @@ static void
 adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
             bool drawbot, int rows){
   int current = as == get_current_adapter();
-  int bcolor, hcolor, cols;
+  int bcolor, hcolor;
+  unsigned cols;
   int attrs;
 
   ncplane_dim_yx(nc, NULL, &cols);
@@ -1414,7 +1414,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
       cwprintw(nc, " [%d]", as->c->numa_node);
     }
     if(as->c->bandwidth){
-      char buf[PREFIXSTRLEN + 1], dbuf[PREFIXSTRLEN + 1];
+      char buf[NCPREFIXSTRLEN + 1], dbuf[NCPREFIXSTRLEN + 1];
 
       if(as->c->demand){
         cwprintw(nc, " (%sbps to chip, %sbps (%ju%%) demanded)",
@@ -1426,7 +1426,7 @@ adapter_box(const adapterstate* as, struct ncplane* nc, bool drawtop,
                  ncqprefix(as->c->bandwidth, 1, buf, 1));
       }
     }else if(as->c->bus != BUS_VIRTUAL && as->c->demand){
-      char dbuf[PREFIXSTRLEN + 1];
+      char dbuf[NCPREFIXSTRLEN + 1];
 
       cwprintw(nc, " (%sbps demanded)", ncqprefix(as->c->demand, 1, dbuf, 1));
     }
@@ -1475,7 +1475,7 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   int p;
 
   // First, print the selected device (if there is one), and those above
-  int rows, cols;
+  unsigned rows, cols;
   ncplane_dim_yx(n, &rows, &cols);
   --rows;
   cur = as->selected;
@@ -1673,7 +1673,8 @@ static void
 multiform_options(struct form_state *fs){
   const struct form_option *opstrs = fs->ops;
   struct ncplane* fsw = fs->p;
-  int z, cols, selidx, maxz;
+  unsigned cols, selidx;
+  int maxz;
 
   assert(fs->formtype == FORM_MULTISELECT);
   ncplane_dim_yx(fsw, &maxz, &cols);
@@ -1682,7 +1683,7 @@ multiform_options(struct form_state *fs){
   ncplane_putwstr_yx(fsw, 1, 1, L"╭");
   ncplane_putwstr_yx(fsw, 1, fs->longop + 4, L"╮");
   maxz -= 3;
-  for(z = 1 ; z < maxz ; ++z){
+  for(unsigned z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
@@ -1717,7 +1718,7 @@ multiform_options(struct form_state *fs){
   }
   compat_set_fg(fsw, FORMBORDER_COLOR);
   ncplane_on_styles(fsw, NCSTYLE_BOLD);
-  for(z = 0 ; z < fs->selections ; ++z){
+  for(unsigned z = 0 ; z < fs->selections ; ++z){
     ncplane_putstr_yx(fsw, z >= fs->selectno ? 3 + z : 2 + z, 4, fs->selarray[z]);
   }
   ncplane_putwstr_yx(fsw, fs->selectno + 2, 1, L"╰");
@@ -1727,14 +1728,15 @@ multiform_options(struct form_state *fs){
 static void
 check_options(struct form_state *fs){
   const struct form_option *opstrs = fs->ops;
-  int z, cols, selidx, maxz;
+  unsigned cols, selidx;
+  int maxz;
 
   assert(fs->formtype == FORM_CHECKBOXEN);
   ncplane_dim_yx(fs->p, &maxz, &cols);
   maxz -= 3;
   compat_set_fg(fs->p, FORMBORDER_COLOR);
   ncplane_on_styles(fs->p, NCSTYLE_BOLD);
-  for(z = 1 ; z < maxz ; ++z){
+  for(unsigned z = 1 ; z < maxz ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
@@ -1771,14 +1773,14 @@ check_options(struct form_state *fs){
 static void
 form_options(struct form_state *fs){
   const struct form_option *opstrs = fs->ops;
-  int z, cols, rows;
+  unsigned cols, rows;
 
   if(fs->formtype != FORM_SELECT){
     return;
   }
   ncplane_dim_yx(fs->p, &rows, &cols);
   ncplane_on_styles(fs->p, NCSTYLE_BOLD);
-  for(z = 1 ; z < rows - 3 ; ++z){
+  for(unsigned z = 1 ; z < rows - 3 ; ++z){
     int op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
@@ -1873,8 +1875,8 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
     int scrollidx){
   size_t longop, longdesc;
   struct form_state *fs;
-  int cols, rows;
-  int x, y;
+  unsigned cols, rows;
+  unsigned x, y;
 
   assert(ops);
   assert(opstrs);
@@ -3047,12 +3049,12 @@ deselect_adapter_locked(void){
 static void
 detail_fs(struct ncplane* hw, const device* d, int row){
   if(d->mnttype){
-    char buf[BPREFIXSTRLEN + 1];
+    char buf[NCBPREFIXSTRLEN + 1];
 
     ncplane_off_styles(hw, NCSTYLE_BOLD);
     const char *size = d->mntsize ? ncbprefix(d->mntsize, 1, buf, 1) : "";
     cmvwprintw(hw, row, START_COL, "%*s%c ",
-        BPREFIXFMT(size), d->mntsize ? 'B' : ' ');
+        NCBPREFIXFMT(size), d->mntsize ? 'B' : ' ');
     ncplane_on_styles(hw, NCSTYLE_BOLD);
     cwprintw(hw, "%s%s", d->label ? "" : "unlabeled ", d->mnttype);
     if(d->label){
@@ -3072,8 +3074,8 @@ detail_fs(struct ncplane* hw, const device* d, int row){
 static int
 update_details(struct ncplane* hw){
   const controller* c = get_current_controller();
-  char buf[BPREFIXSTRLEN + 1];
-  int cols, rows, curcol, n;
+  char buf[NCBPREFIXSTRLEN + 1];
+  unsigned cols, rows, curcol;
   const char* pttype;
   const blockobj* b;
   const device* d;
@@ -3089,7 +3091,7 @@ update_details(struct ncplane* hw){
   if(rows == 0){
     return 0;
   }
-  for(n = 1 ; n < rows - 1 ; ++n){
+  for(unsigned n = 1 ; n < rows - 1 ; ++n){
     cmvwhline(hw, n, START_COL, " ", cols - 2);
   }
   ncplane_set_styles(hw, NCSTYLE_BOLD);
@@ -3218,19 +3220,19 @@ update_details(struct ncplane* hw){
     return 0;
   }
   if(blockobj_unpartitionedp(b)){
-    char ubuf[BPREFIXSTRLEN + 1];
+    char ubuf[NCBPREFIXSTRLEN + 1];
 
     ncbprefix(d->size, 1, ubuf, 1);
     ncplane_off_styles(hw, NCSTYLE_BOLD);
-    cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(ubuf));
+    cmvwprintw(hw, 6, START_COL, "%*sB ", NCBPREFIXFMT(ubuf));
     ncplane_on_styles(hw, NCSTYLE_BOLD);
     cwprintw(hw, "%s", "unpartitioned media");
     detail_fs(hw, b->d, 7);
     return 0;
   }
   if(b->zone){
-    char align[BPREFIXSTRLEN + 1];
-    char zbuf[BPREFIXSTRLEN + 1];
+    char align[NCBPREFIXSTRLEN + 1];
+    char zbuf[NCBPREFIXSTRLEN + 1];
 
     if(b->zone->p){
       assert(b->zone->p->layout == LAYOUT_PARTITION);
@@ -3238,7 +3240,7 @@ update_details(struct ncplane* hw){
       // FIXME limit length!
       ncbprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1),1, zbuf, 1);
       ncplane_off_styles(hw, NCSTYLE_BOLD);
-      cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
+      cmvwprintw(hw, 6, START_COL, "%*sB ", NCBPREFIXFMT(zbuf));
       ncplane_on_styles(hw, NCSTYLE_BOLD);
       cwprintw(hw, "P%lc%lc ", subscript((b->zone->p->partdev.pnumber % 100 / 10)),
           subscript((b->zone->p->partdev.pnumber % 10)));
@@ -3266,7 +3268,7 @@ update_details(struct ncplane* hw){
       // or we'll need recreate alignment() etc here
       ncplane_off_styles(hw, NCSTYLE_BOLD);
       ncbprefix(d->logsec * (b->zone->lsector - b->zone->fsector + 1), 1, zbuf, 1);
-      cmvwprintw(hw, 6, START_COL, "%*sB ", BPREFIXFMT(zbuf));
+      cmvwprintw(hw, 6, START_COL, "%*sB ", NCBPREFIXFMT(zbuf));
       ncplane_on_styles(hw, NCSTYLE_BOLD);
       ncplane_off_styles(hw, NCSTYLE_BOLD);
       cwprintw(hw, "%ju", b->zone->fsector);
@@ -3479,7 +3481,7 @@ dump_diags(void){
 static int
 update_diags(struct panel_state *ps){
   logent l[DIAGROWS];
-  int y, x, r;
+  unsigned y, x;
 
   ncplane_dim_yx(ps->n, &y, &x);
   y -= 2;
@@ -3489,7 +3491,7 @@ update_diags(struct panel_state *ps){
   }
   ncplane_set_styles(ps->n, NCSTYLE_BOLD);
   compat_set_fg(ps->n, SUBDISPLAY_COLOR);
-  for(r = 0 ; r < y ; ++r){
+  for(unsigned r = 0 ; r < y ; ++r){
     char *c, tbuf[x];
     struct tm tm;
     size_t tb;
@@ -3605,14 +3607,13 @@ err:
 }
 
 static void
-detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
-  char buf[PREFIXSTRLEN + 1], b[256];
-  int cols, r;
-  unsigned z;
+detail_mounts(struct ncplane* w, unsigned* row, int maxy, const device* d){
+  char buf[NCPREFIXSTRLEN + 1], b[256];
+  unsigned cols, r;
 
   ncplane_dim_yx(w, NULL, &cols);
   assert(d->mnt.count == d->mntops.count);
-  for(z = 0 ; z < d->mnt.count ; ++z){
+  for(unsigned z = 0 ; z < d->mnt.count ; ++z){
     if(*row == maxy){
       return;
     }
@@ -3625,9 +3626,9 @@ detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
-        PREFIXFMT(buf),
-        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
-        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
+        NCPREFIXFMT(buf),
+        cols - (FSLABELSIZ + 47 + NCPREFIXCOLUMNS),
+        cols - (FSLABELSIZ + 47 + NCPREFIXCOLUMNS),
         d->name);
     if(++*row == maxy){
       return;
@@ -3644,9 +3645,9 @@ detail_mounts(struct ncplane* w, int* row, int maxy, const device* d){
 }
 
 static void
-detail_targets(struct ncplane* w, int* row, int both, const device* d){
-  char buf[PREFIXSTRLEN + 1], b[256]; // FIXME uhhhh
-  int cols, r;
+detail_targets(struct ncplane* w, unsigned* row, int both, const device* d){
+  char buf[NCPREFIXSTRLEN + 1], b[256]; // FIXME uhhhh
+  unsigned cols, r;
   unsigned z;
 
   ncplane_dim_yx(w, NULL, &cols);
@@ -3663,9 +3664,9 @@ detail_targets(struct ncplane* w, int* row, int both, const device* d){
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype,
         d->uuid ? d->uuid : "n/a",
-        PREFIXFMT(buf),
-        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
-        cols - (FSLABELSIZ + 47 + PREFIXCOLUMNS),
+        NCPREFIXFMT(buf),
+        cols - (FSLABELSIZ + 47 + NCPREFIXCOLUMNS),
+        cols - (FSLABELSIZ + 47 + NCPREFIXCOLUMNS),
         d->name);
     ++*row;
     if(!both){
@@ -3685,7 +3686,7 @@ detail_targets(struct ncplane* w, int* row, int both, const device* d){
 
 static int
 map_details(struct ncplane *hw){
-  int y, rows, cols, curcol;
+  unsigned y, rows, cols, curcol;
   const controller *c;
   char *fstab;
 
@@ -3741,7 +3742,7 @@ map_details(struct ncplane *hw){
   cmvwhline(hw, y, 1, " ", cols - 2);
   cmvwprintw(hw, y, 1, "%-*.*s %-5.5s %-36.36s %*s %s",
       FSLABELSIZ, FSLABELSIZ, "Label",
-      "Type", "UUID", PREFIXFMT("Bytes"), "Device");
+      "Type", "UUID", NCPREFIXFMT("Bytes"), "Device");
   if(++y >= rows){
     return 0;
   }
@@ -3796,7 +3797,7 @@ map_details(struct ncplane *hw){
 static int
 display_maps(struct ncplane* mainw, struct panel_state* ps){
   // FIXME compute based off number of maps + targets
-  int rows;
+  unsigned rows;
   ncplane_dim_yx(mainw, &rows, NULL);
   rows -= 15;
 
@@ -5060,8 +5061,9 @@ handle_actform_input(wchar_t ch){
       break;
     }case NCKEY_DOWN: case 'j':{
       lock_notcurses();
-      int maxz;
-      ncplane_dim_yx(fs->p, &maxz, NULL);
+      unsigned umaxz;
+      ncplane_dim_yx(fs->p, &umaxz, NULL);
+      int maxz = umaxz;
       maxz = maxz - 5 >= fs->opcount - 1 ? fs->opcount - 1 : maxz - 5;
       if(fs->idx == (fs->scrolloff + maxz) % fs->opcount){
         if(++fs->scrolloff >= fs->opcount){
@@ -5281,7 +5283,7 @@ handle_input(struct ncplane* w){
   int r;
 
   // FIXME can we not just throw lock_ and unlock_ around the entire stanza?
-  while((ch = notcurses_getc_blocking(NC, &ni)) != (uint32_t)-1){
+  while((ch = notcurses_get_blocking(NC, &ni)) != (uint32_t)-1){
     if(ni.evtype == NCTYPE_RELEASE){
       continue;
     }
@@ -5295,7 +5297,7 @@ handle_input(struct ncplane* w){
     if(ch == NCKEY_RESIZE){
       lock_notcurses();
       struct ncplane *ncp = ncreel_plane(PR);
-      int dimy, dimx;
+      unsigned dimy, dimx;
       notcurses_refresh(NC, &dimy, &dimx);
       ncplane_resize_simple(ncp, dimy - 2, dimx);
       locked_diag("resized to %dx%d", dimx, dimy);
@@ -5670,7 +5672,7 @@ adapter_callback(controller *a, void *state){
   if((as = state) == NULL){
     if(a->blockdevs){
       if( (state = as = create_adapter_state(a)) ){
-        int rows, cols;
+        unsigned rows, cols;
 
 //fprintf(stderr, "NEW ADAPTER STATE ASSIGNED %s %p\n", as->c->name, as);
         notcurses_term_dim_yx(NC, &rows, &cols);
@@ -5951,9 +5953,9 @@ shutdown_cycle(void){
 
 static void raise_info_form(const char *str, const char *text){
   struct form_state *fs;
+  unsigned x, y;
   int lineguess;
   int cols;
-  int x, y;
 
   assert(str && text);
   if(actform){
@@ -6109,7 +6111,7 @@ int main(int argc, char * const *argv){
     return EXIT_FAILURE;
   }
   notcurses_mice_enable(NC, NCMICE_BUTTON_EVENT);
-  int ydim, xdim;
+  unsigned ydim, xdim;
   notcurses_stddim_yx(NC, &ydim, &xdim);
   struct ncplane_options nopts = {
     .y = 1, .x = 0, .rows = ydim - 2, .cols = xdim,

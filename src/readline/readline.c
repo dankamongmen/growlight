@@ -240,16 +240,16 @@ static int print_dev_mplex(const device *, int, int);
 
 static int
 print_mounts(const device *d){
-  char buf[PREFIXSTRLEN + 1];
+  char buf[NCPREFIXSTRLEN + 1];
   int r = 0, rr;
   unsigned z;
 
   for(z = 0 ; z < d->mnt.count ; ++z){
-    const char *size = d->mntsize ? qprefix(d->mntsize, 1, buf, 0) : "";
+    const char *size = d->mntsize ? ncqprefix(d->mntsize, 1, buf, 0) : "";
     r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s %*s\n %s %s\n",
         FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
         d->mnttype, d->uuid ? d->uuid : "n/a", d->name,
-        PREFIXFMT(size), d->mnt.list[z], d->mntops.list[z]);
+        NCPREFIXFMT(size), d->mnt.list[z], d->mntops.list[z]);
     if(rr < 0){
       return -1;
     }
@@ -259,15 +259,15 @@ print_mounts(const device *d){
 
 static int
 print_swap(const device *p){
-  char buf[PREFIXSTRLEN + 1];
+  char buf[NCPREFIXSTRLEN + 1];
   int r = 0, rr;
 
   assert(p->mnttype);
-  qprefix(p->mntsize, 1, buf, 0),
+  ncqprefix(p->mntsize, 1, buf, 0),
   r += rr = printf("%-*.*s %-5.5s %-36.36s %-6.6s %*s",
       FSLABELSIZ, FSLABELSIZ, p->label ? p->label : "n/a",
       p->mnttype, p->uuid ? p->uuid : "n/a",
-      p->name, PREFIXFMT(buf));
+      p->name, NCPREFIXFMT(buf));
   if(rr < 0){
     return -1;
   }
@@ -308,7 +308,7 @@ print_fs(const device *p, int descend){
 
 static int
 print_empty(uint64_t fsect, uint64_t lsect, size_t sectsize){
-  char buf[BPREFIXSTRLEN + 1];
+  char buf[NCBPREFIXSTRLEN + 1];
   int r = 0, rr;
 
   //assert(fsect <= lsect);
@@ -318,7 +318,7 @@ print_empty(uint64_t fsect, uint64_t lsect, size_t sectsize){
   use_terminfo_color(COLOR_GREEN, 0);
   r += rr = printf("Unused sectors %ju:%ju (%s)\n",
                    (uintmax_t)fsect, (uintmax_t)lsect,
-                   bprefix((lsect - fsect + 1) * sectsize, 1, buf, 1));
+                   ncbprefix((lsect - fsect + 1) * sectsize, 1, buf, 1));
   if(rr < 0){
     return -1;
   }
@@ -327,14 +327,14 @@ print_empty(uint64_t fsect, uint64_t lsect, size_t sectsize){
 
 static int
 print_partition(const device *p, int descend){
-  char buf[PREFIXSTRLEN + 1];
+  char buf[NCPREFIXSTRLEN + 1];
   int r = 0, rr;
 
   use_terminfo_color(COLOR_BLUE, 1);
-  qprefix(p->size, 1, buf, 0);
+  ncqprefix(p->size, 1, buf, 0);
   r += rr = printf("%-10.10s %-36.36s %*s %-3.3s %ls\n",
                    p->name, p->partdev.uuid ? p->partdev.uuid : "n/a",
-                   PREFIXFMT(buf),
+                   NCPREFIXFMT(buf),
                    partrole_str(p->partdev.ptype, p->partdev.flags),
                    p->partdev.pname ? p->partdev.pname : L"n/a");
   if(rr < 0){
@@ -380,7 +380,7 @@ print_drive_stats_identified(const device *d) {
 
 static int
 print_drive(const device *d, int descend){
-  char buf[PREFIXSTRLEN + 1];
+  char buf[NCPREFIXSTRLEN + 1];
   uint64_t sector;
   const device *p;
   int r = 0, rr;
@@ -398,12 +398,12 @@ print_drive(const device *d, int descend){
     }else{
       use_terminfo_color(COLOR_MAGENTA, 1); // virtual
     }
-    qprefix(d->size, 1, buf, 0);
+    ncqprefix(d->size, 1, buf, 0);
     r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %ls%ls%ls%ls%ls %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
-      PREFIXFMT(buf),
+      NCPREFIXFMT(buf),
       d->physsec,
       d->blkdev.unloaded ? L"U" :
        d->blkdev.removable ? L"R" :
@@ -425,12 +425,12 @@ print_drive(const device *d, int descend){
     break;
   }case LAYOUT_MDADM:{
     use_terminfo_color(COLOR_YELLOW, 1);
-    qprefix(d->size, 1, buf, 0);
+    ncqprefix(d->size, 1, buf, 0);
     r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %ls%ls%ls%ls%ls %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
-      PREFIXFMT(buf),
+      NCPREFIXFMT(buf),
       d->physsec, L"V", L"M", L".",
       d->roflag ? L"r" : L".", L".",
       d->mddev.pttable ? d->mddev.pttable : "none",
@@ -440,12 +440,12 @@ print_drive(const device *d, int descend){
     break;
   }case LAYOUT_DM:{
     use_terminfo_color(COLOR_YELLOW, 1);
-    qprefix(d->size, 1, buf, 0);
+    ncqprefix(d->size, 1, buf, 0);
     r += rr = printf("%-10.10s %-16.16s %4.4s %*s %4uB %ls%ls%ls%ls%ls %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       d->revision ? d->revision : "n/a",
-      PREFIXFMT(buf),
+      NCPREFIXFMT(buf),
       d->physsec, L"V", L"D", L".",
       d->roflag ? L"r" : L".", L".",
       "n/a",
@@ -455,12 +455,12 @@ print_drive(const device *d, int descend){
     break;
   }case LAYOUT_ZPOOL:{
     use_terminfo_color(COLOR_RED, 1);
-    qprefix(d->size, 1, buf, 0);
+    ncqprefix(d->size, 1, buf, 0);
     r += rr = printf("%-10.10s %-16.16s %4ju %*s %4uB %ls%ls%ls%ls%ls %-6.6s%-16.16s %-4.4s\n",
       d->name,
       d->model ? d->model : "n/a",
       (uintmax_t)d->zpool.zpoolver,
-      PREFIXFMT(buf),
+      NCPREFIXFMT(buf),
       d->physsec, L"V", L"Z", L".",
       d->roflag ? L"r" : L".", L".",
       "spa",
@@ -513,17 +513,17 @@ print_drive(const device *d, int descend){
 
 static int
 print_zpool(const device *d, int descend){
-  char buf[PREFIXSTRLEN + 1];
+  char buf[NCPREFIXSTRLEN + 1];
   int r = 0, rr;
 
   if(d->layout != LAYOUT_ZPOOL){
     return 0;
   }
-  qprefix(d->size, 1, buf, 0);
+  ncqprefix(d->size, 1, buf, 0);
   r += rr = printf("%-10.10s %-36.36s %*s %4uB ZFS%2ju %5lu %-6.6s\n",
       d->name,
       d->uuid ? d->uuid : "n/a",
-      PREFIXFMT(buf), d->physsec, d->zpool.zpoolver,
+      NCPREFIXFMT(buf), d->physsec, d->zpool.zpoolver,
       d->zpool.disks, d->zpool.level ? d->zpool.level : "n/a"
       );
   if(rr < 0){
@@ -537,7 +537,7 @@ print_zpool(const device *d, int descend){
 
 static int
 print_dm(const device *d, int prefix, int descend){
-  char buf[PREFIXSTRLEN + 1];
+  char buf[NCPREFIXSTRLEN + 1];
   const mdslave *md;
   int r = 0, rr;
 
@@ -545,12 +545,12 @@ print_dm(const device *d, int prefix, int descend){
     return 0;
   }
   use_terminfo_color(COLOR_YELLOW, 1);
-  qprefix(d->size, 1, buf, 0);
+  ncqprefix(d->size, 1, buf, 0);
   r += rr = printf("%-*.*s%-10.10s %-36.36s %*s %4uB %-6.6s%5lu %-6.6s\n",
       prefix, prefix, "",
       d->name,
       d->uuid ? d->uuid : "n/a",
-      PREFIXFMT(buf), d->physsec, "n/a",
+      NCPREFIXFMT(buf), d->physsec, "n/a",
       d->dmdev.disks, d->dmdev.level ? d->dmdev.level : "n/a"
       );
   if(rr < 0){
@@ -588,7 +588,7 @@ print_dm(const device *d, int prefix, int descend){
 
 static int
 print_mdadm(const device *d, int prefix, int descend){
-  char buf[PREFIXSTRLEN + 1];
+  char buf[NCPREFIXSTRLEN + 1];
   const mdslave *md;
   int r = 0, rr;
 
@@ -596,12 +596,12 @@ print_mdadm(const device *d, int prefix, int descend){
     return 0;
   }
   use_terminfo_color(COLOR_YELLOW, 1);
-  qprefix(d->size, 1, buf, 0);
+  ncqprefix(d->size, 1, buf, 0);
   r += rr = printf("%-*.*s%-10.10s %-36.36s %*s %4uB %-6.6s%5lu %-6.6s\n",
       prefix, prefix, "",
       d->name,
       d->uuid ? d->uuid : "n/a",
-      PREFIXFMT(buf),
+      NCPREFIXFMT(buf),
       d->physsec, "n/a",
       d->mddev.disks, d->mddev.level ? d->mddev.level : "n/a");
   if(rr < 0){
@@ -668,13 +668,13 @@ print_controller(const controller *c, int descend){
           c->ident, c->pcie.domain, c->pcie.bus,
           c->pcie.dev, c->pcie.func);
       }else{
-        char buf[PREFIXSTRLEN + 1];
+        char buf[NCPREFIXSTRLEN + 1];
 
         r += rr = printf("[%s] PCI Express %04x:%02x.%02x.%x (gen %s x%u, %sbps)\n ",
           c->ident, c->pcie.domain, c->pcie.bus,
           c->pcie.dev, c->pcie.func,
           pcie_gen(c->pcie.gen), c->pcie.lanes_neg,
-          qprefix(c->bandwidth, 1, buf, 1));
+          ncqprefix(c->bandwidth, 1, buf, 1));
       }
       break;
     case BUS_VIRTUAL:
@@ -809,7 +809,7 @@ zpool(wchar_t * const *args, const char *arghelp){
     return 0;
   }
   printf("%-10.10s %-36.36s %*s %5.5s %-6.6s%-6.6s%-6.6s\n",
-         "Device", "UUID", PREFIXFMT("Bytes"), "AShft", "Fmt", "Disks", "Level");
+         "Device", "UUID", NCPREFIXFMT("Bytes"), "AShft", "Fmt", "Disks", "Level");
   if(walk_devices(print_zpool, descend)){
     return -1;
   }
@@ -872,7 +872,7 @@ mdadm(wchar_t * const *args, const char *arghelp){
     return -1;
   }
   printf("%-10.10s %-36.36s %*s %5.5s %-6.6s%-6.6s%-6.6s\n",
-      "Device", "UUID", PREFIXFMT("Bytes"), "PSect", "Table", "Disks", "Level");
+      "Device", "UUID", NCPREFIXFMT("Bytes"), "PSect", "Table", "Disks", "Level");
   for(c = get_controllers() ; c ; c = c->next){
     device *d;
 
@@ -935,7 +935,7 @@ blockdev_dump(int descend){
   const controller *c;
 
   printf("%-10.10s %-16.16s %4.4s %*s %5.5s Flags %-6.6s%-16.16s %-4.4s\n",
-      "Device", "Model", "Rev", PREFIXFMT("Bytes"), "PSect", "Table", "WWN", "PHY");
+      "Device", "Model", "Rev", NCPREFIXFMT("Bytes"), "PSect", "Table", "WWN", "PHY");
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -1323,7 +1323,7 @@ partition(wchar_t * const *args, const char *arghelp){
     return -1;
   }
   printf("%-10.10s %-36.36s %*s %-4.4s %s\n",
-      "Partition", "UUID", PREFIXFMT("Bytes"), "Role", "Name");
+      "Partition", "UUID", NCPREFIXFMT("Bytes"), "Role", "Name");
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -1347,7 +1347,7 @@ mounts(wchar_t * const *args, const char *arghelp){
   ZERO_ARG_CHECK(args, arghelp);
   printf("%-*.*s %-5.5s %-36.36s %s %*s\n",
       FSLABELSIZ, FSLABELSIZ, "Label",
-      "Type", "UUID", "Device", PREFIXFMT("Bytes"));
+      "Type", "UUID", "Device", NCPREFIXFMT("Bytes"));
   for(c = get_controllers() ; c ; c = c->next){
     const device *d;
 
@@ -1421,7 +1421,7 @@ map(wchar_t * const *args, const char *arghelp){
 
 static int
 print_swaps(const device *d, int descend){
-  char buf[PREFIXSTRLEN + 1];
+  char buf[NCPREFIXSTRLEN + 1];
   int rr, r = 0;
 
   if(descend){
@@ -1430,11 +1430,11 @@ print_swaps(const device *d, int descend){
   if(d->swapprio == SWAP_INVALID){
     return 0;
   }
-  qprefix(d->mntsize, 1, buf, 0);
+  ncqprefix(d->mntsize, 1, buf, 0);
   r += rr = printf("%-*.*s %-5d %-36.36s %s %*s\n",
       FSLABELSIZ, FSLABELSIZ, d->label ? d->label : "n/a",
       d->swapprio, d->uuid ? d->uuid : "n/a",
-      d->name, PREFIXFMT(buf));
+      d->name, NCPREFIXFMT(buf));
   if(rr < 0){
     return -1;
   }
@@ -1445,7 +1445,7 @@ static inline int
 fs_dump(int descend){
   printf("%-*.*s %-5.5s %-36.36s %s %*s\n",
          FSLABELSIZ, FSLABELSIZ, "Label",
-         "Type", "UUID", "Device", PREFIXFMT("Bytes"));
+         "Type", "UUID", "Device", NCPREFIXFMT("Bytes"));
   if(walk_devices(print_fs, descend)){
     return -1;
   }
@@ -1547,7 +1547,7 @@ swap(wchar_t * const *args, const char *arghelp){
   device *d;
   if(!args[1]){
     if(printf("%-*.*s %-5.5s %-36.36s %s %*s\n", FSLABELSIZ, FSLABELSIZ,
-          "Label", "Prio", "UUID", "Device", PREFIXFMT("Bytes")) < 0){
+          "Label", "Prio", "UUID", "Device", NCPREFIXFMT("Bytes")) < 0){
       return -1;
     }
     if(walk_devices(print_swaps, 0)){
