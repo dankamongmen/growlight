@@ -178,12 +178,12 @@ struct form_state {
       //   idx == scrollidx -> display at top
       //   idx == scrollidx + ysize - 4 -> display at bottom
       //
-      int idx;    // selection index
-      int scrolloff;    // scroll offset
+      unsigned idx;    // selection index
+      unsigned scrolloff;    // scroll offset
       struct form_option *ops;// form_option array for *this instance*
-      int opcount;    // total number of ops
-      int selectno;    // number of selections, total
-      int selections;    // number of active selections
+      unsigned opcount;  // total number of ops
+      unsigned selectno; // number of selections, total
+      unsigned selections;    // number of active selections
       char** selarray;  // array of selections by name
     };
     struct form_input inp;  // form_input state for this instance
@@ -1475,8 +1475,9 @@ print_adapter_devs(struct ncplane* n, const adapterstate *as, bool drawfromtop){
   int p;
 
   // First, print the selected device (if there is one), and those above
-  unsigned rows, cols;
-  ncplane_dim_yx(n, &rows, &cols);
+  unsigned urows, cols;
+  ncplane_dim_yx(n, &urows, &cols);
+  int rows = urows;
   --rows;
   cur = as->selected;
   line = as->selline;
@@ -1574,7 +1575,7 @@ struct panel_state* show_splash(const wchar_t* msg){
     free(ps);
     return NULL;
   }
-  int cols;
+  unsigned cols;
   ncplane_dim_yx(ps->n, NULL, &cols);
   ncplane_set_styles(ps->n, NCSTYLE_BOLD);
   compat_set_fg(ps->n, SPLASHTEXT_COLOR);
@@ -1624,8 +1625,6 @@ create_form(const char* str, void (*fxn)(const char*), form_enum ftype, int scro
 static void
 destroy_form_locked(struct form_state* fs){
   if(fs){
-    int z;
-
     assert(fs == actform);
     ncplane_destroy(fs->p);
     fs->p = NULL;
@@ -1636,7 +1635,7 @@ destroy_form_locked(struct form_state* fs){
       case FORM_SELECT:
       case FORM_MULTISELECT:
       case FORM_CHECKBOXEN:
-        for(z = 0 ; z < fs->opcount ; ++z){
+        for(unsigned z = 0 ; z < fs->opcount ; ++z){
           free(fs->ops[z].option);
           free(fs->ops[z].desc);
         }
@@ -1674,7 +1673,7 @@ multiform_options(struct form_state *fs){
   const struct form_option *opstrs = fs->ops;
   struct ncplane* fsw = fs->p;
   unsigned cols, selidx;
-  int maxz;
+  unsigned maxz;
 
   assert(fs->formtype == FORM_MULTISELECT);
   ncplane_dim_yx(fsw, &maxz, &cols);
@@ -1684,7 +1683,7 @@ multiform_options(struct form_state *fs){
   ncplane_putwstr_yx(fsw, 1, fs->longop + 4, L"╮");
   maxz -= 3;
   for(unsigned z = 1 ; z < maxz ; ++z){
-    int op = ((z - 1) + fs->scrolloff) % fs->opcount;
+    unsigned op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
@@ -1729,7 +1728,7 @@ static void
 check_options(struct form_state *fs){
   const struct form_option *opstrs = fs->ops;
   unsigned cols, selidx;
-  int maxz;
+  unsigned maxz;
 
   assert(fs->formtype == FORM_CHECKBOXEN);
   ncplane_dim_yx(fs->p, &maxz, &cols);
@@ -1737,7 +1736,7 @@ check_options(struct form_state *fs){
   compat_set_fg(fs->p, FORMBORDER_COLOR);
   ncplane_on_styles(fs->p, NCSTYLE_BOLD);
   for(unsigned z = 1 ; z < maxz ; ++z){
-    int op = ((z - 1) + fs->scrolloff) % fs->opcount;
+    unsigned op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
@@ -1781,7 +1780,7 @@ form_options(struct form_state *fs){
   ncplane_dim_yx(fs->p, &rows, &cols);
   ncplane_on_styles(fs->p, NCSTYLE_BOLD);
   for(unsigned z = 1 ; z < rows - 3 ; ++z){
-    int op = ((z - 1) + fs->scrolloff) % fs->opcount;
+    unsigned op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
     assert(op >= 0);
     assert(op < fs->opcount);
@@ -1803,7 +1802,7 @@ form_options(struct form_state *fs){
 
 static struct panel_state *
 raise_form_explication(struct ncplane* n, const char* text, int linesz){
-  int cols, x, y, brk, tot;
+  unsigned cols, x, y, brk, tot;
   int linepre[linesz - 1];
   int linelen[linesz - 1];
   struct panel_state *ps;
@@ -1848,7 +1847,7 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
   assert(!text[tot]);
   ps = malloc(sizeof(*ps));
   assert(ps);
-  int ncols;
+  unsigned ncols;
   ncplane_dim_yx(n, NULL, &ncols);
   struct ncplane_options nopts = {
     .y = linesz - (y + 2),
@@ -1870,8 +1869,8 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
 }
 
 void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, int),
-    struct form_option *opstrs, int ops, int defidx,
-    int selectno, char **selarray, int selections, const char *text,
+    struct form_option *opstrs, unsigned ops, int defidx,
+    unsigned selectno, char **selarray, int selections, const char *text,
     int scrollidx){
   size_t longop, longdesc;
   struct form_state *fs;
@@ -1895,7 +1894,7 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   }
   cols = longdesc + longop * 2 + 9;
 #define ESCSTR L"'C' confirms setup, ⎋esc returns"
-  if(cols < (int)wcslen(ESCSTR) + 2){
+  if(cols < wcslen(ESCSTR) + 2){
     cols = wcslen(ESCSTR) + 2;
   }
   rows = (ops > selectno ? ops : selectno) + 4;
@@ -1928,9 +1927,10 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
   }
   cwbkgd(fs->p);
   // FIXME adapt for scrolling (default might be off-window at beginning)
-  if((fs->idx = defidx) < 0){
-    fs->idx = defidx = 0;
+  if(defidx < 0){
+    defidx = 0;
   }
+  fs->idx = defidx;
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
@@ -1955,13 +1955,13 @@ void raise_multiform(const char *str, void (*fxn)(const char *, char **, int, in
 // A collection of checkboxes
 static void
 raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
-                struct form_option* opstrs, int ops, int defidx,
+                struct form_option* opstrs, unsigned ops, int defidx,
                 char** selarray, int selections, const char* text,
                 int scrollidx){
   size_t longop, longdesc;
   struct form_state* fs;
-  int cols, rows;
-  int x, y;
+  unsigned cols, rows;
+  unsigned x, y;
 
   assert(ops);
   assert(opstrs);
@@ -1980,7 +1980,7 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
   }
   cols = longdesc + longop + 7;
 #define ESCSTR L"'C' commits, ⎋esc returns"
-  if(cols < (int)wcslen(ESCSTR) + 2){
+  if(cols < wcslen(ESCSTR) + 2){
     cols = wcslen(ESCSTR) + 2;
   }
   rows = ops + 4;
@@ -2015,9 +2015,10 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
   struct ncplane* fsw = fs->p;
   cwbkgd(fsw);
   // FIXME adapt for scrolling (default might be off-window at beginning)
-  if((fs->idx = defidx) < 0){
-    fs->idx = defidx = 0;
+  if(defidx < 0){
+    defidx = 0;
   }
+  fs->idx = defidx;
   fs->opcount = ops;
   fs->selarray = selarray;
   fs->selections = selections;
@@ -2026,7 +2027,7 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
   bevel_all(fsw);
   ncplane_on_styles(fsw, NCSTYLE_BOLD);
   cmvwprintw(fsw, 0, cols - strlen(fs->boxstr) - 2, "%s", fs->boxstr);
-  int nrows;
+  unsigned nrows;
   ncplane_dim_yx(fsw, &nrows, NULL);
   ncplane_putwstr_yx(fsw, nrows - 1, cols - wcslen(ESCSTR) - 1, ESCSTR);
 #undef ESCSTR
@@ -2043,12 +2044,12 @@ raise_checkform(const char* str, void (*fxn)(const char*, char**, int, int),
 // - select type form, for single choice from among a set
 // -------------------------------------------------------------------------
 void raise_form(const char* str, void (*fxn)(const char*),
-                struct form_option* opstrs, int ops, int defidx,
+                struct form_option* opstrs, unsigned ops, int defidx,
                 const char* text){
   size_t longop, longdesc;
   struct form_state *fs;
-  int cols, rows;
-  int x, y;
+  unsigned cols, rows;
+  unsigned x, y;
 
   if(opstrs == NULL || !ops){
     locked_diag("Passed empty %u-option string table", ops);
@@ -2098,9 +2099,10 @@ void raise_form(const char* str, void (*fxn)(const char*),
   }
   cwbkgd(fs->p);
   // FIXME adapt for scrolling (default might be off-window at beginning)
-  if((fs->idx = defidx) < 0){
-    fs->idx = defidx = 0;
+  if(defidx < 0){
+    defidx = 0;
   }
+  fs->idx = defidx;
   fs->opcount = ops;
   ncplane_off_styles(fs->p, NCSTYLE_BOLD);
   compat_set_fg(fs->p, FORMBORDER_COLOR);
@@ -2123,7 +2125,7 @@ void raise_form(const char* str, void (*fxn)(const char*),
 static void
 form_string_options(struct form_state* fs){
   struct ncplane* n = fs->p;
-  int cols;
+  unsigned cols;
 
   if(fs->formtype != FORM_STRING_INPUT){
     return;
@@ -2142,7 +2144,7 @@ void raise_str_form(const char* str, void (*fxn)(const char*),
                     const char* def, const char* text){
   struct form_state* fs;
   int cols;
-  int x, y;
+  unsigned x, y;
 
   assert(str && fxn);
   if(actform){
@@ -3340,7 +3342,7 @@ max_helpstr_len(const wchar_t **h){
 static int
 helpstrs(struct ncplane* n){
   const wchar_t *hs;
-  int z, rows, cols;
+  unsigned z, rows, cols;
   int row = 1;
 
   ncplane_dim_yx(n, &rows, &cols);
@@ -3481,9 +3483,10 @@ dump_diags(void){
 static int
 update_diags(struct panel_state *ps){
   logent l[DIAGROWS];
-  unsigned y, x;
+  unsigned uy, x;
 
-  ncplane_dim_yx(ps->n, &y, &x);
+  ncplane_dim_yx(ps->n, &uy, &x);
+  int y = uy;
   y -= 2;
   assert(x > 26 + START_COL * 2); // see ctime_r(3)
   if((y = get_logs(y, l)) < 0){
@@ -3491,7 +3494,7 @@ update_diags(struct panel_state *ps){
   }
   ncplane_set_styles(ps->n, NCSTYLE_BOLD);
   compat_set_fg(ps->n, SUBDISPLAY_COLOR);
-  for(unsigned r = 0 ; r < y ; ++r){
+  for(int r = 0 ; r < y ; ++r){
     char *c, tbuf[x];
     struct tm tm;
     size_t tb;
@@ -3607,7 +3610,7 @@ err:
 }
 
 static void
-detail_mounts(struct ncplane* w, unsigned* row, int maxy, const device* d){
+detail_mounts(struct ncplane* w, unsigned* row, unsigned maxy, const device* d){
   char buf[NCPREFIXSTRLEN + 1], b[256];
   unsigned cols, r;
 
@@ -5043,13 +5046,9 @@ handle_actform_input(wchar_t ch){
     }case NCKEY_UP: case 'k':{
       lock_notcurses();
       if(fs->idx == fs->scrolloff){
-        if(--fs->scrolloff < 0){
-          fs->scrolloff = fs->opcount - 1;
-        }
+        fs->scrolloff = fs->scrolloff ? fs->scrolloff - 1 : fs->opcount - 1;
       }
-      if(--fs->idx < 0){
-        fs->idx = fs->opcount - 1;
-      }
+      fs->idx = fs->idx ? fs->idx - 1 : fs->opcount - 1;
       if(fs->formtype == FORM_MULTISELECT){
         multiform_options(fs);
       }else if(fs->formtype == FORM_CHECKBOXEN){
@@ -5061,9 +5060,8 @@ handle_actform_input(wchar_t ch){
       break;
     }case NCKEY_DOWN: case 'j':{
       lock_notcurses();
-      unsigned umaxz;
-      ncplane_dim_yx(fs->p, &umaxz, NULL);
-      int maxz = umaxz;
+      unsigned maxz;
+      ncplane_dim_yx(fs->p, &maxz, NULL);
       maxz = maxz - 5 >= fs->opcount - 1 ? fs->opcount - 1 : maxz - 5;
       if(fs->idx == (fs->scrolloff + maxz) % fs->opcount){
         if(++fs->scrolloff >= fs->opcount){
