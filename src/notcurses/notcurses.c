@@ -780,7 +780,7 @@ redraw_subdisplay_border(const struct panel_state* ps){
 // is managed here; only the rows needed for display ought be provided.
 static int
 new_display_panel(struct ncplane* nc, struct panel_state* ps,
-                  int rows, int cols, const char* hstr,
+                  int rows, unsigned cols, const char* hstr,
                   const char* bstr, int borderpair){
   unsigned ybelow, yabove;
   unsigned x, y;
@@ -1685,7 +1685,6 @@ multiform_options(struct form_state *fs){
   for(unsigned z = 1 ; z < maxz ; ++z){
     unsigned op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
-    assert(op >= 0);
     assert(op < fs->opcount);
     ncplane_off_styles(fsw, NCSTYLE_BOLD);
     compat_set_fg(fsw, FORMBORDER_COLOR);
@@ -1738,7 +1737,6 @@ check_options(struct form_state *fs){
   for(unsigned z = 1 ; z < maxz ; ++z){
     unsigned op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
-    assert(op >= 0);
     assert(op < fs->opcount);
     ncplane_off_styles(fs->p, NCSTYLE_BOLD);
     compat_set_fg(fs->p, FORMBORDER_COLOR);
@@ -1782,7 +1780,6 @@ form_options(struct form_state *fs){
   for(unsigned z = 1 ; z < rows - 3 ; ++z){
     unsigned op = ((z - 1) + fs->scrolloff) % fs->opcount;
 
-    assert(op >= 0);
     assert(op < fs->opcount);
     compat_set_fg(fs->p, FORMTEXT_COLOR);
     cmvwprintw(fs->p, z + 1, START_COL * 2, "%-*.*s ",
@@ -2143,7 +2140,7 @@ form_string_options(struct form_state* fs){
 void raise_str_form(const char* str, void (*fxn)(const char*),
                     const char* def, const char* text){
   struct form_state* fs;
-  int cols;
+  unsigned cols;
   unsigned x, y;
 
   assert(str && fxn);
