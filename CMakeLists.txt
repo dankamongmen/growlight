@@ -173,6 +173,11 @@ add_test(
 )
 endif()
 
+add_test(
+  NAME blockdev-verbose
+  COMMAND sh -c "echo 'blockdev -v' | growlight-readline -v --notroot"
+)
+
 # Pandoc documentation (man pages)
 if(USE_PANDOC)
   file(GLOB MANSOURCE8 CONFIGURE_DEPENDS doc/man/man8/*.md)
