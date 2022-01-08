@@ -175,7 +175,7 @@ endif()
 
 add_test(
   NAME blockdev-verbose
-  COMMAND sh -c "echo 'blockdev -v' | growlight-readline -v --notroot"
+  COMMAND sh -c "echo 'blockdev -v' | ./growlight-readline -v --notroot"
 )
 
 # Pandoc documentation (man pages)
