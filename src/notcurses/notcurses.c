@@ -6052,17 +6052,17 @@ create_menu(struct ncplane* n){
   struct ncmenu_section sections[] = {
     { .name = "Growlight", .items = glight_items,
       .itemcount = sizeof(glight_items) / sizeof(*glight_items),
-      .shortcut = { .id = 'g', .alt = true, }, },
+      .shortcut = { .id = 'g', .modifiers = NCKEY_MOD_ALT, }, },
     { .name = "Blockdevs", .items = block_items,
       .itemcount = sizeof(block_items) / sizeof(*block_items),
-      .shortcut = { .id = 'b', .alt = true, }, },
+      .shortcut = { .id = 'b', .modifiers = NCKEY_MOD_ALT, }, },
     { .name = "Partitions", .items = part_items,
       .itemcount = sizeof(part_items) / sizeof(*part_items),
-      .shortcut = { .id = 'p', .alt = true, }, },
+      .shortcut = { .id = 'p', .modifiers = NCKEY_MOD_ALT, }, },
     { .name = NULL, .items = NULL, .itemcount = 0, },
     { .name = "Info", .items = help_items,
       .itemcount = sizeof(help_items) / sizeof(*help_items),
-      .shortcut = { .id = 'i', .alt = true, }, },
+      .shortcut = { .id = 'i', .modifiers = NCKEY_MOD_ALT, }, },
   };
   struct ncmenu_options mopts = {
     .sections = sections,
