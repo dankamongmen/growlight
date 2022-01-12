@@ -16,7 +16,7 @@ gbp import-orig ../growlight_$VERSION.orig.tar.xz
 git push --tags
 dpkg-buildpackage --build=source
 cd ..
-sudo pbuilder build *dsc
+sudo pbuilder build growlight*dsc
 cd -
 git push
 rm debian/files
