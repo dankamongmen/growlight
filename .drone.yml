@@ -8,6 +8,7 @@ steps:
   image: dankamongmen/unstable_builder:2022-01-07a
   commands:
     - export LANG=en_US.UTF-8
+    - export TERM=xterm
     - mkdir build
     - cd build
     - cmake -DUSE_LIBZFS=off ..
