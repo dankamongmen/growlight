@@ -24,7 +24,9 @@ jobs:
           sudo apt install -y \
             build-essential \
             cmake \
-            nettle-dev
+            nettle-dev \
+            libatasmart-dev \
+            libnotcurses-dev
 
       - uses: actions/checkout@v2
 
