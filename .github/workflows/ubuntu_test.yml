@@ -35,7 +35,8 @@ jobs:
             libudev-dev \
             libpci-dev \
             libpciaccess-dev \
-            doctest-dev
+            doctest-dev \
+            pandoc
 
       - uses: actions/checkout@v2
 
