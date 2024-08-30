@@ -34,7 +34,9 @@ jobs:
             nettle-dev \
             libudev-dev \
             libpci-dev \
-            libpciaccess-dev
+            libpciaccess-dev \
+            doctest-dev \
+            libzfs-dev
 
       - uses: actions/checkout@v2
 
