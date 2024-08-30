@@ -27,7 +27,14 @@ jobs:
             nettle-dev \
             libatasmart-dev \
             libnotcurses-dev \
-            libcap-dev
+            libcap-dev \
+            libcryptsetup-dev \
+            libblkid-dev \
+            libdevmapper-dev \
+            libnettle-dev \
+            libudev-dev \
+            libpci-dev \
+            libpciaccess-dev
 
       - uses: actions/checkout@v2
 
