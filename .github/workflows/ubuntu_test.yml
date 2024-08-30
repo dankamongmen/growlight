@@ -31,7 +31,7 @@ jobs:
             libcryptsetup-dev \
             libblkid-dev \
             libdevmapper-dev \
-            libnettle-dev \
+            nettle-dev \
             libudev-dev \
             libpci-dev \
             libpciaccess-dev
