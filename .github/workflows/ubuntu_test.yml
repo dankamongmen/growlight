@@ -26,7 +26,8 @@ jobs:
             cmake \
             nettle-dev \
             libatasmart-dev \
-            libnotcurses-dev
+            libnotcurses-dev \
+            libcap-dev
 
       - uses: actions/checkout@v2
 
