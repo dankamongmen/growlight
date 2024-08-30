@@ -1501,14 +1501,14 @@ watch_dir(int fd, const char *dfp, eventfxn fxn, int *wd, int timeout){
 
 static void
 version(const char *name){
-  diag("%s version %s\n", basename(name), VERSION);
+  diag("%s version %s\n", name, VERSION);
 }
 
 static void
 usage(const char *name, int disphelp){
   diag("usage: %s [ -h|--help ] [ -v|--verbose ] [ -V|--version ]\n"
     "\t[ -t|--target=path ] [ --notroot ] [ -i|--import ]%s\n",
-    basename(name), disphelp ? " [ --disphelp ]" : "");
+    name, disphelp ? " [ --disphelp ]" : "");
 }
 
 static int
