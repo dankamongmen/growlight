@@ -2578,6 +2578,7 @@ ptype_table(const device *d, int *count, int match, int *defidx){
     return NULL;
   }
   *count = 0;
+  *defidx = 0;
   for(pt = ptypes ; pt->name ; ++pt){
     const size_t KEYSIZE = 5; // 4 hex digit code
     char *key, *desc;
@@ -2852,7 +2853,8 @@ psectors_callback(const char *psects){
   }
   if(psects == NULL){ // go back to partition type
     struct form_option *ops_ptype;
-    int opcount, defidx;
+    int opcount;
+    int defidx;
 
     if((ops_ptype = ptype_table(b->d, &opcount, pending_ptype, &defidx)) == NULL){
       if(opcount == 0){
@@ -5711,7 +5713,7 @@ free_zchain(zobj **z){
 // b->zone->p: partition
 static void
 update_blockobj(blockobj* b, device* d){
-  zobj *z, *lastz, *firstchoice;
+  zobj *z, *lastz, *firstchoice, *tmpz;
   uintmax_t sector;
   int zonesel = -1; // -1 for no choice (b->zone == NULL on entry)
   int zones;
@@ -5735,38 +5737,43 @@ update_blockobj(blockobj* b, device* d){
     sector = d->size / d->logsec + 1;
   }else{
     if( (sector = first_usable_sector(d)) ){
-      if((z = create_zobj(z, zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
+      if((tmpz = create_zobj(z, zones, zones, sector - 1, NULL, REP_METADATA)) == NULL){
         goto err;
       }
+      z = tmpz;
       ++zones;
     }
   }
   for(p = d->parts ; p ; p = p->next){
     if(sector != p->partdev.fsector){
-      if((z = create_zobj(z, zones, sector, p->partdev.fsector - 1, NULL, REP_EMPTY)) == NULL){
+      if((tmpz = create_zobj(z, zones, sector, p->partdev.fsector - 1, NULL, REP_EMPTY)) == NULL){
         goto err;
       }
+      z = tmpz;
       ++zones;
     }
-    if((z = create_zobj(z, zones, p->partdev.fsector, p->partdev.lsector, p, L'\0')) == NULL){
+    if((tmpz = create_zobj(z, zones, p->partdev.fsector, p->partdev.lsector, p, L'\0')) == NULL){
       goto err;
     }
+    z = tmpz;
     ++zones;
     sector = p->partdev.lsector + 1;
   }
   if(d->logsec && d->size){
     if(sector < d->size / d->logsec){
       if(sector < last_usable_sector(d) + 1){
-        if((z = create_zobj(z, zones, sector, last_usable_sector(d), NULL, REP_EMPTY)) == NULL){
+        if((tmpz = create_zobj(z, zones, sector, last_usable_sector(d), NULL, REP_EMPTY)) == NULL){
           goto err;
         }
+        z = tmpz;
         ++zones;
         sector = last_usable_sector(d);
       }
       if(sector < d->size / d->logsec){
-        if((z = create_zobj(z, zones, sector, d->size / d->logsec - 1, NULL, REP_METADATA)) == NULL){
+        if((tmpz = create_zobj(z, zones, sector, d->size / d->logsec - 1, NULL, REP_METADATA)) == NULL){
           goto err;
         }
+        z = tmpz;
         ++zones;
         sector = d->size / d->logsec;
       }
