@@ -1441,7 +1441,6 @@ watch_dir(int fd, const char *dfp, eventfxn fxn, int *wd, int timeout){
       verbf("Watching %s on fd %d\n", dfp, *wd);
     }
   }
-  r = 0;
   if((dir = opendir(dfp)) == NULL){
     diag("Couldn't open %s (%s)\n", dfp, strerror(errno));
     if(fd >= 0){ inotify_rm_watch(fd, *wd); }
@@ -1618,11 +1617,10 @@ event_posix_thread(void *unsafe){
           assert(events[r].events == EPOLLIN);
           while((s = read(em->ifd, buf, buflen)) > 0){
             const struct inotify_event *in;
-            unsigned idx = 0;
 
-            if(s - idx >= (ptrdiff_t)sizeof(*in)){
-              in = (struct inotify_event *)(buf + idx);
-              idx += sizeof(*in);
+            // FIXME can there only be one event per read buffer?
+            if(s >= (ptrdiff_t)sizeof(*in)){
+              in = (struct inotify_event *)(buf);
 
               if(in->len == 0){
                 diag("Nil-file event on unknown watch desc %d\n", in->wd);

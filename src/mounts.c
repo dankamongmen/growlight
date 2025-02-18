@@ -145,8 +145,93 @@ err:
   return -1;
 }
 
+static int
+handle_mount(const glightui *gui, const char* mnt, const char* dev, const char* ops, char** fs){
+  struct statvfs vfs;
+  device *d;
+
+  if(statvfs(mnt, &vfs)){
+    int skip = 0;
+
+    // We might have mounted a new target atop or above an
+    // already existing one,  in which case we'll need
+    // possibly recreate the directory structure on the
+    // newly-mounted filesystem.
+    if(growlight_target){
+      if(strncmp(mnt, growlight_target, strlen(growlight_target)) == 0){
+        if(make_parent_directories(mnt) == 0){
+          skip = 1;
+        } // FIXME else remount? otherwise writes
+        // go to new filesystem rather than old...?
+      }
+    }
+    if(!skip){
+      diag("Couldn't stat fs %s (%s?)\n", mnt, strerror(errno));
+      return 0;
+    }
+  }
+  if(*dev != '/'){ // have to get zfs's etc
+    if(fstype_virt_p(*fs)){
+      return 0;
+    }
+    if((d = lookup_device(dev)) == NULL){
+      verbf("virtfs %s at %s\n", *fs, mnt);
+      return 0;
+    }
+  }else{
+    const char *rp = dev;
+    struct stat st;
+    if(lstat(rp, &st) == 0){
+      if(S_ISLNK(st.st_mode)){
+        char buf[PATH_MAX + 1];
+        int r;
+        if((r = readlink(dev, buf, sizeof(buf))) < 0){
+          diag("Couldn't deref %s (%s?)\n", dev, strerror(errno));
+          return 0;
+        }
+        if((size_t)r >= sizeof(buf)){
+          diag("Name too long for %s (%d?)\n", dev, r);
+          return 0;
+        }
+        buf[r] = '\0';
+        rp = buf;
+      }
+    }
+    if((d = lookup_device(rp)) == NULL){
+      return 0;
+    }
+  }
+  if(d->mnttype && strcmp(d->mnttype, *fs)){
+    diag("Already had mounttype for %s: %s (got %s)\n",
+        d->name, d->mnttype, *fs);
+    free(d->mnttype);
+    d->mnttype = NULL;
+    free_stringlist(&d->mntops);
+    free_stringlist(&d->mnt);
+    d->mnttype = *fs;
+    *fs = NULL;
+  }
+  fs = NULL;
+  if(add_string(&d->mnt, mnt)){
+    return -1;
+  }
+  if(add_string(&d->mntops, ops)){
+    return -1;
+  }
+  d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
+  if(d->layout == LAYOUT_PARTITION){
+    d = d->partdev.parent;
+  }
+  d->uistate = gui->block_event(d, d->uistate);
+  if(growlight_target){
+    if(strcmp(mnt, growlight_target) == 0){
+      mount_target();
+    }
+  }
+  return 0;
+}
+
 int parse_mounts(const glightui *gui, const char *fn){
-  char *mnt, *dev, *ops, *fs;
   off_t len, idx;
   char *map;
   int fd;
@@ -155,111 +240,25 @@ int parse_mounts(const glightui *gui, const char *fn){
     return -1;
   }
   idx = 0;
-  dev = mnt = fs = ops = NULL;
+  int ret = 0;
   while(idx < len){
-    char buf[PATH_MAX + 1];
-    struct statvfs vfs;
-    struct stat st;
-    device *d;
-    char *rp;
+    char *mnt, *dev, *ops, *fs;
     int r;
 
-    free(dev); free(mnt); free(fs); free(ops);
-    dev = mnt = fs = ops = NULL; // don't goto double-free()
+    dev = mnt = fs = ops = NULL;
     if((r = parse_mount(map + idx, len - idx, &dev, &mnt, &fs, &ops)) < 0){
-      goto err;
+      ret = -1;
+      break;
     }
     idx += r;
-    if(statvfs(mnt, &vfs)){
-      int skip = 0;
-
-      // We might have mounted a new target atop or above an
-      // already existing one,  in which case we'll need
-      // possibly recreate the directory structure on the
-      // newly-mounted filesystem.
-      if(growlight_target){
-        if(strncmp(mnt, growlight_target, strlen(growlight_target)) == 0){
-          if(make_parent_directories(mnt) == 0){
-            skip = 1;
-          } // FIXME else remount? otherwise writes
-          // go to new filesystem rather than old...?
-        }
-      }
-      if(!skip){
-        diag("Couldn't stat fs %s (%s?)\n", mnt, strerror(errno));
-        continue;
-      }
+    if(handle_mount(gui, mnt, dev, ops, &fs)){
+      ret = -1; // don't exit out of loop
     }
-    if(*dev != '/'){ // have to get zfs's etc
-      if(fstype_virt_p(fs)){
-        continue;
-      }
-      if((d = lookup_device(dev)) == NULL){
-        verbf("virtfs %s at %s\n", fs, mnt);
-        continue;
-      }
-    }else{
-      rp = dev;
-      if(lstat(rp, &st) == 0){
-        if(S_ISLNK(st.st_mode)){
-          if((r = readlink(dev, buf, sizeof(buf))) < 0){
-            diag("Couldn't deref %s (%s?)\n", dev, strerror(errno));
-            continue;
-          }
-          if((size_t)r >= sizeof(buf)){
-            diag("Name too long for %s (%d?)\n", dev, r);
-            continue;
-          }
-          buf[r] = '\0';
-          rp = buf;
-        }
-      }
-      if((d = lookup_device(rp)) == NULL){
-        continue;
-      }
-    }
-    free(dev);
-    dev = NULL;
-    if(d->mnttype && strcmp(d->mnttype, fs)){
-      diag("Already had mounttype for %s: %s (got %s)\n",
-          d->name, d->mnttype, fs);
-      free(d->mnttype);
-      d->mnttype = NULL;
-      free_stringlist(&d->mntops);
-      free_stringlist(&d->mnt);
-      d->mnttype = fs;
-    }else{
-      free(fs);
-    }
-    fs = NULL;
-    if(add_string(&d->mnt, mnt)){
-      goto err;
-    }
-    if(add_string(&d->mntops, ops)){
-      goto err;
-    }
-    d->mntsize = (uintmax_t)vfs.f_bsize * vfs.f_blocks;
-    if(d->layout == LAYOUT_PARTITION){
-      d = d->partdev.parent;
-    }
-    d->uistate = gui->block_event(d, d->uistate);
-    if(growlight_target){
-      if(strcmp(mnt, growlight_target) == 0){
-        mount_target();
-      }
-    }
+    free(dev); free(mnt); free(fs); free(ops);
   }
-  free(dev); free(mnt); free(fs); free(ops);
-  dev = mnt = fs = ops = NULL;
   munmap_virt(map, len);
   close(fd);
-  return 0;
-
-err:
-  diag("Error parsing %s\n", fn);
-  munmap_virt(map, len);
-  close(fd);
-  return -1;
+  return ret;
 }
 
 int mmount(device *d, const char *targ, unsigned mntops, const void *data){
