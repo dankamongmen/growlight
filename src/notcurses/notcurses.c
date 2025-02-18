@@ -2529,7 +2529,7 @@ fs_named_callback(const char *name){
       return;
     }
     raise_form("select a filesystem type", fs_callback, ops_fs,
-        opcount, defidx, FSTYPE_TEXT);
+               opcount, defidx, FSTYPE_TEXT);
     return;
   }
   fs_do(name);
@@ -2710,6 +2710,7 @@ ptype_name_callback(const char *name){
   if(mbsrtowcs(wstr, &n, wcs + 1, &ps) != wcs){
     locked_diag("Error converting multibyte '%s'", name);
     cleanup_new_partition();
+    free(wstr);
     return;
   }
   sps = show_splash(L"Creating partition...");
@@ -4286,7 +4287,7 @@ flag_table(int *count, const char *match, int *defidx, char ***selarray, int *se
       if(zz >= *selections){
         typeof(*selarray) tmp;
 
-        if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
+        if((tmp = realloc(*selarray, sizeof(**selarray) * (*selections + 1))) == NULL){
           free(fo[zz].option);
           free(fo[zz].desc);
           goto err;
@@ -4396,7 +4397,7 @@ flag_to_selections(uint64_t flags, char ***selarray, int *selections,
     if(flags & ul){
       typeof(*selarray) tmp;
 
-      if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
+      if((tmp = realloc(*selarray, sizeof(**selarray) * (*selections + 1))) == NULL){
         // FIXME backfree
         return -1;
       }
