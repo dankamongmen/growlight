@@ -153,13 +153,13 @@ int finalize_target(void){
 	}
 	if((fstab = dump_targets()) == NULL){
 		diag("Couldn't write targets to %s/etc/fstab (%s?)\n", growlight_target, strerror(errno));
-		close(fd);
+		fclose(fp);
 		return -1;
 	}
 	if((r = fprintf(fp, "%s", fstab)) < 0 || (size_t)r < strlen(fstab)){
 		diag("Couldn't write data to %s/etc/fstab (%s?)\n", growlight_target, strerror(errno));
 		free(fstab);
-		close(fd);
+		fclose(fp);
 		return -1;
 	}
 	free(fstab);
@@ -181,13 +181,13 @@ int finalize_target(void){
 	}
 	if((ftargs = dump_controller_modules()) == NULL){
 		diag("Couldn't write targets to %s/etc/initramfs-tools/modules (%s?)\n", growlight_target, strerror(errno));
-		close(fd);
+		fclose(fp);
 		return -1;
 	}
 	if((r = fprintf(fp, "%s", ftargs)) < 0 || (size_t)r < strlen(ftargs)){
 		diag("Couldn't write data to %s/etc/initramfs-tools/modules (%s?)\n", growlight_target, strerror(errno));
 		free(ftargs);
-		close(fd);
+		fclose(fp);
 		return -1;
 	}
 	free(ftargs);
