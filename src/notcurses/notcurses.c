@@ -1808,7 +1808,7 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
   ncplane_dim_yx(n, NULL, &cols);
   --cols;
   tot = 0;
-  for(y = 0 ; (unsigned)y < sizeof(linepre) / sizeof(*linepre) ; ++y){
+  for(y = 0 ; y < sizeof(linepre) / sizeof(*linepre) ; ++y){
     while(isspace(text[tot])){
       ++tot;
     }
@@ -1858,9 +1858,9 @@ raise_form_explication(struct ncplane* n, const char* text, int linesz){
   compat_set_fg(ps->n, FORMBORDER_COLOR);
   bevel_all(ps->n);
   compat_set_fg(ps->n, FORMTEXT_COLOR);
-  do{
+  while(y--){
     ncplane_printf_yx(ps->n, y + 1, 1, "%.*s", linelen[y], text + linepre[y]);
-  }while(y--);
+  }
   screen_update();
   return ps;
 }
