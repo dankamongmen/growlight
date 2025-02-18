@@ -6022,6 +6022,7 @@ boxinfo(const char *text, ...){
   raise_info_form("Press any key to continue...", buf);
   unlock_notcurses_growlight();
   va_end(v);
+  free(buf);
 }
 
 static struct ncmenu*
