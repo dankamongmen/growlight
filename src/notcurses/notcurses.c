@@ -2269,7 +2269,7 @@ ops_table(int *count, const char *match, int *defidx, char ***selarray, int *sel
       if(zz >= *selections){
         typeof(*selarray) tmp;
 
-        if((tmp = realloc(*selarray, sizeof(*selarray) * (*selections + 1))) == NULL){
+        if((tmp = realloc(*selarray, sizeof(**selarray) * (*selections + 1))) == NULL){
           free(fo[zz].option);
           free(fo[zz].desc);
           goto err;
