@@ -325,8 +325,8 @@ find_pcie_controller(unsigned domain, unsigned bus, unsigned dev,
       data = 0;
       if( (pcicap = pci_find_cap(pcidev, PCI_CAP_ID_EXP, PCI_CAP_NORMAL)) ){
         data = pci_read_word(pcidev, pcicap->addr + PCI_EXP_LNKSTA);
-      }else if( (pcicap = pci_find_cap(pcidev, PCI_CAP_ID_MSI, PCI_CAP_NORMAL)) ){
-        // FIXME?
+      //}else if( (pcicap = pci_find_cap(pcidev, PCI_CAP_ID_MSI, PCI_CAP_NORMAL)) ){
+      // FIXME?
       }
       if(data){
         c->pcie.gen = data & PCI_EXP_LNKSTA_SPEED;

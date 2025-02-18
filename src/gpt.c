@@ -379,7 +379,6 @@ static void *
 map_gpt(device *d, size_t *mapsize, int *fd, size_t lbasize){
   const int pgsize = getpagesize();
   const unsigned gptlbas = 1 + (MINIMUM_GPT_ENTRIES * sizeof(struct gpt_entry) / lbasize);
-  uint64_t off;
   void *map;
 
   if(pgsize < 0){
@@ -396,7 +395,7 @@ map_gpt(device *d, size_t *mapsize, int *fd, size_t lbasize){
   }
   // The first copy goes into LBA 1. Calculate offset into map due to
   // lbasize possibly (probably) not equalling the page size.
-  if((off = lbasize % pgsize) == 0){
+  if(lbasize % pgsize == 0){
     *mapsize = 0;
   }else{
     *mapsize = lbasize;
