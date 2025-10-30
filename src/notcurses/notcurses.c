@@ -5972,7 +5972,7 @@ static void raise_info_form(const char *str, const char *text){
   cols = fs->longop; // FIXME? 40 for input currently
   struct ncplane* stdn = notcurses_stdplane(NC);
   ncplane_dim_yx(stdn, &y, &x);
-  assert(x >= cols + 3);
+  assert(x >= (unsigned)cols + 3);
   assert(y >= 3);
   // It could be more than this due to line breaking, so add a fudge
   // factor of 2...FIXME
