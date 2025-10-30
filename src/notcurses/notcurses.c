@@ -6110,7 +6110,6 @@ int main(int argc, char * const *argv){
   pthread_sigmask(SIG_SETMASK, &sigmask, NULL);
   notcurses_options opts = { };
   opts.flags = NCOPTION_INHIBIT_SETLOCALE;
-  // opts.loglevel = NCLOGLEVEL_TRACE;
   if((NC = notcurses_core_init(&opts, stdout)) == NULL){
     return EXIT_FAILURE;
   }
