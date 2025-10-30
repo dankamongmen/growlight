@@ -18,7 +18,8 @@
 #define LBA_SIZE 512u
 #define MBR_SIZE (LBA_SIZE - MBR_OFFSET)
 
-static const unsigned char GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
+static const unsigned char __attribute__ ((nonstring))
+GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
  "\x00\x00\x00\x00\x00\x00"  // 6 bytes of zeros
  "\x80"                      // bootable (violation of GPT spec, but some
                              //  BIOS/MBR *and* UEFI won't boot otherwise)
@@ -32,7 +33,8 @@ static const unsigned char GPT_PROTECTIVE_MBR[LBA_SIZE - MBR_OFFSET] =
  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  "\x55\xaa";                 // MBR signature
 
-static const unsigned char gpt_signature[8] =
+static const unsigned char __attribute__ ((nonstring))
+gpt_signature[8] =
  "\x45\x46\x49\x20\x50\x41\x52\x54";
 
 uint32_t host_to_le32(uint32_t x){
