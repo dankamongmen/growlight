@@ -173,10 +173,14 @@ add_test(
 )
 endif()
 
+if(DEFINED ENV{TERM})
 add_test(
   NAME blockdev-verbose
   COMMAND sh -c "echo 'blockdev -v' | ./growlight-readline -v --notroot"
 )
+else()
+  message(WARNING "TERM is not defined, not running blockdev-verbose test")
+endif()
 
 # Pandoc documentation (man pages)
 if(USE_PANDOC)
