@@ -6,7 +6,9 @@
 extern "C" {
 #endif
 
-void sha1(const void* src, size_t len, void* dst);
+#include <stdint.h>
+
+void sha1(const void* src, size_t len, uint8_t* dst);
 
 #ifdef __cplusplus
 }

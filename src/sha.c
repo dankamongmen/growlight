@@ -4,7 +4,7 @@
 #include "sha.h"
 #include "nettle/sha1.h"
 
-void sha1(const void* src, size_t len, void* dst){
+void sha1(const void* src, size_t len, uint8_t* dst){
   struct sha1_ctx ctx;
   sha1_init(&ctx);
   sha1_update(&ctx, len, src);
