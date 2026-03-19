@@ -20,7 +20,8 @@ done
 BUILDDIR="build-$VERSION"
 mkdir "$BUILDDIR"
 cd "$BUILDDIR"
-cmake ..
+# see https://github.com/dankamongmen/growlight/issues/163 FIXME
+cmake -DUSE_LIBZFS=false ..
 make -j
 
 # if that all worked, commit, push, and tag
